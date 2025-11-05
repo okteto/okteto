@@ -153,7 +153,7 @@ func (s *ParallelCheckStrategy) cloneGlobalImageToDev(cachedImage, manifestName 
 	cloneDuration := time.Since(cloneStartTime)
 	svc.SetCloneDuration(cloneDuration, err == nil)
 
-	return reference, nil
+	return reference, err
 }
 
 func (s *ParallelCheckStrategy) GetImageDigestReferenceForServiceDeploy(manifestName, service string, buildInfo *build.Info) (string, error) {

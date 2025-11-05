@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
@@ -95,14 +96,12 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
-				cacheProbe.On("GetFromCache", "service2").Return(true, "global-image2")
 
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
-				mockRegistry.On("IsGlobalRegistry", "global-image2").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest2").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "global-image2").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "digest2").Return()
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
@@ -139,11 +138,10 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(false, "", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
 
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
 			},
 			expectedCached:    []string{"service1"},
 			expectedNotCached: []string{"service2"},
@@ -176,14 +174,12 @@ func TestParallelCheckStrategy_CheckServicesCache(t *testing.T) {
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
 				cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(true, "global-image1")
-				cacheProbe.On("GetFromCache", "service2").Return(true, "global-image2")
 
-				mockRegistry.On("IsGlobalRegistry", "global-image1").Return(false)
-				mockRegistry.On("IsGlobalRegistry", "global-image2").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+				mockRegistry.On("IsGlobalRegistry", "digest2").Return(false)
 
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "global-image1").Return()
-				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "global-image2").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+				serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "digest2").Return()
 			},
 			expectedCached:    []string{"service1", "service2"},
 			expectedNotCached: nil,
@@ -234,7 +230,7 @@ func TestParallelCheckStrategy_CheckServicesCache_Error(t *testing.T) {
 		// the cloner returns the image directly without calling Clone, making it hard to test the error path.
 		// This functionality is covered by integration tests and the sequential strategy tests.
 		{
-			name:         "get from cache returns false",
+			name:         "clone error when image is global registry",
 			manifestName: "test-manifest",
 			buildManifest: build.ManifestBuild{
 				"service1": &build.Info{Image: "image1"},
@@ -244,11 +240,15 @@ func TestParallelCheckStrategy_CheckServicesCache_Error(t *testing.T) {
 				hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
 
 				cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
-				cacheProbe.On("GetFromCache", "service1").Return(false, "")
+
+				// When IsGlobalRegistry returns true, the cloner tries to clone
+				// Since buildInfo.Image is "image1", that's what gets passed as svcImage (not empty)
+				mockRegistry.On("IsGlobalRegistry", "digest1").Return(true)
+				mockRegistry.On("Clone", "digest1", "image1").Return("", fmt.Errorf("clone error"))
 			},
 			expectedCached:    nil,
 			expectedNotCached: nil,
-			expectedError:     fmt.Errorf("error cloning svc service1 global image to dev: image service1 not found in cache"),
+			expectedError:     fmt.Errorf("error cloning svc service1 global image to dev: error cloning image 'digest1' to 'image1': clone error"),
 		},
 	}
 
@@ -403,4 +403,216 @@ func TestParallelCheckStrategy_GetImageDigestReferenceForServiceDeploy_Error(t *
 			cacheProbe.AssertExpectations(t)
 		})
 	}
+}
+
+// TestParallelCheckStrategy_CheckServicesCache_OrderOfExecution verifies that
+// services are processed in the correct order based on their dependencies.
+// A service should only start processing after all its dependencies have completed.
+func TestParallelCheckStrategy_CheckServicesCache_OrderOfExecution(t *testing.T) {
+	// Create a chain of dependencies: service1 -> service2 -> service3
+	// service2 depends on service1, service3 depends on service2
+	manifestName := "test-manifest"
+	buildManifest := build.ManifestBuild{
+		"service1": &build.Info{Image: "image1"},
+		"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+		"service3": &build.Info{Image: "image3", DependsOn: []string{"service2"}},
+	}
+	svcsToBuild := []string{"service1", "service2", "service3"}
+
+	// Use a slice protected by mutex to record execution order
+	var executionOrder []string
+	var mu sync.Mutex
+
+	strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestParallelCheckStrategy()
+
+	// Mock hasher to record execution order
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service1")
+		mu.Unlock()
+	}).Return("hash1")
+
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service2").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service2")
+		mu.Unlock()
+	}).Return("hash2")
+
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service3").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service3")
+		mu.Unlock()
+	}).Return("hash3")
+
+	// Mock cache checks - all services are cached
+	// The second return value from IsCached is the imageWithDigest, which is passed to cloneGlobalImageToDev
+	cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
+	cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
+	cacheProbe.On("IsCached", "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
+
+	// The cloner calls IsGlobalRegistry with the cachedImage (digest) value
+	mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+	mockRegistry.On("IsGlobalRegistry", "digest2").Return(false)
+	mockRegistry.On("IsGlobalRegistry", "digest3").Return(false)
+
+	// When IsGlobalRegistry returns false, the cloner returns the image directly
+	// So the reference passed to SetServiceEnvVars is the digest
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "digest2").Return()
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "digest3").Return()
+
+	svcInfos := buildTypes.NewBuildInfos(manifestName, "test-namespace", "", svcsToBuild)
+	cached, notCached, err := strategy.CheckServicesCache(context.Background(), manifestName, buildManifest, svcInfos)
+
+	// Verify results
+	assert.NoError(t, err)
+	assert.Len(t, cached, 3, "all services should be cached")
+	assert.Len(t, notCached, 0, "no services should be not cached")
+
+	// Verify execution order: service1 should be processed before service2, service2 before service3
+	mu.Lock()
+	order := make([]string, len(executionOrder))
+	copy(order, executionOrder)
+	mu.Unlock()
+
+	// Find the positions of each service in the execution order
+	positions := make(map[string]int)
+	for i, svc := range order {
+		if _, found := positions[svc]; !found {
+			positions[svc] = i
+		}
+	}
+
+	// Verify that each service appears exactly once
+	pos1, ok1 := positions["hash-service1"]
+	pos2, ok2 := positions["hash-service2"]
+	pos3, ok3 := positions["hash-service3"]
+
+	assert.True(t, ok1, "service1 should be processed")
+	assert.True(t, ok2, "service2 should be processed")
+	assert.True(t, ok3, "service3 should be processed")
+
+	// Verify the order: service1 must come before service2, service2 must come before service3
+	assert.True(t, pos1 < pos2, "service1 should be processed before service2 (got positions: service1=%d, service2=%d)", pos1, pos2)
+	assert.True(t, pos2 < pos3, "service2 should be processed before service3 (got positions: service2=%d, service3=%d)", pos2, pos3)
+
+	hasher.AssertExpectations(t)
+	cacheProbe.AssertExpectations(t)
+	serviceEnvVarsSetter.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
+}
+
+// TestParallelCheckStrategy_CheckServicesCache_OrderOfExecution_ComplexDependencies
+// verifies order of execution with a more complex dependency graph.
+func TestParallelCheckStrategy_CheckServicesCache_OrderOfExecution_ComplexDependencies(t *testing.T) {
+	// Create a dependency graph:
+	//   service1 (no deps)
+	//   service2 (depends on service1)
+	//   service3 (depends on service1)
+	//   service4 (depends on service2 and service3)
+	manifestName := "test-manifest"
+	buildManifest := build.ManifestBuild{
+		"service1": &build.Info{Image: "image1"},
+		"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+		"service3": &build.Info{Image: "image3", DependsOn: []string{"service1"}},
+		"service4": &build.Info{Image: "image4", DependsOn: []string{"service2", "service3"}},
+	}
+	svcsToBuild := []string{"service1", "service2", "service3", "service4"}
+
+	// Use a slice protected by mutex to record execution order
+	var executionOrder []string
+	var mu sync.Mutex
+
+	strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestParallelCheckStrategy()
+
+	// Mock hasher to record execution order
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service1")
+		mu.Unlock()
+	}).Return("hash1")
+
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service2").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service2")
+		mu.Unlock()
+	}).Return("hash2")
+
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service3").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service3")
+		mu.Unlock()
+	}).Return("hash3")
+
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service4").Run(func(args mock.Arguments) {
+		mu.Lock()
+		executionOrder = append(executionOrder, "hash-service4")
+		mu.Unlock()
+	}).Return("hash4")
+
+	// Mock cache checks - all services are cached
+	// The second return value from IsCached is the imageWithDigest, which is passed to cloneGlobalImageToDev
+	cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
+	cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(true, "digest2", nil)
+	cacheProbe.On("IsCached", "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
+	cacheProbe.On("IsCached", "test-manifest", "image4", "hash4", "service4").Return(true, "digest4", nil)
+
+	// The cloner calls IsGlobalRegistry with the cachedImage (digest) value
+	mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+	mockRegistry.On("IsGlobalRegistry", "digest2").Return(false)
+	mockRegistry.On("IsGlobalRegistry", "digest3").Return(false)
+	mockRegistry.On("IsGlobalRegistry", "digest4").Return(false)
+
+	// When IsGlobalRegistry returns false, the cloner returns the image directly
+	// So the reference passed to SetServiceEnvVars is the digest
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service2", "digest2").Return()
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "digest3").Return()
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service4", "digest4").Return()
+
+	svcInfos := buildTypes.NewBuildInfos(manifestName, "test-namespace", "", svcsToBuild)
+	cached, notCached, err := strategy.CheckServicesCache(context.Background(), manifestName, buildManifest, svcInfos)
+
+	// Verify results
+	assert.NoError(t, err)
+	assert.Len(t, cached, 4, "all services should be cached")
+	assert.Len(t, notCached, 0, "no services should be not cached")
+
+	// Verify execution order
+	mu.Lock()
+	order := make([]string, len(executionOrder))
+	copy(order, executionOrder)
+	mu.Unlock()
+
+	// Find the positions of each service in the execution order
+	positions := make(map[string]int)
+	for i, svc := range order {
+		if _, found := positions[svc]; !found {
+			positions[svc] = i
+		}
+	}
+
+	// Verify that each service appears exactly once
+	pos1, ok1 := positions["hash-service1"]
+	pos2, ok2 := positions["hash-service2"]
+	pos3, ok3 := positions["hash-service3"]
+	pos4, ok4 := positions["hash-service4"]
+
+	assert.True(t, ok1, "service1 should be processed")
+	assert.True(t, ok2, "service2 should be processed")
+	assert.True(t, ok3, "service3 should be processed")
+	assert.True(t, ok4, "service4 should be processed")
+
+	// Verify the order constraints:
+	// - service1 must come before service2 and service3
+	// - service2 and service3 must come before service4
+	assert.True(t, pos1 < pos2, "service1 should be processed before service2")
+	assert.True(t, pos1 < pos3, "service1 should be processed before service3")
+	assert.True(t, pos2 < pos4, "service2 should be processed before service4")
+	assert.True(t, pos3 < pos4, "service3 should be processed before service4")
+
+	hasher.AssertExpectations(t)
+	cacheProbe.AssertExpectations(t)
+	serviceEnvVarsSetter.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
 }
