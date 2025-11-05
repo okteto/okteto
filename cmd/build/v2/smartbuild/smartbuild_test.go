@@ -18,20 +18,8 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-type fakeConfigRepo struct {
-	err  error
-	sha  string
-	diff string
-}
-
-func (fcr fakeConfigRepo) GetSHA() (string, error)                { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) GetLatestDirSHA(string) (string, error) { return fcr.sha, fcr.err }
-func (fcr fakeConfigRepo) GetDiffHash(string) (string, error)     { return fcr.diff, fcr.err }
 
 type fakeRegistryController struct {
 	err              error
@@ -55,63 +43,6 @@ type fakeHasher struct {
 
 func (fh fakeHasher) hashWithBuildContext(*build.Info, string) string {
 	return fh.hash
-}
-
-type fakeImageTagger struct {
-	mock.Mock
-}
-
-func (fit *fakeImageTagger) GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
-	args := fit.Called(tags, namespace, registryURL, buildHash, ic)
-	return args.String(0)
-}
-
-func (fit *fakeImageTagger) GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
-	args := fit.Called(manifestName, svcToBuildName, tag)
-	return args.Get(0).([]string)
-}
-
-func (fit *fakeImageTagger) GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
-	args := fit.Called(manifestName, svcToBuildName)
-	return args.Get(0).([]string)
-}
-
-type fakeImageCtrl struct {
-	mock.Mock
-}
-
-func (fic *fakeImageCtrl) IsOktetoCluster() bool {
-	args := fic.Called()
-	return args.Bool(0)
-}
-
-func (fic *fakeImageCtrl) GetGlobalNamespace() string {
-	args := fic.Called()
-	return args.String(0)
-}
-
-func (fic *fakeImageCtrl) GetNamespace() string {
-	args := fic.Called()
-	return args.String(0)
-}
-
-func (fic *fakeImageCtrl) GetRegistryURL() string {
-	args := fic.Called()
-	return args.String(0)
-}
-
-func (fic *fakeImageCtrl) GetImageReference(reference string) (registry.OktetoImageReference, error) {
-	args := fic.Called(reference)
-	return args.Get(0).(registry.OktetoImageReference), args.Error(1)
-}
-
-type fakeOktetoRegistry struct {
-	mock.Mock
-}
-
-func (fr *fakeOktetoRegistry) GetImageReference(reference string) (registry.OktetoImageReference, error) {
-	args := fr.Called(reference)
-	return args.Get(0).(registry.OktetoImageReference), args.Error(1)
 }
 
 func TestGetServiceHash(t *testing.T) {
