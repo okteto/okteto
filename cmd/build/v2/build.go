@@ -255,6 +255,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		}
 		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
 		sp.Start()
+		defer sp.Stop()
 		cachedSvcs, notCachedSvcs, err = ob.smartBuildCtrl.CheckServicesCache(ctx, options.Manifest.Name, options.Manifest.Build, svcInfos)
 		if err != nil {
 			return fmt.Errorf("error checking images: %w", err)
