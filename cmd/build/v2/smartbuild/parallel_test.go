@@ -616,3 +616,80 @@ func TestParallelCheckStrategy_CheckServicesCache_OrderOfExecution_ComplexDepend
 	serviceEnvVarsSetter.AssertExpectations(t)
 	mockRegistry.AssertExpectations(t)
 }
+
+// TestParallelCheckStrategy_CheckServicesCache_OrderOfResults verifies that
+// cachedSvcs and notCachedSvcs are returned in the same order as svcsToBuild,
+// even when services have dependencies. This test specifically covers the change
+// that iterates over svcsToBuild instead of the nodes map to preserve order.
+func TestParallelCheckStrategy_CheckServicesCache_OrderOfResults(t *testing.T) {
+	manifestName := "test-manifest"
+	buildManifest := build.ManifestBuild{
+		"service1": &build.Info{Image: "image1"},
+		"service2": &build.Info{Image: "image2", DependsOn: []string{"service1"}},
+		"service3": &build.Info{Image: "image3", DependsOn: []string{"service1"}},
+		"service4": &build.Info{Image: "image4", DependsOn: []string{"service2", "service3"}},
+		"service5": &build.Info{Image: "image5", DependsOn: []string{"service4"}},
+	}
+	// Define services in a specific order (already ordered by dependencies from DAG.Ordered())
+	svcsToBuild := []string{"service1", "service2", "service3", "service4", "service5"}
+
+	strategy, _, hasher, cacheProbe, serviceEnvVarsSetter, mockRegistry := createTestParallelCheckStrategy()
+
+	// Setup mocks: service1 and service3 are cached, service2 is not cached
+	// service4 depends on service2 (not cached), so it will be marked as not cached without checking
+	// service5 depends on service4 (not cached), so it will be marked as not cached without checking
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service1").Return("hash1")
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service2").Return("hash2")
+	hasher.On("hashWithBuildContext", mock.AnythingOfType("*build.Info"), "service3").Return("hash3")
+	// service4 and service5 won't be checked because their dependencies are not cached
+
+	// service1 and service3 are cached
+	cacheProbe.On("IsCached", "test-manifest", "image1", "hash1", "service1").Return(true, "digest1", nil)
+	cacheProbe.On("IsCached", "test-manifest", "image3", "hash3", "service3").Return(true, "digest3", nil)
+
+	// service2 is not cached (service4 and service5 will be marked as not cached without checking)
+	cacheProbe.On("IsCached", "test-manifest", "image2", "hash2", "service2").Return(false, "", nil)
+
+	// Mock registry for cached services
+	mockRegistry.On("IsGlobalRegistry", "digest1").Return(false)
+	mockRegistry.On("IsGlobalRegistry", "digest3").Return(false)
+
+	// Mock SetServiceEnvVars for cached services
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service1", "digest1").Return()
+	serviceEnvVarsSetter.On("SetServiceEnvVars", "service3", "digest3").Return()
+
+	svcInfos := buildTypes.NewBuildInfos(manifestName, "test-namespace", "", svcsToBuild)
+	cached, notCached, err := strategy.CheckServicesCache(context.Background(), manifestName, buildManifest, svcInfos)
+
+	// Verify no error
+	assert.NoError(t, err)
+
+	// Verify the counts
+	assert.Len(t, cached, 2, "should have 2 cached services")
+	assert.Len(t, notCached, 3, "should have 3 not cached services")
+
+	// Convert to names for easier comparison
+	toNames := func(bis []*buildTypes.BuildInfo) []string {
+		out := make([]string, 0, len(bis))
+		for _, bi := range bis {
+			out = append(out, bi.Name())
+		}
+		return out
+	}
+
+	cachedNames := toNames(cached)
+	notCachedNames := toNames(notCached)
+
+	// Verify cached services are in the correct order
+	// service1 comes before service3 in svcsToBuild, so cached should be [service1, service3]
+	assert.Equal(t, []string{"service1", "service3"}, cachedNames, "cached services should maintain order from svcsToBuild")
+
+	// Verify not cached services are in the correct order
+	// service2, service4, service5 appear in that order in svcsToBuild
+	assert.Equal(t, []string{"service2", "service4", "service5"}, notCachedNames, "not cached services should maintain order from svcsToBuild")
+
+	hasher.AssertExpectations(t)
+	cacheProbe.AssertExpectations(t)
+	serviceEnvVarsSetter.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
+}
