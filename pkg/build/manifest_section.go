@@ -101,8 +101,8 @@ func getDependentNodes(g utils.Graph, startingNodes []string) []string {
 		svcsToDeploySet[svc] = true
 	}
 	// Use a queue to process all nodes, including those added during iteration
-	queue := make([]string, len(startingNodes))
-	copy(queue, startingNodes)
+	queue := make([]string, 0, len(startingNodes))
+	queue = append(queue, startingNodes...)
 
 	for i := 0; i < len(queue); i++ {
 		svcToDeploy := queue[i]
