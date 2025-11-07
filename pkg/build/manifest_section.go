@@ -96,25 +96,24 @@ func getListDiff(l1, l2 []string) []string {
 }
 
 func getDependentNodes(g utils.Graph, startingNodes []string) []string {
+	initialLength := len(startingNodes)
 	svcsToDeploySet := map[string]bool{}
 	for _, svc := range startingNodes {
 		svcsToDeploySet[svc] = true
 	}
-	// Use a queue to process all nodes, including those added during iteration
-	queue := make([]string, len(startingNodes))
-	copy(queue, startingNodes)
-
-	for i := 0; i < len(queue); i++ {
-		svcToDeploy := queue[i]
+	for _, svcToDeploy := range startingNodes {
 		for _, dependentSvc := range g[svcToDeploy] {
 			if _, ok := svcsToDeploySet[dependentSvc]; ok {
 				continue
 			}
-			queue = append(queue, dependentSvc)
+			startingNodes = append(startingNodes, dependentSvc)
 			svcsToDeploySet[dependentSvc] = true
 		}
 	}
-	return queue
+	if initialLength != len(startingNodes) {
+		return getDependentNodes(g, startingNodes)
+	}
+	return startingNodes
 }
 
 func (b ManifestBuild) toGraph() utils.Graph {

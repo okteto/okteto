@@ -156,18 +156,15 @@ func (s *SequentialCheckStrategy) cloneGlobalImageToDev(cachedImage, manifestNam
 // (directly or indirectly) are also marked as not cached without checking cache
 func (s *SequentialCheckStrategy) addDependentsToNotCached(svc *buildTypes.BuildInfo, dependantMap map[string][]string, processed map[string]bool, notCachedSvcs []*buildTypes.BuildInfo, buildInfoByName map[string]*buildTypes.BuildInfo) []*buildTypes.BuildInfo {
 	for _, dependent := range dependantMap[svc.Name()] {
-		if processed[dependent] {
-			continue
+		if !processed[dependent] {
+			processed[dependent] = true
+			bi, ok := buildInfoByName[dependent]
+			if ok {
+				notCachedSvcs = append(notCachedSvcs, bi)
+			}
+			// Recursively add dependents of this dependent
+			notCachedSvcs = s.addDependentsToNotCached(bi, dependantMap, processed, notCachedSvcs, buildInfoByName)
 		}
-		processed[dependent] = true
-		bi, ok := buildInfoByName[dependent]
-		if !ok {
-			continue
-		}
-
-		notCachedSvcs = append(notCachedSvcs, bi)
-		// Recursively add dependents of this dependent
-		notCachedSvcs = s.addDependentsToNotCached(bi, dependantMap, processed, notCachedSvcs, buildInfoByName)
 	}
 
 	return notCachedSvcs
