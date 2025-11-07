@@ -50,7 +50,6 @@ type serviceHasher struct {
 	serviceShaCache map[string]string
 
 	getCurrentTimestampNano func() int64
-	projectCommit           string
 
 	ioCtrl *io.Controller
 
@@ -68,24 +67,6 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGett
 		wdGetter:                wdGetter,
 		ioCtrl:                  ioCtrl,
 	}
-}
-
-// hashProjectCommit returns the hash of the repository's commit
-func (sh *serviceHasher) hashProjectCommit(buildInfo *build.Info) (string, error) {
-	sh.lock.Lock()
-	projectCommit := sh.projectCommit
-	sh.lock.Unlock()
-	if projectCommit == "" {
-		var err error
-		projectCommit, err = sh.gitRepoCtrl.GetSHA()
-		if err != nil {
-			return "", fmt.Errorf("could not get repository sha: %w", err)
-		}
-		sh.lock.Lock()
-		sh.projectCommit = projectCommit
-		sh.lock.Unlock()
-	}
-	return sh.hash(buildInfo, projectCommit, ""), nil
 }
 
 // hashBuildContext returns the hash of the service using its context tree hash
@@ -108,38 +89,46 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 
 	sh.ioCtrl.Logger().Infof("working directory: %s", osWD)
 	sh.ioCtrl.Logger().Infof("smart build context directory: %s", buildContext)
-	if _, ok := sh.serviceShaCache[service]; !ok {
-		errorGettingGitInfo := false
-		dirCommit, err := sh.gitRepoCtrl.GetLatestDirSHA(buildContext)
-		if err != nil {
-			errorGettingGitInfo = true
 
-			sh.ioCtrl.Logger().Infof("could not get build context sha: %s, generating a random one", err)
-			// In case of error getting the dir commit, we just generate a random one, and it will rebuild the image
-			dirCommit = sh.calculateRandomShaForService(service)
-		}
-
-		diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
-		if err != nil {
-			errorGettingGitInfo = true
-			sh.ioCtrl.Logger().Infof("could not get build context diff sha: %s, generating a random one", err)
-			// In case of error getting the diff hash, we just generate a random one, and it will rebuild the image
-			diffHash = sh.calculateRandomShaForService(service)
-		}
-
-		// This is to display just one single warning if any of the git operation fails. As we generate random sha
-		// it will imply a new build of image, and we want to warn users
-		if errorGettingGitInfo {
-			sh.ioCtrl.Out().Warning("Smart builds cannot access git metadata, building image %q...", service)
-		}
-
-		sh.lock.Lock()
-		hash := sh.hash(buildInfo, dirCommit, diffHash)
-		sh.serviceShaCache[service] = hash
-		sh.lock.Unlock()
+	// Use read lock to check if cache exists
+	sh.lock.RLock()
+	hash, ok := sh.serviceShaCache[service]
+	sh.lock.RUnlock()
+	if ok {
+		return hash
 	}
 
-	return sh.serviceShaCache[service]
+	// Use write lock to compute the hash and cache it
+	sh.lock.Lock()
+	defer sh.lock.Unlock()
+
+	errorGettingGitInfo := false
+	dirCommit, err := sh.gitRepoCtrl.GetLatestDirSHA(buildContext)
+	if err != nil {
+		errorGettingGitInfo = true
+
+		sh.ioCtrl.Logger().Infof("could not get build context sha: %s, generating a random one", err)
+		// In case of error getting the dir commit, we just generate a random one, and it will rebuild the image
+		dirCommit = sh.calculateRandomShaForService(service)
+	}
+
+	diffHash, err := sh.gitRepoCtrl.GetDiffHash(buildContext)
+	if err != nil {
+		errorGettingGitInfo = true
+		sh.ioCtrl.Logger().Infof("could not get build context diff sha: %s, generating a random one", err)
+		// In case of error getting the diff hash, we just generate a random one, and it will rebuild the image
+		diffHash = sh.calculateRandomShaForService(service)
+	}
+
+	// This is to display just one single warning if any of the git operation fails. As we generate random sha
+	// it will imply a new build of image, and we want to warn users
+	if errorGettingGitInfo {
+		sh.ioCtrl.Out().Warning("Smart builds: git metadata unavailable for %q", service)
+	}
+
+	hash = sh.hash(buildInfo, dirCommit, diffHash)
+	sh.serviceShaCache[service] = hash
+	return hash
 }
 
 // calculateRandomShaForService generates a random sha for the given service taking into account current timestamp

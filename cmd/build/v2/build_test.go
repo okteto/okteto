@@ -22,7 +22,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/okteto/okteto/cmd/build/basic"
+	"github.com/okteto/okteto/cmd/build/v2/environment"
 	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
+	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -108,6 +110,7 @@ func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	}
 	return imageTag, nil
 }
+
 func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
 
 func (fr fakeRegistry) AddImageByName(images ...string) error {
@@ -156,17 +159,52 @@ func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string)    { re
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)      { return "", "" }
 func (fr fakeRegistry) GetDevImageFromGlobal(imageWithDigest string) string { return "" }
 
-func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
+type fakeImageConfig struct{}
+
+func (fic *fakeImageConfig) IsOktetoCluster() bool {
+	return true
+}
+
+func (fic *fakeImageConfig) GetGlobalNamespace() string {
+	return "okteto-global"
+}
+
+func (fic *fakeImageConfig) GetNamespace() string {
+	return "test"
+}
+
+func (fic *fakeImageConfig) GetRegistryURL() string {
+	return "my-registry"
+}
+
+func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registryIface oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
+	ioCtrl := io.NewIOController()
+	// Smart builds are enabled by default, and now sequential strategy is used as fallback
+	// when parallel is not implemented, so CheckStrategy should never be nil
+	config := smartbuild.NewConfig()
+	imageCtrl := registry.NewImageCtrl(&fakeImageConfig{})
+	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(
+		fakeConfigRepo{},
+		registryIface,
+		afero.NewMemMapFs(),
+		ioCtrl,
+		fakeWorkingDirGetter{},
+		config,
+		newImageTagger(cfg, nil),
+		imageCtrl,
+		environment.NewServiceEnvVarsHandler(ioCtrl, registryIface),
+		"test-namespace",
+		"test-registry.com",
+	)
 	return &OktetoBuilder{
-		Registry:          registry,
-		buildEnvironments: make(map[string]string),
+		Registry: registryIface,
 		Builder: basic.Builder{
 			BuildRunner: builder,
-			IoCtrl:      io.NewIOController(),
+			IoCtrl:      ioCtrl,
 		},
 		Config:         cfg,
-		ioCtrl:         io.NewIOController(),
-		smartBuildCtrl: smartbuild.NewSmartBuildCtrl(fakeConfigRepo{}, registry, afero.NewMemMapFs(), io.NewIOController(), fakeWorkingDirGetter{}),
+		ioCtrl:         ioCtrl,
+		smartBuildCtrl: smartBuildCtrl,
 		oktetoContext: &okteto.ContextStateless{
 			Store: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
@@ -179,6 +217,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registry oktetoRegi
 				CurrentContext: "test",
 			},
 		},
+		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(ioCtrl, registryIface),
 	}
 }
 
@@ -288,7 +327,8 @@ func TestTwoStepsBuild(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	require.NoError(t, err)
 	require.Equal(t, "okteto.dev/test-test:okteto", image)
@@ -319,7 +359,8 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -353,7 +394,8 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -388,7 +430,8 @@ func TestBuildWithStack(t *testing.T) {
 			},
 		},
 	}
-	image, err := bc.buildServiceImages(ctx, manifest, "test", &types.BuildOptions{})
+	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -474,116 +517,4 @@ func TestBuildWithDependsOn(t *testing.T) {
 		}
 	}
 
-}
-
-func Test_areAllServicesBuilt(t *testing.T) {
-	tests := []struct {
-		name     string
-		control  map[string]bool
-		input    []string
-		expected bool
-	}{
-		{
-			name:     "all built",
-			expected: true,
-			input:    []string{"one", "two", "three"},
-			control: map[string]bool{
-				"one":   true,
-				"two":   true,
-				"three": true,
-			},
-		},
-		{
-			name:     "none built",
-			expected: false,
-			input:    []string{"one", "two", "three"},
-			control:  map[string]bool{},
-		},
-		{
-			name:     "some built",
-			expected: false,
-			input:    []string{"one", "two", "three"},
-			control: map[string]bool{
-				"one": true,
-				"two": true,
-			},
-		},
-		{
-			name:     "nil control",
-			expected: false,
-			input:    []string{"one", "two", "three"},
-		},
-		{
-			name:     "nil input",
-			expected: true,
-			control: map[string]bool{
-				"one": true,
-				"two": true,
-			},
-		},
-		{
-			name:     "empty input",
-			expected: true,
-			input:    []string{},
-			control: map[string]bool{
-				"one": true,
-				"two": true,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := areAllServicesBuilt(tt.input, tt.control)
-			require.Equal(t, tt.expected, got)
-		})
-
-	}
-}
-
-func Test_skipServiceBuild(t *testing.T) {
-	tests := []struct {
-		name     string
-		control  map[string]bool
-		input    string
-		expected bool
-	}{
-		{
-			name:     "is built",
-			expected: true,
-			input:    "one",
-			control: map[string]bool{
-				"one":   true,
-				"two":   true,
-				"three": true,
-			},
-		},
-		{
-			name:     "not built",
-			expected: false,
-			input:    "one",
-			control:  map[string]bool{},
-		},
-		{
-			name:     "nil control",
-			expected: false,
-			input:    "one",
-		},
-		{
-			name:     "empty input",
-			expected: false,
-			control: map[string]bool{
-				"one": true,
-				"two": true,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := skipServiceBuild(tt.input, tt.control)
-			require.Equal(t, tt.expected, got)
-		})
-
-	}
 }

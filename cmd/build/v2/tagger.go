@@ -29,9 +29,9 @@ var extendedImageRegex = regexp.MustCompile(`^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+\/
 
 type imageTaggerInterface interface {
 	getServiceDevImageReference(manifestName, svcName string, b *build.Info) string
-	getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
-	getImageReferencesForDeploy(manifestName, svcToBuildName string) []string
-	getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string
+	GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string
+	GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string
+	GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string
 }
 
 type smartBuildController interface {
@@ -83,7 +83,7 @@ func (it imageTagger) getServiceDevImageReference(manifestName, svcName string, 
 	return useReferenceTemplate(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 }
 
-func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
+func (it imageTagger) GetGlobalTagFromDevIfNeccesary(tags, namespace, registryURL, buildHash string, ic registry.ImageCtrl) string {
 	if !it.cfg.HasGlobalAccess() || !it.smartBuildController.IsEnabled() || buildHash == "" {
 		return ""
 	}
@@ -108,8 +108,8 @@ func (it imageTagger) getGlobalTagFromDevIfNeccesary(tags, namespace, registryUR
 	return globalWithHash
 }
 
-// getImageReferencesForTag returns all the possible images references that can be used for build with the given tag
-func (it imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
+// GetImageReferencesForTag returns all the possible images references that can be used for build with the given tag
+func (it imageTagger) GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
 	}
@@ -124,9 +124,9 @@ func (it imageTagger) getImageReferencesForTag(manifestName, svcToBuildName, tag
 	return referencesToCheck
 }
 
-// getImageReferencesForDeploy returns the list of images references for a service when deploying it. In case of deploy,
+// GetImageReferencesForDeploy returns the list of images references for a service when deploying it. In case of deploy,
 // we only have to check if the image is present with the okteto tag. We don't check anything related to the hash
-func (imageTagger) getImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
+func (imageTagger) GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	imageReferences := []string{useReferenceTemplate(constants.DevRegistry, sanitizedName, svcToBuildName, model.OktetoDefaultImageTag)}
 

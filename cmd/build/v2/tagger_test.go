@@ -217,7 +217,7 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 					isOkteto: true,
 				},
 				&fakeSmartBuildCtrl{})
-			assert.Equal(t, tc.expectedImages, tagger.getImageReferencesForTag("test", "test", tc.sha))
+			assert.Equal(t, tc.expectedImages, tagger.GetImageReferencesForTag("test", "test", tc.sha))
 		})
 	}
 }
@@ -253,7 +253,7 @@ func TestImageTaggerWithoutVolumesGetImageReferenceForDeploy(t *testing.T) {
 	imageTagger := &imageTagger{}
 	expected := []string{"okteto.dev/test-repository-service-a:okteto"}
 
-	result := imageTagger.getImageReferencesForDeploy("test repository", "service-a")
+	result := imageTagger.GetImageReferencesForDeploy("test repository", "service-a")
 
 	require.Equal(t, expected, result)
 }
@@ -325,7 +325,7 @@ func Test_getGlobalTagFromDevIfNeccesary(t *testing.T) {
 				registryURL: "myregistry.com",
 				namespace:   "test",
 			})
-			result := imageTagger.getGlobalTagFromDevIfNeccesary(tc.tags, "test", "myregistry.com", tc.buildHash, iCtrl)
+			result := imageTagger.GetGlobalTagFromDevIfNeccesary(tc.tags, "test", "myregistry.com", tc.buildHash, iCtrl)
 			assert.Equal(t, tc.expectedResult, result)
 		})
 	}
