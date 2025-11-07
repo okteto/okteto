@@ -35,7 +35,7 @@ orbs:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.8.2
+      - image: okteto/golang-ci:2.8.3
     environment:
       OKTETO_CONTEXT: https://okteto.integration.dev.okteto.net
       OKTETO_APPS_SUBDOMAIN: integration.dev.okteto.net
@@ -47,7 +47,8 @@ jobs:
     executor: golang-ci
     resource_class: large
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - golangci-lint-cache-v2-{{ checksum ".golangci.yml" }}-{{ checksum "go.sum" }}
@@ -62,7 +63,8 @@ jobs:
     executor: golang-ci
     resource_class: large
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v1-bin-pkg-cache-{{ checksum "go.sum" }}
@@ -88,7 +90,8 @@ jobs:
   check-schema:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - attach_workspace:
           at: ./artifacts
       - run:
@@ -106,7 +109,8 @@ jobs:
   run-unit-test:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: full
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -133,7 +137,8 @@ jobs:
       name: win/server-2022
       version: 2024.04.1
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - run:
           name: Check Golang version
           command: go version
@@ -150,7 +155,8 @@ jobs:
   e2e-actions:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -169,7 +175,8 @@ jobs:
   e2e-build:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -186,7 +193,8 @@ jobs:
   e2e-deploy:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -208,7 +216,8 @@ jobs:
   e2e-up:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -231,7 +240,8 @@ jobs:
   e2e-okteto:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -252,7 +262,8 @@ jobs:
   e2e-okteto-test:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -273,7 +284,8 @@ jobs:
   test-e2e-setup:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v4-pkg-cache-{{ checksum "go.sum" }}
@@ -297,7 +309,8 @@ jobs:
   test-release:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - attach_workspace:
           at: ./artifacts
       - add_ssh_keys:
@@ -325,7 +338,8 @@ jobs:
       OKTETO_NAMESPACE_PREFIX: integration
       OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -352,7 +366,8 @@ jobs:
       OKTETO_NAMESPACE_PREFIX: integration
       OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -389,7 +404,8 @@ jobs:
       OKTETO_NAMESPACE_PREFIX: integration
       OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -426,7 +442,8 @@ jobs:
       OKTETO_NAMESPACE_PREFIX: integration
       OKTETO_SKIP_CLUSTER_CLI_VERSION: true
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -456,7 +473,8 @@ jobs:
   push-image-tag:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: full
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
@@ -464,7 +482,8 @@ jobs:
   push-image-dev:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: full
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG",dev "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
@@ -472,7 +491,8 @@ jobs:
   push-image-master:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: full
       - run: *docker-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
@@ -480,14 +500,16 @@ jobs:
   upload-static-job:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - run: *init-gcloud
       - run: 'gsutil -m -h "Cache-Control: no-store" -h "Content-Type: text/x-sh" cp ./scripts/get-okteto.sh gs://get.okteto.com/get-okteto.sh'
 
   release-brew-formula:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: blobless
       - attach_workspace:
           at: ./artifacts
       - run: *init-gcloud
@@ -507,7 +529,8 @@ jobs:
   release-gh-actions:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: full
       - run: *init-gcloud
       - add_ssh_keys:
           fingerprints:
@@ -529,7 +552,8 @@ jobs:
   release-branch-job:
     executor: golang-ci
     steps:
-      - checkout
+      - checkout:
+          method: full
       - add_ssh_keys:
           fingerprints:
             # This key belongs to oktetobot user in GitHub
