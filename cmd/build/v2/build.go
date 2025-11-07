@@ -324,7 +324,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcInfo.Name()], isStackManifest)
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash = svcInfo.GetBuildHash()
+		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcInfo.Name())
 	}
 	it := newImageTagger(bc.Config, bc.smartBuildCtrl)
 	tagsToBuild := it.getServiceDevImageReference(manifest.Name, svcInfo.Name(), buildSvcInfo)
