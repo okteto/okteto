@@ -255,6 +255,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		}
 		sp := ob.ioCtrl.Out().Spinner("Checking if the images are already built from cache...")
 		sp.Start()
+		defer sp.Stop()
 		cachedSvcs, notCachedSvcs, err = ob.smartBuildCtrl.CheckServicesCache(ctx, options.Manifest.Name, options.Manifest.Build, svcInfos)
 		if err != nil {
 			return fmt.Errorf("error checking images: %w", err)
@@ -323,7 +324,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcInfo.Name()], isStackManifest)
 	var buildHash string
 	if bc.smartBuildCtrl.IsEnabled() {
-		buildHash = svcInfo.GetBuildHash()
+		buildHash = bc.smartBuildCtrl.GetBuildHash(buildSvcInfo, svcInfo.Name())
 	}
 	it := newImageTagger(bc.Config, bc.smartBuildCtrl)
 	tagsToBuild := it.getServiceDevImageReference(manifest.Name, svcInfo.Name(), buildSvcInfo)
