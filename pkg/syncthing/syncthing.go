@@ -325,7 +325,7 @@ func (s *Syncthing) Run() error {
 	}
 
 	if s.ResetDatabase {
-		cmd := exec.Command(s.binPath, "-home", s.Home, "-reset-database")
+		cmd := exec.Command(s.binPath, "debug", "--home", s.Home, "reset-database")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			oktetoLog.Errorf("error resetting syncthing database: %s\n%s", err.Error(), output)
