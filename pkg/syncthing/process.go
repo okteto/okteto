@@ -17,7 +17,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/shirou/gopsutil/v4/process"
+	"github.com/shirou/gopsutil/process"
 )
 
 func terminate(p *process.Process, wait bool) error {

@@ -37,7 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/shirou/gopsutil/v4/process"
+	"github.com/shirou/gopsutil/process"
 	"github.com/spf13/afero"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v2"
