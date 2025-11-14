@@ -78,6 +78,9 @@
         tags=""
         for tag in "${tags_array[@]}"; do
                 tags+="-t $tag "
+                # Add GitHub Container Registry tag
+                tags+="-t ghcr.io/$tag "
+                echo "  DEBUG: Added ghcr.io tag: ghcr.io/$tag"
         done
         echo "DEBUG: Final tags string: ${tags}"
 

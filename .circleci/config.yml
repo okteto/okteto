@@ -10,6 +10,7 @@ aliases:
   - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
   - &release-branch-regex /^release-\d+\.\d+$/
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+  - &github-packages-login echo "$GITHUB_PACKAGES_OKTETOBOT_TOKEN" | docker login ghcr.io -u "oktetobot" --password-stdin
   - &install-cli curl https://get.okteto.com -sSfL | sh
 
 parameters:
@@ -476,6 +477,7 @@ jobs:
       - checkout:
           method: full
       - run: *docker-login
+      - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
 
@@ -485,6 +487,7 @@ jobs:
       - checkout:
           method: full
       - run: *docker-login
+      - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG",dev "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
 
@@ -494,6 +497,7 @@ jobs:
       - checkout:
           method: full
       - run: *docker-login
+      - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
       - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
 
@@ -698,6 +702,8 @@ workflows:
                 - master
                 - *release-branch-regex
       - push-image-master:
+          context:
+            - internal-tooling
           requires:
             - build-binaries
           filters:
@@ -766,6 +772,8 @@ workflows:
       - run-unit-test
       - run-windows-unit-test
       - push-image-dev:
+          context:
+            - internal-tooling
           requires:
             - build-binaries
       - release-job:
@@ -800,6 +808,8 @@ workflows:
             tags:
               ignore: *release-regex
       - push-image-tag:
+          context:
+            - internal-tooling
           requires:
             - build-binaries
           filters:
