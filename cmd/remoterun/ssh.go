@@ -183,27 +183,21 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 		// When local->remote copy completes (local closed or error),
 		// close remote connection to signal EOF and unblock remote->local copy
 		closeRemote()
-		oktetoLog.SetStage("Stopped copy from local to remote")
-		oktetoLog.Infof("Fooo")
 		if err != nil && !errors.Is(err, net.ErrClosed) {
 			return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
 		}
-		oktetoLog.Infof("Local ssh agent closed")
 		return nil
 	})
 
 	// Forward data from remote to local
 	eg.Go(func() error {
 		_, err := io.Copy(localConn, remoteConn)
-		oktetoLog.SetStage("Stopped copy from remote to local")
-		oktetoLog.Infof("Baaaar")
 		// When remote->local copy completes (remote closed or error),
 		// close local connection to signal EOF and unblock local->remote copy
 		closeLocal()
 		if err != nil && !errors.Is(err, net.ErrClosed) {
 			return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
 		}
-		oktetoLog.Infof("Remote ssh agent closed")
 		return nil
 	})
 
