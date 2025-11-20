@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -100,7 +101,13 @@ func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, 
 }
 
 func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn, host, port, userToken string, timeout time.Duration) error {
-	defer localConn.Close()
+	var closeLocalOnce sync.Once
+	closeLocal := func() {
+		closeLocalOnce.Do(func() {
+			localConn.Close()
+		})
+	}
+	defer closeLocal()
 
 	cfg := s.getTLSConfig()
 
@@ -110,7 +117,14 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 		oktetoLog.Errorf("Failed to connect to remote SSH agent: %v", err)
 		return fmt.Errorf("failed to connect to remote SSH agent: %v", err)
 	}
-	defer remoteConn.Close()
+
+	var closeRemoteOnce sync.Once
+	closeRemote := func() {
+		closeRemoteOnce.Do(func() {
+			remoteConn.Close()
+		})
+	}
+	defer closeRemote()
 
 	// Set timeout for auth request
 	err = remoteConn.SetWriteDeadline(time.Now().Add(timeout))
@@ -157,26 +171,19 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	go func() {
 		<-ctx.Done()
-		localConn.Close()
-		remoteConn.Close()
+		closeLocal()
+		closeRemote()
 	}()
 
 	var eg errgroup.Group
 
-	err = localConn.SetDeadline(time.Now().Add(timeout))
-	if err != nil {
-		oktetoLog.Infof("failed to set timeout to the local socket: %v", err)
-	}
-
-	err = remoteConn.SetDeadline(time.Now().Add(timeout))
-	if err != nil {
-		oktetoLog.Infof("failed to set timeout to the remote ssh connection: %v", err)
-	}
-
 	// Forward data from local to remote
 	eg.Go(func() error {
 		_, err := io.Copy(remoteConn, localConn)
-		if err != nil {
+		// When local->remote copy completes (local closed or error),
+		// close remote connection to signal EOF and unblock remote->local copy
+		closeRemote()
+		if err != nil && !errors.Is(err, net.ErrClosed) {
 			return fmt.Errorf("error while sending data to remote SSH agent: %w", err)
 		}
 		return nil
@@ -185,7 +192,10 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 	// Forward data from remote to local
 	eg.Go(func() error {
 		_, err := io.Copy(localConn, remoteConn)
-		if err != nil {
+		// When remote->local copy completes (remote closed or error),
+		// close local connection to signal EOF and unblock local->remote copy
+		closeLocal()
+		if err != nil && !errors.Is(err, net.ErrClosed) {
 			return fmt.Errorf("error while receiving data from remote SSH agent: %w", err)
 		}
 		return nil
