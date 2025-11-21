@@ -24,6 +24,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/build/buildkit"
+	"github.com/okteto/okteto/pkg/build/buildkit/connector"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -43,6 +44,8 @@ import (
 const (
 	warningDockerfilePath   string = "Build '%s': Dockerfile '%s' is not in a relative path to context '%s'"
 	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
+
+	OktetoBuildQueueEnabledEnvVar string = "OKTETO_BUILD_QUEUE_ENABLED"
 )
 
 // OktetoBuilderInterface runs the build of an image
@@ -51,12 +54,23 @@ type OktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
+// buildkitConnector is the interface for the buildkit connector
+type buildkitConnector interface {
+	// WaitUntilIsReady waits for the buildkit server to be ready
+	WaitUntilIsReady(ctx context.Context) error
+	// GetClientFactory returns the client factory
+	GetClientFactory() *connector.ClientFactory
+	// GetWaiter returns the waiter
+	GetWaiter() *connector.Waiter
+}
+
 // OktetoBuilder runs the build of an image
 type OktetoBuilder struct {
 	OktetoContext OktetoContextInterface
 	Fs            afero.Fs
 	metadata      *buildkit.BuildMetadata
 	logger        *io.Controller
+	connector     buildkitConnector
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
@@ -71,11 +85,19 @@ type OktetoRegistryInterface interface {
 // NewOktetoBuilder creates a new instance of OktetoBuilder.
 // It takes an OktetoContextInterface and afero.Fs as parameters and returns a pointer to OktetoBuilder.
 func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs, logger *io.Controller) *OktetoBuilder {
+	var buildkitConnector buildkitConnector
+	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
+		buildkitConnector = connector.NewDirectConnector(context, logger)
+	} else {
+		// TODO: Implement the buildkit connector for the build queue
+		buildkitConnector = connector.NewDirectConnector(context, logger)
+	}
+
 	return &OktetoBuilder{
-		OktetoContext: context,
-		Fs:            fs,
-		metadata:      &buildkit.BuildMetadata{},
-		logger:        logger,
+		OktetoContext: context, Fs: fs,
+		metadata:  &buildkit.BuildMetadata{},
+		logger:    logger,
+		connector: buildkitConnector,
 	}
 }
 
@@ -155,22 +177,13 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
-	buildkitClientFactory := buildkit.NewBuildkitClientFactory(
-		ob.OktetoContext.GetCurrentCertStr(),
-		ob.OktetoContext.GetCurrentBuilder(),
-		ob.OktetoContext.GetCurrentToken(),
-		config.GetCertificatePath(),
-		ioCtrl)
-
-	buildkitWaiter := buildkit.NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
-
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
-	if err := buildkitWaiter.WaitUntilIsUp(ctx); err != nil {
+	if err := ob.connector.WaitUntilIsReady(ctx); err != nil {
 		return err
 	}
 
-	optBuilder, err := buildkit.NewSolveOptBuilder(buildkitClientFactory, reg, ob.OktetoContext, ob.Fs, ioCtrl)
+	optBuilder, err := buildkit.NewSolveOptBuilder(ob.connector.GetClientFactory(), reg, ob.OktetoContext, ob.Fs, ioCtrl)
 	if err != nil {
 		return err
 	}
@@ -180,7 +193,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
 
-	buildSolver := buildkit.NewBuildkitRunner(buildkitClientFactory, buildkitWaiter, reg, run, ioCtrl)
+	buildSolver := buildkit.NewBuildkitRunner(ob.connector.GetClientFactory(), ob.connector.GetWaiter(), reg, run, ioCtrl)
 
 	if err := buildSolver.Run(ctx, opt, buildOptions.OutputMode); err != nil {
 		return err
