@@ -73,7 +73,7 @@ func Test_GetKubeToken(t *testing.T) {
 				httpClient: fakeHttpServer.Client(),
 			}
 
-			got, err := fakeKubetokenClient.GetKubeToken(fakeHttpServer.URL, tt.namespace)
+			got, err := fakeKubetokenClient.GetKubeToken(fakeHttpServer.URL, tt.namespace, "buildkit")
 			if tt.expectedToken != "" {
 				assert.Equal(t, tt.expectedToken, got.Status.Token)
 			}

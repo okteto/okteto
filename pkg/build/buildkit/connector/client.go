@@ -93,6 +93,7 @@ type ClientFactory struct {
 	token                 string
 	builder               string
 	certificatePath       string
+	tlsServerName         string
 }
 
 // NewBuildkitClientFactory creates a new buildkit client factory
@@ -108,6 +109,10 @@ func NewBuildkitClientFactory(cert, builder, token, certificatePath string, l *i
 		buildkitClientCreator: &realBuildkitClientCreator{},
 		logger:                l,
 	}
+}
+
+func (bcf *ClientFactory) SetTLSServerName(serverName string) {
+	bcf.tlsServerName = serverName
 }
 
 // GetBuildkitClient returns a buildkit client
@@ -148,7 +153,12 @@ func (bcf *ClientFactory) getClientWithCert(ctx context.Context) (*client.Client
 		return nil, fmt.Errorf("invalid buildkit service host %s: %w", bcf.builder, err)
 	}
 
-	creds := client.WithCAAndSystemRoot(buildkitURL.Hostname(), bcf.certificatePath)
+	serverName := buildkitURL.Hostname()
+	if bcf.tlsServerName != "" {
+		serverName = bcf.tlsServerName
+	}
+
+	creds := client.WithCAAndSystemRoot(serverName, bcf.certificatePath)
 	oauthToken := &oauth2.Token{
 		AccessToken: bcf.token,
 	}
