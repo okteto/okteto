@@ -48,7 +48,6 @@ type buildKitPodWaitingFragment struct {
 
 type buildkitClient struct {
 	client graphqlClientInterface
-	url    string
 }
 
 func newBuildkitClient(client graphqlClientInterface) *buildkitClient {
