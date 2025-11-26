@@ -46,6 +46,7 @@ type Client struct {
 	stream    types.StreamInterface
 	kubetoken types.KubetokenInterface
 	endpoint  types.EndpointClientInterface
+	buildkit  types.BuildkitInterface
 }
 
 type ClientProvider struct{}
@@ -320,6 +321,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Cli
 	c.stream = newStreamClient(httpClient)
 	c.kubetoken = newKubeTokenClient(httpClient)
 	c.endpoint = newEndpointClient(c.client)
+	c.buildkit = newBuildkitClient(c.client)
 	return c, nil
 }
 
@@ -491,6 +493,11 @@ func (c *Client) Kubetoken() types.KubetokenInterface {
 // Endpoint retrieves the Endpoint client
 func (c *Client) Endpoint() types.EndpointClientInterface {
 	return c.endpoint
+}
+
+// Buildkit retrieves the Buildkit client
+func (c *Client) Buildkit() types.BuildkitInterface {
+	return c.buildkit
 }
 
 func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {

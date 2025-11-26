@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 )
 
-type OktetoContextIface interface {
+type DirectOktetoContextInterface interface {
 	GetCurrentCertStr() string
 	GetCurrentBuilder() string
 	GetCurrentToken() string
@@ -32,7 +32,7 @@ type DirectConnector struct {
 }
 
 // NewDirectConnector creates a new direct connector. It connects to the buildkit server directly.
-func NewDirectConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *DirectConnector {
+func NewDirectConnector(okCtx DirectOktetoContextInterface, ioCtrl *io.Controller) *DirectConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
 		okCtx.GetCurrentCertStr(),
 		okCtx.GetCurrentBuilder(),

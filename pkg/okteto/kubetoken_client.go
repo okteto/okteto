@@ -51,10 +51,17 @@ func getKubetokenURL(baseURL, namespace string) (*url.URL, error) {
 	return url.Parse(fmt.Sprintf(kubetokenPathTemplate, baseURL, namespace))
 }
 
-func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTokenResponse, error) {
+func (c *kubeTokenClient) GetKubeToken(baseURL, namespace, target string) (types.KubeTokenResponse, error) {
 	endpoint, err := getKubetokenURL(baseURL, namespace)
 	if err != nil {
 		return types.KubeTokenResponse{}, err
+	}
+
+	if target != "" {
+		q := endpoint.Query()
+		q.Set("target", target)
+		endpoint.RawQuery = q.Encode()
+		oktetoLog.Infof("requesting kubetoken with target=%s", target)
 	}
 
 	resp, err := c.httpClient.Get(endpoint.String())
