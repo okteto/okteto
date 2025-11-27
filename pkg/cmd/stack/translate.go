@@ -343,7 +343,7 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", svcName),
-		Image:           config.NewImageConfig(oktetoLog.GetOutputWriter()).GetOktetoImage(),
+		Image:           config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage(),
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         initContainerCommand,
 		VolumeMounts:    initContainerVolumeMounts,

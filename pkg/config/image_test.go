@@ -18,76 +18,9 @@ import (
 
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func Test_GetRemoteImage(t *testing.T) {
-	var tests = []struct {
-		name                                          string
-		versionString, expected, cliImageEnv, cliRepo string
-	}{
-		{
-			name:          "no version string and no env return stable",
-			versionString: "",
-			expected:      "okteto/okteto:stable",
-		},
-		{
-			name:          "no version string return env value",
-			versionString: "",
-			cliImageEnv:   "okteto/remote:test",
-			expected:      "okteto/remote:test",
-		},
-		{
-			name:          "found version string",
-			versionString: "2.2.2",
-			expected:      "okteto/okteto:2.2.2",
-		},
-		{
-			name:          "found incorrect version string return stable",
-			versionString: "2.a.2",
-			expected:      "okteto/okteto:stable",
-		},
-		{
-			name:          "Cluster Repo / no version string and no env return stable",
-			versionString: "",
-			cliRepo:       "cluster/cli",
-			expected:      "cluster/cli:stable",
-		},
-		{
-			name:          "Cluster Repo / no version string return env value",
-			versionString: "",
-			cliRepo:       "cluster/cli",
-			cliImageEnv:   "okteto/remote:test",
-			expected:      "okteto/remote:test",
-		},
-		{
-			name:          "Cluster Repo / found version string",
-			versionString: "2.2.2",
-			cliRepo:       "cluster/cli",
-			expected:      "cluster/cli:2.2.2",
-		},
-		{
-			name:          "Cluster Repo / found incorrect version string return stable",
-			versionString: "2.a.2",
-			cliRepo:       "cluster/cli",
-			expected:      "cluster/cli:stable",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.cliImageEnv != "" {
-				t.Setenv(oktetoDeployRemoteImageEnvVar, tt.cliImageEnv)
-			}
-			ClusterCliRepository = tt.cliRepo
-			version := NewImageConfig(io.NewIOController()).GetRemoteImage(tt.versionString)
-			require.Equal(t, version, tt.expected)
-		})
-	}
-}
-
-func TestGetBinImage(t *testing.T) {
+func TestGetCliImage(t *testing.T) {
 	testCases := []struct {
 		name          string
 		envVars       map[string]string
@@ -96,32 +29,61 @@ func TestGetBinImage(t *testing.T) {
 		expectedLogs  []string
 	}{
 		{
-			name: "Environment variable OKTETO_BIN is set",
+			name: "Environment variable OKTETO_CLI_IMAGE is set",
+			envVars: map[string]string{
+				oktetoCLIImageEnvVar: "mycustomimage:tag",
+			},
+			versionString: "1.2.3",
+			expectedImage: "mycustomimage:tag",
+			expectedLogs:  []string{"using okteto cli image (from OKTETO_CLI_IMAGE): mycustomimage:tag"},
+		},
+		{
+			name: "Environment variable OKTETO_BIN is set (backward compatibility)",
 			envVars: map[string]string{
 				oktetoBinEnvVar: "mycustomimage:tag",
 			},
 			versionString: "1.2.3",
 			expectedImage: "mycustomimage:tag",
-			expectedLogs:  []string{"using okteto bin image (from env var): mycustomimage:tag"},
+			expectedLogs:  []string{"using okteto cli image (from OKTETO_BIN): mycustomimage:tag"},
 		},
 		{
-			name: "Environment variable OKTETO_BIN is set to beta",
+			name: "Environment variable OKTETO_REMOTE_CLI_IMAGE is set (backward compatibility)",
 			envVars: map[string]string{
-				oktetoBinEnvVar: "mycustomimage:tag",
+				oktetoDeployRemoteImageEnvVar: "mycustomimage:tag",
 			},
-			versionString: "1.2.3-beta.1",
+			versionString: "1.2.3",
 			expectedImage: "mycustomimage:tag",
-			expectedLogs:  []string{"using okteto bin image (from env var): mycustomimage:tag"},
+			expectedLogs:  []string{"using okteto cli image (from OKTETO_REMOTE_CLI_IMAGE): mycustomimage:tag"},
 		},
 		{
-			name:          "OKTETO_BIN not set, valid VersionString",
+			name: "OKTETO_CLI_IMAGE takes precedence over OKTETO_BIN",
+			envVars: map[string]string{
+				oktetoCLIImageEnvVar: "newimage:tag",
+				oktetoBinEnvVar:      "oldimage:tag",
+			},
+			versionString: "1.2.3",
+			expectedImage: "newimage:tag",
+			expectedLogs:  []string{"using okteto cli image (from OKTETO_CLI_IMAGE): newimage:tag"},
+		},
+		{
+			name: "OKTETO_CLI_IMAGE takes precedence over OKTETO_REMOTE_CLI_IMAGE",
+			envVars: map[string]string{
+				oktetoCLIImageEnvVar:          "newimage:tag",
+				oktetoDeployRemoteImageEnvVar: "oldimage:tag",
+			},
+			versionString: "1.2.3",
+			expectedImage: "newimage:tag",
+			expectedLogs:  []string{"using okteto cli image (from OKTETO_CLI_IMAGE): newimage:tag"},
+		},
+		{
+			name:          "No env vars set, valid VersionString",
 			envVars:       map[string]string{},
 			versionString: "1.2.3",
 			expectedImage: "okteto/okteto:1.2.3",
-			expectedLogs:  []string{"using okteto bin image (from cli version): 1.2.3"},
+			expectedLogs:  []string{"using okteto cli image (from cli version): 1.2.3"},
 		},
 		{
-			name:          "OKTETO_BIN not set, invalid VersionString",
+			name:          "No env vars set, invalid VersionString",
 			envVars:       map[string]string{},
 			versionString: "invalidversion",
 			expectedImage: "okteto/okteto:master",
@@ -145,50 +107,48 @@ func TestGetBinImage(t *testing.T) {
 				cliRepository: "okteto/okteto",
 			}
 
-			image := c.GetBinImage()
+			image := c.GetCliImage()
 			assert.Equal(t, tc.expectedImage, image)
 
 		})
 	}
 }
 
-func TestGetOktetoImage(t *testing.T) {
+func TestClusterCliRepositoryOverridesDefault(t *testing.T) {
+	// Save original value
+	originalClusterRepo := ClusterCliRepository
+	defer func() {
+		ClusterCliRepository = originalClusterRepo
+	}()
+
 	testCases := []struct {
 		name          string
+		clusterRepo   string
 		versionString string
 		expectedImage string
-		expectedLogs  []string
 	}{
 		{
-			name:          "VersionString valid",
+			name:          "ClusterCliRepository from API overrides default",
+			clusterRepo:   "custom.registry.io/okteto/cli",
 			versionString: "1.2.3",
-			expectedImage: "okteto/okteto:1.2.3",
-			expectedLogs:  []string{"using okteto bin image (from cli version): 1.2.3"},
+			expectedImage: "custom.registry.io/okteto/cli:1.2.3",
 		},
 		{
-			name:          "VersionString invalid",
-			versionString: "invalidversion",
-			expectedImage: "okteto/okteto:stable",
-			expectedLogs:  []string{"invalid version string: invalidversion, using latest stable"},
+			name:          "Empty ClusterCliRepository uses default",
+			clusterRepo:   "",
+			versionString: "1.2.3",
+			expectedImage: "okteto/okteto:1.2.3",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			VersionString = tc.versionString
+			ClusterCliRepository = tc.clusterRepo
 
-			// Create ImageConfig with mocked getEnv
-			c := &ImageConfig{
-				ioCtrl: io.NewIOController(),
-				getEnv: func(s string) string {
-					return ""
-				},
-				cliRepository: "okteto/okteto",
-			}
-
-			image := c.GetOktetoImage()
+			imageConfig := NewImageConfig(io.NewIOController())
+			image := imageConfig.GetCliImage()
 			assert.Equal(t, tc.expectedImage, image)
-
 		})
 	}
 }
