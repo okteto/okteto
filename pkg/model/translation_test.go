@@ -77,8 +77,8 @@ func TestDevToTranslationRule(t *testing.T) {
 
 	rule1 := dev.ToTranslationRule(dev, "n", "username", false)
 	rule1OK := &TranslationRule{
-		Marker:            config.NewImageConfig(io.NewIOController()).GetBinImage(),
-		OktetoBinImageTag: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+		Marker:            config.NewImageConfig(io.NewIOController()).GetCliImage(),
+		OktetoBinImageTag: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		Container:         "dev",
 		Image:             "web:latest",
 		ImagePullPolicy:   apiv1.PullNever,
@@ -151,7 +151,7 @@ func TestDevToTranslationRule(t *testing.T) {
 				SubPath:   "okteto-bash-history",
 			},
 		},
-		InitContainer: InitContainer{Image: config.NewImageConfig(io.NewIOController()).GetBinImage()},
+		InitContainer: InitContainer{Image: config.NewImageConfig(io.NewIOController()).GetCliImage()},
 		NodeSelector: map[string]string{
 			"disktype": "ssd",
 		},
@@ -292,7 +292,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 
 	rule := dev.ToTranslationRule(dev, "n", "username", false)
 	ruleOK := &TranslationRule{
-		Marker:            config.NewImageConfig(io.NewIOController()).GetBinImage(),
+		Marker:            config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		OktetoBinImageTag: "image",
 		ImagePullPolicy:   apiv1.PullAlways,
 		Command:           []string{"/var/okteto/bin/start.sh"},
@@ -390,8 +390,8 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 
 	rule := dev.ToTranslationRule(dev, "n", "username", false)
 	ruleOK := &TranslationRule{
-		Marker:            config.NewImageConfig(io.NewIOController()).GetBinImage(),
-		OktetoBinImageTag: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+		Marker:            config.NewImageConfig(io.NewIOController()).GetCliImage(),
+		OktetoBinImageTag: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		ImagePullPolicy:   apiv1.PullAlways,
 		Image:             "dev-image",
 		Command:           []string{"/var/okteto/bin/start.sh"},
@@ -448,7 +448,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 				SubPath:   "okteto-bash-history",
 			},
 		},
-		InitContainer: InitContainer{Image: config.NewImageConfig(io.NewIOController()).GetBinImage()},
+		InitContainer: InitContainer{Image: config.NewImageConfig(io.NewIOController()).GetCliImage()},
 	}
 
 	marshalled, err := yaml.Marshal(rule)

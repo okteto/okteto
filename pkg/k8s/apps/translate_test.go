@@ -229,7 +229,7 @@ dev:
 		InitContainers: []apiv1.Container{
 			{
 				Name:            OktetoBinName,
-				Image:           config.NewImageConfig(io.NewIOController()).GetBinImage(),
+				Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				ImagePullPolicy: apiv1.PullIfNotPresent,
 				Command:         []string{"sh", "-c", "cp /usr/bin-image/bin/* /okteto/bin"},
 				SecurityContext: &apiv1.SecurityContext{
@@ -929,7 +929,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 		InitContainers: []apiv1.Container{
 			{
 				Name:            OktetoBinName,
-				Image:           config.NewImageConfig(io.NewIOController()).GetBinImage(),
+				Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				ImagePullPolicy: apiv1.PullIfNotPresent,
 				Command:         []string{"sh", "-c", "cp /usr/bin-image/bin/* /okteto/bin"},
 				VolumeMounts: []apiv1.VolumeMount{
@@ -1721,7 +1721,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		InitContainers: []apiv1.Container{
 			{
 				Name:            OktetoBinName,
-				Image:           config.NewImageConfig(io.NewIOController()).GetBinImage(),
+				Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				ImagePullPolicy: apiv1.PullIfNotPresent,
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,

@@ -1097,7 +1097,7 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
 		toMarshall.Metadata = nil
 	}
-	if toMarshall.InitContainer.Image == config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage() {
+	if toMarshall.InitContainer.Image == config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage() {
 		toMarshall.InitContainer.Image = ""
 	}
 	if toMarshall.Timeout.Default == 1*time.Minute && toMarshall.Timeout.Resources == 2*time.Minute {

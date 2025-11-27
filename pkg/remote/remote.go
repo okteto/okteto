@@ -490,7 +490,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:               config.NewImageConfig(r.ioCtrl).GetRemoteImage(config.VersionString),
+		OktetoCLIImage:               config.NewImageConfig(r.ioCtrl).GetCliImage(),
 		UserRunnerImage:              params.BaseImage,
 		RemoteDeployEnvVar:           constants.OktetoDeployRemote,
 		ContextArgName:               model.OktetoContextEnvVar,
