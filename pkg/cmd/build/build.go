@@ -87,10 +87,10 @@ type OktetoRegistryInterface interface {
 func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs, logger *io.Controller) *OktetoBuilder {
 	var buildkitConnector buildkitConnector
 	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
-		buildkitConnector = connector.NewDirectConnector(context, logger)
+		buildkitConnector = connector.NewIngressConnector(context, logger)
 	} else {
 		// TODO: Implement the buildkit connector for the build queue
-		buildkitConnector = connector.NewDirectConnector(context, logger)
+		buildkitConnector = connector.NewIngressConnector(context, logger)
 	}
 
 	return &OktetoBuilder{

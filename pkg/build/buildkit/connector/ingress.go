@@ -26,13 +26,13 @@ type OktetoContextIface interface {
 	GetCurrentToken() string
 }
 
-type DirectConnector struct {
+type IngressConnector struct {
 	buildkitClientFactory *ClientFactory
 	waiter                *Waiter
 }
 
-// NewDirectConnector creates a new direct connector. It connects to the buildkit server directly.
-func NewDirectConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *DirectConnector {
+// NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
+func NewIngressConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *IngressConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
 		okCtx.GetCurrentCertStr(),
 		okCtx.GetCurrentBuilder(),
@@ -41,23 +41,23 @@ func NewDirectConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *Direct
 		ioCtrl)
 	waiter := NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
 
-	return &DirectConnector{
+	return &IngressConnector{
 		buildkitClientFactory: buildkitClientFactory,
 		waiter:                waiter,
 	}
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready
-func (d *DirectConnector) WaitUntilIsReady(ctx context.Context) error {
-	return d.waiter.WaitUntilIsUp(ctx)
+func (i *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
+	return i.waiter.WaitUntilIsUp(ctx)
 }
 
 // GetClientFactory returns the client factory
-func (d *DirectConnector) GetClientFactory() *ClientFactory {
-	return d.buildkitClientFactory
+func (i *IngressConnector) GetClientFactory() *ClientFactory {
+	return i.buildkitClientFactory
 }
 
 // GetWaiter returns the waiter
-func (d *DirectConnector) GetWaiter() *Waiter {
-	return d.waiter
+func (i *IngressConnector) GetWaiter() *Waiter {
+	return i.waiter
 }
