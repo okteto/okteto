@@ -223,23 +223,51 @@ func generateManifestFile(devPath string) (string, error) {
 	return manifestFilename, nil
 }
 
-func generatePodFile(ctx context.Context, dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	app, err := apps.Get(ctx, dev, namespace, c)
-	if err != nil {
-		return "", err
+func generatePodFile(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (string, error) {
+	oktetoLog.Infof("generating pod file for dev '%s'", dev.Name)
+
+	var devApp apps.App
+	if dev.Autocreate {
+		devCopy := *dev
+		devCopy.Name = model.DevCloneName(dev.Name)
+		app, err := apps.Get(ctx, &devCopy, namespace, c)
+		if err != nil {
+			oktetoLog.Infof("failed to get autocreate app: %s", err)
+			return "", err
+		}
+		devApp = app
+	} else {
+		app, err := apps.Get(ctx, dev, namespace, c)
+		if err != nil {
+			oktetoLog.Infof("failed to get app: %s", err)
+			return "", err
+		}
+
+		if !apps.IsDevModeOn(app) {
+			oktetoLog.Infof("app '%s' is not in dev mode", dev.Name)
+			return "", oktetoErrors.ErrNotInDevMode
+		}
+
+		devApp = app.DevClone()
 	}
-	devApp := app.DevClone()
+
 	if err := devApp.Refresh(ctx, c); err != nil {
+		oktetoLog.Infof("failed to refresh app: %s", err)
 		return "", err
 	}
+
 	pod, err := devApp.GetRunningPod(ctx, c)
 	if err != nil {
+		oktetoLog.Infof("failed to get running pod: %s", err)
 		return "", err
 	}
 
 	if pod == nil {
+		oktetoLog.Infof("no running pod found for dev '%s'", dev.Name)
 		return "", oktetoErrors.ErrNotFound
 	}
+
+	oktetoLog.Infof("found running pod '%s'", pod.Name)
 
 	tempdir, err := os.MkdirTemp("", "")
 	if err != nil {
@@ -284,15 +312,49 @@ func generatePodFile(ctx context.Context, dev *model.Dev, namespace string, c *k
 	return podFilename, nil
 }
 
-func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	app, err := apps.Get(ctx, dev, namespace, c)
-	if err != nil {
+func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (string, error) {
+	oktetoLog.Infof("generating remote syncthing logs for dev '%s'", dev.Name)
+
+	var devApp apps.App
+	if dev.Autocreate {
+		devCopy := *dev
+		devCopy.Name = model.DevCloneName(dev.Name)
+		app, err := apps.Get(ctx, &devCopy, namespace, c)
+		if err != nil {
+			oktetoLog.Infof("failed to get autocreate app: %s", err)
+			return "", err
+		}
+		devApp = app
+	} else {
+		app, err := apps.Get(ctx, dev, namespace, c)
+		if err != nil {
+			oktetoLog.Infof("failed to get app: %s", err)
+			return "", err
+		}
+
+		if !apps.IsDevModeOn(app) {
+			oktetoLog.Infof("app '%s' is not in dev mode", dev.Name)
+			return "", oktetoErrors.ErrNotInDevMode
+		}
+
+		// Get the dev clone
+		devApp = app.DevClone()
+	}
+
+	// Refresh to get latest state
+	if err := devApp.Refresh(ctx, c); err != nil {
+		oktetoLog.Infof("failed to refresh app: %s", err)
 		return "", err
 	}
-	pod, err := app.GetRunningPod(ctx, c)
+
+	// Get the running pod
+	pod, err := devApp.GetRunningPod(ctx, c)
 	if err != nil {
+		oktetoLog.Infof("failed to get running pod: %s", err)
 		return "", err
 	}
+
+	oktetoLog.Infof("retrieving logs from pod '%s', container '%s'", pod.Name, dev.Container)
 
 	remoteLogs, err := pods.ContainerLogs(ctx, dev.Container, pod.Name, namespace, false, c)
 	if err != nil {
