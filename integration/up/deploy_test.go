@@ -129,11 +129,26 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, err)
 	require.FileExists(t, zipPath)
 
-	// Verify the zip contains 5 files
+	// Verify the zip contains the expected diagnostic files
 	files, err := commands.ListFilesInZip(zipPath)
-	log.Printf("Files in doctor zip: %v", files)
 	require.NoError(t, err)
-	require.Equal(t, 5, len(files), "doctor zip should contain 5 files")
+	log.Printf("Files in doctor zip (%d total): %v", len(files), files)
+
+	// During an active up session, doctor should collect at least these 5 core files:
+	// 1. okteto-summary.txt (always generated)
+	// 2. .stignore (from sync folders if exists)
+	// 3. okteto.log (app logs)
+	// 4. syncthing.log (sync logs)
+	// 5. pod.yaml (when up is running)
+	// Additionally it may include: remote-syncthing.log, k8s.log
+	require.GreaterOrEqual(t, len(files), 5, "doctor zip should contain at least 5 diagnostic files")
+
+	// Verify essential files are present
+	require.Contains(t, files, "okteto-summary.txt")
+	require.Contains(t, files, "okteto.log")
+	require.Contains(t, files, "pod.yaml")
+	require.Contains(t, files, "remote-syncthing.log")
+	require.Contains(t, files, "syncthing.log")
 
 	// Clean up the zip file
 	require.NoError(t, os.Remove(zipPath))
