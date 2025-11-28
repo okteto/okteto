@@ -59,6 +59,7 @@ type PortForwarder struct {
 	restConfig   *rest.Config
 	forwarder    *forwarder
 	ioCtrl       *io.Controller
+	isActive     bool
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
@@ -156,6 +157,7 @@ func (pf *PortForwarder) Stop() {
 		close(pf.forwarder.stopChan)
 		pf.ioCtrl.Logger().Infof("port forward connection stopped")
 	}
+	pf.isActive = false
 }
 
 func getPortForwardK8sClient(oktetoClient *okteto.Client, okCtx PortForwarderOktetoContextInterface) (kubernetes.Interface, *rest.Config, error) {
@@ -172,6 +174,12 @@ func getPortForwardK8sClient(oktetoClient *okteto.Client, okCtx PortForwarderOkt
 
 // WaitUntilIsReady waits for the buildkit server to be ready
 func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
+	// If already active, reuse the existing port forward
+	if pf.isActive {
+		pf.ioCtrl.Logger().Infof("reusing existing port forward on 127.0.0.1:%d", pf.forwarder.localPort)
+		return nil
+	}
+
 	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 	if err != nil {
 		return fmt.Errorf("could not get least loaded buildkit pod: %w", err)
@@ -186,6 +194,7 @@ func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
 	pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", response.PodName)
 	select {
 	case <-pf.forwarder.readyChan:
+		pf.isActive = true
 		pf.ioCtrl.Logger().Infof("port forward to buildkit pod %s is ready on 127.0.0.1:%d", response.PodName, pf.forwarder.localPort)
 		return nil
 	case <-ctx.Done():
