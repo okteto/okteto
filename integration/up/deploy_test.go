@@ -136,8 +136,8 @@ func TestUpWithDeploy(t *testing.T) {
 
 	// Log the files in the zip for debugging
 	files, err := commands.ListFilesInZip(zipPath)
-	require.NoError(t, err)
 	log.Printf("Files in doctor zip: %v", files)
+	require.NoError(t, err)
 
 	// Clean up the zip file
 	require.NoError(t, os.Remove(zipPath))
