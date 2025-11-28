@@ -130,14 +130,10 @@ func TestUpWithDeploy(t *testing.T) {
 	require.FileExists(t, zipPath)
 
 	// Verify the zip contains 5 files
-	fileCount, err := commands.CountFilesInZip(zipPath)
-	require.NoError(t, err)
-	require.Equal(t, 5, fileCount, "doctor zip should contain 5 files")
-
-	// Log the files in the zip for debugging
 	files, err := commands.ListFilesInZip(zipPath)
 	log.Printf("Files in doctor zip: %v", files)
 	require.NoError(t, err)
+	require.Equal(t, 5, len(files), "doctor zip should contain 5 files")
 
 	// Clean up the zip file
 	require.NoError(t, os.Remove(zipPath))
