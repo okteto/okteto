@@ -117,6 +117,31 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, writeFile(indexPath, localupdatedContent))
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
+	// Test doctor command while up is running
+	doctorOpts := &commands.DoctorOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		DevName:    "e2etest",
+	}
+	zipPath, err := commands.RunOktetoDoctor(oktetoPath, doctorOpts)
+	require.NoError(t, err)
+	require.FileExists(t, zipPath)
+
+	// Verify the zip contains 5 files
+	fileCount, err := commands.CountFilesInZip(zipPath)
+	require.NoError(t, err)
+	require.Equal(t, 5, fileCount, "doctor zip should contain 5 files")
+
+	// Log the files in the zip for debugging
+	files, err := commands.ListFilesInZip(zipPath)
+	require.NoError(t, err)
+	log.Printf("Files in doctor zip: %v", files)
+
+	// Clean up the zip file
+	require.NoError(t, os.Remove(zipPath))
+
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
