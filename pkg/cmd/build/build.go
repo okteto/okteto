@@ -88,8 +88,6 @@ func NewOktetoBuilder(okCtx OktetoContextInterface, fs afero.Fs, logger *io.Cont
 	var buildkitConnector buildkitConnector
 	var err error
 	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
-		buildkitConnector = connector.NewDirectConnector(okCtx, logger)
-	} else {
 		buildkitConnector, err = connector.NewPortForwarder(context.Background(), okCtx, logger)
 		if err != nil {
 			logger.Infof("could not create buildkit connector for port forwarding: %s", err)
@@ -97,6 +95,8 @@ func NewOktetoBuilder(okCtx OktetoContextInterface, fs afero.Fs, logger *io.Cont
 			logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to direct connector")
 			buildkitConnector = connector.NewDirectConnector(okCtx, logger)
 		}
+	} else {
+		buildkitConnector = connector.NewDirectConnector(okCtx, logger)
 	}
 
 	return &OktetoBuilder{
