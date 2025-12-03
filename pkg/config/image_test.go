@@ -76,6 +76,16 @@ func TestGetCliImage(t *testing.T) {
 			expectedLogs:  []string{"using okteto cli image (from OKTETO_CLI_IMAGE): newimage:tag"},
 		},
 		{
+			name: "OKTETO_BIN takes precedence over OKTETO_REMOTE_CLI_IMAGE",
+			envVars: map[string]string{
+				oktetoBinEnvVar:               "binimage:tag",
+				oktetoDeployRemoteImageEnvVar: "remoteimage:tag",
+			},
+			versionString: "1.2.3",
+			expectedImage: "binimage:tag",
+			expectedLogs:  []string{"using okteto cli image (from OKTETO_BIN): binimage:tag"},
+		},
+		{
 			name:          "No env vars set, valid VersionString",
 			envVars:       map[string]string{},
 			versionString: "1.2.3",
