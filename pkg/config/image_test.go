@@ -44,7 +44,7 @@ func TestGetCliImage(t *testing.T) {
 			},
 			versionString: "1.2.3",
 			expectedImage: "mycustomimage:tag",
-			expectedLogs:  []string{"using okteto cli image (from OKTETO_BIN): mycustomimage:tag"},
+			expectedLogs:  []string{"Using Okteto CLI image 'mycustomimage:tag' from the OKTETO_BIN environment variable\n    OKTETO_BIN is deprecated, please use OKTETO_CLI_IMAGE instead"},
 		},
 		{
 			name: "Environment variable OKTETO_REMOTE_CLI_IMAGE is set (backward compatibility)",
@@ -53,7 +53,7 @@ func TestGetCliImage(t *testing.T) {
 			},
 			versionString: "1.2.3",
 			expectedImage: "mycustomimage:tag",
-			expectedLogs:  []string{"using okteto cli image (from OKTETO_REMOTE_CLI_IMAGE): mycustomimage:tag"},
+			expectedLogs:  []string{"Using Okteto CLI image 'mycustomimage:tag' from the OKTETO_REMOTE_CLI_IMAGE environment variable\n    OKTETO_REMOTE_CLI_IMAGE is deprecated, please use OKTETO_CLI_IMAGE instead"},
 		},
 		{
 			name: "OKTETO_CLI_IMAGE takes precedence over OKTETO_BIN",
@@ -83,7 +83,7 @@ func TestGetCliImage(t *testing.T) {
 			},
 			versionString: "1.2.3",
 			expectedImage: "binimage:tag",
-			expectedLogs:  []string{"using okteto cli image (from OKTETO_BIN): binimage:tag"},
+			expectedLogs:  []string{"Using Okteto CLI image 'binimage:tag' from the OKTETO_BIN environment variable\n    OKTETO_BIN is deprecated, please use OKTETO_CLI_IMAGE instead"},
 		},
 		{
 			name:          "No env vars set, valid VersionString",

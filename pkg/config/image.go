@@ -57,6 +57,7 @@ type ImageConfig struct {
 // Logger is the interface used to log messages
 type Logger interface {
 	Infof(format string, args ...interface{})
+	Warning(format string, args ...interface{})
 }
 
 // NewImageConfig creates a new ImageConfig instance
@@ -86,14 +87,14 @@ func (c *ImageConfig) GetCliImage() string {
 	// Fall back to legacy OKTETO_BIN for backward compatibility
 	binImage := c.getEnv(oktetoBinEnvVar)
 	if binImage != "" {
-		c.ioCtrl.Infof("using okteto cli image (from OKTETO_BIN): %s", binImage)
+		c.ioCtrl.Warning("Using Okteto CLI image '%s' from the OKTETO_BIN environment variable\n    OKTETO_BIN is deprecated, please use OKTETO_CLI_IMAGE instead", binImage)
 		return binImage
 	}
 
 	// Fall back to legacy OKTETO_REMOTE_CLI_IMAGE for backward compatibility
 	remoteImage := c.getEnv(oktetoDeployRemoteImageEnvVar)
 	if remoteImage != "" {
-		c.ioCtrl.Infof("using okteto cli image (from OKTETO_REMOTE_CLI_IMAGE): %s", remoteImage)
+		c.ioCtrl.Warning("Using Okteto CLI image '%s' from the OKTETO_REMOTE_CLI_IMAGE environment variable\n    OKTETO_REMOTE_CLI_IMAGE is deprecated, please use OKTETO_CLI_IMAGE instead", remoteImage)
 		return remoteImage
 	}
 
