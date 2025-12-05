@@ -89,14 +89,14 @@ func TestGetCliImage(t *testing.T) {
 			name:          "No env vars set, valid VersionString",
 			envVars:       map[string]string{},
 			versionString: "1.2.3",
-			expectedImage: "okteto/okteto:1.2.3",
+			expectedImage: "ghcr.io/okteto/okteto:1.2.3",
 			expectedLogs:  []string{"using okteto cli image (from cli version): 1.2.3"},
 		},
 		{
 			name:          "No env vars set, invalid VersionString",
 			envVars:       map[string]string{},
 			versionString: "invalidversion",
-			expectedImage: "okteto/okteto:master",
+			expectedImage: "ghcr.io/okteto/okteto:master",
 			expectedLogs:  []string{"invalid version string: invalidversion, using latest"},
 		},
 	}
@@ -114,7 +114,7 @@ func TestGetCliImage(t *testing.T) {
 					}
 					return ""
 				},
-				cliRepository: "okteto/okteto",
+				cliRepository: "ghcr.io/okteto/okteto",
 			}
 
 			image := c.GetCliImage()
@@ -147,7 +147,7 @@ func TestClusterCliRepositoryOverridesDefault(t *testing.T) {
 			name:          "Empty ClusterCliRepository uses default",
 			clusterRepo:   "",
 			versionString: "1.2.3",
-			expectedImage: "okteto/okteto:1.2.3",
+			expectedImage: "ghcr.io/okteto/okteto:1.2.3",
 		},
 	}
 

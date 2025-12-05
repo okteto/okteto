@@ -468,7 +468,7 @@ jobs:
       - run: *docker-login
       - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress ghcr.io/okteto/okteto:$CIRCLE_TAG
 
   push-image-dev:
     executor: golang-ci
@@ -478,7 +478,7 @@ jobs:
       - run: *docker-login
       - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG",dev "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress ghcr.io/okteto/okteto:dev
 
   push-image-master:
     executor: golang-ci
@@ -488,7 +488,7 @@ jobs:
       - run: *docker-login
       - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress ghcr.io/okteto/okteto:master
 
   upload-static-job:
     executor: golang-ci

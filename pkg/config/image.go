@@ -45,7 +45,7 @@ const (
 	oktetoCLIImageTemplate = "%s:%s"
 
 	// oktetoCliRepository defines the okteto cli repository
-	oktetoCliRepository = "okteto/okteto"
+	oktetoCliRepository = "ghcr.io/okteto/okteto"
 )
 
 type ImageConfig struct {
