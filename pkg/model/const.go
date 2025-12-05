@@ -105,6 +105,12 @@ const (
 	PrivilegedLocalhost         = "0.0.0.0"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
+
+	// IANAEphemeralPortStart is the start of the IANA dynamic/private port range (49152-65535)
+	// This range is designated for dynamic port allocation and has the lowest chance of conflicts
+	IANAEphemeralPortStart = 49152
+	// IANAEphemeralPortEnd is the end of the IANA dynamic/private port range (49152-65535)
+	IANAEphemeralPortEnd = 65535
 	// OktetoUpCmd up command
 	OktetoUpCmd = "up"
 

@@ -34,7 +34,7 @@ func NewFakeKubetokenClient(response FakeKubetokenResponse) *FakeKubetokenClient
 }
 
 // GetKubeToken returns a temp token
-func (c *FakeKubetokenClient) GetKubeToken(_, _ string) (types.KubeTokenResponse, error) {
+func (c *FakeKubetokenClient) GetKubeToken(_, _, _ string) (types.KubeTokenResponse, error) {
 	return c.response.Token, c.response.Err
 }
 
