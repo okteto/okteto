@@ -248,7 +248,7 @@ func NewDev() *Dev {
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
 		Probes:               &Probes{},
 		Lifecycle:            &Lifecycle{},
-		InitContainer:        InitContainer{Image: config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage()},
+		InitContainer:        InitContainer{Image: config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage()},
 		Metadata: &Metadata{
 			Labels:      Labels{},
 			Annotations: Annotations{},
@@ -380,7 +380,7 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	if dev.InitContainer.Image == "" {
-		dev.InitContainer.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage()
+		dev.InitContainer.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage()
 	}
 
 	if dev.Probes == nil {
@@ -850,7 +850,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		rule.Healthchecks = true
 	}
 	if main == dev {
-		rule.Marker = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage() // for backward compatibility
+		rule.Marker = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage() // for backward compatibility
 		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,

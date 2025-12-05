@@ -280,7 +280,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", "svcName"),
-		Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
+		Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		Command:         []string{"sh", "-c", "chmod 777 /data"},
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts: []apiv1.VolumeMount{
@@ -636,7 +636,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 	}
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", "svcName"),
-		Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
+		Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "chmod 777 /data"},
 		VolumeMounts: []apiv1.VolumeMount{
