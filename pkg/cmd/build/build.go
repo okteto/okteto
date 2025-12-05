@@ -54,8 +54,8 @@ type OktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
-// buildkitConnector is the interface for the buildkit connector
-type buildkitConnector interface {
+// BuildkitConnector is the interface for the buildkit connector
+type BuildkitConnector interface {
 	// WaitUntilIsReady waits for the buildkit server to be ready
 	WaitUntilIsReady(ctx context.Context) error
 	// GetClientFactory returns the client factory
@@ -70,11 +70,17 @@ type OktetoBuilder struct {
 	Fs            afero.Fs
 	metadata      *buildkit.BuildMetadata
 	logger        *io.Controller
-	connector     buildkitConnector
+	connector     BuildkitConnector
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
 	return ob.metadata
+}
+
+// GetConnector returns the buildkit connector used by this builder.
+// This allows the connector to be reused across multiple build operations.
+func (ob *OktetoBuilder) GetConnector() BuildkitConnector {
+	return ob.connector
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -82,12 +88,12 @@ type OktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 }
 
-// NewOktetoBuilder creates a new instance of OktetoBuilder.
-// It takes an OktetoContextInterface and afero.Fs as parameters and returns a pointer to OktetoBuilder.
-func NewOktetoBuilder(okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) *OktetoBuilder {
-	var buildkitConnector buildkitConnector
+// GetBuildkitConnector creates and returns a buildkit connector based on the OKTETO_BUILD_QUEUE_ENABLED environment variable.
+// If the queue is enabled, it tries to create a port forwarder. If that fails, it falls back to a direct connector.
+func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
+	var buildkitConnector BuildkitConnector
 	var err error
-	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
+	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, true) {
 		buildkitConnector, err = connector.NewPortForwarder(context.Background(), okCtx, logger)
 		if err != nil {
 			logger.Infof("could not create buildkit connector for port forwarding: %s", err)
@@ -98,12 +104,17 @@ func NewOktetoBuilder(okCtx OktetoContextInterface, fs afero.Fs, logger *io.Cont
 	} else {
 		buildkitConnector = connector.NewDirectConnector(okCtx, logger)
 	}
+	return buildkitConnector
+}
 
+// NewOktetoBuilder creates a new instance of OktetoBuilder.
+// It takes an OktetoContextInterface, afero.Fs, logger and a buildkit connector as parameters and returns a pointer to OktetoBuilder.
+func NewOktetoBuilder(okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller, conn BuildkitConnector) *OktetoBuilder {
 	return &OktetoBuilder{
 		OktetoContext: okCtx, Fs: fs,
 		metadata:  &buildkit.BuildMetadata{},
 		logger:    logger,
-		connector: buildkitConnector,
+		connector: conn,
 	}
 }
 

@@ -29,6 +29,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/config"
@@ -102,6 +103,7 @@ type getDeployerFunc func(
 	*io.Controller,
 	*io.K8sLogger,
 	dependencyEnvVarsGetter,
+	buildCmd.BuildkitConnector,
 ) (Deployer, error)
 
 type cleanUpFunc func(context.Context, error)
@@ -111,6 +113,7 @@ type Command struct {
 	GetManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
 	K8sClientProvider    okteto.K8sClientProviderWithLogger
 	Builder              builderInterface
+	Connector            buildCmd.BuildkitConnector
 	GetDeployer          getDeployerFunc
 	EndpointGetter       func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
 	DeployWaiter         Waiter
@@ -241,12 +244,16 @@ $ okteto deploy --no-build=true`,
 				insightsTracker.TrackImageBuild,
 			}
 
+			okCtx := &okteto.ContextStateless{Store: okteto.GetContextStore()}
+			conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
+
 			c := &Command{
 				GetManifest: model.GetManifestV2,
 
 				K8sClientProvider:    k8sClientProvider,
 				GetDeployer:          GetDeployer,
-				Builder:              buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				Builder:              buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, conn),
+				Connector:            conn,
 				DeployWaiter:         NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:       NewEndpointGetter,
 				IsRemote:             env.LoadBoolean(constants.OktetoDeployRemote),
@@ -525,6 +532,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		dc.IoCtrl,
 		dc.K8sLogger,
 		GetDependencyEnvVars,
+		dc.Connector,
 	)
 	if err != nil {
 		return err
@@ -657,10 +665,11 @@ func GetDeployer(ctx context.Context,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
+	conn buildCmd.BuildkitConnector,
 ) (Deployer, error) {
 	if ShouldRunInRemote(opts) {
 		oktetoLog.Info("Deploying remotely...")
-		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter), nil
+		return newRemoteDeployer(buildEnvVarsGetter, ioCtrl, dependencyEnvVarsGetter, conn), nil
 	}
 
 	var execDir string

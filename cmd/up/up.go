@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -236,7 +237,7 @@ okteto up api -- echo this is a test
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
+				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, buildCmd.GetBuildkitConnector(&okteto.ContextStateless{Store: okteto.GetContextStore()}, ioCtrl)),
 				autoDown:          newAutoDown(ioCtrl, k8sLogger, at, upMeta),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
