@@ -228,9 +228,13 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	configmapHandler := deployCMD.NewConfigmapHandler(k8sClientProvider, k8sLogger)
 
+	okCtxForBuilder := &okteto.ContextStateless{
+		Store: okteto.GetContextStore(),
+	}
+	conn := buildCMD.GetBuildkitConnector(okCtxForBuilder, ioCtrl)
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
-	})
+	}, conn)
 
 	var nodes []dag.Node
 
@@ -264,6 +268,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			},
 			K8sClientProvider:  k8sClientProvider,
 			Builder:            builder,
+			Connector:          conn,
 			GetDeployer:        deployCMD.GetDeployer,
 			EndpointGetter:     deployCMD.NewEndpointGetter,
 			DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, k8sLogger),
@@ -341,12 +346,14 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return metadata, err
 		}
 
+		okCtx := &okteto.ContextStateless{
+			Store: okteto.GetContextStore(),
+		}
 		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
-			&okteto.ContextStateless{
-				Store: okteto.GetContextStore(),
-			},
+			okCtx,
 			fs,
 			ioCtrl,
+			builder.GetConnector(),
 		))
 		commands := make([]model.DeployCommand, len(test.Commands))
 
