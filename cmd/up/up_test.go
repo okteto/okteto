@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -628,4 +629,7 @@ func (*fakeBuilder) GetBuildEnvVars() map[string]string {
 }
 func (fb *fakeBuilder) GetSvcToBuildFromRegex(_ *model.Manifest, _ model.ImageFromManifest) (string, error) {
 	return fb.getSvcFromRegexRes, fb.getSvcFromRegexErr
+}
+func (*fakeBuilder) GetConnector() buildCmd.BuildkitConnector {
+	return nil
 }

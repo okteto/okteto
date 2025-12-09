@@ -21,6 +21,7 @@ import (
 
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -846,7 +847,16 @@ func TestGetDestroyer(t *testing.T) {
 			dc := &destroyCommand{
 				ioCtrl: io.NewIOController(),
 			}
-			deployer := dc.getDestroyer(tt.opts)
+			deployer := dc.getDestroyer(tt.opts, buildCmd.GetBuildkitConnector(&okteto.ContextStateless{
+				Store: &okteto.ContextStore{
+					Contexts: map[string]*okteto.Context{
+						"example": {
+							Namespace: "test-namespace",
+						},
+					},
+					CurrentContext: "example",
+				},
+			}, io.NewIOController()))
 			require.IsType(t, tt.expectedType, deployer)
 		})
 	}
