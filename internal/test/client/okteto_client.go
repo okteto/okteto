@@ -40,6 +40,7 @@ type FakeOktetoClient struct {
 	PipelineClient  types.PipelineInterface
 	StreamClient    types.StreamInterface
 	KubetokenClient types.KubetokenInterface
+	BuildkitClient  types.BuildkitInterface
 }
 
 func NewFakeOktetoClient() *FakeOktetoClient {
@@ -74,4 +75,9 @@ func (c *FakeOktetoClient) Stream() types.StreamInterface {
 // Kubetoken retrieves the Kubetoken client
 func (c *FakeOktetoClient) Kubetoken() types.KubetokenInterface {
 	return c.KubetokenClient
+}
+
+// Buildkit retrieves the Buildkit client
+func (c *FakeOktetoClient) Buildkit() types.BuildkitInterface {
+	return c.BuildkitClient
 }

@@ -14,14 +14,49 @@
 package connector
 
 import (
+	"context"
+	"errors"
 	"net/url"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+// mockBuildkitClient is a mock implementation of types.BuildkitInterface
+type mockBuildkitClient struct {
+	responses []*types.BuildKitPodResponse
+	errs      []error
+	callIndex int
+}
+
+func (m *mockBuildkitClient) GetLeastLoadedBuildKitPod(_ context.Context, _ string) (*types.BuildKitPodResponse, error) {
+	idx := m.callIndex
+	m.callIndex++
+	if idx < len(m.errs) && m.errs[idx] != nil {
+		return nil, m.errs[idx]
+	}
+	if idx < len(m.responses) {
+		return m.responses[idx], nil
+	}
+	return &types.BuildKitPodResponse{}, nil
+}
+
+// mockOktetoClient is a mock implementation of types.OktetoInterface
+type mockOktetoClient struct {
+	buildkit types.BuildkitInterface
+}
+
+func (m *mockOktetoClient) User() types.UserInterface            { return nil }
+func (m *mockOktetoClient) Namespaces() types.NamespaceInterface { return nil }
+func (m *mockOktetoClient) Previews() types.PreviewInterface     { return nil }
+func (m *mockOktetoClient) Pipeline() types.PipelineInterface    { return nil }
+func (m *mockOktetoClient) Stream() types.StreamInterface        { return nil }
+func (m *mockOktetoClient) Kubetoken() types.KubetokenInterface  { return nil }
+func (m *mockOktetoClient) Buildkit() types.BuildkitInterface    { return m.buildkit }
 
 // mockPortForwarderOktetoContext is a mock implementation of PortForwarderOktetoContextInterface
 type mockPortForwarderOktetoContext struct {
@@ -608,4 +643,277 @@ func TestPortForwarder_GetWaiter_Configuration(t *testing.T) {
 	factory, ok := waiter.buildkitClientFactory.(*buildkitClientFactoryToWait)
 	require.True(t, ok, "buildkitClientFactory should be of type *buildkitClientFactoryToWait")
 	require.NotNil(t, factory.factory)
+}
+
+func TestPortForwarder_WaitUntilIsReady_ReusesExistingConnection(t *testing.T) {
+	tests := []struct {
+		name      string
+		isActive  bool
+		localPort int
+	}{
+		{
+			name:      "reuses connection on port 8080",
+			isActive:  true,
+			localPort: 8080,
+		},
+		{
+			name:      "reuses connection on port 9999",
+			localPort: 9999,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pf := &PortForwarder{
+				isActive:  true,
+				sessionID: "test-session",
+				forwarder: &forwarder{
+					localPort: tt.localPort,
+					stopChan:  make(chan struct{}, 1),
+					readyChan: make(chan struct{}, 1),
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			err := pf.WaitUntilIsReady(context.Background())
+
+			require.NoError(t, err)
+			require.True(t, pf.isActive)
+		})
+	}
+}
+
+func TestPortForwarder_WaitUntilIsReady_ErrorFromBuildkitClient(t *testing.T) {
+	tests := []struct {
+		name          string
+		buildkitErr   error
+		expectedError string
+	}{
+		{
+			name:          "connection refused error",
+			buildkitErr:   errors.New("connection refused"),
+			expectedError: "could not get least loaded buildkit pod: connection refused",
+		},
+		{
+			name:          "timeout error",
+			buildkitErr:   errors.New("context deadline exceeded"),
+			expectedError: "could not get least loaded buildkit pod: context deadline exceeded",
+		},
+		{
+			name:          "unauthorized error",
+			buildkitErr:   errors.New("unauthorized"),
+			expectedError: "could not get least loaded buildkit pod: unauthorized",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockBuildkit := &mockBuildkitClient{
+				errs: []error{tt.buildkitErr},
+			}
+			mockClient := &mockOktetoClient{buildkit: mockBuildkit}
+
+			pf := &PortForwarder{
+				isActive:     false,
+				sessionID:    "test-session",
+				oktetoClient: mockClient,
+				forwarder: &forwarder{
+					localPort: 8080,
+					stopChan:  make(chan struct{}, 1),
+					readyChan: make(chan struct{}, 1),
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			err := pf.WaitUntilIsReady(context.Background())
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.expectedError)
+		})
+	}
+}
+
+func TestPortForwarder_WaitUntilIsReady_ContextCancelledWhilePolling(t *testing.T) {
+	tests := []struct {
+		name           string
+		queuePosition  int
+		totalInQueue   int
+		expectedReason string
+	}{
+		{
+			name:           "cancelled while first in queue",
+			queuePosition:  1,
+			totalInQueue:   5,
+			expectedReason: "context cancelled while waiting for buildkit pod",
+		},
+		{
+			name:           "cancelled while third in queue",
+			queuePosition:  3,
+			totalInQueue:   10,
+			expectedReason: "context cancelled while waiting for buildkit pod",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockBuildkit := &mockBuildkitClient{
+				responses: []*types.BuildKitPodResponse{
+					{
+						PodName:       "",
+						QueuePosition: tt.queuePosition,
+						TotalInQueue:  tt.totalInQueue,
+						Reason:        "waiting for resources",
+					},
+				},
+			}
+			mockClient := &mockOktetoClient{buildkit: mockBuildkit}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel() // Cancel immediately
+
+			pf := &PortForwarder{
+				isActive:     false,
+				sessionID:    "test-session",
+				oktetoClient: mockClient,
+				forwarder: &forwarder{
+					localPort: 8080,
+					stopChan:  make(chan struct{}, 1),
+					readyChan: make(chan struct{}, 1),
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			err := pf.WaitUntilIsReady(ctx)
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.expectedReason)
+		})
+	}
+}
+
+func TestPortForwarder_WaitUntilIsReady_QueuePolling_ContextCancelled(t *testing.T) {
+	tests := []struct {
+		name          string
+		queuePosition int
+		totalInQueue  int
+		reason        string
+	}{
+		{
+			name:          "first in queue then cancelled",
+			queuePosition: 1,
+			totalInQueue:  3,
+			reason:        "waiting for resources",
+		},
+		{
+			name:          "fifth in queue then cancelled",
+			queuePosition: 5,
+			totalInQueue:  10,
+			reason:        "scaling up",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			// Cancel immediately - the poll loop should detect this
+			cancel()
+
+			mockBuildkit := &mockBuildkitClient{
+				responses: []*types.BuildKitPodResponse{
+					// Always return queue status - never a ready pod
+					{
+						PodName:       "",
+						QueuePosition: tt.queuePosition,
+						TotalInQueue:  tt.totalInQueue,
+						Reason:        tt.reason,
+					},
+				},
+			}
+			mockClient := &mockOktetoClient{buildkit: mockBuildkit}
+
+			pf := &PortForwarder{
+				isActive:     false,
+				sessionID:    "test-session",
+				oktetoClient: mockClient,
+				okCtx: &mockPortForwarderOktetoContext{
+					globalNamespace: "okteto",
+				},
+				forwarder: &forwarder{
+					localPort: 8080,
+					stopChan:  make(chan struct{}, 1),
+					readyChan: make(chan struct{}, 1),
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			err := pf.WaitUntilIsReady(ctx)
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "context cancelled")
+		})
+	}
+}
+
+func TestPortForwarder_WaitUntilIsReady_MultiplePolls_BeforeError(t *testing.T) {
+	tests := []struct {
+		name           string
+		pollsBeforeErr int
+		buildkitErr    error
+	}{
+		{
+			name:           "error after 1 poll",
+			pollsBeforeErr: 1,
+			buildkitErr:    errors.New("service unavailable"),
+		},
+		{
+			name:           "error after 2 polls",
+			pollsBeforeErr: 2,
+			buildkitErr:    errors.New("internal error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			responses := make([]*types.BuildKitPodResponse, tt.pollsBeforeErr)
+			errs := make([]error, tt.pollsBeforeErr+1)
+
+			for i := range tt.pollsBeforeErr {
+				responses[i] = &types.BuildKitPodResponse{
+					PodName:       "",
+					QueuePosition: i + 1,
+					TotalInQueue:  5,
+					Reason:        "waiting",
+				}
+				errs[i] = nil
+			}
+			errs[tt.pollsBeforeErr] = tt.buildkitErr
+
+			mockBuildkit := &mockBuildkitClient{
+				responses: responses,
+				errs:      errs,
+			}
+			mockClient := &mockOktetoClient{buildkit: mockBuildkit}
+
+			pf := &PortForwarder{
+				isActive:     false,
+				sessionID:    "test-session",
+				oktetoClient: mockClient,
+				okCtx: &mockPortForwarderOktetoContext{
+					globalNamespace: "okteto",
+				},
+				forwarder: &forwarder{
+					localPort: 8080,
+					stopChan:  make(chan struct{}, 1),
+					readyChan: make(chan struct{}, 1),
+				},
+				ioCtrl: io.NewIOController(),
+			}
+
+			err := pf.WaitUntilIsReady(context.Background())
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "could not get least loaded buildkit pod")
+			require.Equal(t, tt.pollsBeforeErr+1, mockBuildkit.callIndex)
+		})
+	}
 }

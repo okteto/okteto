@@ -20,12 +20,15 @@ import (
 	ioutil "io"
 	"net/http"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -54,11 +57,12 @@ type forwarder struct {
 type PortForwarder struct {
 	sessionID    string
 	okCtx        PortForwarderOktetoContextInterface
-	oktetoClient *okteto.Client
+	oktetoClient types.OktetoInterface
 	k8sClient    kubernetes.Interface
 	restConfig   *rest.Config
 	forwarder    *forwarder
 	ioCtrl       *io.Controller
+	mu           sync.Mutex
 	isActive     bool
 }
 
@@ -144,7 +148,12 @@ func (pf *PortForwarder) Start(ctx context.Context, podName string, remotePort i
 
 // Stop closes the port forward connection gracefully
 func (pf *PortForwarder) Stop() {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+
 	if pf.forwarder == nil || pf.forwarder.stopChan == nil {
+		pf.ioCtrl.Logger().Infof("port forward connection is not active")
+		pf.isActive = false
 		return
 	}
 
@@ -175,33 +184,76 @@ func getPortForwardK8sClient(oktetoClient *okteto.Client, okCtx PortForwarderOkt
 // WaitUntilIsReady waits for the buildkit server to be ready
 func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
 	// If already active, reuse the existing port forward
+	pf.mu.Lock()
 	if pf.isActive {
+		pf.mu.Unlock()
 		pf.ioCtrl.Logger().Infof("reusing existing port forward on 127.0.0.1:%d", pf.forwarder.localPort)
 		return nil
 	}
+	pf.mu.Unlock()
 
-	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
-	if err != nil {
-		return fmt.Errorf("could not get least loaded buildkit pod: %w", err)
+	const (
+		maxWaitTime         = 10 * time.Minute
+		initialPollInterval = 1 * time.Second
+		maxPollInterval     = 10 * time.Second
+		backoffMultiplier   = 2.0
+	)
+
+	startTime := time.Now()
+	pollInterval := initialPollInterval
+
+	sp := pf.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
+	sp.Start()
+	defer sp.Stop()
+	for {
+		if time.Since(startTime) >= maxWaitTime {
+			return fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", maxWaitTime)
+		}
+
+		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
+		if err != nil {
+			return fmt.Errorf("could not get least loaded buildkit pod: %w", err)
+		}
+
+		if response.PodName != "" {
+			pf.ioCtrl.Logger().Info("BuildKit pod is ready, establishing connection...")
+
+			const buildkitPort = 1234
+			if err := pf.Start(ctx, response.PodName, buildkitPort); err != nil {
+				return fmt.Errorf("could not start port forward: %w", err)
+			}
+
+			pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", response.PodName)
+			select {
+			case <-pf.forwarder.readyChan:
+				pf.mu.Lock()
+				pf.isActive = true
+				pf.mu.Unlock()
+				pf.ioCtrl.Logger().Infof("port forward to buildkit pod %s is ready on 127.0.0.1:%d", response.PodName, pf.forwarder.localPort)
+				return nil
+			case <-ctx.Done():
+				pf.Stop()
+				return fmt.Errorf("context cancelled while waiting for port forward: %w", ctx.Err())
+			}
+		}
+
+		if response.TotalInQueue > 0 {
+			pf.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue)
+			sp.Stop()
+			sp = pf.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue))
+			sp.Start()
+		}
+
+		select {
+		case <-time.After(pollInterval):
+			pollInterval = time.Duration(float64(pollInterval) * backoffMultiplier)
+			if pollInterval > maxPollInterval {
+				pollInterval = maxPollInterval
+			}
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
+		}
 	}
-
-	// Buildkit listens on port 1234 inside the pod
-	const buildkitPort = 1234
-	if err := pf.Start(ctx, response.PodName, buildkitPort); err != nil {
-		return fmt.Errorf("could not start port forward: %w", err)
-	}
-
-	pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", response.PodName)
-	select {
-	case <-pf.forwarder.readyChan:
-		pf.isActive = true
-		pf.ioCtrl.Logger().Infof("port forward to buildkit pod %s is ready on 127.0.0.1:%d", response.PodName, pf.forwarder.localPort)
-		return nil
-	case <-ctx.Done():
-		pf.Stop()
-		return fmt.Errorf("context cancelled while waiting for port forward: %w", ctx.Err())
-	}
-
 }
 
 // GetClientFactory returns the client factory
