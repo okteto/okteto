@@ -31,7 +31,7 @@ type IngressConnector struct {
 	waiter                *Waiter
 }
 
-// NewDirectConnector creates a new direct connector. It connects to the buildkit server directly.
+// NewIngressConnector creates a new direct connector. It connects to the buildkit server directly.
 func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Controller) *IngressConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
 		okCtx.GetCurrentCertStr(),
