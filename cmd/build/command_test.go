@@ -333,6 +333,14 @@ func Test_NewBuildCommand(t *testing.T) {
 			Contexts: map[string]*okteto.Context{
 				"test": {
 					Namespace: "test",
+					Cfg: &api.Config{
+						AuthInfos: map[string]*api.AuthInfo{
+							"test": {
+								Token: "test",
+							},
+						},
+					},
+					UserID: "test",
 				},
 			},
 			CurrentContext: "test",

@@ -14,6 +14,7 @@
 package model
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 
@@ -56,4 +57,14 @@ func IsPortAvailable(iface string, port int) bool {
 		}
 	}()
 	return true
+}
+
+// GetAvailablePortInRange returns the first available port in the specified range
+func GetAvailablePortInRange(iface string, minPort, maxPort int) (int, error) {
+	for port := minPort; port <= maxPort; port++ {
+		if IsPortAvailable(iface, port) {
+			return port, nil
+		}
+	}
+	return 0, fmt.Errorf("no available ports in range %d-%d", minPort, maxPort)
 }

@@ -172,7 +172,7 @@ func (kc *Cmd) Run(ctx context.Context, flags Flags) error {
 		return fmt.Errorf("failed to create okteto client: %w", err)
 	}
 
-	out, err := c.Kubetoken().GetKubeToken(ctxResource.Context, ctxResource.Namespace)
+	out, err := c.Kubetoken().GetKubeToken(ctxResource.Context, ctxResource.Namespace, "")
 	if err != nil {
 		return fmt.Errorf("failed to get the kubetoken: %w", err)
 	}

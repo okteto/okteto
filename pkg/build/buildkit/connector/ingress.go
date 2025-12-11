@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 )
 
-type OktetoContextIface interface {
+type IngressOktetoContextInterface interface {
 	GetCurrentCertStr() string
 	GetCurrentBuilder() string
 	GetCurrentToken() string
@@ -31,8 +31,8 @@ type IngressConnector struct {
 	waiter                *Waiter
 }
 
-// NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
-func NewIngressConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *IngressConnector {
+// NewIngressConnector creates a new direct connector. It connects to the buildkit server directly.
+func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Controller) *IngressConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
 		okCtx.GetCurrentCertStr(),
 		okCtx.GetCurrentBuilder(),
@@ -48,16 +48,16 @@ func NewIngressConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *Ingre
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready
-func (i *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
-	return i.waiter.WaitUntilIsUp(ctx)
+func (d *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
+	return d.waiter.WaitUntilIsUp(ctx)
 }
 
 // GetClientFactory returns the client factory
-func (i *IngressConnector) GetClientFactory() *ClientFactory {
-	return i.buildkitClientFactory
+func (d *IngressConnector) GetClientFactory() *ClientFactory {
+	return d.buildkitClientFactory
 }
 
 // GetWaiter returns the waiter
-func (i *IngressConnector) GetWaiter() *Waiter {
-	return i.waiter
+func (d *IngressConnector) GetWaiter() *Waiter {
+	return d.waiter
 }

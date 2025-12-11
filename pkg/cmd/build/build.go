@@ -84,17 +84,23 @@ type OktetoRegistryInterface interface {
 
 // NewOktetoBuilder creates a new instance of OktetoBuilder.
 // It takes an OktetoContextInterface and afero.Fs as parameters and returns a pointer to OktetoBuilder.
-func NewOktetoBuilder(context OktetoContextInterface, fs afero.Fs, logger *io.Controller) *OktetoBuilder {
+func NewOktetoBuilder(okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) *OktetoBuilder {
 	var buildkitConnector buildkitConnector
+	var err error
 	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
-		buildkitConnector = connector.NewIngressConnector(context, logger)
+		buildkitConnector, err = connector.NewPortForwarder(context.Background(), okCtx, logger)
+		if err != nil {
+			logger.Infof("could not create buildkit connector for port forwarding: %s", err)
+			logger.Infof("falling back to ingress connector")
+			logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to ingress connector")
+			buildkitConnector = connector.NewIngressConnector(okCtx, logger)
+		}
 	} else {
-		// TODO: Implement the buildkit connector for the build queue
-		buildkitConnector = connector.NewIngressConnector(context, logger)
+		buildkitConnector = connector.NewIngressConnector(okCtx, logger)
 	}
 
 	return &OktetoBuilder{
-		OktetoContext: context, Fs: fs,
+		OktetoContext: okCtx, Fs: fs,
 		metadata:  &buildkit.BuildMetadata{},
 		logger:    logger,
 		connector: buildkitConnector,

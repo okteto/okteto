@@ -880,7 +880,7 @@ func (tuc *tokenUpdaterController) UpdateKubeConfigToken() error {
 	if err != nil {
 		return err
 	}
-	token, err := oktetoClient.Kubetoken().GetKubeToken(okteto.GetContext().Name, okteto.GetContext().Namespace)
+	token, err := oktetoClient.Kubetoken().GetKubeToken(okteto.GetContext().Name, okteto.GetContext().Namespace, "")
 	if err != nil {
 		return err
 	}

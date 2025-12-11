@@ -843,7 +843,9 @@ func TestGetDestroyer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(constants.OktetoForceRemote, tt.clusterForceRemote)
-			dc := &destroyCommand{}
+			dc := &destroyCommand{
+				ioCtrl: io.NewIOController(),
+			}
 			deployer := dc.getDestroyer(tt.opts)
 			require.IsType(t, tt.expectedType, deployer)
 		})
