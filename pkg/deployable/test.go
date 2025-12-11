@@ -49,6 +49,10 @@ func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error 
 
 	for k, v := range GetPlatformEnvironment(ctx) {
 		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
+		// Always mask cloud credentials from execution environment
+		if v != "" {
+			oktetoLog.AddMaskedWord(v)
+		}
 	}
 
 	envStepper := NewEnvStepper(oktetoEnvFile.Name())
