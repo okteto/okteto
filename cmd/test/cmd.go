@@ -268,7 +268,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			},
 			K8sClientProvider:  k8sClientProvider,
 			Builder:            builder,
-			Connector:          conn,
+			RemoteConnector:    conn,
 			GetDeployer:        deployCMD.GetDeployer,
 			EndpointGetter:     deployCMD.NewEndpointGetter,
 			DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, k8sLogger),
