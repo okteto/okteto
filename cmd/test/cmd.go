@@ -346,14 +346,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return metadata, err
 		}
 
-		okCtx := &okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
-		}
 		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
-			okCtx,
+			okCtxForBuilder,
 			fs,
 			ioCtrl,
-			builder.GetConnector(),
+			conn,
 		))
 		commands := make([]model.DeployCommand, len(test.Commands))
 
