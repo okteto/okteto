@@ -46,6 +46,10 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 
 	for k, v := range GetPlatformEnvironment(ctx) {
 		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
+		// Always mask cloud credentials from execution environment
+		if v != "" {
+			oktetoLog.AddMaskedWord(v)
+		}
 	}
 
 	for _, command := range params.Deployable.Commands {

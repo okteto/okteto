@@ -57,6 +57,10 @@ func (ld *localDestroyCommand) Destroy(ctx context.Context, opts *Options) error
 
 		for k, v := range deployable.GetPlatformEnvironment(ctx) {
 			vars = append(vars, fmt.Sprintf("%s=%s", k, v))
+			// Always mask cloud credentials from execution environment
+			if v != "" {
+				oktetoLog.AddMaskedWord(v)
+			}
 		}
 		params := deployable.DestroyParameters{
 			Name:         opts.Name,
