@@ -87,6 +87,7 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 				DeployWaiter:      deploy.NewDeployWaiter(k8sProvider, k8sLogger),
 				EndpointGetter:    deploy.NewEndpointGetter,
 				AnalyticsTracker:  up.analyticsTracker,
+				Connector:         up.builder.GetConnector(),
 				IoCtrl:            ioCtrl,
 				DivertDeployerGetter: func(d *model.DivertDeploy, name, namespace string, c kubernetes.Interface, ioCtrl *io.Controller) (deploy.DivertDeployer, error) {
 					return divert.New(d, name, namespace, c, ioCtrl)
