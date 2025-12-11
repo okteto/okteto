@@ -49,9 +49,9 @@ func TestExpandRegistry(t *testing.T) {
 				config: fakeImageConfig{
 					isOkteto: false,
 				},
-				image: "okteto/okteto:latest",
+				image: "ghcr.io/okteto/okteto:latest",
 			},
-			expected: "okteto/okteto:latest",
+			expected: "ghcr.io/okteto/okteto:latest",
 		},
 		{
 			name: "no need to expand registry - Okteto",
@@ -59,9 +59,9 @@ func TestExpandRegistry(t *testing.T) {
 				config: fakeImageConfig{
 					isOkteto: true,
 				},
-				image: "okteto/okteto:latest",
+				image: "ghcr.io/okteto/okteto:latest",
 			},
-			expected: "okteto/okteto:latest",
+			expected: "ghcr.io/okteto/okteto:latest",
 		},
 		{
 			name: "okteto dev should expansion - Okteto",

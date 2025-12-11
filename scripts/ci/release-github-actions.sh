@@ -137,8 +137,8 @@ for repo in "${repos[@]}"; do
 
     # Modify Dockerfile
     if [[ -f Dockerfile ]]; then
-        echo "Updating Dockerfile to use okteto/okteto:${RELEASE_TAG}"
-        sed -i.bak -E 's|(FROM okteto/okteto:)[^ ]*|\1'"${RELEASE_TAG}"'|g' Dockerfile
+        echo "Updating Dockerfile to use ghcr.io/okteto/okteto:${RELEASE_TAG}"
+        sed -i.bak -E 's|(FROM ghcr\.io/okteto/okteto:)[^ ]*|\1'"${RELEASE_TAG}"'|g' Dockerfile
         rm Dockerfile.bak
 
         echo "Dockerfile changes:"
@@ -213,17 +213,17 @@ for repo in "${repos[@]}"; do
     update_tag_if_greater "latest"
     update_tag_if_greater "stable"
 
-    # Revert Dockerfile to use okteto/okteto:master
-    echo "Reverting Dockerfile to use okteto/okteto:master"
+    # Revert Dockerfile to use ghcr.io/okteto/okteto:master
+    echo "Reverting Dockerfile to use ghcr.io/okteto/okteto:master"
     if [[ -f Dockerfile ]]; then
-        sed -i.bak -E 's|(FROM okteto/okteto:)[^ ]*|\1master|g' Dockerfile
+        sed -i.bak -E 's|(FROM ghcr\.io/okteto/okteto:)[^ ]*|\1master|g' Dockerfile
         rm Dockerfile.bak
 
         echo "Dockerfile changes:"
         git --no-pager diff Dockerfile
 
         git add Dockerfile
-        git commit -m "Update Dockerfile to use okteto/okteto:master" || echo "No changes to commit in repository '$repo'."
+        git commit -m "Update Dockerfile to use ghcr.io/okteto/okteto:master" || echo "No changes to commit in repository '$repo'."
     else
         echo "Warning: Dockerfile not found in repository '$repo'. Skipping Dockerfile update to master."
     fi

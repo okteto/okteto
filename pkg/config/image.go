@@ -28,18 +28,24 @@ var (
 
 const (
 	// Image env vars
-	// oktetoBinEnvVar defines the okteto bin image to use
+	// oktetoCLIImageEnvVar defines the okteto cli image to use for all operations
+	// This is the primary environment variable that replaces OKTETO_BIN and OKTETO_REMOTE_CLI_IMAGE
+	oktetoCLIImageEnvVar = "OKTETO_CLI_IMAGE"
+
+	// oktetoBinEnvVar defines the okteto bin image to use (deprecated, use OKTETO_CLI_IMAGE instead)
 	// This variable is used for the okteto up start script. It runs syncthing and a supervisor
+	// Kept for backward compatibility
 	oktetoBinEnvVar = "OKTETO_BIN"
 
-	// oktetoDeployRemoteImageEnvVar defines okteto cli image used to deploy an environment remotely
+	// oktetoDeployRemoteImageEnvVar defines okteto cli image used to deploy an environment remotely (deprecated, use OKTETO_CLI_IMAGE instead)
+	// Kept for backward compatibility
 	oktetoDeployRemoteImageEnvVar = "OKTETO_REMOTE_CLI_IMAGE"
 
 	// oktetoCLIImageTemplate defines okteto CLI image template to use for remote deployments
 	oktetoCLIImageTemplate = "%s:%s"
 
 	// oktetoCliRepository defines the okteto cli repository
-	oktetoCliRepository = "okteto/okteto"
+	oktetoCliRepository = "ghcr.io/okteto/okteto"
 )
 
 type ImageConfig struct {
@@ -51,6 +57,7 @@ type ImageConfig struct {
 // Logger is the interface used to log messages
 type Logger interface {
 	Infof(format string, args ...interface{})
+	Warning(format string, args ...interface{})
 }
 
 // NewImageConfig creates a new ImageConfig instance
@@ -67,47 +74,35 @@ func NewImageConfig(ioCtrl Logger) *ImageConfig {
 	}
 }
 
-// GetBinImage returns the okteto bin image to use
-// Bin image is used to run start script in okteto up
-func (c *ImageConfig) GetBinImage() string {
+// GetCliImage returns the okteto cli image to use
+// This is used for all okteto operations including bin image for okteto up start script
+func (c *ImageConfig) GetCliImage() string {
+	// Check new unified env var first
+	cliImage := c.getEnv(oktetoCLIImageEnvVar)
+	if cliImage != "" {
+		c.ioCtrl.Infof("using okteto cli image (from OKTETO_CLI_IMAGE): %s", cliImage)
+		return cliImage
+	}
+
+	// Fall back to legacy OKTETO_BIN for backward compatibility
 	binImage := c.getEnv(oktetoBinEnvVar)
 	if binImage != "" {
-		c.ioCtrl.Infof("using okteto bin image (from env var): %s", binImage)
+		c.ioCtrl.Warning("Using Okteto CLI image '%s' from the OKTETO_BIN environment variable\n    OKTETO_BIN is deprecated, please use OKTETO_CLI_IMAGE instead", binImage)
 		return binImage
 	}
 
+	// Fall back to legacy OKTETO_REMOTE_CLI_IMAGE for backward compatibility
+	remoteImage := c.getEnv(oktetoDeployRemoteImageEnvVar)
+	if remoteImage != "" {
+		c.ioCtrl.Warning("Using Okteto CLI image '%s' from the OKTETO_REMOTE_CLI_IMAGE environment variable\n    OKTETO_REMOTE_CLI_IMAGE is deprecated, please use OKTETO_CLI_IMAGE instead", remoteImage)
+		return remoteImage
+	}
+
 	if _, err := semver.StrictNewVersion(VersionString); err == nil {
-		c.ioCtrl.Infof("using okteto bin image (from cli version): %s", VersionString)
+		c.ioCtrl.Infof("using okteto cli image (from cli version): %s", VersionString)
 		return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, VersionString)
 	}
 
 	c.ioCtrl.Infof("invalid version string: %s, using latest", VersionString)
 	return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, "master")
-}
-
-// GetRemoteImage returns the okteto cli image to use for remote deployments
-// Remote image is used to run okteto deploy/destroy/test remotely
-func (c *ImageConfig) GetRemoteImage(versionString string) string {
-	if _, err := semver.StrictNewVersion(versionString); err == nil {
-		return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, versionString)
-	}
-	c.ioCtrl.Infof("invalid version string: %s, using latest stable", versionString)
-
-	remoteOktetoImage := c.getEnv(oktetoDeployRemoteImageEnvVar)
-	if remoteOktetoImage != "" {
-		return remoteOktetoImage
-	}
-
-	return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, "stable")
-}
-
-// GetOktetoImage returns the okteto cli image to use for hybrid development environments
-func (c *ImageConfig) GetOktetoImage() string {
-	if _, err := semver.StrictNewVersion(VersionString); err == nil {
-		c.ioCtrl.Infof("using okteto bin image (from cli version): %s", VersionString)
-		return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, VersionString)
-	}
-
-	c.ioCtrl.Infof("invalid version string: %s, using latest stable", VersionString)
-	return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, "stable")
 }

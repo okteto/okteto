@@ -763,7 +763,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("dev workdir is not a dir")
 		}
 		dev.Workdir = localDir
-		dev.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetOktetoImage()
+		dev.Image = config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage()
 		dev.ImagePullPolicy = apiv1.PullIfNotPresent
 
 	} else {
@@ -1097,7 +1097,7 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
 		toMarshall.Metadata = nil
 	}
-	if toMarshall.InitContainer.Image == config.NewImageConfig(oktetoLog.GetOutputWriter()).GetBinImage() {
+	if toMarshall.InitContainer.Image == config.NewImageConfig(oktetoLog.GetOutputWriter()).GetCliImage() {
 		toMarshall.InitContainer.Image = ""
 	}
 	if toMarshall.Timeout.Default == 1*time.Minute && toMarshall.Timeout.Resources == 2*time.Minute {
