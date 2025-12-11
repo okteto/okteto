@@ -81,7 +81,7 @@ type registryInterface interface {
 func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 	return &Command{
 		GetManifest:      model.GetManifestV2,
-		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs(), ioCtrl),
+		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs(), ioCtrl, buildCmd.GetBuildkitConnector(okCtx, ioCtrl)),
 		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,

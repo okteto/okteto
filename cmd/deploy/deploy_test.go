@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
@@ -244,8 +245,9 @@ func (f *fakeDeployer) Get(ctx context.Context,
 	ioCtrl *io.Controller,
 	k8Logger *io.K8sLogger,
 	dependencyEnvVarsGetter dependencyEnvVarsGetter,
+	conn buildCmd.BuildkitConnector,
 ) (Deployer, error) {
-	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger, dependencyEnvVarsGetter)
+	args := f.Called(ctx, opts, buildEnvVarsGetter, cmapHandler, k8sProvider, ioCtrl, k8Logger, dependencyEnvVarsGetter, conn)
 	return args.Get(0).(Deployer), args.Error(1)
 }
 
@@ -453,6 +455,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
+		mock.Anything,
 	).Return(fakeDeployer, nil)
 
 	expectedOpts := &Options{
@@ -598,6 +601,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
+		mock.Anything,
 	).Return(fakeDeployer, nil)
 
 	expectedOpts := &Options{
@@ -681,6 +685,7 @@ func TestDeployWithErrorGettingDivertDriver(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
+		mock.Anything,
 	).Return(fakeDeployer, nil)
 
 	expectedOpts := &Options{
@@ -756,6 +761,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 
 	fakeDeployer.On(
 		"Get",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

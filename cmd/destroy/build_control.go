@@ -20,9 +20,11 @@ import (
 	"strings"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -37,8 +39,9 @@ func (bc *buildControlProvider) provide(name string) buildCtrl {
 }
 
 type buildCtrl struct {
-	builder builderInterface
-	name    string
+	builder   builderInterface
+	connector buildCmd.BuildkitConnector
+	name      string
 }
 
 func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface, ioCtrl *io.Controller) buildCtrl {
@@ -46,9 +49,14 @@ func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface,
 		analyticsTracker.TrackImageBuild,
 		insights.TrackImageBuild,
 	}
+	okCtx := &okteto.ContextStateless{
+		Store: okteto.GetContextStore(),
+	}
+	conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
 	return buildCtrl{
-		builder: buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish),
-		name:    name,
+		builder:   buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, conn),
+		connector: conn,
+		name:      name,
 	}
 }
 
@@ -56,6 +64,10 @@ type builderInterface interface {
 	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
 	GetServicesToBuildDuringExecution(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error)
 	Build(ctx context.Context, options *types.BuildOptions) error
+}
+
+func (bc buildCtrl) GetConnector() buildCmd.BuildkitConnector {
+	return bc.connector
 }
 
 func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.Manifest) error {

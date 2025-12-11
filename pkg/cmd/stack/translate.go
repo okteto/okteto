@@ -26,12 +26,14 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/build"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -84,7 +86,10 @@ func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOption
 		analyticsTracker.TrackImageBuild,
 		insights.TrackImageBuild,
 	}
-	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish)
+	okCtx := &okteto.ContextStateless{
+		Store: okteto.GetContextStore(),
+	}
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, buildCmd.GetBuildkitConnector(okCtx, ioCtrl))
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,

@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -480,7 +481,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	// it should be executed
 	if opts.Manifest.Destroy != nil && len(opts.Manifest.Destroy.Commands) > 0 {
 		// call to specific Destroy logic
-		destroyer := dc.getDestroyer(opts)
+		destroyer := dc.getDestroyer(opts, buildCtrl.GetConnector())
 		if err := destroyer.Destroy(ctx, opts); err != nil {
 			// If there was an interruption in the execution, or it was an error, but it wasn't a force Destroy
 			// we have to change the status to err
@@ -632,11 +633,11 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	return nil
 }
 
-func (dc *destroyCommand) getDestroyer(opts *Options) destroyInterface {
+func (dc *destroyCommand) getDestroyer(opts *Options, conn buildCmd.BuildkitConnector) destroyInterface {
 	var destroyer destroyInterface
 
 	if shouldRunInRemote(opts) {
-		destroyer = newRemoteDestroyer(opts.Manifest, dc.ioCtrl)
+		destroyer = newRemoteDestroyer(opts.Manifest, dc.ioCtrl, conn)
 		oktetoLog.Info("Destroying remotely...")
 	} else {
 		runner := &deployable.DestroyRunner{
