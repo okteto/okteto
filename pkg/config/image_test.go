@@ -103,6 +103,8 @@ func TestGetCliImage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Reset cache before each test
+			cachedCliImage = ""
 			VersionString = tc.versionString
 
 			// Create ImageConfig with mocked getEnv
@@ -153,6 +155,8 @@ func TestClusterCliRepositoryOverridesDefault(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Reset cache before each test
+			cachedCliImage = ""
 			VersionString = tc.versionString
 			ClusterCliRepository = tc.clusterRepo
 
