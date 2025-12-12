@@ -29,6 +29,7 @@ type OktetoInterface interface {
 	Pipeline() PipelineInterface
 	Stream() StreamInterface
 	Kubetoken() KubetokenInterface
+	Buildkit() BuildkitInterface
 }
 
 // UserInterface represents the client that connects to the user functions
