@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/build/buildkit/connector"
@@ -58,10 +59,10 @@ type OktetoBuilderInterface interface {
 type BuildkitConnector interface {
 	// WaitUntilIsReady waits for the buildkit server to be ready
 	WaitUntilIsReady(ctx context.Context) error
-	// GetClientFactory returns the client factory
-	GetClientFactory() *connector.ClientFactory
-	// GetWaiter returns the waiter
-	GetWaiter() *connector.Waiter
+	// Stop closes the connection to the buildkit server
+	Stop()
+	// GetBuildkitClient returns the buildkit client
+	GetBuildkitClient(ctx context.Context) (*client.Client, error)
 }
 
 // OktetoBuilder runs the build of an image
@@ -99,10 +100,10 @@ func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) B
 			logger.Infof("could not create buildkit connector for port forwarding: %s", err)
 			logger.Infof("falling back to direct connector")
 			logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to direct connector")
-			buildkitConnector = connector.NewDirectConnector(okCtx, logger)
+			buildkitConnector = connector.NewIngressConnector(okCtx, logger)
 		}
 	} else {
-		buildkitConnector = connector.NewDirectConnector(okCtx, logger)
+		buildkitConnector = connector.NewIngressConnector(okCtx, logger)
 	}
 	return buildkitConnector
 }
@@ -194,13 +195,14 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
+	defer ob.connector.Stop()
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
 	if err := ob.connector.WaitUntilIsReady(ctx); err != nil {
 		return err
 	}
 
-	optBuilder, err := buildkit.NewSolveOptBuilder(ob.connector.GetClientFactory(), reg, ob.OktetoContext, ob.Fs, ioCtrl)
+	optBuilder, err := buildkit.NewSolveOptBuilder(ob.connector, reg, ob.OktetoContext, ob.Fs, ioCtrl)
 	if err != nil {
 		return err
 	}
@@ -210,7 +212,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return fmt.Errorf("failed to create build solver: %w", err)
 	}
 
-	buildSolver := buildkit.NewBuildkitRunner(ob.connector.GetClientFactory(), ob.connector.GetWaiter(), reg, run, ioCtrl)
+	buildSolver := buildkit.NewBuildkitRunner(ob.connector, reg, run, ioCtrl)
 
 	if err := buildSolver.Run(ctx, opt, buildOptions.OutputMode); err != nil {
 		return err

@@ -16,6 +16,7 @@ package connector
 import (
 	"context"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
 )
@@ -52,12 +53,11 @@ func (i *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
 	return i.waiter.WaitUntilIsUp(ctx)
 }
 
-// GetClientFactory returns the client factory
-func (i *IngressConnector) GetClientFactory() *ClientFactory {
-	return i.buildkitClientFactory
+func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
+	return i.buildkitClientFactory.GetBuildkitClient(ctx)
 }
 
-// GetWaiter returns the waiter
-func (i *IngressConnector) GetWaiter() *Waiter {
-	return i.waiter
+// Stop is a no-op for the ingress connector since it doesn't maintain a persistent connection
+func (i *IngressConnector) Stop() {
+	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
 }
