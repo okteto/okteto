@@ -36,6 +36,13 @@ import (
 	"k8s.io/client-go/transport/spdy"
 )
 
+var waitReasonMessages = map[string]string{
+	"QUEUE_POSITION":    "waiting for earlier requests in queue",
+	"NO_PODS_AVAILABLE": "no BuildKit pods are available",
+	"ALL_PODS_BUSY":     "all BuildKit pods are at capacity",
+	"PODS_SCALING":      "BuildKit pods are starting up",
+}
+
 type PortForwarderOktetoContextInterface interface {
 	GetCurrentCertStr() string
 	GetCurrentBuilder() string
@@ -238,10 +245,15 @@ func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
 		}
 
 		if response.TotalInQueue > 0 {
+			friendlyReason := waitReasonMessages[response.Reason]
+			if friendlyReason == "" {
+				friendlyReason = response.Reason
+			}
 			pf.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue)
 			sp.Stop()
-			sp = pf.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue))
+			sp = pf.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", friendlyReason, response.QueuePosition, response.TotalInQueue))
 			sp.Start()
+			defer sp.Stop()
 		}
 
 		select {
