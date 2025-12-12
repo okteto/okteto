@@ -24,6 +24,9 @@ var (
 	// ClusterCliRepository defines the okteto cli repository for all the operations.
 	// This env var is set when executing the okteto context at the beginning of any command
 	ClusterCliRepository = ""
+
+	// cachedCliImage stores the computed CLI image to avoid re-evaluation and duplicate warnings
+	cachedCliImage = ""
 )
 
 const (
@@ -77,32 +80,42 @@ func NewImageConfig(ioCtrl Logger) *ImageConfig {
 // GetCliImage returns the okteto cli image to use
 // This is used for all okteto operations including bin image for okteto up start script
 func (c *ImageConfig) GetCliImage() string {
+	// Return cached value if already computed
+	if cachedCliImage != "" {
+		return cachedCliImage
+	}
+
 	// Check new unified env var first
 	cliImage := c.getEnv(oktetoCLIImageEnvVar)
 	if cliImage != "" {
 		c.ioCtrl.Infof("using okteto cli image (from OKTETO_CLI_IMAGE): %s", cliImage)
-		return cliImage
+		cachedCliImage = cliImage
+		return cachedCliImage
 	}
 
 	// Fall back to legacy OKTETO_BIN for backward compatibility
 	binImage := c.getEnv(oktetoBinEnvVar)
 	if binImage != "" {
 		c.ioCtrl.Warning("Using Okteto CLI image '%s' from the OKTETO_BIN environment variable\n    OKTETO_BIN is deprecated, please use OKTETO_CLI_IMAGE instead", binImage)
-		return binImage
+		cachedCliImage = binImage
+		return cachedCliImage
 	}
 
 	// Fall back to legacy OKTETO_REMOTE_CLI_IMAGE for backward compatibility
 	remoteImage := c.getEnv(oktetoDeployRemoteImageEnvVar)
 	if remoteImage != "" {
 		c.ioCtrl.Warning("Using Okteto CLI image '%s' from the OKTETO_REMOTE_CLI_IMAGE environment variable\n    OKTETO_REMOTE_CLI_IMAGE is deprecated, please use OKTETO_CLI_IMAGE instead", remoteImage)
-		return remoteImage
+		cachedCliImage = remoteImage
+		return cachedCliImage
 	}
 
 	if _, err := semver.StrictNewVersion(VersionString); err == nil {
 		c.ioCtrl.Infof("using okteto cli image (from cli version): %s", VersionString)
-		return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, VersionString)
+		cachedCliImage = fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, VersionString)
+		return cachedCliImage
 	}
 
 	c.ioCtrl.Infof("invalid version string: %s, using latest", VersionString)
-	return fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, "master")
+	cachedCliImage = fmt.Sprintf(oktetoCLIImageTemplate, c.cliRepository, "master")
+	return cachedCliImage
 }
