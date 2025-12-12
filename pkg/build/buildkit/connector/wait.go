@@ -68,20 +68,24 @@ type Waiter struct {
 	retryInterval         time.Duration
 }
 
+type buildkitGetter interface {
+	GetBuildkitClient(ctx context.Context) (*client.Client, error)
+}
+
 type buildkitClientFactoryToWait struct {
-	factory *ClientFactory
+	factory buildkitGetter
 }
 
 func (b *buildkitClientFactoryToWait) GetBuildkitClient(ctx context.Context) (clientInfoRetriever, error) {
 	return b.factory.GetBuildkitClient(ctx)
 }
 
-func buildkitClientFactoryToWaitFactory(factory *ClientFactory) buildkitClientFactoryWaiter {
+func buildkitClientFactoryToWaitFactory(factory buildkitGetter) buildkitClientFactoryWaiter {
 	return &buildkitClientFactoryToWait{factory}
 }
 
 // NewBuildkitClientWaiter creates a new buildkitWaiter
-func NewBuildkitClientWaiter(factory *ClientFactory, logger *io.Controller) *Waiter {
+func NewBuildkitClientWaiter(factory buildkitGetter, logger *io.Controller) *Waiter {
 	return &Waiter{
 		maxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
 		retryInterval:         env.LoadTimeOrDefault(retryBuildkitIntervalEnvVar, retryTime),

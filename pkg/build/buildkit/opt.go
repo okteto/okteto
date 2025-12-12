@@ -52,13 +52,9 @@ type SolveOptBuilder struct {
 	imageCtrl        registry.ImageCtrl
 	reg              registry.OktetoRegistry
 	okCtx            OktetoContextInterface
-	clientFactory    ClientFactoryIface
+	clientFactory    clientFactory
 	fs               afero.Fs
 	secretTempFolder string
-}
-
-type ClientFactoryIface interface {
-	GetBuildkitClient(ctx context.Context) (*client.Client, error)
 }
 
 // OktetoContextInterface is an interface to interact with the okteto context
@@ -78,8 +74,12 @@ type OktetoContextInterface interface {
 	GetRegistryURL() string
 }
 
+type clientFactory interface {
+	GetBuildkitClient(ctx context.Context) (*client.Client, error)
+}
+
 // NewSolveOptBuilder creates a new SolveOptBuilder
-func NewSolveOptBuilder(clientFactory ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
+func NewSolveOptBuilder(cf clientFactory, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
 	secretTempFolder, err := getSecretTempFolder(fs)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func NewSolveOptBuilder(clientFactory ClientFactoryIface, reg registry.OktetoReg
 		reg:              reg,
 		fs:               fs,
 		secretTempFolder: secretTempFolder,
-		clientFactory:    clientFactory,
+		clientFactory:    cf,
 		okCtx:            okCtx,
 	}, nil
 }

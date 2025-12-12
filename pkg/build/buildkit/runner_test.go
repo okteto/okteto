@@ -62,6 +62,20 @@ func (m *fakeBuildkitClientFactory) GetBuildkitClient(context.Context) (*client.
 	return &client.Client{}, nil
 }
 
+type fakeBuildkitConnector struct {
+	waiter        buildkitWaiterInterface
+	clientFactory buildkitClientFactory
+}
+
+func (f *fakeBuildkitConnector) WaitUntilIsReady(ctx context.Context) error {
+	return f.waiter.WaitUntilIsUp(ctx)
+}
+func (f *fakeBuildkitConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
+	return f.clientFactory.GetBuildkitClient(ctx)
+}
+func (m *fakeBuildkitConnector) Stop() {
+	// No-op: fake buildkit connector doesn't maintain a persistent connection that needs to be closed
+}
 func TestRunnerRun(t *testing.T) {
 	type input struct {
 		buildkitWaiter           buildkitWaiterInterface
@@ -232,9 +246,12 @@ func TestRunnerRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			solveAttempts = 0
 			fmt.Print(solveAttempts)
+
 			r := &Runner{
-				waiter:                             tt.input.buildkitWaiter,
-				clientFactory:                      tt.input.buildkitClientFactory,
+				connector: &fakeBuildkitConnector{
+					waiter:        tt.input.buildkitWaiter,
+					clientFactory: tt.input.buildkitClientFactory,
+				},
 				solveBuild:                         tt.input.fakeSolver,
 				registry:                           tt.input.fakeRegistryImageChecker,
 				metadata:                           &runnerMetadata{},
@@ -361,10 +378,12 @@ func TestNewBuildkitRunner(t *testing.T) {
 				t.Setenv(MaxRetriesForBuildkitTransientErrorsEnvVar, tt.envVar)
 			}
 
-			runner := NewBuildkitRunner(&fakeBuildkitClientFactory{}, &fakeBuildkitWaiter{}, &fakeRegistryImageChecker{}, func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil }, io.NewIOController())
+			runner := NewBuildkitRunner(&fakeBuildkitConnector{
+				waiter:        &fakeBuildkitWaiter{},
+				clientFactory: &fakeBuildkitClientFactory{},
+			}, &fakeRegistryImageChecker{}, func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil }, io.NewIOController())
 
-			assert.Implements(t, (*buildkitClientFactory)(nil), runner.clientFactory)
-			assert.Implements(t, (*buildkitWaiterInterface)(nil), runner.waiter)
+			assert.Implements(t, (*buildkitConnector)(nil), runner.connector)
 			assert.Implements(t, (*registryImageChecker)(nil), runner.registry)
 			assert.NotNil(t, runner.solveBuild)
 			assert.NotNil(t, runner.logger)

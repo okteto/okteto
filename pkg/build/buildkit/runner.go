@@ -54,14 +54,24 @@ type runnerMetadata struct {
 
 // Runner runs a build using buildkit
 type Runner struct {
-	clientFactory                      buildkitClientFactory
-	waiter                             buildkitWaiterInterface
+	connector                          buildkitConnector
 	solveBuild                         SolveBuildFn
 	registry                           registryImageChecker
 	logger                             *io.Controller
 	metadata                           *runnerMetadata
 	maxAttemptsBuildkitTransientErrors int
 }
+
+// buildkitConnector is the interface for the buildkit connector
+type buildkitConnector interface {
+	// WaitUntilIsReady waits for the buildkit server to be ready
+	WaitUntilIsReady(ctx context.Context) error
+	// Stop closes the connection to the buildkit server
+	Stop()
+	// GetBuildkitClient returns the buildkit client
+	GetBuildkitClient(ctx context.Context) (*client.Client, error)
+}
+
 type SolveOptBuilderInterface interface {
 	Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error)
 }
@@ -70,10 +80,9 @@ type SolveOptBuilderInterface interface {
 type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
 
 // NewBuildkitRunner creates a new buildkit runner
-func NewBuildkitRunner(clientFactory buildkitClientFactory, waiter buildkitWaiterInterface, registry registryImageChecker, solver SolveBuildFn, logger *io.Controller) *Runner {
+func NewBuildkitRunner(connector buildkitConnector, registry registryImageChecker, solver SolveBuildFn, logger *io.Controller) *Runner {
 	return &Runner{
-		clientFactory:                      clientFactory,
-		waiter:                             waiter,
+		connector:                          connector,
 		solveBuild:                         solver,
 		maxAttemptsBuildkitTransientErrors: env.LoadIntOrDefault(MaxRetriesForBuildkitTransientErrorsEnvVar, defaultMaxAttempts),
 		logger:                             logger,
@@ -97,13 +106,14 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 			r.logger.Logger().Infof("retrying build, attempt %d", attempts)
 			r.logger.Out().Warning("BuildKit service connection failure. Retrying...")
 		}
+
 		// if buildkit is not available for 10 minutes, we should fail
-		if err := r.waiter.WaitUntilIsUp(ctx); err != nil {
+		if err := r.connector.WaitUntilIsReady(ctx); err != nil {
 			r.logger.Logger().Infof("failed to wait for BuildKit service to be available: %s", err)
 			return err
 		}
 
-		client, err := r.clientFactory.GetBuildkitClient(ctx)
+		client, err := r.connector.GetBuildkitClient(ctx)
 		if err != nil {
 			r.logger.Logger().Infof("failed to get buildkit client: %s", err)
 			if attempts >= r.maxAttemptsBuildkitTransientErrors {
