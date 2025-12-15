@@ -14,46 +14,12 @@
 package connector
 
 import (
-	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/log/io"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-// mockBuildkitClient is a mock implementation of types.BuildkitInterface
-type mockBuildkitClient struct {
-	responses []*types.BuildKitPodResponse
-	errs      []error
-	callIndex int
-}
-
-func (m *mockBuildkitClient) GetLeastLoadedBuildKitPod(_ context.Context, _ string) (*types.BuildKitPodResponse, error) {
-	idx := m.callIndex
-	m.callIndex++
-	if idx < len(m.errs) && m.errs[idx] != nil {
-		return nil, m.errs[idx]
-	}
-	if idx < len(m.responses) {
-		return m.responses[idx], nil
-	}
-	return &types.BuildKitPodResponse{}, nil
-}
-
-// mockOktetoClient is a mock implementation of types.OktetoInterface
-type mockOktetoClient struct {
-	buildkit types.BuildkitInterface
-}
-
-func (m *mockOktetoClient) User() types.UserInterface            { return nil }
-func (m *mockOktetoClient) Namespaces() types.NamespaceInterface { return nil }
-func (m *mockOktetoClient) Previews() types.PreviewInterface     { return nil }
-func (m *mockOktetoClient) Pipeline() types.PipelineInterface    { return nil }
-func (m *mockOktetoClient) Stream() types.StreamInterface        { return nil }
-func (m *mockOktetoClient) Kubetoken() types.KubetokenInterface  { return nil }
-func (m *mockOktetoClient) Buildkit() types.BuildkitInterface    { return m.buildkit }
 
 // mockPortForwarderOktetoContext is a mock implementation of PortForwarderOktetoContextInterface
 type mockPortForwarderOktetoContext struct {
