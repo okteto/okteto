@@ -47,26 +47,22 @@ type PortForwarderOktetoContextInterface interface {
 	GetCurrentCfg() *clientcmdapi.Config
 }
 
-// forwarder represents a port forwarder for the buildkit server.
-type forwarder struct {
-	stopChan       chan struct{}
-	readyChan      chan struct{}
-	localPort      int
-	podName        string
-	lastSessionErr error
-}
-
-// PortForwarder represents a port forwarder for the buildkit server.
+// PortForwarder manages a port forward connection to the buildkit server.
 type PortForwarder struct {
 	sessionID    string
 	okCtx        PortForwarderOktetoContextInterface
 	oktetoClient types.OktetoInterface
 	k8sClient    kubernetes.Interface
 	restConfig   *rest.Config
-	forwarder    *forwarder
 	ioCtrl       *io.Controller
-	isActive     bool
-	mu           sync.Mutex
+
+	// Connection state
+	stopChan  chan struct{}
+	readyChan chan struct{}
+	localPort int
+	podName   string
+	isActive  bool
+	mu        sync.Mutex
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
@@ -94,12 +90,10 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		k8sClient:    k8sClient,
 		restConfig:   restConfig,
 		okCtx:        okCtx,
-		forwarder: &forwarder{
-			stopChan:  make(chan struct{}, 1),
-			readyChan: make(chan struct{}, 1),
-			localPort: port,
-		},
-		ioCtrl: ioCtrl,
+		ioCtrl:       ioCtrl,
+		stopChan:     make(chan struct{}, 1),
+		readyChan:    make(chan struct{}, 1),
+		localPort:    port,
 	}, nil
 }
 
@@ -110,13 +104,13 @@ const buildkitPort = 1234
 // If already active, it reuses the existing connection.
 // If not active, it gets the least loaded pod and establishes a new connection.
 func (pf *PortForwarder) Start(ctx context.Context) error {
-	if pf.forwarder.podName == "" {
+	if pf.podName == "" {
 		if err := pf.assignBuildkitPod(ctx); err != nil {
 			pf.ioCtrl.Logger().Infof("failed to assign buildkit pod: %s", err)
 			return err
 		}
 	} else {
-		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.forwarder.podName)
+		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.podName)
 	}
 
 	if err := pf.establishPortForward(); err != nil {
@@ -158,8 +152,8 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) error {
 		}
 
 		if response.PodName != "" {
-			pf.forwarder.podName = response.PodName
-			pf.ioCtrl.Logger().Infof("assigned buildkit pod: %s", pf.forwarder.podName)
+			pf.podName = response.PodName
+			pf.ioCtrl.Logger().Infof("assigned buildkit pod: %s", pf.podName)
 			return nil
 		}
 
@@ -184,13 +178,13 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) error {
 
 // establishPortForward creates the port forward to the buildkit pod
 func (pf *PortForwarder) establishPortForward() error {
-	pf.forwarder.stopChan = make(chan struct{}, 1)
-	pf.forwarder.readyChan = make(chan struct{}, 1)
+	pf.stopChan = make(chan struct{}, 1)
+	pf.readyChan = make(chan struct{}, 1)
 
 	url := pf.k8sClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(pf.okCtx.GetGlobalNamespace()).
-		Name(pf.forwarder.podName).
+		Name(pf.podName).
 		SubResource("portforward").URL()
 
 	transport, upgrader, err := spdy.RoundTripperFor(pf.restConfig)
@@ -199,14 +193,14 @@ func (pf *PortForwarder) establishPortForward() error {
 	}
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url)
-	ports := []string{fmt.Sprintf("%d:%d", pf.forwarder.localPort, buildkitPort)}
+	ports := []string{fmt.Sprintf("%d:%d", pf.localPort, buildkitPort)}
 
 	forwarder, err := portforward.NewOnAddresses(
 		dialer,
 		[]string{"127.0.0.1"},
 		ports,
-		pf.forwarder.stopChan,
-		pf.forwarder.readyChan,
+		pf.stopChan,
+		pf.readyChan,
 		ioutil.Discard,
 		new(bytes.Buffer),
 	)
@@ -217,7 +211,6 @@ func (pf *PortForwarder) establishPortForward() error {
 	go func() {
 		if err := forwarder.ForwardPorts(); err != nil {
 			pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
-			pf.forwarder.lastSessionErr = err
 			pf.Stop()
 		}
 	}()
@@ -227,12 +220,12 @@ func (pf *PortForwarder) establishPortForward() error {
 
 // waitUntilReady waits for the port forward to be ready or context to be cancelled
 func (pf *PortForwarder) waitUntilReady(ctx context.Context) error {
-	pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", pf.forwarder.podName)
+	pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", pf.podName)
 
 	select {
-	case <-pf.forwarder.readyChan:
+	case <-pf.readyChan:
 		pf.isActive = true
-		pf.ioCtrl.Logger().Infof("port forward to buildkit pod %s is ready on 127.0.0.1:%d", pf.forwarder.podName, pf.forwarder.localPort)
+		pf.ioCtrl.Logger().Infof("port forward to buildkit pod %s is ready on 127.0.0.1:%d", pf.podName, pf.localPort)
 		return nil
 	case <-ctx.Done():
 		pf.Stop()
@@ -245,15 +238,15 @@ func (pf *PortForwarder) Stop() {
 	pf.mu.Lock()
 	defer pf.mu.Unlock()
 
-	if pf.forwarder == nil || pf.forwarder.stopChan == nil {
+	if pf.stopChan == nil {
 		pf.ioCtrl.Logger().Infof("port forward connection is not active")
 		return
 	}
 
 	select {
-	case <-pf.forwarder.stopChan:
+	case <-pf.stopChan:
 	default:
-		close(pf.forwarder.stopChan)
+		close(pf.stopChan)
 	}
 	pf.isActive = false
 	pf.ioCtrl.Logger().Infof("port forward connection stopped")
@@ -284,7 +277,7 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 			return nil, fmt.Errorf("failed to start port forward: %w", err)
 		}
 	}
-	localAddress := fmt.Sprintf("127.0.0.1:%d", pf.forwarder.localPort)
+	localAddress := fmt.Sprintf("127.0.0.1:%d", pf.localPort)
 	pf.ioCtrl.Logger().Infof("using buildkit via local port forward: %s", localAddress)
 	originalURL, err := url.Parse(pf.okCtx.GetCurrentBuilder())
 	if err != nil {

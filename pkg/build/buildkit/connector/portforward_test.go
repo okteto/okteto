@@ -97,29 +97,17 @@ func (m *mockPortForwarderOktetoContext) GetCurrentCfg() *clientcmdapi.Config {
 func TestPortForwarder_Stop(t *testing.T) {
 	tests := []struct {
 		name          string
-		setupForward  func() *forwarder
+		stopChan      chan struct{}
 		shouldNotFail bool
 	}{
 		{
-			name: "stop with open channel",
-			setupForward: func() *forwarder {
-				return &forwarder{
-					stopChan:  make(chan struct{}, 1),
-					readyChan: make(chan struct{}, 1),
-					localPort: 8080,
-				}
-			},
+			name:          "stop with open channel",
+			stopChan:      make(chan struct{}, 1),
 			shouldNotFail: true,
 		},
 		{
-			name: "stop with nil channel",
-			setupForward: func() *forwarder {
-				return &forwarder{
-					stopChan:  nil,
-					readyChan: make(chan struct{}, 1),
-					localPort: 8080,
-				}
-			},
+			name:          "stop with nil channel",
+			stopChan:      nil,
 			shouldNotFail: true,
 		},
 	}
@@ -127,7 +115,9 @@ func TestPortForwarder_Stop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pf := &PortForwarder{
-				forwarder: tt.setupForward(),
+				stopChan:  tt.stopChan,
+				readyChan: make(chan struct{}, 1),
+				localPort: 8080,
 				ioCtrl:    io.NewIOController(),
 			}
 
@@ -137,9 +127,9 @@ func TestPortForwarder_Stop(t *testing.T) {
 			})
 
 			// Verify channel is closed if it was not nil
-			if pf.forwarder.stopChan != nil {
+			if pf.stopChan != nil {
 				select {
-				case _, ok := <-pf.forwarder.stopChan:
+				case _, ok := <-pf.stopChan:
 					require.False(t, ok, "channel should be closed")
 				default:
 					t.Error("channel should be closed but is still open")
@@ -151,12 +141,10 @@ func TestPortForwarder_Stop(t *testing.T) {
 
 func TestPortForwarder_Stop_MultipleCallsSafe(t *testing.T) {
 	pf := &PortForwarder{
-		forwarder: &forwarder{
-			stopChan:  make(chan struct{}, 1),
-			readyChan: make(chan struct{}, 1),
-			localPort: 8080,
-		},
-		ioCtrl: io.NewIOController(),
+		stopChan:  make(chan struct{}, 1),
+		readyChan: make(chan struct{}, 1),
+		localPort: 8080,
+		ioCtrl:    io.NewIOController(),
 	}
 
 	// First stop should work
@@ -166,7 +154,7 @@ func TestPortForwarder_Stop_MultipleCallsSafe(t *testing.T) {
 
 	// Verify channel is closed
 	select {
-	case _, ok := <-pf.forwarder.stopChan:
+	case _, ok := <-pf.stopChan:
 		require.False(t, ok, "channel should be closed")
 	default:
 		t.Error("channel should be closed")
@@ -190,11 +178,9 @@ func TestPortForwarder_GetWaiter(t *testing.T) {
 	}
 
 	pf := &PortForwarder{
-		okCtx: okCtx,
-		forwarder: &forwarder{
-			localPort: 8443,
-		},
-		ioCtrl: io.NewIOController(),
+		okCtx:     okCtx,
+		localPort: 8443,
+		ioCtrl:    io.NewIOController(),
 	}
 
 	waiter := NewBuildkitClientWaiter(pf, io.NewIOController())
@@ -212,12 +198,10 @@ func TestPortForwarder_GetWaiter_Configuration(t *testing.T) {
 	}
 
 	pf := &PortForwarder{
-		okCtx:    okCtx,
-		isActive: true,
-		forwarder: &forwarder{
-			localPort: 8443,
-		},
-		ioCtrl: io.NewIOController(),
+		okCtx:     okCtx,
+		isActive:  true,
+		localPort: 8443,
+		ioCtrl:    io.NewIOController(),
 	}
 
 	waiter := NewBuildkitClientWaiter(pf, io.NewIOController())
