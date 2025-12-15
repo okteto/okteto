@@ -1150,7 +1150,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1203,7 +1203,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1279,7 +1279,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1391,7 +1391,7 @@ dev:
 							},
 						},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1479,7 +1479,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1559,7 +1559,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1613,7 +1613,7 @@ dev:
 						SSHServerPort: 2222,
 						Services:      []*Dev{},
 						InitContainer: InitContainer{
-							Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+							Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 						},
 						Timeout: Timeout{
 							Resources: 120 * time.Second,
@@ -1808,7 +1808,7 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
+				Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				ImagePullPolicy: v1.PullIfNotPresent,
 				Secrets:         []Secret{},
 				Probes:          &Probes{},
@@ -1828,7 +1828,7 @@ reverse:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+					Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				},
 			},
 		},
@@ -1891,7 +1891,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+					Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				},
 			},
 		},
@@ -1947,7 +1947,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+					Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				},
 			},
 		},
@@ -1973,7 +1973,7 @@ forward:
 				Command: Command{
 					Values: []string{"sh"},
 				},
-				Image:           config.NewImageConfig(io.NewIOController()).GetOktetoImage(),
+				Image:           config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				ImagePullPolicy: v1.PullIfNotPresent,
 				Secrets:         []Secret{},
 				Probes:          &Probes{},
@@ -2005,7 +2005,7 @@ forward:
 					Enabled: true,
 				},
 				InitContainer: InitContainer{
-					Image: config.NewImageConfig(io.NewIOController()).GetBinImage(),
+					Image: config.NewImageConfig(io.NewIOController()).GetCliImage(),
 				},
 			},
 		},

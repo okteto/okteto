@@ -206,10 +206,8 @@ jobs:
           # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            echo "OKTETO_BIN=$OKTETO_BIN"
+            export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
@@ -228,10 +226,8 @@ jobs:
           name: Run up integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            echo "OKTETO_BIN=$OKTETO_BIN"
+            export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
@@ -252,10 +248,8 @@ jobs:
           name: Run okteto integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            echo "OKTETO_BIN=$OKTETO_BIN"
+            export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
@@ -274,10 +268,8 @@ jobs:
           name: Run okteto test integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_REMOTE_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            export OKTETO_BIN=okteto.global/cli-e2e:${CIRCLE_SHA1}
-            echo "OKTETO_REMOTE_CLI_IMAGE=$OKTETO_REMOTE_CLI_IMAGE"
-            echo "OKTETO_BIN=$OKTETO_BIN"
+            export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto-test
@@ -295,7 +287,7 @@ jobs:
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
           # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
-          # which run the deploy, we set the env var OKTETO_REMOTE_CLI_IMAGE to the one we are building
+          # which run the deploy, we set the env var OKTETO_CLI_IMAGE to the one we are building
           name: Build Dockerfile for current commit
           command: |
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
@@ -389,8 +381,7 @@ jobs:
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
-            $env:OKTETO_BIN="okteto.global/cli-e2e:${CIRCLE_SHA1}"
+            $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
@@ -427,8 +418,7 @@ jobs:
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
-            $env:OKTETO_BIN="okteto.global/cli-e2e:${CIRCLE_SHA1}"
+            $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/test -tags="integration" --count=1 -v -timeout 20m
@@ -464,9 +454,8 @@ jobs:
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
-            $env:OKTETO_REMOTE_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
-            $env:OKTETO_BIN="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
-            echo OKTETO_BIN=$env:OKTETO_BIN
+            $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
+            echo OKTETO_CLI_IMAGE=$env:OKTETO_CLI_IMAGE
             & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
@@ -479,7 +468,7 @@ jobs:
       - run: *docker-login
       - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:$CIRCLE_TAG
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress ghcr.io/okteto/okteto:$CIRCLE_TAG
 
   push-image-dev:
     executor: golang-ci
@@ -489,7 +478,7 @@ jobs:
       - run: *docker-login
       - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG",dev "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:dev
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress ghcr.io/okteto/okteto:dev
 
   push-image-master:
     executor: golang-ci
@@ -499,7 +488,7 @@ jobs:
       - run: *docker-login
       - run: *github-packages-login
       - run: ./scripts/ci/push-image.sh "master" "linux/amd64,linux/arm64"
-      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress okteto/okteto:master
+      - run: trivy image --db-repository public.ecr.aws/aquasecurity/trivy-db:2 --java-db-repository public.ecr.aws/aquasecurity/trivy-java-db:1 --no-progress ghcr.io/okteto/okteto:master
 
   upload-static-job:
     executor: golang-ci

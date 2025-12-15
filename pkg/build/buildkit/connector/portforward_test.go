@@ -28,8 +28,8 @@ import (
 
 // mockBuildkitClient is a mock implementation of types.BuildkitInterface
 type mockBuildkitClient struct {
-	responses []*types.BuildKitPodResponse
 	errs      []error
+	responses []*types.BuildKitPodResponse
 	callIndex int
 }
 
@@ -193,7 +193,6 @@ func TestPortForwarder_GetClientFactory(t *testing.T) {
 		certStr          string
 		token            string
 		expectedHostname string
-		expectNil        bool
 	}{
 		{
 			name:             "valid builder URL",
@@ -201,7 +200,6 @@ func TestPortForwarder_GetClientFactory(t *testing.T) {
 			certStr:          "cert-data",
 			token:            "token-data",
 			expectedHostname: "buildkit.example.com",
-			expectNil:        false,
 		},
 		{
 			name:             "builder URL without port",
@@ -209,7 +207,6 @@ func TestPortForwarder_GetClientFactory(t *testing.T) {
 			certStr:          "cert-data",
 			token:            "token-data",
 			expectedHostname: "buildkit.example.com",
-			expectNil:        false,
 		},
 		{
 			name:             "builder URL with path",
@@ -217,14 +214,6 @@ func TestPortForwarder_GetClientFactory(t *testing.T) {
 			certStr:          "cert-data",
 			token:            "token-data",
 			expectedHostname: "buildkit.example.com",
-			expectNil:        false,
-		},
-		{
-			name:      "invalid builder URL",
-			builder:   "://invalid-url",
-			certStr:   "cert-data",
-			token:     "token-data",
-			expectNil: true,
 		},
 	}
 
@@ -246,18 +235,34 @@ func TestPortForwarder_GetClientFactory(t *testing.T) {
 
 			factory := pf.GetClientFactory()
 
-			if tt.expectNil {
-				require.Nil(t, factory)
-			} else {
-				require.NotNil(t, factory)
-				require.Equal(t, tt.certStr, factory.cert)
-				require.Equal(t, tt.token, factory.token)
-				require.Contains(t, factory.builder, "tcp://127.0.0.1")
-				require.Equal(t, config.GetCertificatePath(), factory.certificatePath)
-				require.Equal(t, tt.expectedHostname, factory.tlsServerName)
-			}
+			require.NotNil(t, factory)
+			require.Equal(t, tt.certStr, factory.cert)
+			require.Equal(t, tt.token, factory.token)
+			require.Contains(t, factory.builder, "tcp://127.0.0.1")
+			require.Equal(t, config.GetCertificatePath(), factory.certificatePath)
+			require.Equal(t, tt.expectedHostname, factory.tlsServerName)
 		})
 	}
+}
+
+func TestPortForwarder_GetClientFactory_InvalidURL(t *testing.T) {
+	okCtx := &mockPortForwarderOktetoContext{
+		builder: "://invalid-url",
+		certStr: "cert-data",
+		token:   "token-data",
+	}
+
+	pf := &PortForwarder{
+		okCtx: okCtx,
+		forwarder: &forwarder{
+			localPort: 8443,
+		},
+		ioCtrl: io.NewIOController(),
+	}
+
+	factory := pf.GetClientFactory()
+
+	require.Nil(t, factory)
 }
 
 func TestPortForwarder_GetWaiter(t *testing.T) {
@@ -287,37 +292,31 @@ func TestPortForwarder_GetClientFactory_ParseURL(t *testing.T) {
 		name                string
 		builder             string
 		expectedTLSHostname string
-		expectNil           bool
 	}{
 		{
 			name:                "URL with subdomain",
 			builder:             "https://build.okteto.example.com:443",
 			expectedTLSHostname: "build.okteto.example.com",
-			expectNil:           false,
 		},
 		{
 			name:                "URL with IP address",
 			builder:             "https://192.168.1.1:443",
 			expectedTLSHostname: "192.168.1.1",
-			expectNil:           false,
 		},
 		{
 			name:                "URL with localhost",
 			builder:             "https://localhost:443",
 			expectedTLSHostname: "localhost",
-			expectNil:           false,
 		},
 		{
 			name:                "malformed URL - url.Parse handles gracefully",
 			builder:             "https//buildkit.example.com",
 			expectedTLSHostname: "",
-			expectNil:           false,
 		},
 		{
 			name:                "empty builder URL",
 			builder:             "",
 			expectedTLSHostname: "",
-			expectNil:           false,
 		},
 	}
 
@@ -339,17 +338,13 @@ func TestPortForwarder_GetClientFactory_ParseURL(t *testing.T) {
 
 			factory := pf.GetClientFactory()
 
-			if tt.expectNil {
-				require.Nil(t, factory)
-			} else {
-				require.NotNil(t, factory)
+			require.NotNil(t, factory)
 
-				// Verify that the builder was converted to local address
-				require.Contains(t, factory.builder, "tcp://127.0.0.1:9090")
+			// Verify that the builder was converted to local address
+			require.Contains(t, factory.builder, "tcp://127.0.0.1:9090")
 
-				// Verify TLS server name is set correctly (might be empty for malformed URLs)
-				require.Equal(t, tt.expectedTLSHostname, factory.tlsServerName)
-			}
+			// Verify TLS server name is set correctly (might be empty for malformed URLs)
+			require.Equal(t, tt.expectedTLSHostname, factory.tlsServerName)
 		})
 	}
 }
@@ -445,28 +440,24 @@ func TestPortForwarder_ForwarderStructure(t *testing.T) {
 
 func TestGetClientFactory_TLSServerNameConfiguration(t *testing.T) {
 	tests := []struct {
-		name               string
-		builderURL         string
-		expectedTLSName    string
-		shouldContainLocal bool
+		name            string
+		builderURL      string
+		expectedTLSName string
 	}{
 		{
-			name:               "production URL",
-			builderURL:         "https://buildkit.okteto.com:443",
-			expectedTLSName:    "buildkit.okteto.com",
-			shouldContainLocal: true,
+			name:            "production URL",
+			builderURL:      "https://buildkit.okteto.com:443",
+			expectedTLSName: "buildkit.okteto.com",
 		},
 		{
-			name:               "staging URL",
-			builderURL:         "https://buildkit.staging.okteto.dev:443",
-			expectedTLSName:    "buildkit.staging.okteto.dev",
-			shouldContainLocal: true,
+			name:            "staging URL",
+			builderURL:      "https://buildkit.staging.okteto.dev:443",
+			expectedTLSName: "buildkit.staging.okteto.dev",
 		},
 		{
-			name:               "custom domain",
-			builderURL:         "https://buildkit.mycompany.com:8443",
-			expectedTLSName:    "buildkit.mycompany.com",
-			shouldContainLocal: true,
+			name:            "custom domain",
+			builderURL:      "https://buildkit.mycompany.com:8443",
+			expectedTLSName: "buildkit.mycompany.com",
 		},
 	}
 
@@ -496,9 +487,7 @@ func TestGetClientFactory_TLSServerNameConfiguration(t *testing.T) {
 			require.Equal(t, originalURL.Hostname(), tt.expectedTLSName)
 			require.Equal(t, tt.expectedTLSName, factory.tlsServerName)
 
-			if tt.shouldContainLocal {
-				require.Contains(t, factory.builder, "127.0.0.1")
-			}
+			require.Contains(t, factory.builder, "127.0.0.1")
 		})
 	}
 }

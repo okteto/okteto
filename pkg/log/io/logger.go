@@ -156,6 +156,11 @@ func (ol *oktetoLogger) Debugf(format string, args ...any) {
 	ol.logrusLogger.Debug(fmt.Sprintf(format, args...))
 }
 
+// Warning logs a warning message
+func (ol *oktetoLogger) Warning(format string, args ...any) {
+	ol.logrusLogger.Warn(fmt.Sprintf(format, args...))
+}
+
 // Info logs an info message
 func (ol *oktetoLogger) Info(msg string) {
 	ol.logrusLogger.Info(msg)
