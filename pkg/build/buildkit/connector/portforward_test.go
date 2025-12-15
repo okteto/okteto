@@ -62,19 +62,19 @@ func (m *mockPortForwarderOktetoContext) GetCurrentCfg() *clientcmdapi.Config {
 
 func TestPortForwarder_Stop(t *testing.T) {
 	tests := []struct {
-		name          string
-		stopChan      chan struct{}
-		shouldNotFail bool
+		name     string
+		stopChan chan struct{}
+		isActive bool
 	}{
 		{
-			name:          "stop with open channel",
-			stopChan:      make(chan struct{}, 1),
-			shouldNotFail: true,
+			name:     "stop with open channel",
+			stopChan: make(chan struct{}, 1),
+			isActive: true,
 		},
 		{
-			name:          "stop with nil channel",
-			stopChan:      nil,
-			shouldNotFail: true,
+			name:     "stop with nil channel",
+			stopChan: nil,
+			isActive: false,
 		},
 	}
 
@@ -85,6 +85,7 @@ func TestPortForwarder_Stop(t *testing.T) {
 				readyChan: make(chan struct{}, 1),
 				localPort: 8080,
 				ioCtrl:    io.NewIOController(),
+				isActive:  tt.isActive,
 			}
 
 			// Should not panic
@@ -111,6 +112,7 @@ func TestPortForwarder_Stop_MultipleCallsSafe(t *testing.T) {
 		readyChan: make(chan struct{}, 1),
 		localPort: 8080,
 		ioCtrl:    io.NewIOController(),
+		isActive:  true,
 	}
 
 	// First stop should work
@@ -149,7 +151,7 @@ func TestPortForwarder_GetWaiter(t *testing.T) {
 		ioCtrl:    io.NewIOController(),
 	}
 
-	waiter := NewBuildkitClientWaiter(pf, io.NewIOController())
+	waiter := NewBuildkitClientWaiter(pf, &NoOpConnectionManager{}, io.NewIOController())
 
 	require.NotNil(t, waiter)
 	require.NotNil(t, waiter.buildkitClientFactory)
@@ -170,7 +172,7 @@ func TestPortForwarder_GetWaiter_Configuration(t *testing.T) {
 		ioCtrl:    io.NewIOController(),
 	}
 
-	waiter := NewBuildkitClientWaiter(pf, io.NewIOController())
+	waiter := NewBuildkitClientWaiter(pf, pf, io.NewIOController())
 
 	require.NotNil(t, waiter)
 	require.NotNil(t, waiter.buildkitClientFactory)

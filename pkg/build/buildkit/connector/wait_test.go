@@ -129,6 +129,7 @@ func TestWaitUntilIsUp(t *testing.T) {
 				maxWaitTime:           tt.maxWaitTime,
 				retryInterval:         tt.retryInterval,
 				sleeper:               tt.sleeper,
+				connectionManager:     &NoOpConnectionManager{},
 			}
 
 			err := bw.WaitUntilIsUp(context.Background())
@@ -201,7 +202,7 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 
 			factory := &ClientFactory{}
 			logger := io.NewIOController()
-			bw := NewBuildkitClientWaiter(factory, logger)
+			bw := NewBuildkitClientWaiter(factory, &NoOpConnectionManager{}, logger)
 
 			assert.Equal(t, tt.expectedMaxWaitTime, bw.maxWaitTime)
 			assert.Equal(t, tt.expectedRetryTime, bw.retryInterval)

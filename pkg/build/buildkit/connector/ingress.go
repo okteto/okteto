@@ -32,6 +32,19 @@ type IngressConnector struct {
 	waiter                *Waiter
 }
 
+// NoOpStarter is a no-op starter for the ingress connector
+type NoOpConnectionManager struct{}
+
+// Start is a no-op for the no-op connection starter
+func (n *NoOpConnectionManager) Start(ctx context.Context) error {
+	return nil
+}
+
+// Stop is a no-op for the no-op connection manager
+func (n *NoOpConnectionManager) Stop() {
+	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
+}
+
 // NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
 func NewIngressConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *IngressConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
@@ -40,12 +53,18 @@ func NewIngressConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *Ingre
 		okCtx.GetCurrentToken(),
 		config.GetCertificatePath(),
 		ioCtrl)
-	waiter := NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
+	waiter := NewBuildkitClientWaiter(buildkitClientFactory, &NoOpConnectionManager{}, ioCtrl)
 
 	return &IngressConnector{
 		buildkitClientFactory: buildkitClientFactory,
 		waiter:                waiter,
 	}
+}
+
+// Start is a no-op for the ingress connector since it doesn't maintain a persistent connection
+func (i *IngressConnector) Start(ctx context.Context) error {
+	// No-op: ingress connector doesn't need to establish a connection upfront
+	return nil
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready

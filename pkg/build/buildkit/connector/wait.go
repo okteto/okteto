@@ -66,6 +66,7 @@ type Waiter struct {
 	waitingTime           time.Duration
 	maxWaitTime           time.Duration
 	retryInterval         time.Duration
+	connectionManager     buildkitConnectionManager
 }
 
 type buildkitGetter interface {
@@ -84,14 +85,21 @@ func buildkitClientFactoryToWaitFactory(factory buildkitGetter) buildkitClientFa
 	return &buildkitClientFactoryToWait{factory}
 }
 
+// buildkitConnectionManager is the interface for the buildkit connection manager
+type buildkitConnectionManager interface {
+	Start(ctx context.Context) error
+	Stop()
+}
+
 // NewBuildkitClientWaiter creates a new buildkitWaiter
-func NewBuildkitClientWaiter(factory buildkitGetter, logger *io.Controller) *Waiter {
+func NewBuildkitClientWaiter(factory buildkitGetter, connectionManager buildkitConnectionManager, logger *io.Controller) *Waiter {
 	return &Waiter{
 		maxWaitTime:           env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),
 		retryInterval:         env.LoadTimeOrDefault(retryBuildkitIntervalEnvVar, retryTime),
 		sleeper:               &DefaultSleeper{},
 		buildkitClientFactory: buildkitClientFactoryToWaitFactory(factory),
 		logger:                logger,
+		connectionManager:     connectionManager,
 	}
 }
 
@@ -114,6 +122,13 @@ func (bw *Waiter) WaitUntilIsUp(ctx context.Context) error {
 			bw.waitingTime = bw.maxWaitTime
 			return fmt.Errorf("buildkit service not available for %v", bw.maxWaitTime)
 		default:
+			if err := bw.connectionManager.Start(ctx); err != nil {
+				bw.logger.Infof("Failed to start BuildKit service: %v\n", err)
+				bw.logger.Infof("Retrying in %v...\n", bw.retryInterval)
+				bw.sleeper.Sleep(bw.retryInterval)
+				continue
+			}
+			defer bw.connectionManager.Stop()
 			c, err := bw.buildkitClientFactory.GetBuildkitClient(ctx)
 			if err != nil {
 				sp.Start()

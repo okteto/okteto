@@ -67,6 +67,10 @@ type fakeBuildkitConnector struct {
 	clientFactory buildkitClientFactory
 }
 
+func (f *fakeBuildkitConnector) Start(ctx context.Context) error {
+	// No-op: fake buildkit connector doesn't need to establish a connection
+	return nil
+}
 func (f *fakeBuildkitConnector) WaitUntilIsReady(ctx context.Context) error {
 	return f.waiter.WaitUntilIsUp(ctx)
 }

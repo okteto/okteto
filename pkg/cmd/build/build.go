@@ -57,6 +57,8 @@ type OktetoBuilderInterface interface {
 
 // BuildkitConnector is the interface for the buildkit connector
 type BuildkitConnector interface {
+	// Start establishes the connection to the buildkit server
+	Start(ctx context.Context) error
 	// WaitUntilIsReady waits for the buildkit server to be ready
 	WaitUntilIsReady(ctx context.Context) error
 	// Stop closes the connection to the buildkit server
@@ -195,7 +197,6 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
-	defer ob.connector.Stop()
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
 	if err := ob.connector.WaitUntilIsReady(ctx); err != nil {

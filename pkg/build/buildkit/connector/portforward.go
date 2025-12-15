@@ -104,6 +104,11 @@ const buildkitPort = 1234
 // If already active, it reuses the existing connection.
 // If not active, it gets the least loaded pod and establishes a new connection.
 func (pf *PortForwarder) Start(ctx context.Context) error {
+	if pf.isActive {
+		pf.ioCtrl.Logger().Infof("port forward connection is already active")
+		return nil
+	}
+
 	if pf.podName == "" {
 		if err := pf.assignBuildkitPod(ctx); err != nil {
 			pf.ioCtrl.Logger().Infof("failed to assign buildkit pod: %s", err)
@@ -243,6 +248,11 @@ func (pf *PortForwarder) Stop() {
 		return
 	}
 
+	if !pf.isActive {
+		pf.ioCtrl.Logger().Infof("port forward connection is not active")
+		return
+	}
+
 	select {
 	case <-pf.stopChan:
 	default:
@@ -266,17 +276,11 @@ func getPortForwardK8sClient(oktetoClient *okteto.Client, okCtx PortForwarderOkt
 
 // WaitUntilIsReady waits for the buildkit server to be ready
 func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
-	return NewBuildkitClientWaiter(pf, pf.ioCtrl).WaitUntilIsUp(ctx)
+	return NewBuildkitClientWaiter(pf, pf, pf.ioCtrl).WaitUntilIsUp(ctx)
 }
 
-// GetClientFactory returns the client factory
+// GetBuildkitClient returns the buildkit client. Start() must be called before this method.
 func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
-	if !pf.isActive {
-		if err := pf.Start(ctx); err != nil {
-			pf.ioCtrl.Logger().Infof("failed to start port forward: %s", err)
-			return nil, fmt.Errorf("failed to start port forward: %w", err)
-		}
-	}
 	localAddress := fmt.Sprintf("127.0.0.1:%d", pf.localPort)
 	pf.ioCtrl.Logger().Infof("using buildkit via local port forward: %s", localAddress)
 	originalURL, err := url.Parse(pf.okCtx.GetCurrentBuilder())

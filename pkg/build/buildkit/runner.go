@@ -64,6 +64,8 @@ type Runner struct {
 
 // buildkitConnector is the interface for the buildkit connector
 type buildkitConnector interface {
+	// Start establishes the connection to the buildkit server
+	Start(ctx context.Context) error
 	// WaitUntilIsReady waits for the buildkit server to be ready
 	WaitUntilIsReady(ctx context.Context) error
 	// Stop closes the connection to the buildkit server
@@ -105,6 +107,10 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 		if attempts > 1 {
 			r.logger.Logger().Infof("retrying build, attempt %d", attempts)
 			r.logger.Out().Warning("BuildKit service connection failure. Retrying...")
+		}
+		if err := r.connector.Start(ctx); err != nil {
+			r.logger.Logger().Infof("failed to start buildkit connector: %s", err)
+			return fmt.Errorf("could not start buildkit connector: %w", err)
 		}
 
 		// if buildkit is not available for 10 minutes, we should fail
