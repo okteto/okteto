@@ -65,8 +65,8 @@ type PortForwarder struct {
 	restConfig   *rest.Config
 	forwarder    *forwarder
 	ioCtrl       *io.Controller
-	mu           sync.Mutex
 	isActive     bool
+	mu           sync.Mutex
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
@@ -110,14 +110,13 @@ const buildkitPort = 1234
 // If already active, it reuses the existing connection.
 // If not active, it gets the least loaded pod and establishes a new connection.
 func (pf *PortForwarder) Start(ctx context.Context) error {
-	if pf.isActive {
-		pf.ioCtrl.Logger().Infof("reusing existing port forward to pod %s on 127.0.0.1:%d", pf.forwarder.podName, pf.forwarder.localPort)
-		return nil
-	}
-
-	if err := pf.assignBuildkitPod(ctx); err != nil {
-		pf.ioCtrl.Logger().Infof("failed to assign buildkit pod: %s", err)
-		return err
+	if pf.forwarder.podName == "" {
+		if err := pf.assignBuildkitPod(ctx); err != nil {
+			pf.ioCtrl.Logger().Infof("failed to assign buildkit pod: %s", err)
+			return err
+		}
+	} else {
+		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.forwarder.podName)
 	}
 
 	if err := pf.establishPortForward(); err != nil {
@@ -248,7 +247,6 @@ func (pf *PortForwarder) Stop() {
 
 	if pf.forwarder == nil || pf.forwarder.stopChan == nil {
 		pf.ioCtrl.Logger().Infof("port forward connection is not active")
-		pf.isActive = false
 		return
 	}
 
@@ -258,7 +256,6 @@ func (pf *PortForwarder) Stop() {
 		close(pf.forwarder.stopChan)
 	}
 	pf.isActive = false
-	pf.forwarder.lastSessionErr = nil
 	pf.ioCtrl.Logger().Infof("port forward connection stopped")
 }
 
@@ -287,7 +284,6 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 			return nil, fmt.Errorf("failed to start port forward: %w", err)
 		}
 	}
-
 	localAddress := fmt.Sprintf("127.0.0.1:%d", pf.forwarder.localPort)
 	pf.ioCtrl.Logger().Infof("using buildkit via local port forward: %s", localAddress)
 	originalURL, err := url.Parse(pf.okCtx.GetCurrentBuilder())
