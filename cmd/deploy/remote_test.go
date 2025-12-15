@@ -20,12 +20,14 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	fakefs "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -166,7 +168,12 @@ func TestGetCommandFlags(t *testing.T) {
 func Test_newRemoteDeployer(t *testing.T) {
 	getBuildEnvVars := func() map[string]string { return nil }
 	getDependencyEnvVars := func(_ environGetter) map[string]string { return nil }
-	got := newRemoteDeployer(getBuildEnvVars, io.NewIOController(), getDependencyEnvVars)
+	ioCtrl := io.NewIOController()
+	okCtx := &okteto.ContextStateless{
+		Store: okteto.GetContextStore(),
+	}
+	conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
+	got := newRemoteDeployer(getBuildEnvVars, ioCtrl, getDependencyEnvVars, conn)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)
 }

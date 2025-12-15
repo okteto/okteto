@@ -128,13 +128,14 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 }
 
 // NewBuilderFromScratch creates a new okteto builder
-func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish) *OktetoBuilder {
+func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish, conn buildCmd.BuildkitConnector) *OktetoBuilder {
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
 			Store: okteto.GetContextStore(),
 		},
 		afero.NewOsFs(),
 		ioCtrl,
+		conn,
 	)
 	reg := registry.NewOktetoRegistry(okteto.Config{})
 	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
@@ -181,6 +182,15 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish)
 // GetBuildEnvVars returns the build env vars
 func (ob *OktetoBuilder) GetBuildEnvVars() map[string]string {
 	return ob.serviceEnvVarsHandler.GetBuildEnvVars()
+}
+
+// GetConnector returns the buildkit connector from the underlying builder.
+// This allows the connector to be reused across multiple build operations.
+func (ob *OktetoBuilder) GetConnector() buildCmd.BuildkitConnector {
+	if builder, ok := ob.BuildRunner.(*buildCmd.OktetoBuilder); ok {
+		return builder.GetConnector()
+	}
+	return nil
 }
 
 // IsV1 returns false since it is a builder v2

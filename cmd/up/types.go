@@ -20,6 +20,7 @@ import (
 
 	"github.com/moby/term"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -41,6 +42,7 @@ type builderInterface interface {
 	Build(ctx context.Context, options *types.BuildOptions) error
 	GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error)
 	GetBuildEnvVars() map[string]string
+	GetConnector() buildCmd.BuildkitConnector
 }
 
 type analyticsTrackerInterface interface {

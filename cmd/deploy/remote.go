@@ -66,7 +66,7 @@ type remoteDeployer struct {
 }
 
 // newRemoteDeployer creates the remote deployer
-func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter) *remoteDeployer {
+func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller, getDependencyEnvVars dependencyEnvVarsGetter, conn buildCmd.BuildkitConnector) *remoteDeployer {
 	fs := afero.NewOsFs()
 	builder := buildCmd.NewOktetoBuilder(
 		&okteto.ContextStateless{
@@ -74,6 +74,7 @@ func newRemoteDeployer(buildVarsGetter buildEnvVarsGetter, ioCtrl *io.Controller
 		},
 		fs,
 		ioCtrl,
+		conn,
 	)
 	runner := remote.NewRunner(ioCtrl, builder)
 	return &remoteDeployer{
