@@ -39,7 +39,7 @@ func NewDirectConnector(okCtx DirectOktetoContextInterface, ioCtrl *io.Controlle
 		okCtx.GetCurrentToken(),
 		config.GetCertificatePath(),
 		ioCtrl)
-	waiter := NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
+	waiter := NewBuildkitClientWaiter(buildkitClientFactory, &NoOpConnectionManager{}, ioCtrl)
 
 	return &DirectConnector{
 		buildkitClientFactory: buildkitClientFactory,
