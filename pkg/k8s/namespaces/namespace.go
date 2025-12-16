@@ -282,7 +282,7 @@ func newTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 func (t *Trip) wander(ctx context.Context, traveler Traveler) error {
 	_, apis, err := t.k8s.Discovery().ServerGroupsAndResources()
 	if err != nil {
-		//only return the err when is NOT GroupDiscoveryFailedError and NOT relative to metrics.k8s.io or custom.metrics.k8s.io
+		// only return the err when is NOT GroupDiscoveryFailedError and NOT relative to metrics.k8s.io or custom.metrics.k8s.io
 		groupErr, ok := err.(*discovery.ErrGroupDiscoveryFailed)
 		if !ok {
 			return err
@@ -353,7 +353,7 @@ func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.Re
 	}
 	defer t.sem.Release(1)
 
-	pager := pager.New(pager.SimplePageFunc(func(opts metav1.ListOptions) (runtime.Object, error) {
+	pager := pager.New(pager.SimplePageFunc(func(_ metav1.ListOptions) (runtime.Object, error) {
 		objs, err := client.List(ctx, t.list)
 		return objs, err
 	}))

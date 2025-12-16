@@ -386,7 +386,7 @@ func (*fakeDiscovery) ServerPreferredNamespacedResources() ([]*metav1.APIResourc
 func (*fakeDiscovery) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
 	return nil, nil
 }
-func (*fakeDiscovery) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
+func (*fakeDiscovery) ServerResourcesForGroupVersion(_ string) (*metav1.APIResourceList, error) {
 	return nil, nil
 }
 func (*fakeDiscovery) ServerVersion() (*version.Info, error) {
@@ -558,7 +558,7 @@ func Test_wander(t *testing.T) {
 				sem:       semaphore.NewWeighted(10),
 			}
 
-			err := trip.wander(ctx, TravelerFunc(func(obj runtime.Object) error {
+			err := trip.wander(ctx, TravelerFunc(func(_ runtime.Object) error {
 				return nil
 			}))
 
