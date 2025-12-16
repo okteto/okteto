@@ -298,7 +298,7 @@ func (t *Trip) wander(ctx context.Context, traveler Traveler) error {
 			delete(err.Groups, schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"})
 		}
 
-		if len(err.Groups) > 1 {
+		if len(err.Groups) > 0 {
 			return err
 		}
 	}
