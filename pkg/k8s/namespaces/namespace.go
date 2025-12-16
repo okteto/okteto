@@ -282,7 +282,25 @@ func newTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 func (t *Trip) wander(ctx context.Context, traveler Traveler) error {
 	_, apis, err := t.k8s.Discovery().ServerGroupsAndResources()
 	if err != nil {
-		return err
+		//only return the err when is NOT GroupDiscoveryFailedError and NOT relative to metrics.k8s.io or custom.metrics.k8s.io
+		err, ok := err.(*discovery.ErrGroupDiscoveryFailed)
+		if !ok {
+			return err
+		}
+
+		if _, ok := err.Groups[schema.GroupVersion{Group: "metrics.k8s.io", Version: "v1beta1"}]; ok {
+			oktetoLog.Debug("Unable to retrieve server API: metrics.k8s.io/v1beta1")
+			delete(err.Groups, schema.GroupVersion{Group: "metrics.k8s.io", Version: "v1beta1"})
+		}
+
+		if _, ok := err.Groups[schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"}]; ok {
+			oktetoLog.Debug("Unable to retrieve server API: custom.metrics.k8s.io/v1beta2")
+			delete(err.Groups, schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"})
+		}
+
+		if len(err.Groups) > 1 {
+			return err
+		}
 	}
 
 	eg, _ := errgroup.WithContext(ctx)
