@@ -283,23 +283,23 @@ func (t *Trip) wander(ctx context.Context, traveler Traveler) error {
 	_, apis, err := t.k8s.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		//only return the err when is NOT GroupDiscoveryFailedError and NOT relative to metrics.k8s.io or custom.metrics.k8s.io
-		err, ok := err.(*discovery.ErrGroupDiscoveryFailed)
+		groupErr, ok := err.(*discovery.ErrGroupDiscoveryFailed)
 		if !ok {
 			return err
 		}
 
-		if _, ok := err.Groups[schema.GroupVersion{Group: "metrics.k8s.io", Version: "v1beta1"}]; ok {
+		if _, ok := groupErr.Groups[schema.GroupVersion{Group: "metrics.k8s.io", Version: "v1beta1"}]; ok {
 			oktetoLog.Debug("Unable to retrieve server API: metrics.k8s.io/v1beta1")
-			delete(err.Groups, schema.GroupVersion{Group: "metrics.k8s.io", Version: "v1beta1"})
+			delete(groupErr.Groups, schema.GroupVersion{Group: "metrics.k8s.io", Version: "v1beta1"})
 		}
 
-		if _, ok := err.Groups[schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"}]; ok {
+		if _, ok := groupErr.Groups[schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"}]; ok {
 			oktetoLog.Debug("Unable to retrieve server API: custom.metrics.k8s.io/v1beta2")
-			delete(err.Groups, schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"})
+			delete(groupErr.Groups, schema.GroupVersion{Group: "custom.metrics.k8s.io", Version: "v1beta2"})
 		}
 
-		if len(err.Groups) > 0 {
-			return err
+		if len(groupErr.Groups) > 0 {
+			return groupErr
 		}
 	}
 
