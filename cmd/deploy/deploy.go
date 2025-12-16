@@ -113,7 +113,7 @@ type Command struct {
 	GetManifest          func(path string, fs afero.Fs) (*model.Manifest, error)
 	K8sClientProvider    okteto.K8sClientProviderWithLogger
 	Builder              builderInterface
-	Connector            buildCmd.BuildkitConnector
+	RemoteConnector      buildCmd.BuildkitConnector
 	GetDeployer          getDeployerFunc
 	EndpointGetter       func(k8sLogger *io.K8sLogger) (EndpointGetter, error)
 	DeployWaiter         Waiter
@@ -253,7 +253,7 @@ $ okteto deploy --no-build=true`,
 				K8sClientProvider:    k8sClientProvider,
 				GetDeployer:          GetDeployer,
 				Builder:              buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, conn),
-				Connector:            conn,
+				RemoteConnector:      conn,
 				DeployWaiter:         NewDeployWaiter(k8sClientProvider, k8sLogger),
 				EndpointGetter:       NewEndpointGetter,
 				IsRemote:             env.LoadBoolean(constants.OktetoDeployRemote),
@@ -532,7 +532,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		dc.IoCtrl,
 		dc.K8sLogger,
 		GetDependencyEnvVars,
-		dc.Connector,
+		dc.RemoteConnector,
 	)
 	if err != nil {
 		return err

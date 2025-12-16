@@ -134,10 +134,10 @@ For eg: [https://downloads.okteto.com/cli/2.2.2/okteto-Darwin-x86_64](https://do
 
 The same artifacts are also uploaded to the Github release assets and can be downloaded from there.
 
-Alongside the release artifacts, a docker image is automatically created for each release and pushed to [hub.docker.com/r/okteto/okteto](https://hub.docker.com/r/okteto/okteto):
+Alongside the release artifacts, a docker image is automatically created for each release and pushed to [GitHub Packages](https://github.com/orgs/okteto/packages/container/package/okteto):
 
 ```sh
-docker pull okteto/okteto:2.2.2
+docker pull ghcr.io/okteto/okteto:3.15.0
 ```
 
 #### Pull Request Labels

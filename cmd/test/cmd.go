@@ -268,7 +268,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			},
 			K8sClientProvider:  k8sClientProvider,
 			Builder:            builder,
-			Connector:          conn,
+			RemoteConnector:    conn,
 			GetDeployer:        deployCMD.GetDeployer,
 			EndpointGetter:     deployCMD.NewEndpointGetter,
 			DeployWaiter:       deployCMD.NewDeployWaiter(k8sClientProvider, k8sLogger),
@@ -346,14 +346,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			return metadata, err
 		}
 
-		okCtx := &okteto.ContextStateless{
-			Store: okteto.GetContextStore(),
-		}
 		runner := remote.NewRunner(ioCtrl, buildCMD.NewOktetoBuilder(
-			okCtx,
+			okCtxForBuilder,
 			fs,
 			ioCtrl,
-			builder.GetConnector(),
+			conn,
 		))
 		commands := make([]model.DeployCommand, len(test.Commands))
 

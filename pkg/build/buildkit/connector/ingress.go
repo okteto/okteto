@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 )
 
-type OktetoContextIface interface {
+type IngressOktetoContextInterface interface {
 	GetCurrentCertStr() string
 	GetCurrentBuilder() string
 	GetCurrentToken() string
@@ -46,7 +46,7 @@ func (n *NoOpConnectionManager) Stop() {
 }
 
 // NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
-func NewIngressConnector(okCtx OktetoContextIface, ioCtrl *io.Controller) *IngressConnector {
+func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Controller) *IngressConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
 		okCtx.GetCurrentCertStr(),
 		okCtx.GetCurrentBuilder(),
@@ -68,8 +68,8 @@ func (i *IngressConnector) Start(ctx context.Context) error {
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready
-func (i *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
-	return i.waiter.WaitUntilIsUp(ctx)
+func (d *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
+	return d.waiter.WaitUntilIsUp(ctx)
 }
 
 func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {

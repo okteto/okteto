@@ -96,12 +96,12 @@ type OktetoRegistryInterface interface {
 func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
 	var buildkitConnector BuildkitConnector
 	var err error
-	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, true) {
+	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
 		buildkitConnector, err = connector.NewPortForwarder(context.Background(), okCtx, logger)
 		if err != nil {
 			logger.Infof("could not create buildkit connector for port forwarding: %s", err)
-			logger.Infof("falling back to direct connector")
-			logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to direct connector")
+			logger.Infof("falling back to ingress connector")
+			logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to ingress connector")
 			buildkitConnector = connector.NewIngressConnector(okCtx, logger)
 		}
 	} else {
