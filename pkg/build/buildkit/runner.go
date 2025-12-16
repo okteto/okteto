@@ -133,6 +133,7 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 		solveTime = time.Since(startSolverTime)
 		if err != nil {
 			if IsRetryable(err) {
+				r.connector.Stop()
 				r.logger.Logger().Infof("retrying operation: %s", err)
 				analytics.TrackBuildTransientError(true)
 				if attempts >= r.maxAttemptsBuildkitTransientErrors {

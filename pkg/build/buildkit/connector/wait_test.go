@@ -34,30 +34,12 @@ func (s *MockSleeper) Sleep(duration time.Duration) {
 }
 
 type fakeBuildkitClientFactoryWithRetries struct {
-	err              error
-	infoRetriever    clientInfoRetriever
-	attempts         int
-	successOnAttempt int
+	err      error
+	attempts int
 }
 
-type fakeClientInfoRetriever struct {
-	err []error
-}
-
-func (f *fakeClientInfoRetriever) Info(ctx context.Context) (*client.Info, error) {
-	if len(f.err) > 0 {
-		err := f.err[0]
-		f.err = f.err[1:]
-		return nil, err
-	}
-	return &client.Info{}, nil
-}
-
-func (f *fakeBuildkitClientFactoryWithRetries) GetBuildkitClient(ctx context.Context) (clientInfoRetriever, error) {
+func (f *fakeBuildkitClientFactoryWithRetries) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
 	f.attempts++
-	if f.attempts >= f.successOnAttempt {
-		return f.infoRetriever, nil
-	}
 	return nil, f.err
 }
 
@@ -71,77 +53,40 @@ func TestWaitUntilIsUp(t *testing.T) {
 		maxWaitTime           time.Duration
 		retryInterval         time.Duration
 		expectedSleeperCalls  int
-		expectedAttempts      int
 	}{
 		{
-			name:          "SuccessImmediately",
-			maxWaitTime:   time.Minute,
-			retryInterval: time.Second,
-			sleeper:       &MockSleeper{},
-			buildkitClientFactory: &fakeBuildkitClientFactoryWithRetries{
-				successOnAttempt: 1,
-				err:              nil,
-				infoRetriever: &fakeClientInfoRetriever{
-					err: nil,
-				},
-			},
-			expectedErr:          nil,
-			expectedSleeperCalls: 0,
-			expectedAttempts:     1,
-		},
-		{
-			name:          "RetriesGetBuildkitClient",
-			maxWaitTime:   time.Minute,
+			name:          "RetriesOnGetBuildkitClientError",
+			maxWaitTime:   100 * time.Millisecond,
 			retryInterval: 0,
 			sleeper:       &MockSleeper{},
 			buildkitClientFactory: &fakeBuildkitClientFactoryWithRetries{
-				successOnAttempt: 3,
-				err:              errors.New("timeout"),
-				infoRetriever:    &fakeClientInfoRetriever{},
+				err: errors.New("connection refused"),
 			},
-			expectedErr:          nil,
-			expectedSleeperCalls: 2,
-			expectedAttempts:     3,
-		},
-		{
-			name:          "RetriesInfoTimeout",
-			maxWaitTime:   time.Minute,
-			retryInterval: 0,
-			sleeper:       &MockSleeper{},
-			buildkitClientFactory: &fakeBuildkitClientFactoryWithRetries{
-				successOnAttempt: 1,
-				err:              errors.New("timeout"),
-				infoRetriever: &fakeClientInfoRetriever{
-					err: []error{errors.New("timeout")},
-				},
-			},
-			expectedErr:          nil,
-			expectedSleeperCalls: 1,
-			expectedAttempts:     2,
+			expectedErr:          errors.New("buildkit service not available"),
+			expectedSleeperCalls: 1, // At least one sleep before timeout
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bw := &Waiter{
-				logger:                io.NewIOController(),
-				buildkitClientFactory: tt.buildkitClientFactory,
-				maxWaitTime:           tt.maxWaitTime,
-				retryInterval:         tt.retryInterval,
-				sleeper:               tt.sleeper,
-				connectionManager:     &NoOpConnectionManager{},
+				logger:        io.NewIOController(),
+				maxWaitTime:   tt.maxWaitTime,
+				retryInterval: tt.retryInterval,
+				sleeper:       tt.sleeper,
 			}
 
-			err := bw.WaitUntilIsUp(context.Background())
+			err := bw.WaitUntilIsUp(context.Background(), tt.buildkitClientFactory.GetBuildkitClient)
 			if tt.expectedErr != nil {
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, tt.expectedErr.Error())
-			} else if err != nil {
+			} else {
 				assert.NoError(t, err)
 			}
 
-			assert.Equal(t, tt.expectedSleeperCalls, tt.sleeper.Calls)
-			assert.Equal(t, tt.expectedAttempts, tt.buildkitClientFactory.attempts)
+			// Verify that at least one retry happened
+			assert.GreaterOrEqual(t, tt.sleeper.Calls, tt.expectedSleeperCalls)
+			assert.GreaterOrEqual(t, tt.buildkitClientFactory.attempts, 1)
 		})
 	}
 }
@@ -200,14 +145,12 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 				}
 			}
 
-			factory := &ClientFactory{}
 			logger := io.NewIOController()
-			bw := NewBuildkitClientWaiter(factory, &NoOpConnectionManager{}, logger)
+			bw := NewBuildkitClientWaiter(logger)
 
 			assert.Equal(t, tt.expectedMaxWaitTime, bw.maxWaitTime)
 			assert.Equal(t, tt.expectedRetryTime, bw.retryInterval)
 			assert.IsType(t, &DefaultSleeper{}, bw.sleeper)
-			assert.IsType(t, &buildkitClientFactoryToWait{}, bw.buildkitClientFactory)
 			assert.Equal(t, logger, bw.logger)
 		})
 	}

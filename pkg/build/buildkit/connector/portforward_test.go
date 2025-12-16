@@ -18,47 +18,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/require"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-// mockPortForwarderOktetoContext is a mock implementation of PortForwarderOktetoContextInterface
-type mockPortForwarderOktetoContext struct {
-	certStr         string
-	builder         string
-	token           string
-	namespace       string
-	globalNamespace string
-	currentUser     string
-	currentCfg      *clientcmdapi.Config
-}
-
-func (m *mockPortForwarderOktetoContext) GetCurrentCertStr() string {
-	return m.certStr
-}
-
-func (m *mockPortForwarderOktetoContext) GetCurrentBuilder() string {
-	return m.builder
-}
-
-func (m *mockPortForwarderOktetoContext) GetCurrentToken() string {
-	return m.token
-}
-
-func (m *mockPortForwarderOktetoContext) GetNamespace() string {
-	return m.namespace
-}
-
-func (m *mockPortForwarderOktetoContext) GetGlobalNamespace() string {
-	return m.globalNamespace
-}
-
-func (m *mockPortForwarderOktetoContext) GetCurrentUser() string {
-	return m.currentUser
-}
-
-func (m *mockPortForwarderOktetoContext) GetCurrentCfg() *clientcmdapi.Config {
-	return m.currentCfg
-}
 
 func TestPortForwarder_Stop(t *testing.T) {
 	tests := []struct {
@@ -140,41 +100,15 @@ func TestPortForwarder_Stop_MultipleCallsSafe(t *testing.T) {
 }
 
 func TestPortForwarder_GetWaiter(t *testing.T) {
-	okCtx := &mockPortForwarderOktetoContext{
-		builder: "https://buildkit.example.com",
-		certStr: "cert-data",
-		token:   "token-data",
-	}
-
-	pf := &PortForwarder{
-		okCtx:     okCtx,
-		localPort: 8443,
-		ioCtrl:    io.NewIOController(),
-	}
-
-	waiter := NewBuildkitClientWaiter(pf, &NoOpConnectionManager{}, io.NewIOController())
+	waiter := NewBuildkitClientWaiter(io.NewIOController())
 
 	require.NotNil(t, waiter)
-	require.NotNil(t, waiter.buildkitClientFactory)
 	require.NotNil(t, waiter.logger)
 }
 
 func TestPortForwarder_GetWaiter_Configuration(t *testing.T) {
-	okCtx := &mockPortForwarderOktetoContext{
-		builder: "https://buildkit.example.com:443",
-		certStr: "certificate",
-		token:   "token",
-	}
-
-	pf := &PortForwarder{
-		okCtx:     okCtx,
-		isActive:  true,
-		localPort: 8443,
-		ioCtrl:    io.NewIOController(),
-	}
-
-	waiter := NewBuildkitClientWaiter(pf, pf, io.NewIOController())
+	waiter := NewBuildkitClientWaiter(io.NewIOController())
 
 	require.NotNil(t, waiter)
-	require.NotNil(t, waiter.buildkitClientFactory)
+	require.NotNil(t, waiter.logger)
 }

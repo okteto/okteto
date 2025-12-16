@@ -199,6 +199,12 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
+	if err := ob.connector.Start(ctx); err != nil {
+		return err
+	}
+
+	defer ob.connector.Stop()
+
 	if err := ob.connector.WaitUntilIsReady(ctx); err != nil {
 		return err
 	}

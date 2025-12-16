@@ -53,7 +53,7 @@ func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Control
 		okCtx.GetCurrentToken(),
 		config.GetCertificatePath(),
 		ioCtrl)
-	waiter := NewBuildkitClientWaiter(buildkitClientFactory, &NoOpConnectionManager{}, ioCtrl)
+	waiter := NewBuildkitClientWaiter(ioCtrl)
 
 	return &IngressConnector{
 		buildkitClientFactory: buildkitClientFactory,
@@ -69,7 +69,7 @@ func (i *IngressConnector) Start(ctx context.Context) error {
 
 // WaitUntilIsReady waits for the buildkit server to be ready
 func (d *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
-	return d.waiter.WaitUntilIsUp(ctx)
+	return d.waiter.WaitUntilIsUp(ctx, d.GetBuildkitClient)
 }
 
 func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
