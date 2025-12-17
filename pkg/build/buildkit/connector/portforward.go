@@ -91,7 +91,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		return nil, fmt.Errorf("could not get available port: %w", err)
 	}
 
-	return &PortForwarder{
+	pf := &PortForwarder{
 		sessionID:    sessionID,
 		oktetoClient: oktetoClient,
 		k8sClient:    k8sClient,
@@ -101,7 +101,14 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		stopChan:     make(chan struct{}, 1),
 		readyChan:    make(chan struct{}, 1),
 		localPort:    port,
-	}, nil
+	}
+
+	_, err = pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
+	}
+
+	return pf, nil
 }
 
 // buildkitPort is the port where buildkit listens inside the pod
@@ -119,10 +126,11 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	}
 
 	if pf.podName == "" {
-		if err := pf.assignBuildkitPod(ctx); err != nil {
-			pf.ioCtrl.Logger().Infof("failed to assign buildkit pod: %s", err)
-			return err
+		podName, err := pf.assignBuildkitPod(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to assign buildkit pod: %w", err)
 		}
+		pf.podName = podName
 	} else {
 		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.podName)
 	}
@@ -141,7 +149,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 }
 
 // assignBuildkitPod gets the least loaded buildkit pod and assigns it to this port forwarder
-func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) error {
+func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) {
 	const (
 		maxWaitTime         = 10 * time.Minute
 		initialPollInterval = 1 * time.Second
@@ -157,18 +165,17 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) error {
 	defer sp.Stop()
 	for {
 		if time.Since(startTime) >= maxWaitTime {
-			return fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", maxWaitTime)
+			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", maxWaitTime)
 		}
 
 		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 		if err != nil {
-			return fmt.Errorf("could not get least loaded buildkit pod: %w", err)
+			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 
 		if response.PodName != "" {
-			pf.podName = response.PodName
-			pf.ioCtrl.Logger().Infof("assigned buildkit pod: %s", pf.podName)
-			return nil
+			pf.ioCtrl.Logger().Infof("assigned buildkit pod: %s", response.PodName)
+			return response.PodName, nil
 		}
 
 		if response.TotalInQueue > 0 {
@@ -190,7 +197,7 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) error {
 				pollInterval = maxPollInterval
 			}
 		case <-ctx.Done():
-			return fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
+			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}
 }
