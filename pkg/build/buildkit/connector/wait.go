@@ -50,32 +50,16 @@ func (s *DefaultSleeper) Sleep(duration time.Duration) {
 	time.Sleep(duration)
 }
 
-type buildkitClientFactoryWaiter interface {
-	GetBuildkitClient(ctx context.Context) (clientInfoRetriever, error)
-}
-
-type clientInfoRetriever interface {
-	Info(ctx context.Context) (*client.Info, error)
-}
-
 // Waiter encapsulates the logic to check if the BuildKit server is up and running
 type Waiter struct {
-	sleeper               sleeper
-	buildkitClientFactory buildkitClientFactoryWaiter
-	logger                *io.Controller
-	waitingTime           time.Duration
-	maxWaitTime           time.Duration
-	retryInterval         time.Duration
-	connectionManager     buildkitConnectionManager
+	sleeper       sleeper
+	logger        *io.Controller
+	waitingTime   time.Duration
+	maxWaitTime   time.Duration
+	retryInterval time.Duration
 }
 
 type GetBuildkitClientFn func(ctx context.Context) (*client.Client, error)
-
-// buildkitConnectionManager is the interface for the buildkit connection manager
-type buildkitConnectionManager interface {
-	Start(ctx context.Context) error
-	Stop()
-}
 
 // NewBuildkitClientWaiter creates a new buildkitWaiter
 func NewBuildkitClientWaiter(logger *io.Controller) *Waiter {

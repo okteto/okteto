@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -36,6 +37,8 @@ const (
 
 type registryImageChecker interface {
 	GetImageTagWithDigest(tag string) (string, error)
+	IsOktetoRegistry(image string) bool
+	IsGlobalRegistry(image string) bool
 }
 
 type buildkitWaiterInterface interface {
@@ -52,6 +55,9 @@ type runnerMetadata struct {
 	solveTime time.Duration
 }
 
+// SolveOptBuilderFactory is a function that creates a SolveOptBuilderInterface
+type SolveOptBuilderFactory func(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (SolveOptBuilderInterface, error)
+
 // Runner runs a build using buildkit
 type Runner struct {
 	connector                          buildkitConnector
@@ -60,6 +66,9 @@ type Runner struct {
 	logger                             *io.Controller
 	metadata                           *runnerMetadata
 	maxAttemptsBuildkitTransientErrors int
+	okCtx                              OktetoContextInterface
+	fs                                 afero.Fs
+	solveOptBuilderFactory             SolveOptBuilderFactory
 }
 
 // buildkitConnector is the interface for the buildkit connector
@@ -81,8 +90,13 @@ type SolveOptBuilderInterface interface {
 // SolveBuildFn is a function that solves a build
 type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
 
+// defaultSolveOptBuilderFactory is the default factory that creates a SolveOptBuilder
+func defaultSolveOptBuilderFactory(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (SolveOptBuilderInterface, error) {
+	return NewSolveOptBuilder(cf, reg, okCtx, fs, logger)
+}
+
 // NewBuildkitRunner creates a new buildkit runner
-func NewBuildkitRunner(connector buildkitConnector, registry registryImageChecker, solver SolveBuildFn, logger *io.Controller) *Runner {
+func NewBuildkitRunner(connector buildkitConnector, registry registryImageChecker, solver SolveBuildFn, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) *Runner {
 	return &Runner{
 		connector:                          connector,
 		solveBuild:                         solver,
@@ -90,11 +104,33 @@ func NewBuildkitRunner(connector buildkitConnector, registry registryImageChecke
 		logger:                             logger,
 		registry:                           registry,
 		metadata:                           &runnerMetadata{},
+		okCtx:                              okCtx,
+		fs:                                 fs,
+		solveOptBuilderFactory:             defaultSolveOptBuilderFactory,
 	}
 }
 
 // Run executes a build using buildkit
-func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode string) error {
+func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outputMode string) error {
+	if err := r.connector.Start(ctx); err != nil {
+		return err
+	}
+
+	defer r.connector.Stop()
+
+	if err := r.connector.WaitUntilIsReady(ctx); err != nil {
+		return err
+	}
+
+	optBuilder, err := r.solveOptBuilderFactory(r.connector, r.registry, r.okCtx, r.fs, r.logger)
+	if err != nil {
+		return err
+	}
+
+	opt, err := optBuilder.Build(ctx, buildOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create build solver: %w", err)
+	}
 	tag := r.extractTagsFromOpt(opt)
 	attempts := 0
 	var solveTime time.Duration
@@ -102,6 +138,20 @@ func (r *Runner) Run(ctx context.Context, opt *client.SolveOpt, outputMode strin
 		r.metadata.attempts = attempts
 		r.metadata.solveTime = solveTime
 	}()
+
+	var showBuildMessage bool
+	switch buildOptions.OutputMode {
+	case "test", "deploy", "destroy":
+		showBuildMessage = false
+	default:
+		showBuildMessage = true
+	}
+
+	if showBuildMessage {
+		builder := r.okCtx.GetCurrentBuilder()
+		r.logger.Out().Infof("Building '%s' in %s...", buildOptions.Path, builder)
+	}
+
 	for {
 		attempts++
 		if attempts > 1 {
