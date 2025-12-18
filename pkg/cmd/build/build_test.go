@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -923,6 +924,88 @@ func Test_setOutputMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("BUILDKIT_PROGRESS", tt.envBuildkitProgressValue)
 			got := setOutputMode(tt.input)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_shouldUseInClusterConnector(t *testing.T) {
+	tests := []struct {
+		name            string
+		envDeployRemote string
+		envInInstaller  string
+		envManagedPod   string
+		expected        bool
+	}{
+		{
+			name:     "no env vars set - returns false",
+			expected: false,
+		},
+		{
+			name:            "OKTETO_DEPLOY_REMOTE=true - returns true",
+			envDeployRemote: "true",
+			expected:        true,
+		},
+		{
+			name:            "OKTETO_DEPLOY_REMOTE=false - returns false",
+			envDeployRemote: "false",
+			expected:        false,
+		},
+		{
+			name:           "OKTETO_IN_INSTALLER=true - returns true",
+			envInInstaller: "true",
+			expected:       true,
+		},
+		{
+			name:           "OKTETO_IN_INSTALLER=false - returns false",
+			envInInstaller: "false",
+			expected:       false,
+		},
+		{
+			name:          "OKTETO_MANAGED_POD=true - returns true",
+			envManagedPod: "true",
+			expected:      true,
+		},
+		{
+			name:          "OKTETO_MANAGED_POD=false - returns false",
+			envManagedPod: "false",
+			expected:      false,
+		},
+		{
+			name:            "multiple env vars set - returns true if any is true",
+			envDeployRemote: "false",
+			envInInstaller:  "false",
+			envManagedPod:   "true",
+			expected:        true,
+		},
+		{
+			name:            "all env vars false - returns false",
+			envDeployRemote: "false",
+			envInInstaller:  "false",
+			envManagedPod:   "false",
+			expected:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear all env vars first
+			t.Setenv(constants.OktetoDeployRemote, "")
+			t.Setenv("OKTETO_IN_INSTALLER", "")
+			t.Setenv("OKTETO_MANAGED_POD", "")
+
+			// Set the specific env vars for this test
+			if tt.envDeployRemote != "" {
+				t.Setenv(constants.OktetoDeployRemote, tt.envDeployRemote)
+			}
+			if tt.envInInstaller != "" {
+				t.Setenv("OKTETO_IN_INSTALLER", tt.envInInstaller)
+			}
+			if tt.envManagedPod != "" {
+				t.Setenv("OKTETO_MANAGED_POD", tt.envManagedPod)
+			}
+
+			got := shouldUseInClusterConnector()
 			require.Equal(t, tt.expected, got)
 		})
 	}
