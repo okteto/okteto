@@ -73,12 +73,13 @@ type PortForwarder struct {
 	ioCtrl       *io.Controller
 	maxWaitTime  time.Duration
 	// Connection state
-	stopChan  chan struct{}
-	readyChan chan struct{}
-	localPort int
-	podName   string
-	isActive  bool
-	mu        sync.Mutex
+	stopChan       chan struct{}
+	readyChan      chan struct{}
+	localPort      int
+	podName        string
+	isActive       bool
+	mu             sync.Mutex
+	buildkitClient *client.Client
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
@@ -291,6 +292,7 @@ func (pf *PortForwarder) Stop() {
 		close(pf.stopChan)
 	}
 	pf.isActive = false
+	pf.buildkitClient = nil
 	pf.ioCtrl.Logger().Infof("port forward connection stopped")
 }
 
@@ -317,7 +319,16 @@ func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
 }
 
 // GetBuildkitClient returns the buildkit client. Start() must be called before this method.
+// If a client has already been created, it returns the cached one.
 func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+
+	if pf.buildkitClient != nil {
+		pf.ioCtrl.Logger().Infof("reusing existing buildkit client")
+		return pf.buildkitClient, nil
+	}
+
 	localAddress := fmt.Sprintf("127.0.0.1:%d", pf.localPort)
 	pf.ioCtrl.Logger().Infof("using buildkit via local port forward: %s", localAddress)
 	originalURL, err := url.Parse(pf.okCtx.GetCurrentBuilder())
@@ -335,5 +346,12 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 
 	buildkitClientFactory.SetTLSServerName(originalHostname)
 	pf.ioCtrl.Logger().Infof("TLS verification will use server name: %s", originalHostname)
-	return buildkitClientFactory.GetBuildkitClient(ctx)
+
+	c, err := buildkitClientFactory.GetBuildkitClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pf.buildkitClient = c
+	return c, nil
 }
