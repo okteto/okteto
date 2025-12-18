@@ -50,7 +50,7 @@ const (
 	initialPollIntervalPortForward = 1 * time.Second
 	maxPollIntervalPortForward     = 10 * time.Second
 	backoffMultiplierPortForward   = 2.0
-	buildkitPodWaitTimeoutEnvVar   = "OKTETO_BUILDKIT_POD_WAIT_TIMEOUT"
+	buildkitQueueWaitTimeoutEnvVar = "OKTETO_BUILDKIT_QUEUE_WAIT_TIMEOUT"
 )
 
 type PortForwarderOktetoContextInterface interface {
@@ -80,6 +80,7 @@ type PortForwarder struct {
 	isActive       bool
 	mu             sync.Mutex
 	buildkitClient *client.Client
+	waiter         *Waiter
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
@@ -100,7 +101,8 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	if err != nil {
 		return nil, fmt.Errorf("could not get available port: %w", err)
 	}
-	maxWaitTime := env.LoadTimeOrDefault(buildkitPodWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
+	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
+	waiter := NewBuildkitClientWaiter(ioCtrl)
 
 	pf := &PortForwarder{
 		sessionID:    sessionID,
@@ -110,11 +112,13 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		okCtx:        okCtx,
 		ioCtrl:       ioCtrl,
 		maxWaitTime:  maxWaitTime,
+		waiter:       waiter,
 		stopChan:     make(chan struct{}, 1),
 		readyChan:    make(chan struct{}, 1),
 		localPort:    port,
 	}
 
+	// We need to call it once in order to check if the buildkit pod endpoint is available
 	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
@@ -155,7 +159,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := pf.waitUntilReady(ctx); err != nil {
+	if err := pf.waitUntilPortForwardIsReady(ctx); err != nil {
 		pf.ioCtrl.Logger().Infof("failed to wait until ready: %s", err)
 		return err
 	}
@@ -257,7 +261,7 @@ func (pf *PortForwarder) establishPortForward() error {
 }
 
 // waitUntilReady waits for the port forward to be ready or context to be cancelled
-func (pf *PortForwarder) waitUntilReady(ctx context.Context) error {
+func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error {
 	pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", pf.podName)
 
 	select {
@@ -308,14 +312,15 @@ func getPortForwardK8sClient(oktetoClient *okteto.Client, okCtx PortForwarderOkt
 	return okteto.NewK8sClientProvider().Provide(portForwardCfg)
 }
 
-// WaitUntilIsReady waits for the buildkit server to be ready
+// WaitUntilIsReady waits for the buildkit server to be ready.
+// Any function calling this method must call Start() first and handle the Stop() call.
 func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
 	if !pf.isActive {
 		if err := pf.Start(ctx); err != nil {
 			return fmt.Errorf("failed to start port forward: %w", err)
 		}
 	}
-	return NewBuildkitClientWaiter(pf.ioCtrl).WaitUntilIsUp(ctx, pf.GetBuildkitClient)
+	return pf.waiter.WaitUntilIsUp(ctx, pf.GetBuildkitClient)
 }
 
 // GetBuildkitClient returns the buildkit client. Start() must be called before this method.
