@@ -88,4 +88,3 @@ func TestInClusterConnector_GetBuildkitClient_NoPodIP(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no buildkit pod IP available")
 }
-
