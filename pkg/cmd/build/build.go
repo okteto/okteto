@@ -114,14 +114,13 @@ func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) B
 func shouldUseInClusterConnector() bool {
 	return env.LoadBoolean(constants.OktetoDeployRemote) || // Remote commands (deploy --remote, destroy --remote, test)
 		config.RunningInInstaller() || // Pipeline installer
-		env.LoadBoolean("OKTETO_MANAGED_POD") // Pods in managed namespaces
+		env.LoadBoolean(constants.OktetoManagedPodEnvVar) // Pods in managed namespaces
 }
 
 func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
 	conn, err := connector.NewInClusterConnector(context.Background(), okCtx, logger)
 	if err != nil {
 		logger.Infof("could not create in-cluster connector: %s, falling back to ingress", err)
-		logger.Out().Warning("Could not create in-cluster buildkit connector, falling back to ingress connector")
 		return connector.NewIngressConnector(okCtx, logger)
 	}
 	return conn

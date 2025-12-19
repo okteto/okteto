@@ -992,7 +992,7 @@ func Test_shouldUseInClusterConnector(t *testing.T) {
 			// Clear all env vars first
 			t.Setenv(constants.OktetoDeployRemote, "")
 			t.Setenv("OKTETO_IN_INSTALLER", "")
-			t.Setenv("OKTETO_MANAGED_POD", "")
+			t.Setenv(constants.OktetoManagedPodEnvVar, "")
 
 			// Set the specific env vars for this test
 			if tt.envDeployRemote != "" {
@@ -1002,7 +1002,7 @@ func Test_shouldUseInClusterConnector(t *testing.T) {
 				t.Setenv("OKTETO_IN_INSTALLER", tt.envInInstaller)
 			}
 			if tt.envManagedPod != "" {
-				t.Setenv("OKTETO_MANAGED_POD", tt.envManagedPod)
+				t.Setenv(constants.OktetoManagedPodEnvVar, tt.envManagedPod)
 			}
 
 			got := shouldUseInClusterConnector()
