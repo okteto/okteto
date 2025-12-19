@@ -16,7 +16,9 @@ package connector
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
 )
@@ -30,6 +32,7 @@ type IngressOktetoContextInterface interface {
 type IngressConnector struct {
 	buildkitClientFactory *ClientFactory
 	waiter                *Waiter
+	metrics               *ConnectorMetrics
 }
 
 // NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
@@ -41,22 +44,31 @@ func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Control
 		config.GetCertificatePath(),
 		ioCtrl)
 	waiter := NewBuildkitClientWaiter(ioCtrl)
+	sessionID := uuid.New().String()
 
 	return &IngressConnector{
 		buildkitClientFactory: buildkitClientFactory,
 		waiter:                waiter,
+		metrics:               NewConnectorMetrics(analytics.ConnectorTypeIngress, sessionID),
 	}
 }
 
 // Start is a no-op for the ingress connector since it doesn't maintain a persistent connection
 func (i *IngressConnector) Start(ctx context.Context) error {
-	// No-op: ingress connector doesn't need to establish a connection upfront
+	i.metrics.StartTracking()
 	return nil
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready
-func (d *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
-	return d.waiter.WaitUntilIsUp(ctx, d.GetBuildkitClient)
+func (i *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
+	err := i.waiter.WaitUntilIsUp(ctx, i.GetBuildkitClient)
+	i.metrics.SetServiceReadyDuration(i.waiter.GetWaitingTime())
+	if err != nil {
+		i.metrics.TrackFailure()
+	} else {
+		i.metrics.TrackSuccess()
+	}
+	return err
 }
 
 func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
@@ -66,4 +78,9 @@ func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Clien
 // Stop is a no-op for the ingress connector since it doesn't maintain a persistent connection
 func (i *IngressConnector) Stop() {
 	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
+}
+
+// GetMetrics returns the connector metrics for external configuration
+func (i *IngressConnector) GetMetrics() *ConnectorMetrics {
+	return i.metrics
 }

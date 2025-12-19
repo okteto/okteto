@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -81,6 +82,9 @@ type PortForwarder struct {
 	mu             sync.Mutex
 	buildkitClient *client.Client
 	waiter         *Waiter
+
+	// Metrics collector for analytics
+	metrics *ConnectorMetrics
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
@@ -116,6 +120,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		stopChan:     make(chan struct{}, 1),
 		readyChan:    make(chan struct{}, 1),
 		localPort:    port,
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypePortForward, sessionID),
 	}
 
 	// We need to call it once in order to check if the buildkit pod endpoint is available
@@ -145,12 +150,14 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	}
 
 	if pf.podName == "" {
+		pf.metrics.SetPodReused(false)
 		podName, err := pf.assignBuildkitPod(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to assign buildkit pod: %w", err)
 		}
 		pf.podName = podName
 	} else {
+		pf.metrics.SetPodReused(true)
 		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.podName)
 	}
 
@@ -169,25 +176,33 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 
 // assignBuildkitPod gets the least loaded buildkit pod and assigns it to this port forwarder
 func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) {
-
-	startTime := time.Now()
 	pollInterval := initialPollIntervalPortForward
+
+	// Start tracking metrics
+	pf.metrics.StartTracking()
 
 	sp := pf.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
 	sp.Start()
 	defer sp.Stop()
 	for {
-		if time.Since(startTime) >= pf.maxWaitTime {
+		if time.Since(pf.metrics.StartTime) >= pf.maxWaitTime {
+			pf.metrics.SetWaitingForPodTimedOut(true)
+			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", maxWaitTime)
 		}
 
 		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 		if err != nil {
+			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 
+		// Capture queue metrics
+		pf.metrics.RecordQueueStatus(response.QueuePosition, response.Reason)
+
 		if response.PodName != "" {
 			pf.ioCtrl.Logger().Infof("assigned buildkit pod: %s", response.PodName)
+			pf.metrics.TrackSuccess()
 			return response.PodName, nil
 		}
 
@@ -359,4 +374,9 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 
 	pf.buildkitClient = c
 	return c, nil
+}
+
+// GetMetrics returns the connector metrics for external configuration
+func (pf *PortForwarder) GetMetrics() *ConnectorMetrics {
+	return pf.metrics
 }
