@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/build/buildkit/connector"
@@ -56,12 +57,14 @@ type OktetoBuilderInterface interface {
 
 // BuildkitConnector is the interface for the buildkit connector
 type BuildkitConnector interface {
+	// Start establishes the connection to the buildkit server
+	Start(ctx context.Context) error
 	// WaitUntilIsReady waits for the buildkit server to be ready
 	WaitUntilIsReady(ctx context.Context) error
-	// GetClientFactory returns the client factory
-	GetClientFactory() *connector.ClientFactory
-	// GetWaiter returns the waiter
-	GetWaiter() *connector.Waiter
+	// Stop closes the connection to the buildkit server
+	Stop()
+	// GetBuildkitClient returns the buildkit client
+	GetBuildkitClient(ctx context.Context) (*client.Client, error)
 }
 
 // OktetoBuilder runs the build of an image
@@ -124,14 +127,7 @@ func (ob *OktetoBuilder) GetBuilder() string {
 
 // Run runs the build sequence
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
-	isRemoteExecution := buildOptions.OutputMode == DeployOutputModeOnBuild || buildOptions.OutputMode == DestroyOutputModeOnBuild || buildOptions.OutputMode == TestOutputModeOnBuild
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
-
-	if !isRemoteExecution {
-		builder := ob.GetBuilder()
-		buildMsg := fmt.Sprintf("Building '%s'", buildOptions.File)
-		ioCtrl.Out().Infof("%s in %s...", buildMsg, builder)
-	}
 
 	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, SolveBuild)
 }
@@ -196,23 +192,8 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
-	if err := ob.connector.WaitUntilIsReady(ctx); err != nil {
-		return err
-	}
-
-	optBuilder, err := buildkit.NewSolveOptBuilder(ob.connector.GetClientFactory(), reg, ob.OktetoContext, ob.Fs, ioCtrl)
-	if err != nil {
-		return err
-	}
-
-	opt, err := optBuilder.Build(ctx, buildOptions)
-	if err != nil {
-		return fmt.Errorf("failed to create build solver: %w", err)
-	}
-
-	buildSolver := buildkit.NewBuildkitRunner(ob.connector.GetClientFactory(), ob.connector.GetWaiter(), reg, run, ioCtrl)
-
-	if err := buildSolver.Run(ctx, opt, buildOptions.OutputMode); err != nil {
+	buildSolver := buildkit.NewBuildkitRunner(ob.connector, reg, run, ob.OktetoContext, ob.Fs, ioCtrl)
+	if err := buildSolver.Run(ctx, buildOptions, buildOptions.OutputMode); err != nil {
 		return err
 	}
 

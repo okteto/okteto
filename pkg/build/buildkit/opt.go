@@ -50,15 +50,11 @@ const (
 type SolveOptBuilder struct {
 	logger           *io.Controller
 	imageCtrl        registry.ImageCtrl
-	reg              registry.OktetoRegistry
+	reg              IsInOktetoRegistryChecker
 	okCtx            OktetoContextInterface
-	clientFactory    ClientFactoryIface
+	clientFactory    clientFactory
 	fs               afero.Fs
 	secretTempFolder string
-}
-
-type ClientFactoryIface interface {
-	GetBuildkitClient(ctx context.Context) (*client.Client, error)
 }
 
 // OktetoContextInterface is an interface to interact with the okteto context
@@ -78,8 +74,18 @@ type OktetoContextInterface interface {
 	GetRegistryURL() string
 }
 
+type clientFactory interface {
+	GetBuildkitClient(ctx context.Context) (*client.Client, error)
+}
+
+// IsInOktetoRegistryChecker is a checker for if an image is in the okteto registry
+type IsInOktetoRegistryChecker interface {
+	IsOktetoRegistry(image string) bool
+	IsGlobalRegistry(image string) bool
+}
+
 // NewSolveOptBuilder creates a new SolveOptBuilder
-func NewSolveOptBuilder(clientFactory ClientFactoryIface, reg registry.OktetoRegistry, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
+func NewSolveOptBuilder(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
 	secretTempFolder, err := getSecretTempFolder(fs)
 	if err != nil {
 		return nil, err
@@ -91,7 +97,7 @@ func NewSolveOptBuilder(clientFactory ClientFactoryIface, reg registry.OktetoReg
 		reg:              reg,
 		fs:               fs,
 		secretTempFolder: secretTempFolder,
-		clientFactory:    clientFactory,
+		clientFactory:    cf,
 		okCtx:            okCtx,
 	}, nil
 }
@@ -209,7 +215,7 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		}})
 
 		if err != nil {
-			return nil, fmt.Errorf("Failed to mount ssh agent for %s: %w", sess.Id, err)
+			return nil, fmt.Errorf("failed to mount ssh agent for %s: %w", sess.Id, err)
 		}
 		attachable = append(attachable, ssh)
 	}

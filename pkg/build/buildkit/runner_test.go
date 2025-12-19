@@ -20,7 +20,10 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type fakeBuildkitWaiter struct {
@@ -49,6 +52,48 @@ func (m *fakeRegistryImageChecker) GetImageTagWithDigest(string) (string, error)
 	return "digest", nil
 }
 
+func (m *fakeRegistryImageChecker) IsOktetoRegistry(string) bool {
+	return false
+}
+
+func (m *fakeRegistryImageChecker) IsGlobalRegistry(string) bool {
+	return false
+}
+
+type fakeOktetoContext struct{}
+
+func (f *fakeOktetoContext) GetCurrentName() string                            { return "test-context" }
+func (f *fakeOktetoContext) GetNamespace() string                              { return "test-namespace" }
+func (f *fakeOktetoContext) GetGlobalNamespace() string                        { return "okteto" }
+func (f *fakeOktetoContext) GetCurrentBuilder() string                         { return "test-builder" }
+func (f *fakeOktetoContext) GetCurrentCertStr() string                         { return "" }
+func (f *fakeOktetoContext) GetCurrentCfg() *clientcmdapi.Config               { return nil }
+func (f *fakeOktetoContext) GetCurrentToken() string                           { return "test-token" }
+func (f *fakeOktetoContext) GetCurrentUser() string                            { return "test-user" }
+func (f *fakeOktetoContext) IsOktetoCluster() bool                             { return false }
+func (f *fakeOktetoContext) IsInsecure() bool                                  { return false }
+func (f *fakeOktetoContext) UseContextByBuilder()                              {}
+func (f *fakeOktetoContext) GetTokenByContextName(name string) (string, error) { return "", nil }
+func (f *fakeOktetoContext) GetRegistryURL() string                            { return "" }
+
+type fakeSolveOptBuilder struct {
+	opt *client.SolveOpt
+	err error
+}
+
+func (f *fakeSolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.opt, nil
+}
+
+func newFakeSolveOptBuilderFactory(opt *client.SolveOpt, err error) SolveOptBuilderFactory {
+	return func(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (SolveOptBuilderInterface, error) {
+		return &fakeSolveOptBuilder{opt: opt, err: err}, nil
+	}
+}
+
 type fakeBuildkitClientFactory struct {
 	err []error
 }
@@ -62,6 +107,24 @@ func (m *fakeBuildkitClientFactory) GetBuildkitClient(context.Context) (*client.
 	return &client.Client{}, nil
 }
 
+type fakeBuildkitConnector struct {
+	waiter        buildkitWaiterInterface
+	clientFactory buildkitClientFactory
+}
+
+func (f *fakeBuildkitConnector) Start(ctx context.Context) error {
+	// No-op: fake buildkit connector doesn't need to establish a connection
+	return nil
+}
+func (f *fakeBuildkitConnector) WaitUntilIsReady(ctx context.Context) error {
+	return f.waiter.WaitUntilIsUp(ctx)
+}
+func (f *fakeBuildkitConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
+	return f.clientFactory.GetBuildkitClient(ctx)
+}
+func (m *fakeBuildkitConnector) Stop() {
+	// No-op: fake buildkit connector doesn't maintain a persistent connection that needs to be closed
+}
 func TestRunnerRun(t *testing.T) {
 	type input struct {
 		buildkitWaiter           buildkitWaiterInterface
@@ -74,6 +137,15 @@ func TestRunnerRun(t *testing.T) {
 		attempts int
 	}
 	var solveAttempts int
+	defaultSolveOpt := &client.SolveOpt{Exports: []client.ExportEntry{
+		{
+			Type: "image",
+			Attrs: map[string]string{
+				"push": "true",
+				"name": "image:latest",
+			},
+		},
+	}}
 	tests := []struct {
 		name   string
 		input  input
@@ -88,14 +160,17 @@ func TestRunnerRun(t *testing.T) {
 			},
 			output: output{
 				err:      assert.AnError,
-				attempts: 1,
+				attempts: 0, // fails before entering the loop
 			},
 		},
 		{
 			name: "buildkit client fails to retrieve after waiting and fail",
 			input: input{
 				buildkitWaiter: &fakeBuildkitWaiter{
-					err: []error{nil, assert.AnError},
+					// 1st: initial wait before loop succeeds
+					// 2nd: first loop iteration succeeds
+					// 3rd: second loop iteration fails
+					err: []error{nil, nil, assert.AnError},
 				},
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{assert.AnError},
@@ -150,7 +225,10 @@ func TestRunnerRun(t *testing.T) {
 			name: "retryable error to wait failure",
 			input: input{
 				buildkitWaiter: &fakeBuildkitWaiter{
-					err: []error{nil, assert.AnError},
+					// 1st: initial wait before loop succeeds
+					// 2nd: first loop iteration succeeds
+					// 3rd: second loop iteration fails (after retryable error triggers retry)
+					err: []error{nil, nil, assert.AnError},
 				},
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
@@ -232,24 +310,22 @@ func TestRunnerRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			solveAttempts = 0
 			fmt.Print(solveAttempts)
+
 			r := &Runner{
-				waiter:                             tt.input.buildkitWaiter,
-				clientFactory:                      tt.input.buildkitClientFactory,
+				connector: &fakeBuildkitConnector{
+					waiter:        tt.input.buildkitWaiter,
+					clientFactory: tt.input.buildkitClientFactory,
+				},
 				solveBuild:                         tt.input.fakeSolver,
 				registry:                           tt.input.fakeRegistryImageChecker,
 				metadata:                           &runnerMetadata{},
 				logger:                             io.NewIOController(),
 				maxAttemptsBuildkitTransientErrors: 5,
+				okCtx:                              &fakeOktetoContext{},
+				fs:                                 afero.NewMemMapFs(),
+				solveOptBuilderFactory:             newFakeSolveOptBuilderFactory(defaultSolveOpt, nil),
 			}
-			err := r.Run(context.Background(), &client.SolveOpt{Exports: []client.ExportEntry{
-				{
-					Type: "image",
-					Attrs: map[string]string{
-						"push": "true",
-						"name": "image:latest",
-					},
-				},
-			}}, "")
+			err := r.Run(context.Background(), &types.BuildOptions{}, "")
 			assert.ErrorIs(t, err, tt.output.err)
 			assert.Equal(t, tt.output.attempts, r.metadata.attempts)
 		})
@@ -361,14 +437,26 @@ func TestNewBuildkitRunner(t *testing.T) {
 				t.Setenv(MaxRetriesForBuildkitTransientErrorsEnvVar, tt.envVar)
 			}
 
-			runner := NewBuildkitRunner(&fakeBuildkitClientFactory{}, &fakeBuildkitWaiter{}, &fakeRegistryImageChecker{}, func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil }, io.NewIOController())
+			runner := NewBuildkitRunner(
+				&fakeBuildkitConnector{
+					waiter:        &fakeBuildkitWaiter{},
+					clientFactory: &fakeBuildkitClientFactory{},
+				},
+				&fakeRegistryImageChecker{},
+				func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil },
+				&fakeOktetoContext{},
+				afero.NewMemMapFs(),
+				io.NewIOController(),
+			)
 
-			assert.Implements(t, (*buildkitClientFactory)(nil), runner.clientFactory)
-			assert.Implements(t, (*buildkitWaiterInterface)(nil), runner.waiter)
+			assert.Implements(t, (*buildkitConnector)(nil), runner.connector)
 			assert.Implements(t, (*registryImageChecker)(nil), runner.registry)
 			assert.NotNil(t, runner.solveBuild)
 			assert.NotNil(t, runner.logger)
 			assert.NotNil(t, runner.metadata)
+			assert.NotNil(t, runner.okCtx)
+			assert.NotNil(t, runner.fs)
+			assert.NotNil(t, runner.solveOptBuilderFactory)
 			assert.Equal(t, tt.expected, runner.maxAttemptsBuildkitTransientErrors)
 		})
 	}

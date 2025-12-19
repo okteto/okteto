@@ -16,6 +16,7 @@ package connector
 import (
 	"context"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
 )
@@ -31,7 +32,7 @@ type IngressConnector struct {
 	waiter                *Waiter
 }
 
-// NewIngressConnector creates a new direct connector. It connects to the buildkit server directly.
+// NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
 func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Controller) *IngressConnector {
 	buildkitClientFactory := NewBuildkitClientFactory(
 		okCtx.GetCurrentCertStr(),
@@ -39,7 +40,7 @@ func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Control
 		okCtx.GetCurrentToken(),
 		config.GetCertificatePath(),
 		ioCtrl)
-	waiter := NewBuildkitClientWaiter(buildkitClientFactory, ioCtrl)
+	waiter := NewBuildkitClientWaiter(ioCtrl)
 
 	return &IngressConnector{
 		buildkitClientFactory: buildkitClientFactory,
@@ -47,17 +48,22 @@ func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Control
 	}
 }
 
+// Start is a no-op for the ingress connector since it doesn't maintain a persistent connection
+func (i *IngressConnector) Start(ctx context.Context) error {
+	// No-op: ingress connector doesn't need to establish a connection upfront
+	return nil
+}
+
 // WaitUntilIsReady waits for the buildkit server to be ready
 func (d *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
-	return d.waiter.WaitUntilIsUp(ctx)
+	return d.waiter.WaitUntilIsUp(ctx, d.GetBuildkitClient)
 }
 
-// GetClientFactory returns the client factory
-func (d *IngressConnector) GetClientFactory() *ClientFactory {
-	return d.buildkitClientFactory
+func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
+	return i.buildkitClientFactory.GetBuildkitClient(ctx)
 }
 
-// GetWaiter returns the waiter
-func (d *IngressConnector) GetWaiter() *Waiter {
-	return d.waiter
+// Stop is a no-op for the ingress connector since it doesn't maintain a persistent connection
+func (i *IngressConnector) Stop() {
+	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
 }
