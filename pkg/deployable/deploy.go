@@ -270,6 +270,10 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		)
 		for k, v := range GetPlatformEnvironment(ctx) {
 			params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
+			// Always mask cloud credentials from execution environment
+			if strings.TrimSpace(v) != "" {
+				oktetoLog.AddMaskedWord(v)
+			}
 		}
 	}
 	oktetoLog.EnableMasking()
