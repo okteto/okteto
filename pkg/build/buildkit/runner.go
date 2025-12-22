@@ -149,7 +149,7 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 
 	if showBuildMessage {
 		builder := r.okCtx.GetCurrentBuilder()
-		r.logger.Out().Infof("Building '%s' in %s...", buildOptions.Path, builder)
+		r.logger.Out().Infof("Building '%s' in %s...", buildOptions.File, builder)
 	}
 
 	for {

@@ -161,4 +161,7 @@ const (
 
 	// OktetoIsDependencyEnvVar defines if the command is executed inside a dependency
 	OktetoIsDependencyEnvVar = "OKTETO_IS_DEPENDENCY"
+
+	// OkteoManagedPodEnvVar defines if the pod is executed inside a ns managed by okteto
+	OktetoManagedPodEnvVar = "OKTETO_MANAGED_POD"
 )

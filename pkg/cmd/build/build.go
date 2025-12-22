@@ -91,23 +91,49 @@ type OktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 }
 
-// GetBuildkitConnector creates and returns a buildkit connector based on the OKTETO_BUILD_QUEUE_ENABLED environment variable.
-// If the queue is enabled, it tries to create a port forwarder. If that fails, it falls back to a direct connector.
+// GetBuildkitConnector creates and returns a buildkit connector based on the execution environment.
+//
+// Selection priority:
+//  1. InClusterConnector - when running inside Okteto (remote commands, installer, or managed pods)
+//  2. PortForwarder - when build queue is enabled (OKTETO_BUILD_QUEUE_ENABLED=true)
+//  3. IngressConnector - default for local CLI execution
 func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
-	var buildkitConnector BuildkitConnector
-	var err error
-	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
-		buildkitConnector, err = connector.NewPortForwarder(context.Background(), okCtx, logger)
-		if err != nil {
-			logger.Infof("could not create buildkit connector for port forwarding: %s", err)
-			logger.Infof("falling back to ingress connector")
-			logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to ingress connector")
-			buildkitConnector = connector.NewIngressConnector(okCtx, logger)
-		}
-	} else {
-		buildkitConnector = connector.NewIngressConnector(okCtx, logger)
+	if shouldUseInClusterConnector() {
+		return newInClusterConnectorWithFallback(okCtx, logger)
 	}
-	return buildkitConnector
+
+	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
+		return newPortForwarderWithFallback(okCtx, logger)
+	}
+
+	return connector.NewIngressConnector(okCtx, logger)
+}
+
+// shouldUseInClusterConnector returns true when running inside an Okteto-managed environment
+// where we can connect directly to BuildKit via pod IP
+func shouldUseInClusterConnector() bool {
+	return env.LoadBoolean(constants.OktetoDeployRemote) || // Remote commands (deploy --remote, destroy --remote, test)
+		config.RunningInInstaller() || // Pipeline installer
+		env.LoadBoolean(constants.OktetoManagedPodEnvVar) // Pods in managed namespaces
+}
+
+func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
+	conn, err := connector.NewInClusterConnector(context.Background(), okCtx, logger)
+	if err != nil {
+		logger.Infof("could not create in-cluster connector: %s, falling back to ingress", err)
+		return connector.NewIngressConnector(okCtx, logger)
+	}
+	return conn
+}
+
+func newPortForwarderWithFallback(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
+	conn, err := connector.NewPortForwarder(context.Background(), okCtx, logger)
+	if err != nil {
+		logger.Infof("could not create port forwarder: %s, falling back to ingress", err)
+		logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to ingress connector")
+		return connector.NewIngressConnector(okCtx, logger)
+	}
+	return conn
 }
 
 // NewOktetoBuilder creates a new instance of OktetoBuilder.
