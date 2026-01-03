@@ -35,12 +35,10 @@
 /.editorconfig
 /.gitignore
 /.golangci.yml
-/.mdlrc
 /.pre-commit-config.yaml
 /.prettierrc
 /.prettierignore
 /.stignore
-/.yaml-lint.yml
 
 # Okteto specific files (not needed inside the container)
 /.oktetoignore

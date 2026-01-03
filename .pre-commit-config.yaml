@@ -3,7 +3,7 @@
 default_stages: [pre-commit, pre-push]
 default_language_version:
   python: python3
-  node: 22.19.0
+  node: 24.12.0
 minimum_pre_commit_version: '3.2.0'
 repos:
   - repo: meta
@@ -20,14 +20,18 @@ repos:
         entry: prettier --write '**/*.json' '**/*.md' '**/*.yaml' '**/*.yml'
         files: \.(json|md|ya?ml)$
         language: node
-        additional_dependencies: ['prettier@3.6.2']
-  # general checks for the repository
+        pass_filenames: false
+        additional_dependencies: ['prettier@3.7.4']
+
+  # check for secrets
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.28.0
+    rev: v8.30.0
     hooks:
       - id: gitleaks
         name: run gitleaks
         description: detect hardcoded secrets with gitleaks
+
+  # general checks for the repository
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -54,17 +58,6 @@ repos:
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
 
-  # shell and markdown checks
-  - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 3.0.0
-    hooks:
-      - id: shellcheck
-        name: run shellcheck
-        exclude: ^samples/|^scripts/ci/push-image.sh
-      - id: markdownlint
-        name: run markdownlint
-        exclude: ^samples/
-
   # check spelling though all the repository
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
@@ -74,6 +67,27 @@ repos:
         description: Check Spelling with codespell
         entry: codespell -L ba,flate,ges,indx,keypair,splitted,vertexes --exclude-file=go.sum
 
+  # markdown checks
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0
+    hooks:
+      - id: markdownlint
+        name: run markdownlint
+        description: check Markdown files with markdownlint
+        args: [--config=.github/linters/.markdown-lint.yml]
+        exclude: ^samples/
+        types: [markdown]
+        files: \.md$
+
+  # shell checks
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        name: run shellcheck
+        description: check Shell scripts with shellcheck
+        exclude: ^samples/|^scripts/ci/push-image.sh
+
   # yaml files check
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.37.1
@@ -81,7 +95,7 @@ repos:
       - id: yamllint
         name: run yamllint
         description: Check YAML files with yamllint
-        entry: yamllint --strict -c .yaml-lint.yml
+        args: [--strict, -c=.github/linters/.yaml-lint.yml]
         types: [yaml]
-        files: \.(ya?ml)$
+        files: \.ya?ml$
         exclude: ^integration/validate/manifests/invalid-syntax\.yml$

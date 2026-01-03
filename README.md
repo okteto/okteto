@@ -19,7 +19,7 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 Okteto enables development inside a container, providing a seamless IDE and tool integration as if you were working locally but with the resources of a remote cluster. When you run `okteto up` your Kubernetes deployment is replaced by a Development Container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can use any [docker image](https://okteto.com/docs/development/images/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
-<img align="left" src="images/how-does-it-work.png">
+<img align="left" src="images/how-does-it-work.png" alt="How does it work">
 
 The end result is a remote cluster that is seen by your IDE and tools as a local filesystem/environment. You keep writing code on your local IDE and as soon as you save a file, the change goes to the development container, and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
 
@@ -116,6 +116,6 @@ You can also join us in the [#okteto](https://kubernetes.slack.com/messages/CM1Q
 ### Thanks to all our contributors!
 
 <a href="https://github.com/okteto/okteto/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=okteto/okteto" />
+  <img src="https://contrib.rocks/image?repo=okteto/okteto" alt="Contributors Avatars" />
 </a>
 <!--  https://contrib.rocks -->

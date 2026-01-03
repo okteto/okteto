@@ -1,6 +1,5 @@
 ---
 # https://yamllint.readthedocs.io/en/stable/index.html
-# yamllint --strict -c .yaml-lint.yml .
 
 extends: default
 
