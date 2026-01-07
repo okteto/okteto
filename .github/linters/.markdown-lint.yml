@@ -1,9 +1,29 @@
-rules '~MD007', '~MD013', '~MD024', '~MD025', '~MD026', '~MD033', '~MD040', '~MD041'
 # MD007 ul-indent - Unordered list indentation
+MD007: false
+
 # MD013 line-length - Line length
+MD013: false
+
 # MD024 no-duplicate-heading/no-duplicate-header - Multiple headings with the same content
+MD024: false
+
 # MD025 single-title/single-h1 - Multiple top-level headings in the same document
+MD025: false
+
 # MD026 no-trailing-punctuation - Trailing punctuation in heading
+MD026: false
+
 # MD033 no-inline-html - Inline HTML
+MD033: false
+
+# MD034/no-bare-urls Bare URL used
+MD034: false
+
 # MD040 fenced-code-language - Fenced code blocks should have a language specified
+MD040: false
+
 # MD041 first-line-heading/first-line-h1 - First line in a file should be a top-level heading
+MD041: false
+
+# MD059/descriptive-link-text Link text should be descriptive
+MD059: false
