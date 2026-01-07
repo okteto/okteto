@@ -190,6 +190,20 @@ func (p *Proxy) InitTranslator() {
 	}
 }
 
+// shouldInterceptRequest returns true if the request should be intercepted to inject labels and transformations.
+// PUT and POST requests are always intercepted.
+// PATCH requests are only intercepted for server-side apply operations to avoid issues with partial objects.
+func shouldInterceptRequest(r *http.Request) bool {
+	if r.Method == "PUT" || r.Method == "POST" {
+		return true
+	}
+	// For PATCH, only intercept server-side apply operations
+	if r.Method == "PATCH" && r.Header.Get("Content-Type") == "application/apply-patch+yaml" {
+		return true
+	}
+	return false
+}
+
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
@@ -242,7 +256,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 
 		r.Host = destinationURL.Host
 		// Modify all resources updated or created to include the label.
-		if r.Method == "PUT" || r.Method == "POST" || r.Method == "PATCH" {
+		if shouldInterceptRequest(r) {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				oktetoLog.Infof("could not read the request body: %s", err)
