@@ -931,70 +931,89 @@ func Test_setOutputMode(t *testing.T) {
 
 func Test_shouldUseInClusterConnector(t *testing.T) {
 	tests := []struct {
-		name            string
-		envDeployRemote string
-		envInInstaller  string
-		envManagedPod   string
-		expected        bool
+		name                 string
+		envBuildQueueEnabled string
+		envDeployRemote      string
+		envInInstaller       string
+		envManagedPod        string
+		expected             bool
 	}{
 		{
 			name:     "no env vars set - returns false",
 			expected: false,
 		},
 		{
-			name:            "OKTETO_DEPLOY_REMOTE=true - returns true",
-			envDeployRemote: "true",
-			expected:        true,
+			name:                 "build queue disabled - returns false even with OKTETO_DEPLOY_REMOTE=true",
+			envBuildQueueEnabled: "false",
+			envDeployRemote:      "true",
+			expected:             false,
 		},
 		{
-			name:            "OKTETO_DEPLOY_REMOTE=false - returns false",
-			envDeployRemote: "false",
-			expected:        false,
+			name:                 "OKTETO_DEPLOY_REMOTE=true - returns true",
+			envBuildQueueEnabled: "true",
+			envDeployRemote:      "true",
+			expected:             true,
 		},
 		{
-			name:           "OKTETO_IN_INSTALLER=true - returns true",
-			envInInstaller: "true",
-			expected:       true,
+			name:                 "OKTETO_DEPLOY_REMOTE=false - returns false",
+			envBuildQueueEnabled: "true",
+			envDeployRemote:      "false",
+			expected:             false,
 		},
 		{
-			name:           "OKTETO_IN_INSTALLER=false - returns false",
-			envInInstaller: "false",
-			expected:       false,
+			name:                 "OKTETO_IN_INSTALLER=true - returns true",
+			envBuildQueueEnabled: "true",
+			envInInstaller:       "true",
+			expected:             true,
 		},
 		{
-			name:          "OKTETO_MANAGED_POD=true - returns true",
-			envManagedPod: "true",
-			expected:      true,
+			name:                 "OKTETO_IN_INSTALLER=false - returns false",
+			envBuildQueueEnabled: "true",
+			envInInstaller:       "false",
+			expected:             false,
 		},
 		{
-			name:          "OKTETO_MANAGED_POD=false - returns false",
-			envManagedPod: "false",
-			expected:      false,
+			name:                 "OKTETO_MANAGED_POD=true - returns true",
+			envBuildQueueEnabled: "true",
+			envManagedPod:        "true",
+			expected:             true,
 		},
 		{
-			name:            "multiple env vars set - returns true if any is true",
-			envDeployRemote: "false",
-			envInInstaller:  "false",
-			envManagedPod:   "true",
-			expected:        true,
+			name:                 "OKTETO_MANAGED_POD=false - returns false",
+			envBuildQueueEnabled: "true",
+			envManagedPod:        "false",
+			expected:             false,
 		},
 		{
-			name:            "all env vars false - returns false",
-			envDeployRemote: "false",
-			envInInstaller:  "false",
-			envManagedPod:   "false",
-			expected:        false,
+			name:                 "multiple env vars set - returns true if any is true",
+			envBuildQueueEnabled: "true",
+			envDeployRemote:      "false",
+			envInInstaller:       "false",
+			envManagedPod:        "true",
+			expected:             true,
+		},
+		{
+			name:                 "all env vars false - returns false",
+			envBuildQueueEnabled: "true",
+			envDeployRemote:      "false",
+			envInInstaller:       "false",
+			envManagedPod:        "false",
+			expected:             false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear all env vars first
+			t.Setenv(OktetoBuildQueueEnabledEnvVar, "")
 			t.Setenv(constants.OktetoDeployRemote, "")
 			t.Setenv("OKTETO_IN_INSTALLER", "")
-			t.Setenv("OKTETO_MANAGED_POD", "")
+			t.Setenv(constants.OktetoManagedPodEnvVar, "")
 
 			// Set the specific env vars for this test
+			if tt.envBuildQueueEnabled != "" {
+				t.Setenv(OktetoBuildQueueEnabledEnvVar, tt.envBuildQueueEnabled)
+			}
 			if tt.envDeployRemote != "" {
 				t.Setenv(constants.OktetoDeployRemote, tt.envDeployRemote)
 			}
@@ -1002,7 +1021,7 @@ func Test_shouldUseInClusterConnector(t *testing.T) {
 				t.Setenv("OKTETO_IN_INSTALLER", tt.envInInstaller)
 			}
 			if tt.envManagedPod != "" {
-				t.Setenv("OKTETO_MANAGED_POD", tt.envManagedPod)
+				t.Setenv(constants.OktetoManagedPodEnvVar, tt.envManagedPod)
 			}
 
 			got := shouldUseInClusterConnector()

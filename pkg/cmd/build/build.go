@@ -112,9 +112,12 @@ func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) B
 // shouldUseInClusterConnector returns true when running inside an Okteto-managed environment
 // where we can connect directly to BuildKit via pod IP
 func shouldUseInClusterConnector() bool {
+	if !env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
+		return false
+	}
 	return env.LoadBoolean(constants.OktetoDeployRemote) || // Remote commands (deploy --remote, destroy --remote, test)
 		config.RunningInInstaller() || // Pipeline installer
-		env.LoadBoolean("OKTETO_MANAGED_POD") // Pods in managed namespaces
+		env.LoadBoolean(constants.OktetoManagedPodEnvVar) // Pods in managed namespaces
 }
 
 func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
