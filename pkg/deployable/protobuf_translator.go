@@ -60,6 +60,10 @@ func (p *protobufTranslator) Translate(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	if processedJSON == nil {
+		return nil, nil
+	}
+
 	// 4. Decode processed JSON back to runtime.Object
 	processedObj, _, err := p.jsonSerializer.Decode(processedJSON, nil, nil)
 	if err != nil {

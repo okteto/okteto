@@ -44,6 +44,10 @@ func (y *yamlTranslator) Translate(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	if processedJSON == nil {
+		return nil, nil
+	}
+
 	// Convert JSON back to YAML
 	yamlBytes, err := yaml.JSONToYAML(processedJSON)
 	if err != nil {
