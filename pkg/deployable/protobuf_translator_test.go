@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,25 +26,367 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-// fake object that does not support metadata.
-type noMetaObject struct{}
+// runProtobufTranslatorTest is a helper that marshals the input object to protobuf,
+// runs the translator, and returns the decoded output object.
+func runProtobufTranslatorTest(t *testing.T, inputObj runtime.Object, translatorName string, dDriver divert.Driver) runtime.Object {
+	// Encode input object to protobuf
+	pbSerializer := protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
+	var buf bytes.Buffer
+	err := pbSerializer.Encode(inputObj, &buf)
+	require.NoError(t, err, "failed to encode object to protobuf")
 
-func (n *noMetaObject) GetObjectKind() schema.ObjectKind {
-	return schema.EmptyObjectKind
+	// Run translator
+	translator := newProtobufTranslator(translatorName, dDriver)
+	outBytes, err := translator.Translate(buf.Bytes())
+	require.NoError(t, err, "Translate returned error")
+	require.NotNil(t, outBytes, "expected non-nil output bytes")
+
+	// Decode output bytes
+	decodedObj, _, err := pbSerializer.Decode(outBytes, nil, nil)
+	require.NoError(t, err, "failed to decode output bytes")
+
+	return decodedObj
 }
 
-func (n *noMetaObject) DeepCopyObject() runtime.Object {
-	return n
+func TestProtobufTranslatorTranslateDeployment(t *testing.T) {
+	inputObj := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "deployment-test",
+			Labels: map[string]string{
+				"original": "label",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "myapp",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "test-container", Image: "nginx"},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, &fakeDivertDriver{})
+
+	deployment, ok := decodedObj.(*appsv1.Deployment)
+	require.True(t, ok, "decoded object is not a Deployment")
+
+	// Verify top-level metadata
+	assert.Equal(t, translatorName, deployment.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+
+	// Verify Deployment spec template metadata
+	assert.Equal(t, translatorName, deployment.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel], "expected template metadata label to be set")
+
+	// Verify that the divert driver was applied (container "diverted" added)
+	found := false
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected diverted container to be added by divert driver")
 }
 
-func TestProtobufTranslator_Translate_Success(t *testing.T) {
-	// Create a sample Pod with some existing labels.
-	pod := &apiv1.Pod{
+func TestProtobufTranslatorTranslateStatefulSet(t *testing.T) {
+	inputObj := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "StatefulSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "statefulset-test",
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "statefulset",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "test-container", Image: "nginx"},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, &fakeDivertDriver{})
+
+	sts, ok := decodedObj.(*appsv1.StatefulSet)
+	require.True(t, ok, "decoded object is not a StatefulSet")
+
+	assert.Equal(t, translatorName, sts.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+	assert.Equal(t, translatorName, sts.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel], "expected template metadata label to be set")
+
+	found := false
+	for _, c := range sts.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected diverted container to be added by divert driver")
+}
+
+func TestProtobufTranslatorTranslateJob(t *testing.T) {
+	inputObj := &batchv1.Job{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Job",
+			APIVersion: "batch/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "job-test",
+		},
+		Spec: batchv1.JobSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"job": "true",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "test-container", Image: "busybox"},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, &fakeDivertDriver{})
+
+	job, ok := decodedObj.(*batchv1.Job)
+	require.True(t, ok, "decoded object is not a Job")
+
+	assert.Equal(t, translatorName, job.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+	assert.Equal(t, translatorName, job.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel], "expected template metadata label to be set")
+
+	found := false
+	for _, c := range job.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected diverted container to be added by divert driver")
+}
+
+func TestProtobufTranslatorTranslateCronJob(t *testing.T) {
+	inputObj := &batchv1.CronJob{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CronJob",
+			APIVersion: "batch/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cronjob-test",
+		},
+		Spec: batchv1.CronJobSpec{
+			Schedule: "*/5 * * * *",
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"cron": "job",
+							},
+						},
+						Spec: apiv1.PodSpec{
+							Containers: []apiv1.Container{
+								{Name: "test-container", Image: "busybox"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, &fakeDivertDriver{})
+
+	cronJob, ok := decodedObj.(*batchv1.CronJob)
+	require.True(t, ok, "decoded object is not a CronJob")
+
+	assert.Equal(t, translatorName, cronJob.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+	assert.Equal(t, translatorName, cronJob.Spec.JobTemplate.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel], "expected template metadata label to be set")
+
+	found := false
+	for _, c := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected diverted container to be added by divert driver")
+}
+
+func TestProtobufTranslatorTranslateDaemonSet(t *testing.T) {
+	inputObj := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "daemonset-test",
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"daemon": "true",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "test-container", Image: "nginx"},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, &fakeDivertDriver{})
+
+	daemonSet, ok := decodedObj.(*appsv1.DaemonSet)
+	require.True(t, ok, "decoded object is not a DaemonSet")
+
+	assert.Equal(t, translatorName, daemonSet.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+	assert.Equal(t, translatorName, daemonSet.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel], "expected template metadata label to be set")
+
+	found := false
+	for _, c := range daemonSet.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected diverted container to be added by divert driver")
+}
+
+func TestProtobufTranslatorTranslateReplicaSet(t *testing.T) {
+	inputObj := &appsv1.ReplicaSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ReplicaSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "replicaset-test",
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "replicaset",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "test-container", Image: "nginx"},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, &fakeDivertDriver{})
+
+	rs, ok := decodedObj.(*appsv1.ReplicaSet)
+	require.True(t, ok, "decoded object is not a ReplicaSet")
+
+	assert.Equal(t, translatorName, rs.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+	assert.Equal(t, translatorName, rs.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel], "expected template metadata label to be set")
+
+	found := false
+	for _, c := range rs.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected diverted container to be added by divert driver")
+}
+
+func TestProtobufTranslatorWithNilDivertDriver(t *testing.T) {
+	inputObj := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "deployment-test",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "myapp",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "test-container", Image: "nginx"},
+					},
+				},
+			},
+		},
+	}
+
+	translatorName := "test-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, nil)
+
+	deployment, ok := decodedObj.(*appsv1.Deployment)
+	require.True(t, ok, "decoded object is not a Deployment")
+
+	// Verify labels are set
+	assert.Equal(t, translatorName, deployment.ObjectMeta.Labels[model.DeployedByLabel], "expected metadata label to be set")
+
+	// Verify that no diverted container was added (divert driver is nil)
+	found := false
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		if c.Name == "diverted" {
+			found = true
+			break
+		}
+	}
+	assert.False(t, found, "expected no diverted container when divert driver is nil")
+
+	// Verify we still have the original container
+	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1, "expected original container to remain")
+	assert.Equal(t, "test-container", deployment.Spec.Template.Spec.Containers[0].Name)
+}
+
+func TestProtobufTranslatorInvalidInput(t *testing.T) {
+	invalidBytes := []byte("this is not valid protobuf data")
+	translator := newProtobufTranslator("test-deployer", nil)
+	outputBytes, err := translator.Translate(invalidBytes)
+	assert.Error(t, err, "Translate should return an error for invalid input")
+	assert.Nil(t, outputBytes, "expected output bytes to be nil for invalid input")
+}
+
+func TestProtobufTranslatorTranslatePod(t *testing.T) {
+	inputObj := &apiv1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: "v1",
@@ -61,398 +404,62 @@ func TestProtobufTranslator_Translate_Success(t *testing.T) {
 		},
 	}
 
-	// Create a protobuf serializer (using the same scheme as the translator).
-	pbSerializer := protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
-	var buf bytes.Buffer
-	err := pbSerializer.Encode(pod, &buf)
-	require.NoError(t, err, "failed to encode pod to protobuf")
-	inputBytes := buf.Bytes()
-
 	translatorName := "test-deployer"
-	translator := newProtobufTranslator(translatorName, nil)
-	outputBytes, err := translator.Translate(inputBytes)
-	require.NoError(t, err, "Translate returned an error")
-	require.NotNil(t, outputBytes, "expected non-nil output bytes")
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, nil)
 
-	decodedObj, _, err := pbSerializer.Decode(outputBytes, nil, nil)
-	require.NoError(t, err, "failed to decode output bytes")
-
-	podOut, ok := decodedObj.(*apiv1.Pod)
+	pod, ok := decodedObj.(*apiv1.Pod)
 	require.True(t, ok, "decoded object is not a Pod")
 
-	labels := podOut.GetLabels()
+	// Verify labels are set
+	labels := pod.GetLabels()
 	require.Equal(t, translatorName, labels[model.DeployedByLabel], "expected deployed-by label to be set")
 
-	annotations := podOut.GetAnnotations()
+	// Verify annotations are set
+	annotations := pod.GetAnnotations()
 	require.NotNil(t, annotations, "annotations should not be nil after translation")
 	assert.Equal(t, "true", annotations[model.OktetoSampleAnnotation], "expected okteto sample annotation to be set")
 }
 
-func TestProtobufTranslator_InvalidInput(t *testing.T) {
-	invalidBytes := []byte("this is not valid protobuf data")
-	translator := newProtobufTranslator("test-deployer", nil)
-	outputBytes, err := translator.Translate(invalidBytes)
-	assert.Error(t, err, "Translate should not return an error for invalid input")
-	assert.Nil(t, outputBytes, "expected output bytes to be nil for invalid input")
-}
-
-func TestProtobufTranslator_translateMetadata_NoMetadata(t *testing.T) {
-	translator := newProtobufTranslator("test-deployer", nil)
-	obj := &noMetaObject{}
-	err := translator.translateMetadata(obj)
-	assert.Error(t, err, "expected error when object has no metadata")
-}
-
-func TestTranslateDeploymentSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid deployment",
-			obj: &appsv1.Deployment{
-				Spec: appsv1.DeploymentSpec{
-					Template: apiv1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{}, // no labels set yet
-						Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
+func TestProtobufTranslatorDeploymentWithCustomDeployerName(t *testing.T) {
+	inputObj := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-deployment",
+			Namespace: "default",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"version": "v1",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{Name: "app", Image: "myapp:latest"},
 					},
 				},
 			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.StatefulSet{},
-			expectError: true,
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
+	translatorName := "custom-deployer"
+	decodedObj := runProtobufTranslatorTest(t, inputObj, translatorName, nil)
 
-			err := translator.translateDeploymentSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
+	deployment, ok := decodedObj.(*appsv1.Deployment)
+	require.True(t, ok, "decoded object is not a Deployment")
 
-			dep := tc.obj.(*appsv1.Deployment)
-			label, exists := dep.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label, "unexpected label value")
-			containers := dep.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
-}
+	// Verify the deployed-by label was injected with custom name
+	assert.Equal(t, translatorName, deployment.ObjectMeta.Labels[model.DeployedByLabel])
+	assert.Equal(t, translatorName, deployment.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel])
 
-func TestTranslateStatefulSetSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid statefulset",
-			obj: &appsv1.StatefulSet{
-				Spec: appsv1.StatefulSetSpec{
-					Template: apiv1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{},
-						Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.Deployment{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
-
-			err := translator.translateStatefulSetSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			sts := tc.obj.(*appsv1.StatefulSet)
-			label, exists := sts.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label)
-			containers := sts.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
-}
-
-func TestTranslateJobSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid job",
-			obj: &batchv1.Job{
-				Spec: batchv1.JobSpec{
-					Template: apiv1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{},
-						Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.Deployment{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
-
-			err := translator.translateJobSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			job := tc.obj.(*batchv1.Job)
-			label, exists := job.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label)
-			containers := job.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
-}
-
-func TestTranslateCronJobSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid cronjob",
-			obj: &batchv1.CronJob{
-				Spec: batchv1.CronJobSpec{
-					JobTemplate: batchv1.JobTemplateSpec{
-						Spec: batchv1.JobSpec{
-							Template: apiv1.PodTemplateSpec{
-								ObjectMeta: metav1.ObjectMeta{},
-								Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
-							},
-						},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.Deployment{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
-
-			err := translator.translateCronJobSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			cron := tc.obj.(*batchv1.CronJob)
-			label, exists := cron.Spec.JobTemplate.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label)
-			containers := cron.Spec.JobTemplate.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
-}
-
-func TestTranslateDaemonSetSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid daemonset",
-			obj: &appsv1.DaemonSet{
-				Spec: appsv1.DaemonSetSpec{
-					Template: apiv1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{},
-						Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.Deployment{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
-
-			err := translator.translateDaemonSetSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			ds := tc.obj.(*appsv1.DaemonSet)
-			label, exists := ds.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label)
-			containers := ds.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
-}
-
-func TestTranslateReplicationControllerSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid replicationcontroller",
-			obj: &apiv1.ReplicationController{
-				Spec: apiv1.ReplicationControllerSpec{
-					Template: &apiv1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{},
-						Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.Deployment{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
-
-			err := translator.translateReplicationControllerSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			rc := tc.obj.(*apiv1.ReplicationController)
-			label, exists := rc.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label)
-			containers := rc.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
-}
-
-func TestTranslateReplicaSetSpec(t *testing.T) {
-	tests := []struct {
-		name        string
-		obj         runtime.Object
-		expectError bool
-	}{
-		{
-			name: "valid replicaset",
-			obj: &appsv1.ReplicaSet{
-				Spec: appsv1.ReplicaSetSpec{
-					Template: apiv1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{},
-						Spec:       apiv1.PodSpec{Containers: []apiv1.Container{}},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name:        "invalid type",
-			obj:         &appsv1.Deployment{},
-			expectError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			translator := &protobufTranslator{
-				name:         "test-name",
-				divertDriver: &fakeDivertDriver{},
-			}
-
-			err := translator.translateReplicaSetSpec(tc.obj)
-			if tc.expectError {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			rs := tc.obj.(*appsv1.ReplicaSet)
-			label, exists := rs.Spec.Template.ObjectMeta.Labels[model.DeployedByLabel]
-			assert.True(t, exists, "expected label %q to exist", model.DeployedByLabel)
-			assert.Equal(t, translator.name, label)
-			containers := rs.Spec.Template.Spec.Containers
-			assert.Len(t, containers, 1)
-			assert.Equal(t, "diverted", containers[0].Name)
-		})
-	}
+	// Verify original fields are preserved
+	assert.Equal(t, "my-deployment", deployment.ObjectMeta.Name)
+	assert.Equal(t, "default", deployment.ObjectMeta.Namespace)
+	assert.Equal(t, "v1", deployment.Spec.Template.ObjectMeta.Labels["version"])
+	assert.Equal(t, "app", deployment.Spec.Template.Spec.Containers[0].Name)
+	assert.Equal(t, "myapp:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 }

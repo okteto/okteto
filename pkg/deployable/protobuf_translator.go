@@ -17,209 +17,62 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/divert"
-	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
 	"k8s.io/kubectl/pkg/scheme"
 )
 
 type protobufTranslator struct {
-	serializer   *protobuf.Serializer
-	divertDriver divert.Driver
-	name         string
+	protobufSerializer *protobuf.Serializer
+	jsonSerializer     *json.Serializer
+	jsonTranslator     *jsonTranslator
 }
 
 func newProtobufTranslator(name string, divertDriver divert.Driver) *protobufTranslator {
-	protobufSerializer := protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
 	return &protobufTranslator{
-		name:         name,
-		serializer:   protobufSerializer,
-		divertDriver: divertDriver,
+		protobufSerializer: protobuf.NewSerializer(scheme.Scheme, scheme.Scheme),
+		jsonSerializer:     json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false),
+		jsonTranslator:     newJSONTranslator(name, divertDriver),
 	}
 }
 
+// Translate converts Protobuf to JSON, processes it using the JSON translator, and converts back to Protobuf
 func (p *protobufTranslator) Translate(b []byte) ([]byte, error) {
-	// Passing nil for defaultGVK and into, so the serializer infers the GVK from the data and creates a new object.
-	// This is necessary because the object is not known at compile time.
-	obj, _, err := p.serializer.Decode(b, nil, nil)
+	// 1. Decode Protobuf bytes to runtime.Object
+	obj, _, err := p.protobufSerializer.Decode(b, nil, nil)
 	if err != nil {
-		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
-		return nil, fmt.Errorf("could not unmarshal resource body: %w", err)
+		oktetoLog.Infof("error decoding protobuf on proxy: %s", err.Error())
+		return nil, fmt.Errorf("could not decode protobuf: %w", err)
 	}
 
-	if err := p.translateMetadata(obj); err != nil {
+	// 2. Encode runtime.Object to JSON
+	var jsonBuf bytes.Buffer
+	if err := p.jsonSerializer.Encode(obj, &jsonBuf); err != nil {
+		oktetoLog.Infof("error encoding to JSON on proxy: %s", err.Error())
+		return nil, fmt.Errorf("could not encode to JSON: %w", err)
+	}
+
+	// 3. Use the JSON translator to process the JSON
+	processedJSON, err := p.jsonTranslator.Translate(jsonBuf.Bytes())
+	if err != nil {
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	if err := p.serializer.Encode(obj, &buf); err != nil {
-		return nil, fmt.Errorf("could not encode resource: %w", err)
-	}
-
-	switch obj.GetObjectKind().GroupVersionKind().Kind {
-	case "Deployment":
-		if err := p.translateDeploymentSpec(obj); err != nil {
-			return nil, err
-		}
-	case "StatefulSet":
-		if err := p.translateStatefulSetSpec(obj); err != nil {
-			return nil, err
-		}
-	case "Job":
-		if err := p.translateJobSpec(obj); err != nil {
-			return nil, err
-		}
-	case "CronJob":
-		if err := p.translateCronJobSpec(obj); err != nil {
-			return nil, err
-		}
-	case "DaemonSet":
-		if err := p.translateDaemonSetSpec(obj); err != nil {
-			return nil, err
-		}
-	case "ReplicationController":
-		if err := p.translateReplicationControllerSpec(obj); err != nil {
-			return nil, err
-		}
-	case "ReplicaSet":
-		if err := p.translateReplicaSetSpec(obj); err != nil {
-			return nil, err
-		}
-
-	}
-
-	return buf.Bytes(), nil
-}
-
-func (p *protobufTranslator) translateMetadata(obj runtime.Object) error {
-	metaObj, err := meta.Accessor(obj)
+	// 4. Decode processed JSON back to runtime.Object
+	processedObj, _, err := p.jsonSerializer.Decode(processedJSON, nil, nil)
 	if err != nil {
-		return fmt.Errorf("could not access object metadata: %w", err)
+		oktetoLog.Infof("error decoding processed JSON on proxy: %s", err.Error())
+		return nil, fmt.Errorf("could not decode processed JSON: %w", err)
 	}
 
-	// Update labels directly instead of using labels.SetInMetadata.
-	currentLabels := metaObj.GetLabels()
-	if currentLabels == nil {
-		currentLabels = make(map[string]string)
-	}
-	currentLabels[model.DeployedByLabel] = p.name
-	metaObj.SetLabels(currentLabels)
-
-	// Update annotations directly.
-	annotations := metaObj.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	if utils.IsOktetoRepo() {
-		annotations[model.OktetoSampleAnnotation] = "true"
-	}
-	metaObj.SetAnnotations(annotations)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateDeploymentSpec(obj runtime.Object) error {
-	deployment, ok := obj.(*appsv1.Deployment)
-	if !ok {
-		return fmt.Errorf("expected *appsv1.Deployment, got %T", obj)
+	// 5. Encode runtime.Object back to Protobuf
+	var protobufBuf bytes.Buffer
+	if err := p.protobufSerializer.Encode(processedObj, &protobufBuf); err != nil {
+		oktetoLog.Infof("error encoding to protobuf on proxy: %s", err.Error())
+		return nil, fmt.Errorf("could not encode to protobuf: %w", err)
 	}
 
-	labels.SetInMetadata(&deployment.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	deployment.Spec.Template.Spec = p.applyDivertToPod(deployment.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateStatefulSetSpec(obj runtime.Object) error {
-	sts, ok := obj.(*appsv1.StatefulSet)
-	if !ok {
-		return fmt.Errorf("expected *appsv1.Statefulset, got %T", obj)
-	}
-
-	labels.SetInMetadata(&sts.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	sts.Spec.Template.Spec = p.applyDivertToPod(sts.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateJobSpec(obj runtime.Object) error {
-	job, ok := obj.(*batchv1.Job)
-	if !ok {
-		return fmt.Errorf("expected *batchv1.Job, got %T", obj)
-	}
-
-	labels.SetInMetadata(&job.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	job.Spec.Template.Spec = p.applyDivertToPod(job.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateCronJobSpec(obj runtime.Object) error {
-	cronJob, ok := obj.(*batchv1.CronJob)
-	if !ok {
-		return fmt.Errorf("expected *batchv1.CronJob, got %T", obj)
-	}
-
-	labels.SetInMetadata(&cronJob.Spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	cronJob.Spec.JobTemplate.Spec.Template.Spec = p.applyDivertToPod(cronJob.Spec.JobTemplate.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateDaemonSetSpec(obj runtime.Object) error {
-	daemonSet, ok := obj.(*appsv1.DaemonSet)
-	if !ok {
-		return fmt.Errorf("expected *appsv1.DaemonSet, got %T", obj)
-	}
-
-	labels.SetInMetadata(&daemonSet.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	daemonSet.Spec.Template.Spec = p.applyDivertToPod(daemonSet.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateReplicationControllerSpec(obj runtime.Object) error {
-	replicationController, ok := obj.(*apiv1.ReplicationController)
-	if !ok {
-		return fmt.Errorf("expected *apiv1.ReplicationController, got %T", obj)
-	}
-
-	labels.SetInMetadata(&replicationController.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	replicationController.Spec.Template.Spec = p.applyDivertToPod(replicationController.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) translateReplicaSetSpec(obj runtime.Object) error {
-	replicaSet, ok := obj.(*appsv1.ReplicaSet)
-	if !ok {
-		return fmt.Errorf("expected *appsv1.ReplicaSet, got %T", obj)
-	}
-
-	labels.SetInMetadata(&replicaSet.Spec.Template.ObjectMeta, model.DeployedByLabel, p.name)
-
-	replicaSet.Spec.Template.Spec = p.applyDivertToPod(replicaSet.Spec.Template.Spec)
-
-	return nil
-}
-
-func (p *protobufTranslator) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
-	if p.divertDriver == nil {
-		return podSpec
-	}
-	return p.divertDriver.UpdatePod(podSpec)
+	return protobufBuf.Bytes(), nil
 }

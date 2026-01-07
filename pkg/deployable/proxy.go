@@ -186,6 +186,7 @@ func (p *Proxy) InitTranslator() {
 	p.proxyHandler.translators = map[string]translator{
 		"application/json":                    newJSONTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
 		"application/vnd.kubernetes.protobuf": newProtobufTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
+		"application/apply-patch+yaml":        newYAMLTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
 	}
 }
 
@@ -241,7 +242,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 
 		r.Host = destinationURL.Host
 		// Modify all resources updated or created to include the label.
-		if r.Method == "PUT" || r.Method == "POST" {
+		if r.Method == "PUT" || r.Method == "POST" || r.Method == "PATCH" {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				oktetoLog.Infof("could not read the request body: %s", err)
