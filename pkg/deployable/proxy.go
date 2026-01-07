@@ -57,12 +57,8 @@ type proxyHandler struct {
 	DivertDriver divert.Driver
 	// Name is sanitized version of the pipeline name
 	Name             string
-	translators      map[string]translator
+	translator       *Translator
 	analyticsTracker *analytics.Tracker
-}
-
-type translator interface {
-	Translate([]byte) ([]byte, error)
 }
 
 // NewProxy creates a new proxy
@@ -183,11 +179,7 @@ func (p *Proxy) SetDivert(driver divert.Driver) {
 }
 
 func (p *Proxy) InitTranslator() {
-	p.proxyHandler.translators = map[string]translator{
-		"application/json":                    newJSONTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
-		"application/vnd.kubernetes.protobuf": newProtobufTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
-		"application/apply-patch+yaml":        newYAMLTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
-	}
+	p.proxyHandler.translator = newTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver)
 }
 
 // shouldInterceptRequest returns true if the request should be intercepted to inject labels and transformations.
@@ -268,15 +260,9 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				reverseProxy.ServeHTTP(rw, r)
 				return
 			}
-			var translator translator
-			if v, ok := ph.translators[r.Header.Get("Content-Type")]; ok {
-				translator = v
-			} else {
-				oktetoLog.Infof("unsupported content type: %s", r.Header.Get("Content-Type"))
-				go ph.analyticsTracker.TrackUnsupportedContentType(r.Header.Get("Content-Type"))
-				translator = ph.translators["application/json"]
-			}
-			b, err = translator.Translate(b)
+
+			// Use the universal translator (handles JSON, YAML, Protobuf automatically)
+			b, err = ph.translator.Translate(b)
 			if err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(http.StatusInternalServerError)
