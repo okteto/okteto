@@ -262,7 +262,8 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			}
 
 			// Use the universal translator (handles JSON, YAML, Protobuf automatically)
-			b, err = ph.translator.Translate(b)
+			contentType := r.Header.Get("Content-Type")
+			b, err = ph.translator.Translate(b, contentType)
 			if err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(http.StatusInternalServerError)

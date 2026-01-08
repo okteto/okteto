@@ -85,7 +85,7 @@ func TestTranslatorWithJSON(t *testing.T) {
 
 	// Translate
 	translator := newTranslator("test-deployer", &fakeDivertDriver{})
-	result, err := translator.Translate(jsonBuf.Bytes())
+	result, err := translator.Translate(jsonBuf.Bytes(), "application/json")
 	require.NoError(t, err)
 
 	// Decode result
@@ -125,7 +125,7 @@ spec:
 
 	// Translate
 	translator := newTranslator("test-deployer", &fakeDivertDriver{})
-	result, err := translator.Translate([]byte(yamlInput))
+	result, err := translator.Translate([]byte(yamlInput), "application/apply-patch+yaml")
 	require.NoError(t, err)
 
 	// Decode result
@@ -173,7 +173,7 @@ func TestTranslatorWithProtobuf(t *testing.T) {
 
 	// Translate
 	translator := newTranslator("test-deployer", &fakeDivertDriver{})
-	result, err := translator.Translate(pbBuf.Bytes())
+	result, err := translator.Translate(pbBuf.Bytes(), "application/vnd.kubernetes.protobuf")
 	require.NoError(t, err)
 
 	// Decode result
@@ -221,7 +221,7 @@ func TestTranslatorWithoutDivertDriver(t *testing.T) {
 
 	// Translate without divert driver
 	translator := newTranslator("test-deployer", nil)
-	result, err := translator.Translate(jsonBuf.Bytes())
+	result, err := translator.Translate(jsonBuf.Bytes(), "application/json")
 	require.NoError(t, err)
 
 	// Decode result
@@ -268,7 +268,7 @@ func TestTranslatorWithDaemonSet(t *testing.T) {
 
 	// Translate
 	translator := newTranslator("test-deployer", nil)
-	result, err := translator.Translate(jsonBuf.Bytes())
+	result, err := translator.Translate(jsonBuf.Bytes(), "application/json")
 	require.NoError(t, err)
 
 	// Decode result
@@ -317,7 +317,7 @@ func TestTranslatorWithCronJob(t *testing.T) {
 
 	// Translate
 	translator := newTranslator("test-deployer", nil)
-	result, err := translator.Translate(jsonBuf.Bytes())
+	result, err := translator.Translate(jsonBuf.Bytes(), "application/json")
 	require.NoError(t, err)
 
 	// Decode result
@@ -337,7 +337,7 @@ func TestTranslatorInvalidInput(t *testing.T) {
 	invalidBytes := []byte("this is not valid kubernetes resource")
 
 	translator := newTranslator("test-deployer", nil)
-	result, err := translator.Translate(invalidBytes)
+	result, err := translator.Translate(invalidBytes, "application/json")
 
 	// Should not return an error but nil result
 	assert.NoError(t, err)
@@ -368,7 +368,7 @@ func TestTranslatorWithPod(t *testing.T) {
 
 	// Translate
 	translator := newTranslator("test-deployer", nil)
-	result, err := translator.Translate(jsonBuf.Bytes())
+	result, err := translator.Translate(jsonBuf.Bytes(), "application/json")
 	require.NoError(t, err)
 
 	// Decode result

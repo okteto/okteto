@@ -26,7 +26,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
 	"k8s.io/kubectl/pkg/scheme"
 )
 
@@ -36,7 +37,6 @@ type Translator struct {
 	name         string
 	divertDriver divert.Driver
 	decoder      runtime.Decoder
-	codecs       serializer.CodecFactory
 }
 
 func newTranslator(name string, divertDriver divert.Driver) *Translator {
@@ -44,14 +44,13 @@ func newTranslator(name string, divertDriver divert.Driver) *Translator {
 		name:         name,
 		divertDriver: divertDriver,
 		decoder:      scheme.Codecs.UniversalDeserializer(),
-		codecs:       scheme.Codecs,
 	}
 }
 
 // Translate decodes the input bytes (any format), modifies the object, and re-encodes
-func (t *Translator) Translate(b []byte) ([]byte, error) {
+func (t *Translator) Translate(b []byte, contentType string) ([]byte, error) {
 	// 1. Decode using UniversalDeserializer (handles JSON, YAML, Protobuf automatically)
-	obj, gvk, err := t.decoder.Decode(b, nil, nil)
+	obj, _, err := t.decoder.Decode(b, nil, nil)
 	if err != nil {
 		oktetoLog.Infof("error decoding resource on proxy: %s", err.Error())
 		return nil, nil
@@ -62,10 +61,10 @@ func (t *Translator) Translate(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// 3. Get encoder for the same format based on GroupVersion
-	encoder := t.codecs.LegacyCodec(gvk.GroupVersion())
+	// 3. Get encoder for the appropriate format based on Content-Type
+	encoder := getEncoderForContentType(contentType)
 
-	// 4. Encode back to the same format
+	// 4. Encode back using the selected encoder
 	var buf bytes.Buffer
 	if err := encoder.Encode(obj, &buf); err != nil {
 		oktetoLog.Infof("error encoding resource on proxy: %s", err.Error())
@@ -73,6 +72,22 @@ func (t *Translator) Translate(b []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// getEncoderForContentType returns the appropriate encoder based on Content-Type header
+func getEncoderForContentType(contentType string) runtime.Encoder {
+	switch contentType {
+	case "application/vnd.kubernetes.protobuf":
+		// For protobuf, use the protobuf serializer
+		return protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
+	case "application/json", "application/apply-patch+yaml":
+		// For JSON and YAML (server-side apply), use JSON encoder
+		// Kubernetes YAML is just JSON in YAML syntax
+		return json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	default:
+		// Default to JSON encoding
+		return json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	}
 }
 
 // modifyObject modifies the runtime.Object by adding labels and applying transformations
