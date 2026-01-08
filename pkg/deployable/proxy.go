@@ -34,7 +34,11 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/scheme"
 )
 
 const (
@@ -196,6 +200,21 @@ func shouldInterceptRequest(r *http.Request) bool {
 	return false
 }
 
+func (ph *proxyHandler) getDecoder() runtime.Decoder {
+	return scheme.Codecs.UniversalDeserializer()
+}
+
+func (ph *proxyHandler) getEncoder(contentType string) runtime.Encoder {
+	switch contentType {
+	case "application/vnd.kubernetes.protobuf":
+		return protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
+	case "application/json", "application/apply-patch+yaml":
+		return json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	default:
+		return json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	}
+}
+
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
@@ -261,18 +280,35 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				return
 			}
 
-			// Use the universal translator (handles JSON, YAML, Protobuf automatically)
-			contentType := r.Header.Get("Content-Type")
-			b, err = ph.translator.Translate(b, contentType)
+			// Decode the request body into a runtime.Object
+			decoder := ph.getDecoder()
+			obj, _, err := decoder.Decode(b, nil, nil)
 			if err != nil {
+				oktetoLog.Infof("error decoding resource on proxy: %s", err.Error())
+				reverseProxy.ServeHTTP(rw, r)
+				return
+			}
+
+			// Modify the object
+			if err := ph.translator.Modify(obj); err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
+			// Encode back to the same format based on Content-Type
+			contentType := r.Header.Get("Content-Type")
+			encoder := ph.getEncoder(contentType)
+			var buf bytes.Buffer
+			if err := encoder.Encode(obj, &buf); err != nil {
+				oktetoLog.Infof("error encoding resource on proxy: %s", err.Error())
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
 			// Needed to set the new Content-Length
-			r.ContentLength = int64(len(b))
-			r.Body = io.NopCloser(bytes.NewBuffer(b))
+			r.ContentLength = int64(buf.Len())
+			r.Body = io.NopCloser(&buf)
 		}
 
 		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
