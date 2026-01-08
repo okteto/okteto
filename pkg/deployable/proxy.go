@@ -34,6 +34,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
@@ -200,8 +201,37 @@ func shouldInterceptRequest(r *http.Request) bool {
 	return false
 }
 
-func (ph *proxyHandler) getDecoder() runtime.Decoder {
-	return scheme.Codecs.UniversalDeserializer()
+// decodeObject decodes the bytes into a runtime.Object
+// It first tries to decode as a typed object using UniversalDeserializer
+// If that fails (e.g., for CRDs), it falls back to decoding as unstructured
+func (ph *proxyHandler) decodeObject(b []byte, contentType string) (runtime.Object, error) {
+	// First attempt: decode as typed object (works for standard K8s resources)
+	decoder := scheme.Codecs.UniversalDeserializer()
+	obj, _, err := decoder.Decode(b, nil, nil)
+	if err == nil {
+		return obj, nil
+	}
+
+	// Fallback: decode as unstructured (works for CRDs and other unknown types)
+	oktetoLog.Debugf("error decoding as typed resource, trying unstructured: %s", err.Error())
+
+	unstructuredObj := &unstructured.Unstructured{}
+	var unstructuredDecoder runtime.Decoder
+
+	switch contentType {
+	case "application/vnd.kubernetes.protobuf":
+		unstructuredDecoder = protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
+	default:
+		// JSON/YAML decoder (JSON and YAML are interchangeable for Kubernetes)
+		unstructuredDecoder = json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	}
+
+	_, _, err = unstructuredDecoder.Decode(b, nil, unstructuredObj)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding object: %w", err)
+	}
+
+	return unstructuredObj, nil
 }
 
 func (ph *proxyHandler) getEncoder(contentType string) runtime.Encoder {
@@ -281,15 +311,19 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			}
 
 			// Decode the request body into a runtime.Object
-			decoder := ph.getDecoder()
-			obj, _, err := decoder.Decode(b, nil, nil)
+			// This automatically falls back to unstructured for CRDs
+			contentType := r.Header.Get("Content-Type")
+			obj, err := ph.decodeObject(b, contentType)
 			if err != nil {
 				oktetoLog.Infof("error decoding resource on proxy: %s", err.Error())
+				// Restore the request body for the reverse proxy since we already consumed it
+				r.Body = io.NopCloser(bytes.NewReader(b))
+				r.ContentLength = int64(len(b))
 				reverseProxy.ServeHTTP(rw, r)
 				return
 			}
 
-			// Modify the object
+			// Modify the object (works for both typed and unstructured objects)
 			if err := ph.translator.Modify(obj); err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(http.StatusInternalServerError)
@@ -297,7 +331,6 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			}
 
 			// Encode back to the same format based on Content-Type
-			contentType := r.Header.Get("Content-Type")
 			encoder := ph.getEncoder(contentType)
 			var buf bytes.Buffer
 			if err := encoder.Encode(obj, &buf); err != nil {

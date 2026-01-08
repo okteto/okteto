@@ -25,6 +25,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type fakeDivertDriver struct{}
@@ -306,4 +307,43 @@ func TestTranslatorWithoutDivertDriver(t *testing.T) {
 	// Verify no divert modifications (only original container)
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 	assert.Equal(t, "nginx", deployment.Spec.Template.Spec.Containers[0].Name)
+}
+
+func TestTranslatorModifyUnstructured(t *testing.T) {
+	// Create an unstructured object representing a CRD (like Okteto's External resource)
+	unstructuredObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "dev.okteto.com/v1",
+			"kind":       "External",
+			"metadata": map[string]interface{}{
+				"name":      "test-external",
+				"namespace": "default",
+				"labels": map[string]interface{}{
+					"app": "test",
+				},
+			},
+			"spec": map[string]interface{}{
+				"name": "test-external",
+				"endpoints": []interface{}{
+					map[string]interface{}{
+						"name": "endpoint1",
+						"url":  "https://example.com",
+					},
+				},
+			},
+		},
+	}
+
+	translator := newTranslator("test-deployer", nil)
+	err := translator.Modify(unstructuredObj)
+	require.NoError(t, err)
+
+	// Verify labels were added
+	labels := unstructuredObj.GetLabels()
+	assert.Equal(t, "test-deployer", labels[model.DeployedByLabel])
+	assert.Equal(t, "test", labels["app"]) // Original label preserved
+
+	// Verify annotations were added
+	annotations := unstructuredObj.GetAnnotations()
+	assert.Equal(t, "true", annotations[model.OktetoSampleAnnotation])
 }
