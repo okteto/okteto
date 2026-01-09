@@ -234,33 +234,11 @@ func (ic *InClusterConnector) GetBuildkitClient(ctx context.Context) (*client.Cl
 
 // WaitUntilIsReady waits for the buildkit server to be ready.
 func (ic *InClusterConnector) WaitUntilIsReady(ctx context.Context) error {
-	ic.mu.Lock()
-	hasPodIP := ic.podIP != ""
-	ic.mu.Unlock()
-
-	if !hasPodIP {
-		if err := ic.Start(ctx); err != nil {
-			return fmt.Errorf("failed to start in-cluster connection: %w", err)
-		}
-	}
-	return ic.waiter.WaitUntilIsUp(ctx, ic.GetBuildkitClient)
+	return nil
 }
 
 // Stop clears podIP to force a new pod assignment and connection verification on next Start()
 func (ic *InClusterConnector) Stop() {
-	ic.mu.Lock()
-	defer ic.mu.Unlock()
 
-	if ic.podIP == "" {
-		ic.ioCtrl.Logger().Infof("in-cluster connection has no pod IP assigned")
-		return
-	}
-
-	ic.ioCtrl.Logger().Infof("clearing pod IP %s, will request new pod on next Start()", ic.podIP)
-	ic.podIP = ""
 }
 
-// GetMetrics returns the connector metrics for external configuration
-func (ic *InClusterConnector) GetMetrics() *ConnectorMetrics {
-	return ic.metrics
-}

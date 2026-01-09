@@ -375,8 +375,3 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 	pf.buildkitClient = c
 	return c, nil
 }
-
-// GetMetrics returns the connector metrics for external configuration
-func (pf *PortForwarder) GetMetrics() *ConnectorMetrics {
-	return pf.metrics
-}

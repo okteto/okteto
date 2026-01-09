@@ -79,8 +79,3 @@ func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Clien
 func (i *IngressConnector) Stop() {
 	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
 }
-
-// GetMetrics returns the connector metrics for external configuration
-func (i *IngressConnector) GetMetrics() *ConnectorMetrics {
-	return i.metrics
-}

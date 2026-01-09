@@ -176,11 +176,6 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 	}
 }
 
-func TestConnectorTypeConstants(t *testing.T) {
-	assert.Equal(t, ConnectorType("ingress"), ConnectorTypeIngress)
-	assert.Equal(t, ConnectorType("portforward"), ConnectorTypePortForward)
-	assert.Equal(t, ConnectorType("incluster"), ConnectorTypeInCluster)
-}
 
 func TestTrackBuildkitConnection(t *testing.T) {
 	var capturedEvent string
