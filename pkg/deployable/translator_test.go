@@ -30,20 +30,20 @@ import (
 
 type fakeDivertDriver struct{}
 
-func (f *fakeDivertDriver) UpdatePod(podSpec apiv1.PodSpec) apiv1.PodSpec {
+func (*fakeDivertDriver) UpdatePod(podSpec apiv1.PodSpec) apiv1.PodSpec {
 	podSpec.Containers = append(podSpec.Containers, apiv1.Container{Name: "diverted"})
 	return podSpec
 }
 
-func (f *fakeDivertDriver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {
+func (*fakeDivertDriver) UpdateVirtualService(vs *istioNetworkingV1beta1.VirtualService) {
 	vs.Hosts = []string{"diverted.example.com"}
 }
 
-func (f *fakeDivertDriver) Deploy(ctx context.Context) error {
+func (*fakeDivertDriver) Deploy(_ context.Context) error {
 	return nil
 }
 
-func (f *fakeDivertDriver) Destroy(ctx context.Context) error {
+func (*fakeDivertDriver) Destroy(_ context.Context) error {
 	return nil
 }
 
