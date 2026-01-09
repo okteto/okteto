@@ -1,7 +1,8 @@
 # Base image versions - Centralized version control for easier updates
-# Kubernetes tools
+# Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
 ARG KUBECTL_VERSION=1.34.3
-ARG HELM_VERSION=3.19.4
+ARG HELM3_VERSION=3.19.4
+ARG HELM4_VERSION=4.0.4
 ARG KUSTOMIZE_VERSION=5.8.0
 # Okteto components
 
@@ -63,16 +64,26 @@ RUN curl -sLf --retry 3 -o kubectl \
 # Stage 3.3: Download Helm (Kubernetes package manager)
 FROM golang-builder AS helm-builder
 ARG TARGETARCH
-ARG HELM_VERSION
+ARG HELM3_VERSION
 RUN curl -sLf --retry 3 -o helm.tar.gz \
-    "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" \
+    "https://get.helm.sh/helm-v${HELM3_VERSION}-linux-${TARGETARCH}.tar.gz" \
     && mkdir -p helm \
     && tar -C helm -xf helm.tar.gz \
-    && mv helm/linux-${TARGETARCH}/helm /usr/local/bin/ \
+    && mv helm/linux-${TARGETARCH}/helm /usr/local/bin/helm \
     && chmod +x /usr/local/bin/helm \
     && rm -rf helm helm.tar.gz \
     # Verify binary works
     && /usr/local/bin/helm version
+ARG HELM4_VERSION
+RUN curl -sLf --retry 3 -o helm.tar.gz \
+    "https://get.helm.sh/helm-v${HELM4_VERSION}-linux-${TARGETARCH}.tar.gz" \
+    && mkdir -p helm \
+    && tar -C helm -xf helm.tar.gz \
+    && mv helm/linux-${TARGETARCH}/helm /usr/local/bin/helm4 \
+    && chmod +x /usr/local/bin/helm4 \
+    && rm -rf helm helm.tar.gz \
+    # Verify binary works
+    && /usr/local/bin/helm4 version
 
 # Stage 3.4: Download git (Version control system)
 FROM debian:bookworm-slim AS git-builder
