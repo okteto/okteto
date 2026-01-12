@@ -287,3 +287,55 @@ func (b *bytesBuffer) Write(p []byte) (n int, err error) {
 func int32Ptr(i int32) *int32 {
 	return &i
 }
+
+// TestPartialDeploymentServerSideApply tests that partial objects (minimal YAML)
+// can be decoded, modified, and encoded without errors
+func TestPartialDeploymentServerSideApply(t *testing.T) {
+	// Simulate a very minimal server-side apply payload
+	// This is the kind of partial object we might receive in a PATCH request
+	partialDeploymentYAML := []byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+  namespace: default
+`)
+
+	// Step 1: Decode
+	obj, err := decodeObject(partialDeploymentYAML, "application/apply-patch+yaml")
+	require.NoError(t, err)
+	require.NotNil(t, obj)
+
+	deployment, ok := obj.(*appsv1.Deployment)
+	require.True(t, ok, "expected *appsv1.Deployment, got %T", obj)
+	assert.Equal(t, "test-deployment", deployment.Name)
+	assert.Equal(t, "default", deployment.Namespace)
+
+	// Step 2: Modify using Translator
+	translator := newTranslator("test-deployer", nil)
+	err = translator.Modify(obj)
+	require.NoError(t, err)
+
+	// Step 3: Verify labels and annotations were added correctly
+	// Check metadata labels
+	require.NotNil(t, deployment.Labels)
+	assert.Equal(t, "test-deployer", deployment.Labels["dev.okteto.com/deployed-by"],
+		"deployed-by label should be set in metadata")
+
+	// Check metadata annotations
+	require.NotNil(t, deployment.Annotations)
+	assert.Equal(t, "true", deployment.Annotations["dev.okteto.com/sample"],
+		"sample annotation should be set in metadata")
+
+	// Check template labels
+	require.NotNil(t, deployment.Spec.Template.Labels)
+	assert.Equal(t, "test-deployer", deployment.Spec.Template.Labels["dev.okteto.com/deployed-by"],
+		"deployed-by label should be set in template")
+
+	// Step 4: Encode back
+	encoder := getEncoder("application/apply-patch+yaml")
+	var encoded []byte
+	buf := &bytesBuffer{buf: &encoded}
+	err = encoder.Encode(deployment, buf)
+	require.NoError(t, err)
+	assert.NotEmpty(t, encoded)
+}
