@@ -112,6 +112,7 @@ func (ic *InClusterConnector) Start(ctx context.Context) error {
 	// Request a new pod from the API
 	podIP, err := ic.assignBuildkitPod(ctx)
 	if err != nil {
+		ic.metrics.TrackSuccess()
 		return fmt.Errorf("failed to assign buildkit pod: %w", err)
 	}
 	ic.podIP = podIP
