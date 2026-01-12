@@ -34,7 +34,12 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/scheme"
 )
 
 const (
@@ -57,12 +62,8 @@ type proxyHandler struct {
 	DivertDriver divert.Driver
 	// Name is sanitized version of the pipeline name
 	Name             string
-	translators      map[string]translator
+	translator       *Translator
 	analyticsTracker *analytics.Tracker
-}
-
-type translator interface {
-	Translate([]byte) ([]byte, error)
 }
 
 // NewProxy creates a new proxy
@@ -183,9 +184,64 @@ func (p *Proxy) SetDivert(driver divert.Driver) {
 }
 
 func (p *Proxy) InitTranslator() {
-	p.proxyHandler.translators = map[string]translator{
-		"application/json":                    newJSONTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
-		"application/vnd.kubernetes.protobuf": newProtobufTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver),
+	p.proxyHandler.translator = newTranslator(p.proxyHandler.Name, p.proxyHandler.DivertDriver)
+}
+
+// shouldInterceptRequest returns true if the request should be intercepted to inject labels and transformations.
+// PUT and POST requests are always intercepted.
+// PATCH requests are only intercepted for server-side apply operations to avoid issues with partial objects.
+func shouldInterceptRequest(r *http.Request) bool {
+	if r.Method == "PUT" || r.Method == "POST" {
+		return true
+	}
+	// For PATCH, only intercept server-side apply operations
+	if r.Method == "PATCH" && r.Header.Get("Content-Type") == "application/apply-patch+yaml" {
+		return true
+	}
+	return false
+}
+
+// decodeObject decodes the bytes into a runtime.Object
+// It first tries to decode as a typed object using UniversalDeserializer
+// If that fails (e.g., for CRDs), it falls back to decoding as unstructured
+func decodeObject(b []byte, contentType string) (runtime.Object, error) {
+	// First attempt: decode as typed object (works for standard K8s resources)
+	decoder := scheme.Codecs.UniversalDeserializer()
+	obj, _, err := decoder.Decode(b, nil, nil)
+	if err == nil {
+		return obj, nil
+	}
+
+	// Fallback: decode as unstructured (works for CRDs and other unknown types)
+	oktetoLog.Debugf("error decoding as typed resource, trying unstructured: %s", err.Error())
+
+	unstructuredObj := &unstructured.Unstructured{}
+	var unstructuredDecoder runtime.Decoder
+
+	switch contentType {
+	case "application/vnd.kubernetes.protobuf":
+		unstructuredDecoder = protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
+	default:
+		// JSON/YAML decoder (JSON and YAML are interchangeable for Kubernetes)
+		unstructuredDecoder = json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	}
+
+	_, _, err = unstructuredDecoder.Decode(b, nil, unstructuredObj)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding object: %w", err)
+	}
+
+	return unstructuredObj, nil
+}
+
+func getEncoder(contentType string) runtime.Encoder {
+	switch contentType {
+	case "application/vnd.kubernetes.protobuf":
+		return protobuf.NewSerializer(scheme.Scheme, scheme.Scheme)
+	case "application/json", "application/apply-patch+yaml":
+		return json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
+	default:
+		return json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
 	}
 }
 
@@ -241,7 +297,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 
 		r.Host = destinationURL.Host
 		// Modify all resources updated or created to include the label.
-		if r.Method == "PUT" || r.Method == "POST" {
+		if shouldInterceptRequest(r) {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				oktetoLog.Infof("could not read the request body: %s", err)
@@ -253,24 +309,39 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				reverseProxy.ServeHTTP(rw, r)
 				return
 			}
-			var translator translator
-			if v, ok := ph.translators[r.Header.Get("Content-Type")]; ok {
-				translator = v
-			} else {
-				oktetoLog.Infof("unsupported content type: %s", r.Header.Get("Content-Type"))
-				go ph.analyticsTracker.TrackUnsupportedContentType(r.Header.Get("Content-Type"))
-				translator = ph.translators["application/json"]
-			}
-			b, err = translator.Translate(b)
+
+			// Decode the request body into a runtime.Object
+			// This automatically falls back to unstructured for CRDs
+			contentType := r.Header.Get("Content-Type")
+			obj, err := decodeObject(b, contentType)
 			if err != nil {
+				oktetoLog.Infof("error decoding resource on proxy: %s", err.Error())
+				// Restore the request body for the reverse proxy since we already consumed it
+				r.Body = io.NopCloser(bytes.NewReader(b))
+				r.ContentLength = int64(len(b))
+				reverseProxy.ServeHTTP(rw, r)
+				return
+			}
+
+			// Modify the object (works for both typed and unstructured objects)
+			if err := ph.translator.Modify(obj); err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
+			// Encode back to the same format based on Content-Type
+			encoder := getEncoder(contentType)
+			var buf bytes.Buffer
+			if err := encoder.Encode(obj, &buf); err != nil {
+				oktetoLog.Infof("error encoding resource on proxy: %s", err.Error())
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
 			// Needed to set the new Content-Length
-			r.ContentLength = int64(len(b))
-			r.Body = io.NopCloser(bytes.NewBuffer(b))
+			r.ContentLength = int64(buf.Len())
+			r.Body = io.NopCloser(&buf)
 		}
 
 		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
