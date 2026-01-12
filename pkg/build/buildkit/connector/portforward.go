@@ -130,6 +130,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	}
 
 	if response.PodName != "" {
+		pf.metrics.TrackSuccess()
 		pf.podName = response.PodName
 	}
 	return pf, nil

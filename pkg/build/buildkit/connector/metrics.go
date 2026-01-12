@@ -114,7 +114,9 @@ func (m *ConnectorMetrics) track(success bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.queueWaitDuration = time.Since(m.StartTime)
+	if !m.StartTime.IsZero() {
+		m.queueWaitDuration = time.Since(m.StartTime)
+	}
 
 	metadata := &analytics.BuildkitConnectorMetadata{
 		SessionID:             m.sessionID,
