@@ -10,8 +10,10 @@ repos:
     hooks:
       - id: identity
         name: run identity check
+        description: a simple hook which prints all arguments passed to it, useful for debugging
       - id: check-hooks-apply
         name: run check-hooks-apply
+        description: ensures that the configured hooks apply to at least one file in the repository
   - repo: local
     hooks:
       - id: prettier
@@ -36,26 +38,48 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+        description: prevent giant files from being committed
+      - id: check-ast
+        description: simply check whether files parse as valid python
       - id: check-case-conflict
+        description: check for files with names that would conflict on a case-insensitive filesystem like MacOS HFS+ or Windows FA
       - id: check-executables-have-shebangs
+        description: checks that non-binary executables have a proper shebang
         exclude: ^scripts/windows\.sh$
       - id: check-illegal-windows-names
+        description: check for files that cannot be created on Windows
       - id: check-json
+        description: attempts to load all json files to verify syntax
       - id: check-merge-conflict
+        description: check for files that contain merge conflict strings
       - id: check-shebang-scripts-are-executable
+        description: checks that scripts with shebangs are executable
       - id: check-toml
+        description: attempts to load all TOML files to verify syntax
       - id: check-vcs-permalinks
+        description: ensures that links to vcs websites are permalinks
       - id: check-xml
+        description: attempts to load all xml files to verify syntax
       - id: check-yaml
+        description: attempts to load all yaml files to verify syntax
         exclude: ^integration/validate/manifests/invalid-syntax\.yml$|k8s\.yml$
+      - id: detect-aws-credentials
+        description: checks for the existence of AWS secrets that you have set up with the AWS CLI
+        args: [--allow-missing-credentials]
       - id: detect-private-key
+        description: checks for the existence of private keys
         exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^pkg/deployable/certs\.go$
       - id: end-of-file-fixer
+        description: makes sure files end in a newline and only a newline
         exclude: schema.json
       - id: fix-byte-order-marker
+        description: removes UTF-8 byte order marker
       - id: forbid-submodules
+        description: forbids any submodules in the repository
       - id: mixed-line-ending
+        description: replaces or checks mixed line ending
       - id: trailing-whitespace
+        description: trims trailing whitespace
         exclude: ^\.github/pull_request_template\.md$
 
   # check spelling though all the repository
