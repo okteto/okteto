@@ -176,7 +176,6 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 	}
 }
 
-
 func TestTrackBuildkitConnection(t *testing.T) {
 	var capturedEvent string
 	var capturedSuccess bool

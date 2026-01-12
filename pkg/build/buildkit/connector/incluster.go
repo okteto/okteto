@@ -241,4 +241,3 @@ func (ic *InClusterConnector) WaitUntilIsReady(ctx context.Context) error {
 func (ic *InClusterConnector) Stop() {
 
 }
-
