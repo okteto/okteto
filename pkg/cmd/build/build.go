@@ -124,7 +124,8 @@ func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.
 	conn, err := connector.NewInClusterConnector(context.Background(), okCtx, logger)
 	if err != nil {
 		logger.Infof("could not create in-cluster connector: %s, falling back to ingress", err)
-		return connector.NewIngressConnector(okCtx, logger)
+		fallbackConn := connector.NewIngressConnector(okCtx, logger)
+		return fallbackConn
 	}
 	return conn
 }
@@ -134,7 +135,8 @@ func newPortForwarderWithFallback(okCtx OktetoContextInterface, logger *io.Contr
 	if err != nil {
 		logger.Infof("could not create port forwarder: %s, falling back to ingress", err)
 		logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to ingress connector")
-		return connector.NewIngressConnector(okCtx, logger)
+		fallbackConn := connector.NewIngressConnector(okCtx, logger)
+		return fallbackConn
 	}
 	return conn
 }

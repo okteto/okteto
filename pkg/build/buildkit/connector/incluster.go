@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -49,6 +50,9 @@ type InClusterConnector struct {
 	// Connection state
 	podIP string
 	mu    sync.Mutex
+
+	// Metrics collector for analytics
+	metrics *ConnectorMetrics
 }
 
 // NewInClusterConnector creates a new in-cluster connector that connects to buildkit via pod IP.
@@ -69,6 +73,7 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 		ioCtrl:       ioCtrl,
 		maxWaitTime:  maxWaitTime,
 		waiter:       waiter,
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypeInCluster, sessionID),
 	}
 
 	// Verify that the buildkit pod endpoint is available (like PortForwarder)
@@ -96,7 +101,9 @@ func (ic *InClusterConnector) Start(ctx context.Context) error {
 		if err := ic.verifyConnection(ctx); err != nil {
 			ic.ioCtrl.Logger().Infof("existing pod IP %s no longer valid: %s, will request new pod", ic.podIP, err)
 			ic.podIP = ""
+			ic.metrics.SetPodReused(false)
 		} else {
+			ic.metrics.SetPodReused(true)
 			ic.ioCtrl.Logger().Infof("verified buildkit connection is working, reusing pod IP: %s", ic.podIP)
 			return nil
 		}
@@ -130,25 +137,34 @@ func (ic *InClusterConnector) verifyConnection(ctx context.Context) error {
 
 // assignBuildkitPod gets the least loaded buildkit pod with queue waiting support
 func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, error) {
-	startTime := time.Now()
 	pollInterval := initialPollIntervalPortForward
+
+	// Start tracking metrics
+	ic.metrics.StartTracking()
 
 	sp := ic.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
 	sp.Start()
 	defer sp.Stop()
 
 	for {
-		if time.Since(startTime) >= ic.maxWaitTime {
+		if time.Since(ic.metrics.StartTime) >= ic.maxWaitTime {
+			ic.metrics.SetWaitingForPodTimedOut(true)
+			ic.metrics.TrackFailure()
 			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", ic.maxWaitTime)
 		}
 
 		response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 		if err != nil {
+			ic.metrics.TrackFailure()
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 
+		// Capture queue metrics
+		ic.metrics.RecordQueueStatus(response.QueuePosition, response.Reason)
+
 		if response.PodIP != "" {
 			ic.ioCtrl.Logger().Infof("assigned buildkit pod IP: %s", response.PodIP)
+			ic.metrics.TrackSuccess()
 			return response.PodIP, nil
 		}
 
@@ -223,4 +239,5 @@ func (ic *InClusterConnector) WaitUntilIsReady(ctx context.Context) error {
 
 // Stop clears podIP to force a new pod assignment and connection verification on next Start()
 func (ic *InClusterConnector) Stop() {
+
 }
