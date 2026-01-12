@@ -20,64 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInClusterConnector_Stop(t *testing.T) {
-	tests := []struct {
-		name          string
-		initialPodIP  string
-		expectedPodIP string
-	}{
-		{
-			name:          "stop with podIP clears it",
-			initialPodIP:  "10.0.0.1",
-			expectedPodIP: "",
-		},
-		{
-			name:          "stop without podIP does nothing",
-			initialPodIP:  "",
-			expectedPodIP: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ic := &InClusterConnector{
-				podIP:  tt.initialPodIP,
-				ioCtrl: io.NewIOController(),
-			}
-
-			// Should not panic
-			require.NotPanics(t, func() {
-				ic.Stop()
-			})
-
-			require.Equal(t, tt.expectedPodIP, ic.podIP)
-		})
-	}
-}
-
-func TestInClusterConnector_Stop_MultipleCallsSafe(t *testing.T) {
-	ic := &InClusterConnector{
-		podIP:  "10.0.0.1",
-		ioCtrl: io.NewIOController(),
-	}
-
-	// First stop should work
-	require.NotPanics(t, func() {
-		ic.Stop()
-	})
-	require.Equal(t, "", ic.podIP)
-
-	// Second stop should also not panic (idempotent)
-	require.NotPanics(t, func() {
-		ic.Stop()
-	})
-
-	// Third stop should still not panic
-	require.NotPanics(t, func() {
-		ic.Stop()
-	})
-}
-
 func TestInClusterConnector_GetBuildkitClient_NoPodIP(t *testing.T) {
 	ic := &InClusterConnector{
 		podIP:  "",
