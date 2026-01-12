@@ -259,7 +259,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d, c))
-	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value2", timeout, upResult.ErrorChan))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
