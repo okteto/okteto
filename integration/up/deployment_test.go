@@ -219,7 +219,6 @@ func TestUpDeploymentV2(t *testing.T) {
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		OktetoHome:   dir,
 		Token:        token,
-		Envs:         []string{"OKTETO_SERVICES_UP_WAIT=true"},
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
