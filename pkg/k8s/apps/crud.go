@@ -150,7 +150,7 @@ func loadServiceTranslations(ctx context.Context, namespace string, dev *model.D
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev, okteto.GetContext().Username, okteto.GetContext().Username, reset)
+		rule := s.ToTranslationRule(dev, namespace, okteto.GetContext().Username, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)

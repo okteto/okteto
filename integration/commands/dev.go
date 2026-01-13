@@ -38,6 +38,7 @@ type UpOptions struct {
 	OktetoHome   string
 	Token        string
 	Deploy       bool
+	Envs         []string
 }
 
 // UpCommandProcessResult has the information about the command process
@@ -135,7 +136,9 @@ func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	if upOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, upOptions.Token))
 	}
-
+	if len(upOptions.Envs) > 0 {
+		cmd.Env = append(cmd.Env, upOptions.Envs...)
+	}
 	return cmd
 }
 
