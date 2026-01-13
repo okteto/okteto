@@ -287,7 +287,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	// Test that original hasn't change
 	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
 	require.NoError(t, compareDeployment(context.Background(), originalDeploymentService, c))
-	// require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
 func compareDeployment(ctx context.Context, deployment *appsv1.Deployment, c kubernetes.Interface) error {
