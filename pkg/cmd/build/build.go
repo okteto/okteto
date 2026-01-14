@@ -21,7 +21,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/build/buildkit/connector"
@@ -183,6 +185,9 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 	defer os.RemoveAll(secretTempFolder)
 
+	// Best-effort cleanup of old build folders (older than 24 hours)
+	go cleanupOldSecretFolders()
+
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
 	if err := ob.connector.WaitUntilIsReady(ctx); err != nil {
@@ -193,6 +198,11 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if cleanupErr := optBuilder.Cleanup(); cleanupErr != nil {
+			oktetoLog.Infof("failed to cleanup build secrets: %s", cleanupErr)
+		}
+	}()
 
 	opt, err := optBuilder.Build(ctx, buildOptions)
 	if err != nil {
@@ -401,13 +411,51 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	return joinPath
 }
 
-func createSecretTempFolder() (string, error) {
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
-	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
+// cleanupOldSecretFolders removes orphaned build secret folders older than 24 hours
+func cleanupOldSecretFolders() {
+	baseSecretFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+	entries, err := os.ReadDir(baseSecretFolder)
+	if err != nil {
+		return // Silent failure - this is best-effort cleanup
 	}
 
-	return secretTempFolder, nil
+	cutoff := time.Now().Add(-24 * time.Hour)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Check if it's a UUID-named folder
+		if _, err := uuid.Parse(entry.Name()); err != nil {
+			continue // Not a UUID folder, skip
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		if info.ModTime().Before(cutoff) {
+			folderPath := filepath.Join(baseSecretFolder, entry.Name())
+			os.RemoveAll(folderPath) // Best effort, ignore errors
+		}
+	}
+}
+
+func createSecretTempFolder() (string, error) {
+	baseSecretFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+	if err := os.MkdirAll(baseSecretFolder, 0700); err != nil {
+		return "", fmt.Errorf("failed to create %s: %s", baseSecretFolder, err)
+	}
+
+	// Create a unique subfolder for this build using UUID
+	buildID := uuid.New().String()
+	buildSecretFolder := filepath.Join(baseSecretFolder, buildID)
+	if err := os.MkdirAll(buildSecretFolder, 0700); err != nil {
+		return "", fmt.Errorf("failed to create build secret folder %s: %s", buildSecretFolder, err)
+	}
+
+	return buildSecretFolder, nil
 }
 
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile

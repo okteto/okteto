@@ -21,8 +21,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -926,4 +929,148 @@ func Test_setOutputMode(t *testing.T) {
 			require.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func Test_createSecretTempFolder(t *testing.T) {
+	// Set up a temporary okteto home for testing
+	tempDir := t.TempDir()
+	t.Setenv("OKTETO_HOME", tempDir)
+
+	t.Run("creates UUID subfolder", func(t *testing.T) {
+		folder1, err := createSecretTempFolder()
+		require.NoError(t, err)
+		require.NotEmpty(t, folder1)
+
+		// Verify folder exists
+		info, err := os.Stat(folder1)
+		require.NoError(t, err)
+		require.True(t, info.IsDir())
+
+		// Verify it's under .secret/
+		baseSecretFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+		require.Contains(t, folder1, baseSecretFolder)
+
+		// Verify the subfolder name is a valid UUID
+		folderName := filepath.Base(folder1)
+		_, err = uuid.Parse(folderName)
+		require.NoError(t, err, "folder name should be a valid UUID")
+	})
+
+	t.Run("creates unique folders for multiple calls", func(t *testing.T) {
+		folder1, err := createSecretTempFolder()
+		require.NoError(t, err)
+
+		folder2, err := createSecretTempFolder()
+		require.NoError(t, err)
+
+		// Verify they are different
+		require.NotEqual(t, folder1, folder2, "each call should create a unique folder")
+
+		// Verify both folders exist
+		_, err = os.Stat(folder1)
+		require.NoError(t, err)
+		_, err = os.Stat(folder2)
+		require.NoError(t, err)
+	})
+
+	t.Run("has correct permissions", func(t *testing.T) {
+		folder, err := createSecretTempFolder()
+		require.NoError(t, err)
+
+		info, err := os.Stat(folder)
+		require.NoError(t, err)
+
+		// Verify permissions are 0700 (owner only)
+		require.Equal(t, os.FileMode(0700), info.Mode().Perm())
+	})
+}
+
+func Test_cleanupOldSecretFolders(t *testing.T) {
+	// Set up a temporary okteto home for testing
+	tempDir := t.TempDir()
+	t.Setenv("OKTETO_HOME", tempDir)
+
+	baseSecretFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+	require.NoError(t, os.MkdirAll(baseSecretFolder, 0700))
+
+	t.Run("removes folders older than 24 hours", func(t *testing.T) {
+		// Create an old UUID folder
+		oldUUID := uuid.New().String()
+		oldFolder := filepath.Join(baseSecretFolder, oldUUID)
+		require.NoError(t, os.MkdirAll(oldFolder, 0700))
+
+		// Make it old by changing modification time
+		oldTime := time.Now().Add(-25 * time.Hour)
+		require.NoError(t, os.Chtimes(oldFolder, oldTime, oldTime))
+
+		// Verify folder exists before cleanup
+		_, err := os.Stat(oldFolder)
+		require.NoError(t, err)
+
+		// Run cleanup
+		cleanupOldSecretFolders()
+
+		// Verify folder was removed
+		_, err = os.Stat(oldFolder)
+		require.True(t, os.IsNotExist(err), "old folder should be removed")
+	})
+
+	t.Run("keeps folders newer than 24 hours", func(t *testing.T) {
+		// Create a recent UUID folder
+		recentUUID := uuid.New().String()
+		recentFolder := filepath.Join(baseSecretFolder, recentUUID)
+		require.NoError(t, os.MkdirAll(recentFolder, 0700))
+
+		// Verify folder exists before cleanup
+		_, err := os.Stat(recentFolder)
+		require.NoError(t, err)
+
+		// Run cleanup
+		cleanupOldSecretFolders()
+
+		// Verify folder still exists
+		_, err = os.Stat(recentFolder)
+		require.NoError(t, err, "recent folder should not be removed")
+	})
+
+	t.Run("ignores non-UUID folders", func(t *testing.T) {
+		// Create a non-UUID folder
+		nonUUIDFolder := filepath.Join(baseSecretFolder, "not-a-uuid")
+		require.NoError(t, os.MkdirAll(nonUUIDFolder, 0700))
+
+		// Make it old
+		oldTime := time.Now().Add(-25 * time.Hour)
+		require.NoError(t, os.Chtimes(nonUUIDFolder, oldTime, oldTime))
+
+		// Run cleanup
+		cleanupOldSecretFolders()
+
+		// Verify non-UUID folder still exists (not removed)
+		_, err := os.Stat(nonUUIDFolder)
+		require.NoError(t, err, "non-UUID folder should not be removed")
+	})
+
+	t.Run("ignores files in base folder", func(t *testing.T) {
+		// Create a file in the base folder
+		testFile := filepath.Join(baseSecretFolder, "test-file.txt")
+		require.NoError(t, os.WriteFile(testFile, []byte("test"), 0600))
+
+		// Run cleanup (should not panic or error)
+		cleanupOldSecretFolders()
+
+		// Verify file still exists
+		_, err := os.Stat(testFile)
+		require.NoError(t, err, "file should not be removed")
+	})
+
+	t.Run("handles missing base folder gracefully", func(t *testing.T) {
+		// Use a different temp dir where .secret doesn't exist
+		tempDir2 := t.TempDir()
+		t.Setenv("OKTETO_HOME", tempDir2)
+
+		// Should not panic
+		require.NotPanics(t, func() {
+			cleanupOldSecretFolders()
+		})
+	})
 }

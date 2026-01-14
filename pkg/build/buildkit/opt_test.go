@@ -15,8 +15,11 @@ package buildkit
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -116,4 +119,159 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_getSecretTempFolder(t *testing.T) {
+	// Set up a temporary okteto home for testing
+	tempDir := t.TempDir()
+	t.Setenv("OKTETO_HOME", tempDir)
+
+	fakeFs := afero.NewMemMapFs()
+
+	t.Run("creates UUID subfolder", func(t *testing.T) {
+		folder, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+		require.NotEmpty(t, folder)
+
+		// Verify folder exists
+		exists, err := afero.DirExists(fakeFs, folder)
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		// Verify it's under .secret/
+		baseSecretFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+		require.Contains(t, folder, baseSecretFolder)
+
+		// Verify the subfolder name is a valid UUID
+		folderName := filepath.Base(folder)
+		_, err = uuid.Parse(folderName)
+		require.NoError(t, err, "folder name should be a valid UUID")
+	})
+
+	t.Run("creates unique folders for multiple calls", func(t *testing.T) {
+		folder1, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+
+		folder2, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+
+		// Verify they are different
+		require.NotEqual(t, folder1, folder2, "each call should create a unique folder")
+
+		// Verify both folders exist
+		exists1, err := afero.DirExists(fakeFs, folder1)
+		require.NoError(t, err)
+		require.True(t, exists1)
+
+		exists2, err := afero.DirExists(fakeFs, folder2)
+		require.NoError(t, err)
+		require.True(t, exists2)
+	})
+
+	t.Run("has correct permissions", func(t *testing.T) {
+		folder, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+
+		info, err := fakeFs.Stat(folder)
+		require.NoError(t, err)
+
+		// Verify permissions are 0700 (owner only)
+		require.Equal(t, PermissionsOwnerOnly, int(info.Mode().Perm()))
+	})
+}
+
+func Test_SolveOptBuilder_Cleanup(t *testing.T) {
+	// Set up a temporary okteto home for testing
+	tempDir := t.TempDir()
+	t.Setenv("OKTETO_HOME", tempDir)
+
+	fakeFs := afero.NewMemMapFs()
+
+	t.Run("removes secret folder when set", func(t *testing.T) {
+		// Create a secret folder
+		secretFolder, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+
+		// Create a file in the folder
+		testFile := filepath.Join(secretFolder, "test-secret.txt")
+		err = afero.WriteFile(fakeFs, testFile, []byte("secret content"), 0600)
+		require.NoError(t, err)
+
+		// Verify folder and file exist
+		exists, err := afero.DirExists(fakeFs, secretFolder)
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		fileExists, err := afero.Exists(fakeFs, testFile)
+		require.NoError(t, err)
+		require.True(t, fileExists)
+
+		// Create builder with this secret folder
+		builder := &SolveOptBuilder{
+			fs:               fakeFs,
+			secretTempFolder: secretFolder,
+		}
+
+		// Call cleanup
+		err = builder.Cleanup()
+		require.NoError(t, err)
+
+		// Verify folder was removed
+		exists, err = afero.DirExists(fakeFs, secretFolder)
+		require.NoError(t, err)
+		require.False(t, exists, "secret folder should be removed")
+	})
+
+	t.Run("does nothing when secretTempFolder is empty", func(t *testing.T) {
+		builder := &SolveOptBuilder{
+			fs:               fakeFs,
+			secretTempFolder: "",
+		}
+
+		// Call cleanup - should not error
+		err := builder.Cleanup()
+		require.NoError(t, err)
+	})
+
+	t.Run("removes only the specific build folder, not siblings", func(t *testing.T) {
+		// Create two secret folders
+		secretFolder1, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+
+		secretFolder2, err := getSecretTempFolder(fakeFs)
+		require.NoError(t, err)
+
+		// Create files in both folders
+		testFile1 := filepath.Join(secretFolder1, "secret1.txt")
+		err = afero.WriteFile(fakeFs, testFile1, []byte("secret 1"), 0600)
+		require.NoError(t, err)
+
+		testFile2 := filepath.Join(secretFolder2, "secret2.txt")
+		err = afero.WriteFile(fakeFs, testFile2, []byte("secret 2"), 0600)
+		require.NoError(t, err)
+
+		// Create builder for first folder only
+		builder := &SolveOptBuilder{
+			fs:               fakeFs,
+			secretTempFolder: secretFolder1,
+		}
+
+		// Cleanup first folder
+		err = builder.Cleanup()
+		require.NoError(t, err)
+
+		// Verify first folder is removed
+		exists1, err := afero.DirExists(fakeFs, secretFolder1)
+		require.NoError(t, err)
+		require.False(t, exists1, "first secret folder should be removed")
+
+		// Verify second folder still exists
+		exists2, err := afero.DirExists(fakeFs, secretFolder2)
+		require.NoError(t, err)
+		require.True(t, exists2, "second secret folder should still exist")
+
+		fileExists2, err := afero.Exists(fakeFs, testFile2)
+		require.NoError(t, err)
+		require.True(t, fileExists2, "file in second folder should still exist")
+	})
 }

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	dockerConfig "github.com/docker/cli/cli/config"
+	"github.com/google/uuid"
 	"github.com/moby/buildkit/client"
 	buildctl "github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/session"
@@ -285,6 +286,14 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 	return opt, nil
 }
 
+// Cleanup removes the temporary secret folder created for this build
+func (b *SolveOptBuilder) Cleanup() error {
+	if b.secretTempFolder != "" {
+		return b.fs.RemoveAll(b.secretTempFolder)
+	}
+	return nil
+}
+
 // validate validates the build options
 func (b *SolveOptBuilder) validateTags(imageTag string) error {
 	if imageTag == "" {
@@ -327,13 +336,20 @@ func (b *SolveOptBuilder) extendRegistries(image string) string {
 
 // getSecretTempFolder returns the secret temp folder
 func getSecretTempFolder(fs afero.Fs) (string, error) {
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+	baseSecretFolder := filepath.Join(config.GetOktetoHome(), ".secret")
 
-	if err := fs.MkdirAll(secretTempFolder, PermissionsOwnerOnly); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
+	if err := fs.MkdirAll(baseSecretFolder, PermissionsOwnerOnly); err != nil {
+		return "", fmt.Errorf("failed to create %s: %s", baseSecretFolder, err)
 	}
 
-	return secretTempFolder, nil
+	// Create a unique subfolder for this build using UUID
+	buildID := uuid.New().String()
+	buildSecretFolder := filepath.Join(baseSecretFolder, buildID)
+	if err := fs.MkdirAll(buildSecretFolder, PermissionsOwnerOnly); err != nil {
+		return "", fmt.Errorf("failed to create build secret folder %s: %s", buildSecretFolder, err)
+	}
+
+	return buildSecretFolder, nil
 }
 
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
