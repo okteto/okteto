@@ -15,7 +15,6 @@ package connector
 
 import (
 	"testing"
-	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/stretchr/testify/assert"
@@ -37,11 +36,6 @@ func TestNewConnectorMetrics(t *testing.T) {
 			connectorType: analytics.ConnectorTypeInCluster,
 			sessionID:     "session-ic-456",
 		},
-		{
-			name:          "ingress",
-			connectorType: analytics.ConnectorTypeIngress,
-			sessionID:     "session-ig-789",
-		},
 	}
 
 	for _, tt := range tests {
@@ -59,17 +53,13 @@ func TestConnectorMetrics_StartTracking(t *testing.T) {
 	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
 
 	// Set some values first
-	m.wasQueued = true
 	m.maxQueuePosition = 5
-	m.waitingForPodTimedOut = true
 
 	// Start tracking should reset all values
 	m.StartTracking()
 
-	assert.False(t, m.wasQueued)
 	assert.Equal(t, 0, m.maxQueuePosition)
 	assert.Equal(t, "", m.lastQueueReason)
-	assert.False(t, m.waitingForPodTimedOut)
 	assert.False(t, m.StartTime.IsZero())
 }
 
@@ -78,7 +68,6 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 		name                     string
 		queuePosition            int
 		reason                   string
-		expectedWasQueued        bool
 		expectedMaxQueuePosition int
 		expectedReason           string
 	}{
@@ -86,7 +75,6 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 			name:                     "no queue",
 			queuePosition:            0,
 			reason:                   "",
-			expectedWasQueued:        false,
 			expectedMaxQueuePosition: 0,
 			expectedReason:           "",
 		},
@@ -94,7 +82,6 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 			name:                     "in queue",
 			queuePosition:            3,
 			reason:                   "ALL_PODS_BUSY",
-			expectedWasQueued:        true,
 			expectedMaxQueuePosition: 3,
 			expectedReason:           "ALL_PODS_BUSY",
 		},
@@ -105,7 +92,6 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 			m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
 			m.RecordQueueStatus(tt.queuePosition, tt.reason)
 
-			assert.Equal(t, tt.expectedWasQueued, m.wasQueued)
 			assert.Equal(t, tt.expectedMaxQueuePosition, m.maxQueuePosition)
 			assert.Equal(t, tt.expectedReason, m.lastQueueReason)
 		})
@@ -130,35 +116,12 @@ func TestConnectorMetrics_RecordQueueStatus_MaxValues(t *testing.T) {
 	assert.Equal(t, "PODS_SCALING", m.lastQueueReason) // reason always updates
 }
 
-func TestConnectorMetrics_SetPodReused(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypeInCluster, "test-session")
-
-	assert.False(t, m.podReused)
-	m.SetPodReused(true)
-	assert.True(t, m.podReused)
-	m.SetPodReused(false)
-	assert.False(t, m.podReused)
-}
-
-func TestConnectorMetrics_SetWaitingForPodTimedOut(t *testing.T) {
+func TestConnectorMetrics_SetErrReason(t *testing.T) {
 	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
 
-	assert.False(t, m.waitingForPodTimedOut)
-	m.SetWaitingForPodTimedOut(true)
-	assert.True(t, m.waitingForPodTimedOut)
-}
-
-func TestConnectorMetrics_SetServiceReadyDuration(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypeIngress, "test-session")
-
-	m.SetServiceReadyDuration(5 * time.Second)
-	assert.Equal(t, 5*time.Second, m.serviceReadyDuration)
-}
-
-func TestConnectorMetrics_SetWasFallback(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypeIngress, "test-session")
-
-	assert.False(t, m.wasFallback)
-	m.SetWasFallback(true)
-	assert.True(t, m.wasFallback)
+	assert.Equal(t, "", m.errReason)
+	m.SetErrReason("QueueTimeout")
+	assert.Equal(t, "QueueTimeout", m.errReason)
+	m.SetErrReason("PortForwardCreation")
+	assert.Equal(t, "PortForwardCreation", m.errReason)
 }

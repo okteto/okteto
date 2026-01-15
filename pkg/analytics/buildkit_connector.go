@@ -21,7 +21,6 @@ const buildkitConnectionEvent = "BuildkitConnection"
 type ConnectorType string
 
 const (
-	ConnectorTypeIngress     ConnectorType = "ingress"
 	ConnectorTypePortForward ConnectorType = "portforward"
 	ConnectorTypeInCluster   ConnectorType = "incluster"
 )
@@ -37,14 +36,7 @@ type BuildkitConnectorMetadata struct {
 	// Success indicates if the connection was established successfully
 	Success bool
 
-	// WasFallback indicates if this connector was used as a fallback
-	// (e.g., incluster failed and fell back to ingress)
-	WasFallback bool
-
 	// --- Queue Metrics (for portforward and incluster) ---
-
-	// WasQueued indicates if QueuePosition > 0 at any point during connection
-	WasQueued bool
 
 	// QueueWaitDuration is the total time spent in assigning the buildkit pod until getting a pod
 	QueueWaitDuration time.Duration
@@ -56,33 +48,21 @@ type BuildkitConnectorMetadata struct {
 	// Values: QUEUE_POSITION, NO_PODS_AVAILABLE, ALL_PODS_BUSY, PODS_SCALING
 	QueueReason string
 
-	// --- Connection Metrics ---
+	// --- Error Tracking ---
 
-	// ServiceReadyDuration is the time spent waiting for BuildKit to respond
-	// (from Waiter.GetWaitingTime())
-	ServiceReadyDuration time.Duration
-
-	// PodReused indicates if an existing podName/podIP was reused
-	PodReused bool
-
-	// --- Timeout ---
-
-	// WaitingForPodTimedOut indicates if the connection failed due to timeout
-	WaitingForPodTimedOut bool
+	// ErrReason is the reason for the connection failure
+	// Values: QueueTimeout, PortForwardCreation, ConnectionLost, BackendInternalError, IncompatibleBackend, etc.
+	ErrReason string
 }
 
 func (m *BuildkitConnectorMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
-		"sessionId":                   m.SessionID,
-		"connectorType":               string(m.ConnectorType),
-		"wasFallback":                 m.WasFallback,
-		"wasQueued":                   m.WasQueued,
-		"queueWaitDurationSeconds":    m.QueueWaitDuration.Seconds(),
-		"maxQueuePosition":            m.MaxQueuePosition,
-		"queueReason":                 m.QueueReason,
-		"serviceReadyDurationSeconds": m.ServiceReadyDuration.Seconds(),
-		"podReused":                   m.PodReused,
-		"waitingForPodTimedOut":       m.WaitingForPodTimedOut,
+		"sessionId":                m.SessionID,
+		"connectorType":            string(m.ConnectorType),
+		"queueWaitDurationSeconds": m.QueueWaitDuration.Seconds(),
+		"maxQueuePosition":         m.MaxQueuePosition,
+		"queueReason":              m.QueueReason,
+		"errReason":                m.ErrReason,
 	}
 }
 

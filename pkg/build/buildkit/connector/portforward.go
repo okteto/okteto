@@ -16,6 +16,7 @@ package connector
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	ioutil "io"
 	"net/http"
@@ -106,7 +107,8 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		return nil, fmt.Errorf("could not get available port: %w", err)
 	}
 	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
-	waiter := NewBuildkitClientWaiter(ioCtrl)
+	// Configure waiter for 3 attempts: 5s retry interval * 3 = 15s max wait time
+	waiter := NewBuildkitClientWaiterWithConfig(ioCtrl, 4*time.Second, 1*time.Second)
 
 	pf := &PortForwarder{
 		sessionID:    sessionID,
@@ -126,6 +128,12 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	// We need to call it once in order to check if the buildkit pod endpoint is available
 	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 	if err != nil {
+		if errors.Is(err, okteto.ErrIncompatibleBackend) {
+			pf.metrics.SetErrReason("IncompatibleBackend")
+		} else {
+			pf.metrics.SetErrReason("BackendInternalError")
+		}
+		pf.metrics.TrackFailure()
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 	}
 
@@ -151,24 +159,27 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	}
 
 	if pf.podName == "" {
-		pf.metrics.SetPodReused(false)
 		podName, err := pf.assignBuildkitPod(ctx)
 		if err != nil {
+			// assignBuildkitPod already tracked the failure with specific error reason
 			return fmt.Errorf("failed to assign buildkit pod: %w", err)
 		}
 		pf.podName = podName
 	} else {
-		pf.metrics.SetPodReused(true)
 		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.podName)
 	}
 
 	if err := pf.establishPortForward(); err != nil {
 		pf.ioCtrl.Logger().Infof("failed to establish port forward: %s", err)
+		pf.metrics.SetErrReason("PortForwardCreation")
+		pf.metrics.TrackFailure()
 		return err
 	}
 
 	if err := pf.waitUntilPortForwardIsReady(ctx); err != nil {
 		pf.ioCtrl.Logger().Infof("failed to wait until ready: %s", err)
+		pf.metrics.SetErrReason("PortForwardCreation")
+		pf.metrics.TrackFailure()
 		return err
 	}
 
@@ -187,13 +198,18 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 	defer sp.Stop()
 	for {
 		if time.Since(pf.metrics.StartTime) >= pf.maxWaitTime {
-			pf.metrics.SetWaitingForPodTimedOut(true)
+			pf.metrics.SetErrReason("QueueTimeout")
 			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", maxWaitTime)
 		}
 
 		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 		if err != nil {
+			if errors.Is(err, okteto.ErrIncompatibleBackend) {
+				pf.metrics.SetErrReason("IncompatibleBackend")
+			} else {
+				pf.metrics.SetErrReason("BackendInternalError")
+			}
 			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
@@ -226,6 +242,8 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 				pollInterval = maxPollIntervalPortForward
 			}
 		case <-ctx.Done():
+			pf.metrics.SetErrReason("ContextCancelledWhileWaitingForBuildkitPod")
+			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}
@@ -244,6 +262,7 @@ func (pf *PortForwarder) establishPortForward() error {
 
 	transport, upgrader, err := spdy.RoundTripperFor(pf.restConfig)
 	if err != nil {
+		pf.metrics.SetErrReason("PortForwardCreation")
 		return fmt.Errorf("failed to create SPDY round tripper: %w", err)
 	}
 
@@ -260,6 +279,7 @@ func (pf *PortForwarder) establishPortForward() error {
 		new(bytes.Buffer),
 	)
 	if err != nil {
+		pf.metrics.SetErrReason("PortForwardCreation")
 		return fmt.Errorf("failed to create port forwarder: %w", err)
 	}
 
@@ -287,6 +307,7 @@ func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error 
 		return nil
 	case <-ctx.Done():
 		pf.Stop()
+		pf.metrics.SetErrReason("ContextCancelledWhileWaitingForPortForward")
 		return fmt.Errorf("context cancelled while waiting for port forward: %w", ctx.Err())
 	}
 }
