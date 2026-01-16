@@ -107,7 +107,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		return nil, fmt.Errorf("could not get available port: %w", err)
 	}
 	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
-	// Configure waiter for 3 attempts: 5s retry interval * 3 = 15s max wait time
+	// Configure waiter for 3 attempts: 1s retry interval * 4 = 4s max wait time
 	waiter := NewBuildkitClientWaiterWithConfig(ioCtrl, 4*time.Second, 1*time.Second)
 
 	pf := &PortForwarder{
