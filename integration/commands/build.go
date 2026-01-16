@@ -45,6 +45,7 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd {
 	cmd := exec.Command(oktetoPath)
 	cmd.Args = append(cmd.Args, "build")
+	cmd.Args = append(cmd.Args, "--log-level=debug")
 	if buildOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", buildOptions.ManifestPath)
 	}
@@ -96,15 +97,11 @@ func ExecOktetoBuildCmd(cmd *exec.Cmd) error {
 	}
 
 	go func() {
-		if _, err := io.Copy(os.Stdout, stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "error copying stdout: %v\n", err)
-		}
+		io.Copy(os.Stdout, stdout)
 	}()
 
 	go func() {
-		if _, err := io.Copy(os.Stderr, stderr); err != nil {
-			fmt.Fprintf(os.Stderr, "error copying stderr: %v\n", err)
-		}
+		io.Copy(os.Stderr, stderr)
 	}()
 
 	if err := cmd.Wait(); err != nil {
