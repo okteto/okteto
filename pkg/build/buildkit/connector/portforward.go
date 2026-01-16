@@ -221,7 +221,7 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 
 		// Calculate wait duration as min(queue position, exponential backoff)
 		// This prioritizes early queue positions with faster refresh rates
-		waitDuration := min(time.Duration(response.QueuePosition)* time.Second, pollInterval)
+		waitDuration := min(time.Duration(response.QueuePosition)*time.Second, pollInterval)
 
 		select {
 		case <-time.After(waitDuration):
