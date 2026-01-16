@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 
@@ -80,10 +81,33 @@ func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd 
 
 // ExecOktetoBuildCmd runs an okteto build command
 func ExecOktetoBuildCmd(cmd *exec.Cmd) error {
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start okteto build: %w", err)
+	}
+
+	go func() {
+		if _, err := io.Copy(os.Stdout, stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "error copying stdout: %v\n", err)
+		}
+	}()
+
+	go func() {
+		if _, err := io.Copy(os.Stderr, stderr); err != nil {
+			fmt.Fprintf(os.Stderr, "error copying stderr: %v\n", err)
+		}
+	}()
+
+	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("okteto build failed: \nerror: %w", err)
 	}
 	return nil
