@@ -64,7 +64,7 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 
 	sessionID := uuid.New().String()
 	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
-	waiter := NewBuildkitClientWaiter(ioCtrl)
+	waiter := NewBuildkitClientWaiterWithConfig(ioCtrl, 4*time.Second, 1*time.Second)
 
 	ic := &InClusterConnector{
 		sessionID:    sessionID,
@@ -79,10 +79,14 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 	// Verify that the buildkit pod endpoint is available (like PortForwarder)
 	response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 	if err != nil {
+
+		ic.metrics.SetErrReason("BackendInternalError")
+		ic.metrics.TrackFailure()
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 	}
 
 	if response.PodIP != "" {
+		ic.metrics.TrackSuccess()
 		ic.podIP = response.PodIP
 	}
 
@@ -101,9 +105,7 @@ func (ic *InClusterConnector) Start(ctx context.Context) error {
 		if err := ic.verifyConnection(ctx); err != nil {
 			ic.ioCtrl.Logger().Infof("existing pod IP %s no longer valid: %s, will request new pod", ic.podIP, err)
 			ic.podIP = ""
-			ic.metrics.SetPodReused(false)
 		} else {
-			ic.metrics.SetPodReused(true)
 			ic.ioCtrl.Logger().Infof("verified buildkit connection is working, reusing pod IP: %s", ic.podIP)
 			return nil
 		}
@@ -112,7 +114,7 @@ func (ic *InClusterConnector) Start(ctx context.Context) error {
 	// Request a new pod from the API
 	podIP, err := ic.assignBuildkitPod(ctx)
 	if err != nil {
-		ic.metrics.TrackSuccess()
+		// assignBuildkitPod already tracked the failure with specific error reason
 		return fmt.Errorf("failed to assign buildkit pod: %w", err)
 	}
 	ic.podIP = podIP
@@ -149,13 +151,14 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 
 	for {
 		if time.Since(ic.metrics.StartTime) >= ic.maxWaitTime {
-			ic.metrics.SetWaitingForPodTimedOut(true)
+			ic.metrics.SetErrReason("QueueTimeout")
 			ic.metrics.TrackFailure()
 			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", ic.maxWaitTime)
 		}
 
 		response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 		if err != nil {
+			ic.metrics.SetErrReason("BackendInternalError")
 			ic.metrics.TrackFailure()
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
@@ -193,6 +196,8 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 				pollInterval = maxPollIntervalPortForward
 			}
 		case <-ctx.Done():
+			ic.metrics.SetErrReason("ContextCancelled")
+			ic.metrics.TrackFailure()
 			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}
