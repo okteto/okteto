@@ -360,10 +360,26 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	for idx, tag := range tags {
 		// check if the image is pushed to the dev registry if DevTag is set
 		reference := tag
-		digest, err := bc.Registry.GetImageTagWithDigest(reference)
-		if err != nil {
-			return "", fmt.Errorf("error accessing image at registry %s: %w", reference, err)
+		var digest string
+		var err error
+
+		// Retry up to 3 times with 2 second delays
+		for attempt := 1; attempt <= 3; attempt++ {
+			digest, err = bc.Registry.GetImageTagWithDigest(reference)
+			if err == nil {
+				break
+			}
+
+			if attempt < 3 {
+				bc.ioCtrl.Logger().Infof("failed to get image digest for %s (attempt %d/3): %v. Retrying in 2s...", reference, attempt, err)
+				time.Sleep(2 * time.Second)
+			}
 		}
+
+		if err != nil {
+			return "", fmt.Errorf("error accessing image at registry %s after 3 attempts: %w", reference, err)
+		}
+
 		if idx == 0 {
 			imageTagWithDigest = digest
 		}
