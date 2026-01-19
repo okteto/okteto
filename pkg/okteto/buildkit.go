@@ -15,12 +15,17 @@ package okteto
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
+
+// ErrIncompatibleBackend is returned when the backend does not support the buildkit pod endpoint
+var ErrIncompatibleBackend = errors.New("backend does not support buildkit pod management")
 
 // buildKitPodQuery represents the query to get the least loaded buildkit pod
 type buildKitPodQuery struct {
@@ -67,6 +72,12 @@ func (c *buildkitClient) GetLeastLoadedBuildKitPod(ctx context.Context, buildReq
 
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
+		// Detect if the backend doesn't support the buildkit pod endpoint
+		// GraphQL returns "Cannot query field" error when the field doesn't exist in the schema
+		errStr := err.Error()
+		if strings.Contains(errStr, "Cannot query field") && strings.Contains(errStr, "getLeastLoadedBuildKitPod") {
+			return nil, ErrIncompatibleBackend
+		}
 		return nil, fmt.Errorf("failed to get least loaded buildkit pod: %w", err)
 	}
 
