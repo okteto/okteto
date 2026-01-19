@@ -180,7 +180,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalStatefulSet.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs, c))
-	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value2", timeout, upResult.ErrorChan))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
