@@ -373,7 +373,7 @@ func containsAddressInUse(err error) bool {
 	}
 	// Check for common "address already in use" error messages
 	errStr := strings.ToLower(err.Error())
-	return strings.Contains(errStr, "unable to listen on any of the requested ports") 
+	return strings.Contains(errStr, "unable to listen on any of the requested ports")
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready.
