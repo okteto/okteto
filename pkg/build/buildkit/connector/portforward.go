@@ -48,6 +48,14 @@ var waitReasonMessages = map[string]string{
 	"PODS_SCALING":      "BuildKit pods are starting up",
 }
 
+// getUserFacingQueueMessage returns the user-facing message for queue waiting
+func getUserFacingQueueMessage(reason string, position, total int) string {
+	if reason == "NO_PODS_AVAILABLE" {
+		return "Waiting for the Okteto Build service to become available"
+	}
+	return fmt.Sprintf("Waiting in the Okteto Build queue (position %d of %d)", position, total)
+}
+
 const (
 	defaultMaxWaitTimePortForward  = 10 * time.Minute
 	initialPollIntervalPortForward = 1 * time.Second
@@ -196,7 +204,7 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 	// Start tracking metrics
 	pf.metrics.StartTracking()
 
-	sp := pf.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
+	sp := pf.ioCtrl.Out().Spinner("Waiting for the Okteto Build service to become available")
 	sp.Start()
 	defer sp.Stop()
 	for {
@@ -227,13 +235,10 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 		}
 
 		if response.TotalInQueue > 0 {
-			friendlyReason := waitReasonMessages[response.Reason]
-			if friendlyReason == "" {
-				friendlyReason = response.Reason
-			}
-			pf.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue)
+			userMessage := getUserFacingQueueMessage(response.Reason, response.QueuePosition, response.TotalInQueue)
+			pf.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)", response.Reason, response.QueuePosition, response.TotalInQueue)
 			sp.Stop()
-			sp = pf.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", friendlyReason, response.QueuePosition, response.TotalInQueue))
+			sp = pf.ioCtrl.Out().Spinner(userMessage)
 			sp.Start()
 			defer sp.Stop()
 		}

@@ -145,7 +145,7 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 	// Start tracking metrics
 	ic.metrics.StartTracking()
 
-	sp := ic.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
+	sp := ic.ioCtrl.Out().Spinner("Waiting for the Okteto Build service to become available")
 	sp.Start()
 	defer sp.Stop()
 
@@ -173,15 +173,11 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 		}
 
 		if response.TotalInQueue > 0 {
-			friendlyReason := waitReasonMessages[response.Reason]
-			if friendlyReason == "" {
-				friendlyReason = response.Reason
-			}
-			ic.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)",
+			userMessage := getUserFacingQueueMessage(response.Reason, response.QueuePosition, response.TotalInQueue)
+			ic.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)",
 				response.Reason, response.QueuePosition, response.TotalInQueue)
 			sp.Stop()
-			sp = ic.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)",
-				friendlyReason, response.QueuePosition, response.TotalInQueue))
+			sp = ic.ioCtrl.Out().Spinner(userMessage)
 			sp.Start()
 		}
 
