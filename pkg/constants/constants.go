@@ -164,4 +164,7 @@ const (
 
 	// OkteoManagedPodEnvVar defines if the pod is executed inside a ns managed by okteto
 	OktetoManagedPodEnvVar = "OKTETO_MANAGED_POD"
+
+	// OktetoHelm4EnabledEnvVar defines if Helm 4 should be used as the default helm binary
+	OktetoHelm4EnabledEnvVar = "OKTETO_HELM_4_ENABLED"
 )
