@@ -1,8 +1,8 @@
 # Base image versions - Centralized version control for easier updates
 # Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
 ARG KUBECTL_VERSION=1.34.3
-ARG HELM3_VERSION=3.19.4
-ARG HELM4_VERSION=4.0.4
+ARG HELM3_VERSION=3.19.5
+ARG HELM4_VERSION=4.0.5
 ARG KUSTOMIZE_VERSION=5.8.0
 # Okteto components
 
@@ -71,6 +71,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     && tar -C helm -xf helm.tar.gz \
     && mv helm/linux-${TARGETARCH}/helm /usr/local/bin/helm \
     && chmod +x /usr/local/bin/helm \
+    && cp /usr/local/bin/helm /usr/local/bin/helm3 \
     && rm -rf helm helm.tar.gz \
     # Verify binary works
     && /usr/local/bin/helm version
@@ -151,6 +152,8 @@ COPY --link --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
 COPY --link --chmod=755 --from=kubectl-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --link --chmod=755 --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
 COPY --link --chmod=755 --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
+COPY --link --chmod=755 --from=helm-builder /usr/local/bin/helm3 /usr/local/bin/helm3
+COPY --link --chmod=755 --from=helm-builder /usr/local/bin/helm4 /usr/local/bin/helm4
 
 # Step 3: Copy Okteto CLI and credential helper
 COPY --link --chmod=755 --from=builder /okteto/bin/okteto /usr/local/bin/okteto
