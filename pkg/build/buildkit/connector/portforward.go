@@ -42,13 +42,6 @@ import (
 	"k8s.io/client-go/transport/spdy"
 )
 
-var waitReasonMessages = map[string]string{
-	"QUEUE_POSITION":    "waiting for earlier requests in queue",
-	"NO_PODS_AVAILABLE": "no BuildKit pods are available",
-	"ALL_PODS_BUSY":     "all BuildKit pods are at capacity",
-	"PODS_SCALING":      "BuildKit pods are starting up",
-}
-
 // getUserFacingQueueMessage returns the user-facing message for queue waiting
 func getUserFacingQueueMessage(reason string, position, total int) string {
 	if reason == "NO_PODS_AVAILABLE" {
