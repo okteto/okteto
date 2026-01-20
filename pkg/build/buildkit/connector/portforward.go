@@ -199,6 +199,10 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 	sp := pf.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
 	sp.Start()
 	defer sp.Stop()
+
+	// Track the last message to avoid duplicates
+	var lastMessage string
+
 	for {
 		if time.Since(pf.metrics.StartTime) >= pf.maxWaitTime {
 			pf.metrics.SetErrReason("QueueTimeout")
@@ -231,11 +235,19 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 			if friendlyReason == "" {
 				friendlyReason = response.Reason
 			}
-			pf.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue)
-			sp.Stop()
-			sp = pf.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", friendlyReason, response.QueuePosition, response.TotalInQueue))
-			sp.Start()
-			defer sp.Stop()
+
+			// Create the message to display
+			currentMessage := fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", friendlyReason, response.QueuePosition, response.TotalInQueue)
+
+			// Only update if the message has changed to avoid duplicates
+			if currentMessage != lastMessage {
+				pf.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue)
+				sp.Stop()
+				sp = pf.ioCtrl.Out().Spinner(currentMessage)
+				sp.Start()
+				defer sp.Stop()
+				lastMessage = currentMessage
+			}
 		}
 
 		// Calculate wait duration as min(queue position, exponential backoff)

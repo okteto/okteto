@@ -149,6 +149,9 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 	sp.Start()
 	defer sp.Stop()
 
+	// Track the last message to avoid duplicates
+	var lastMessage string
+
 	for {
 		if time.Since(ic.metrics.StartTime) >= ic.maxWaitTime {
 			ic.metrics.SetErrReason("QueueTimeout")
@@ -177,12 +180,19 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 			if friendlyReason == "" {
 				friendlyReason = response.Reason
 			}
-			ic.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)",
-				response.Reason, response.QueuePosition, response.TotalInQueue)
-			sp.Stop()
-			sp = ic.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)",
-				friendlyReason, response.QueuePosition, response.TotalInQueue))
-			sp.Start()
+
+			// Create the message to display
+			currentMessage := fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", friendlyReason, response.QueuePosition, response.TotalInQueue)
+
+			// Only update if the message has changed to avoid duplicates
+			if currentMessage != lastMessage {
+				ic.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)",
+					response.Reason, response.QueuePosition, response.TotalInQueue)
+				sp.Stop()
+				sp = ic.ioCtrl.Out().Spinner(currentMessage)
+				sp.Start()
+				lastMessage = currentMessage
+			}
 		}
 
 		// Calculate wait duration as min(queue position, exponential backoff)
