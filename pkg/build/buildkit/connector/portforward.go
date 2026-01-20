@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -41,11 +42,12 @@ import (
 	"k8s.io/client-go/transport/spdy"
 )
 
-var waitReasonMessages = map[string]string{
-	"QUEUE_POSITION":    "waiting for earlier requests in queue",
-	"NO_PODS_AVAILABLE": "no BuildKit pods are available",
-	"ALL_PODS_BUSY":     "all BuildKit pods are at capacity",
-	"PODS_SCALING":      "BuildKit pods are starting up",
+// getUserFacingQueueMessage returns the user-facing message for queue waiting
+func getUserFacingQueueMessage(reason string, position, total int) string {
+	if reason == "NO_PODS_AVAILABLE" {
+		return "Waiting for the Okteto Build service to become available"
+	}
+	return fmt.Sprintf("Waiting in the Okteto Build queue (position %d of %d)", position, total)
 }
 
 const (
@@ -196,14 +198,19 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 	// Start tracking metrics
 	pf.metrics.StartTracking()
 
-	sp := pf.ioCtrl.Out().Spinner("Waiting for BuildKit pod to become available...")
+	sp := pf.ioCtrl.Out().Spinner("Waiting for the Okteto Build service to become available")
 	sp.Start()
 	defer sp.Stop()
 	for {
 		if time.Since(pf.metrics.StartTime) >= pf.maxWaitTime {
 			pf.metrics.SetErrReason("QueueTimeout")
 			pf.metrics.TrackFailure()
-			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", maxWaitTime)
+			return "", oktetoErrors.UserError{
+				E: fmt.Errorf("waiting in the Okteto Build queue timed out after %v", pf.maxWaitTime),
+				Hint: `You can:
+- Try again (queue may have cleared)
+- Contact your Okteto Admin to add build capacity`,
+			}
 		}
 
 		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
@@ -227,13 +234,10 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 		}
 
 		if response.TotalInQueue > 0 {
-			friendlyReason := waitReasonMessages[response.Reason]
-			if friendlyReason == "" {
-				friendlyReason = response.Reason
-			}
-			pf.ioCtrl.Logger().Infof("Waiting for BuildKit: %s (position %d of %d in queue)", response.Reason, response.QueuePosition, response.TotalInQueue)
+			userMessage := getUserFacingQueueMessage(response.Reason, response.QueuePosition, response.TotalInQueue)
+			pf.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)", response.Reason, response.QueuePosition, response.TotalInQueue)
 			sp.Stop()
-			sp = pf.ioCtrl.Out().Spinner(fmt.Sprintf("Waiting for BuildKit: %s (position %d of %d in queue)", friendlyReason, response.QueuePosition, response.TotalInQueue))
+			sp = pf.ioCtrl.Out().Spinner(userMessage)
 			sp.Start()
 			defer sp.Stop()
 		}
