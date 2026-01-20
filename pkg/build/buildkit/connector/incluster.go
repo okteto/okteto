@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -153,7 +154,12 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 		if time.Since(ic.metrics.StartTime) >= ic.maxWaitTime {
 			ic.metrics.SetErrReason("QueueTimeout")
 			ic.metrics.TrackFailure()
-			return "", fmt.Errorf("timeout waiting for buildkit pod after %v: please contact your cluster administrator to increase the maximum number of BuildKit instances or adjust the metrics thresholds", ic.maxWaitTime)
+			return "", oktetoErrors.UserError{
+				E: fmt.Errorf("waiting in the Okteto Build queue timed out after %v", ic.maxWaitTime),
+				Hint: `You can:
+- Try again (queue may have cleared)
+- Contact your Okteto Admin to add build capacity`,
+			}
 		}
 
 		response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
