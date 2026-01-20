@@ -21,6 +21,7 @@ import (
 	ioutil "io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,6 +78,7 @@ type PortForwarder struct {
 	// Connection state
 	stopChan       chan struct{}
 	readyChan      chan struct{}
+	errChan        chan error
 	localPort      int
 	podName        string
 	isActive       bool
@@ -106,6 +108,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	if err != nil {
 		return nil, fmt.Errorf("could not get available port: %w", err)
 	}
+
 	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
 	// Configure waiter for 3 attempts: 1s retry interval * 4 = 4s max wait time
 	waiter := NewBuildkitClientWaiterWithConfig(ioCtrl, 4*time.Second, 1*time.Second)
@@ -257,6 +260,7 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 func (pf *PortForwarder) establishPortForward() error {
 	pf.stopChan = make(chan struct{}, 1)
 	pf.readyChan = make(chan struct{}, 1)
+	pf.errChan = make(chan error, 1)
 
 	url := pf.k8sClient.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -290,6 +294,12 @@ func (pf *PortForwarder) establishPortForward() error {
 	go func() {
 		if err := forwarder.ForwardPorts(); err != nil {
 			pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
+			// Only send error to channel if it's a port conflict (address already in use)
+			// so we can retry with a different port
+			if containsAddressInUse(err) {
+				pf.errChan <- fmt.Errorf("port %d is already in use. Please check if another process is using it.", pf.localPort)
+				return
+			}
 			pf.mu.Lock()
 			pf.podName = ""
 			pf.mu.Unlock()
@@ -309,6 +319,9 @@ func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error 
 		pf.isActive = true
 		pf.ioCtrl.Logger().Infof("port forward to buildkit pod %s is ready on 127.0.0.1:%d", pf.podName, pf.localPort)
 		return nil
+	case err := <-pf.errChan:
+		pf.ioCtrl.Logger().Infof("port forward failed: %s", err)
+		return fmt.Errorf("port forward failed: %w", err)
 	case <-ctx.Done():
 		pf.Stop()
 		pf.metrics.SetErrReason("ContextCancelledWhileWaitingForPortForward")
@@ -351,6 +364,16 @@ func getPortForwardK8sClient(oktetoClient *okteto.Client, okCtx PortForwarderOkt
 
 	portForwardCfg.AuthInfos[okCtx.GetCurrentUser()].Token = kubetoken.Status.Token
 	return okteto.NewK8sClientProvider().Provide(portForwardCfg)
+}
+
+// containsAddressInUse checks if an error indicates that a port is already in use
+func containsAddressInUse(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for common "address already in use" error messages
+	errStr := strings.ToLower(err.Error())
+	return strings.Contains(errStr, "unable to listen on any of the requested ports")
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready.
