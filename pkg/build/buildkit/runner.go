@@ -148,7 +148,12 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 	}
 
 	if showBuildMessage {
-		r.logger.Out().Infof("Building '%s'...", buildOptions.File)
+		// Use the original user-facing path if available, otherwise fall back to the internal path
+		displayPath := buildOptions.File
+		if buildOptions.OriginalDockerfile != "" {
+			displayPath = buildOptions.OriginalDockerfile
+		}
+		r.logger.Out().Infof("Building '%s'...", displayPath)
 	}
 
 	for {

@@ -37,16 +37,19 @@ type BuildOptions struct {
 	// exported files are written to
 	LocalOutputPath string
 	File            string
-	OutputMode      string
-	Path            string
-	Platform        string
-	Tag             string
-	Target          string
-	Namespace       string
-	K8sContext      string
-	BuildArgs       []string
-	Secrets         []string
-	ExportCache     []string
+	// OriginalDockerfile is the user-facing Dockerfile path before translation
+	// (e.g., "api/Dockerfile" instead of "/Users/.../.okteto/.dockerfile/buildkit-123")
+	OriginalDockerfile string
+	OutputMode         string
+	Path               string
+	Platform           string
+	Tag                string
+	Target             string
+	Namespace          string
+	K8sContext         string
+	BuildArgs          []string
+	Secrets            []string
+	ExportCache        []string
 	// CommandArgs comes from the user input on the command
 	CommandArgs  []string
 	SshSessions  []BuildSshSession
