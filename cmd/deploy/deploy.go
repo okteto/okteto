@@ -441,7 +441,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err, true); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
@@ -452,7 +452,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if err := buildImages(ctx, dc.Builder, dc.CfgMapHandler, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err, false); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
@@ -490,7 +490,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		if hasDeployed {
 			if deployOptions.Wait {
 				if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
-					if err := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err, true); err != nil {
+					if err := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); err != nil {
 						oktetoLog.Infof("could not update configmap with timeout error: %s", err)
 						return err
 					}
@@ -514,7 +514,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err, true); errStatus != nil {
+	if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 		return errStatus
 	}
 

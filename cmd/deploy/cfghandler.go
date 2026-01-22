@@ -32,7 +32,7 @@ import (
 // or an okteto destroy directly
 type ConfigMapHandler interface {
 	TranslateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
-	UpdateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error, bool) error
+	UpdateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 	UpdateEnvsFromCommands(context.Context, string, string, []string) error
 	GetDependencyBuildEnvVars(context.Context, string, string) (map[string]string, error)
 	SetBuildEnvVars(context.Context, string, string, map[string]string) error
@@ -74,15 +74,13 @@ func (ch *defaultConfigMapHandler) GetConfigmapVariablesEncoded(ctx context.Cont
 	return pipeline.GetConfigmapVariablesEncoded(ctx, name, namespace, c)
 }
 
-func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, errMain error, logError bool) error {
+func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, errMain error) error {
 	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
 	if err != nil {
 		return err
 	}
 	if errMain != nil {
-		if logError {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, errMain.Error())
-		}
+		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, errMain.Error())
 		data.Status = pipeline.ErrorStatus
 	}
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
