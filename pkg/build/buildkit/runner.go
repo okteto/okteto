@@ -148,8 +148,12 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 	}
 
 	if showBuildMessage {
-		builder := r.okCtx.GetCurrentBuilder()
-		r.logger.Out().Infof("Building '%s' in %s...", buildOptions.File, builder)
+		// Use the original user-facing path if available, otherwise fall back to the internal path
+		displayPath := buildOptions.File
+		if buildOptions.OriginalDockerfile != "" {
+			displayPath = buildOptions.OriginalDockerfile
+		}
+		r.logger.Out().Infof("Building '%s'...", displayPath)
 	}
 
 	for {

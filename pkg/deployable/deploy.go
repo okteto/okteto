@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -262,20 +264,25 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commands runs on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
 	)
-	if okteto.IsOkteto() {
-		params.Variables = append(
-			params.Variables,
-			// Set OKTETO_DOMAIN=okteto-subdomain env variable
-			fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
-		)
-		for k, v := range GetPlatformEnvironment(ctx) {
-			params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
-			// Always mask cloud credentials from execution environment
-			if strings.TrimSpace(v) != "" {
-				oktetoLog.AddMaskedWord(v)
-			}
+
+	params.Variables = append(
+		params.Variables,
+		// Set OKTETO_DOMAIN=okteto-subdomain env variable
+		fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
+	)
+	for k, v := range GetPlatformEnvironment(ctx) {
+		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
+		// Always mask cloud credentials from execution environment
+		if strings.TrimSpace(v) != "" {
+			oktetoLog.AddMaskedWord(v)
 		}
 	}
+
+	// Setup helm version based on environment variable
+	if err := setupHelmVersion(); err != nil {
+		return err
+	}
+
 	oktetoLog.EnableMasking()
 	err = r.runCommandsSection(ctx, params)
 	return err
@@ -441,4 +448,24 @@ func GetPlatformEnvironment(ctx context.Context) map[string]string {
 		return map[string]string{}
 	}
 	return env
+}
+
+// setupHelmVersion configures the helm binary based on OKTETO_HELM_4_ENABLED environment variable.
+// Only runs in remote deploy environments when OKTETO_HELM_4_ENABLED is "true".
+// Copies helm4 to helm to override the default helm3 binary.
+func setupHelmVersion() error {
+	if !env.LoadBoolean(constants.OktetoHelm4EnabledEnvVar) {
+		return nil
+	}
+
+	if !env.LoadBoolean(constants.OktetoDeployRemote) {
+		return nil
+	}
+
+	cmd := exec.Command("cp", "/okteto/bin/helm4", "/okteto/bin/helm")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to copy helm4 to helm: %w", err)
+	}
+
+	return nil
 }

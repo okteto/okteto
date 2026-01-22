@@ -207,6 +207,8 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	var err error
 	if buildOptions.File != "" {
+		// Preserve the original user-facing path before translation
+		buildOptions.OriginalDockerfile = buildOptions.File
 		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext, repoURL, buildOptions.File, buildOptions.Target)
 		if err != nil {
 			return err
@@ -354,16 +356,17 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 	}
 
 	opts := &types.BuildOptions{
-		Manifest:    manifest,
-		CacheFrom:   b.CacheFrom,
-		Target:      b.Target,
-		Path:        b.Context,
-		Tag:         b.Image,
-		File:        file,
-		BuildArgs:   build.SerializeArgs(args),
-		NoCache:     o.NoCache,
-		ExportCache: b.ExportCache,
-		Platform:    o.Platform,
+		Manifest:           manifest,
+		CacheFrom:          b.CacheFrom,
+		Target:             b.Target,
+		Path:               b.Context,
+		Tag:                b.Image,
+		File:               file,
+		OriginalDockerfile: b.Dockerfile,
+		BuildArgs:          build.SerializeArgs(args),
+		NoCache:            o.NoCache,
+		ExportCache:        b.ExportCache,
+		Platform:           o.Platform,
 	}
 
 	// if secrets are present at the cmd flag, copy them to opts.Secrets
