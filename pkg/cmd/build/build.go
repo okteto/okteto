@@ -65,6 +65,8 @@ type BuildkitConnector interface {
 	Stop()
 	// GetBuildkitClient returns the buildkit client
 	GetBuildkitClient(ctx context.Context) (*client.Client, error)
+	// GetType returns the connector type name for logging
+	GetType() string
 }
 
 // OktetoBuilder runs the build of an image
@@ -194,7 +196,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 }
 
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run buildkit.SolveBuildFn) error {
-	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
+	oktetoLog.Infof("building your image using %s connector", ob.connector.GetType())
 
 	repoURL := ""
 	if buildOptions.Manifest != nil && buildOptions.Manifest.ManifestPath != "" {

@@ -171,7 +171,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		}
 		pf.podName = podName
 	} else {
-		pf.ioCtrl.Logger().Infof("reusing existing buildkit pod: %s", pf.podName)
+		pf.ioCtrl.Logger().Infof("using assigned buildkit pod: %s", pf.podName)
 	}
 
 	if err := pf.establishPortForward(); err != nil {
@@ -342,6 +342,11 @@ func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error 
 	}
 }
 
+// GetType returns the connector type name for logging
+func (pf *PortForwarder) GetType() string {
+	return "port-forward"
+}
+
 // Stop closes the port forward connection gracefully
 func (pf *PortForwarder) Stop() {
 	pf.mu.Lock()
@@ -407,7 +412,6 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 	defer pf.mu.Unlock()
 
 	if pf.buildkitClient != nil {
-		pf.ioCtrl.Logger().Infof("reusing existing buildkit client")
 		return pf.buildkitClient, nil
 	}
 
