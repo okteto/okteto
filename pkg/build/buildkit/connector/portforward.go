@@ -201,6 +201,10 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 	sp := pf.ioCtrl.Out().Spinner("Waiting for the Okteto Build service to become available")
 	sp.Start()
 	defer sp.Stop()
+
+	// Track the last message to avoid duplicates
+	var lastMessage string
+
 	for {
 		if time.Since(pf.metrics.StartTime) >= pf.maxWaitTime {
 			pf.metrics.SetErrReason("QueueTimeout")
@@ -235,11 +239,16 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 
 		if response.TotalInQueue > 0 {
 			userMessage := getUserFacingQueueMessage(response.Reason, response.QueuePosition, response.TotalInQueue)
-			pf.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)", response.Reason, response.QueuePosition, response.TotalInQueue)
-			sp.Stop()
-			sp = pf.ioCtrl.Out().Spinner(userMessage)
-			sp.Start()
-			defer sp.Stop()
+
+			// Only update if the message has changed to avoid duplicates
+			if userMessage != lastMessage {
+				pf.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)", response.Reason, response.QueuePosition, response.TotalInQueue)
+				sp.Stop()
+				sp = pf.ioCtrl.Out().Spinner(userMessage)
+				sp.Start()
+				defer sp.Stop()
+				lastMessage = userMessage
+			}
 		}
 
 		// Calculate wait duration as min(queue position, exponential backoff)

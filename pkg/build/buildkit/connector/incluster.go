@@ -150,6 +150,9 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 	sp.Start()
 	defer sp.Stop()
 
+	// Track the last message to avoid duplicates
+	var lastMessage string
+
 	for {
 		if time.Since(ic.metrics.StartTime) >= ic.maxWaitTime {
 			ic.metrics.SetErrReason("QueueTimeout")
@@ -180,11 +183,16 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 
 		if response.TotalInQueue > 0 {
 			userMessage := getUserFacingQueueMessage(response.Reason, response.QueuePosition, response.TotalInQueue)
-			ic.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)",
-				response.Reason, response.QueuePosition, response.TotalInQueue)
-			sp.Stop()
-			sp = ic.ioCtrl.Out().Spinner(userMessage)
-			sp.Start()
+
+			// Only update if the message has changed to avoid duplicates
+			if userMessage != lastMessage {
+				ic.ioCtrl.Logger().Infof("Waiting in queue: %s (position %d of %d)",
+					response.Reason, response.QueuePosition, response.TotalInQueue)
+				sp.Stop()
+				sp = ic.ioCtrl.Out().Spinner(userMessage)
+				sp.Start()
+				lastMessage = userMessage
+			}
 		}
 
 		// Calculate wait duration as min(queue position, exponential backoff)
