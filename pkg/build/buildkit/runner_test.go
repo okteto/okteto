@@ -88,8 +88,13 @@ func (f *fakeSolveOptBuilder) Build(ctx context.Context, buildOptions *types.Bui
 	return f.opt, nil
 }
 
+type fakeSecretManager struct{}
+
+func (f *fakeSecretManager) GetSecretTempFolder() string { return "" }
+func (f *fakeSecretManager) Cleanup() error              { return nil }
+
 func newFakeSolveOptBuilderFactory(opt *client.SolveOpt, err error) SolveOptBuilderFactory {
-	return func(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (SolveOptBuilderInterface, error) {
+	return func(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller, secretMgr secretBuildManager) (SolveOptBuilderInterface, error) {
 		return &fakeSolveOptBuilder{opt: opt, err: err}, nil
 	}
 }
