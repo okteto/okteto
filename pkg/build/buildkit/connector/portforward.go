@@ -171,7 +171,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		}
 		pf.podName = podName
 	} else {
-		pf.ioCtrl.Logger().Infof("using assigned buildkit pod: %s", pf.podName)
+		pf.ioCtrl.Logger().Infof("Connected to BuildKit pod: %s", pf.podName)
 	}
 
 	if err := pf.establishPortForward(); err != nil {
