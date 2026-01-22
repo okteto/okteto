@@ -45,12 +45,14 @@ dev:
     - -c
     - "echo -n $VAR > var.html && python -m http.server 8080"
     workdir: /usr/src/app
+    priorityClassName: clie2etest
     sync:
     - .:/usr/src/app
     forward:
     - 8084:8080
     services:
     - name: e2etest-other
+      priorityClassName: clie2etest
       sync:
       - .:/usr/src/app
 `
@@ -63,6 +65,7 @@ dev:
     - -c
     - "echo -n $VAR > var.html && python -m http.server 8080"
     workdir: /usr/src/app
+    priorityClassName: clie2etest
     sync:
     - .:/usr/src/app
     forward:
@@ -84,6 +87,7 @@ spec:
       labels:
         app: e2etest
     spec:
+      priorityClassName: clie2etest
       terminationGracePeriodSeconds: 1
       containers:
       - name: test
@@ -128,6 +132,7 @@ spec:
       labels:
         app: e2etest-other
     spec:
+      priorityClassName: clie2etest
       terminationGracePeriodSeconds: 1
       containers:
       - name: test
