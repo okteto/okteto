@@ -74,11 +74,18 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, namespace string, 
 		defer os.RemoveAll(podPath)
 	}
 
-	remoteLogsPath, err := generateRemoteSyncthingLogsFile(ctx, dev, namespace, c)
+	containerLogsPath, err := generateContainerLogsFolder(ctx, dev, namespace, c)
 	if err != nil {
-		oktetoLog.Infof("error getting remote syncthing logs: %s", err)
+		oktetoLog.Infof("error getting container logs: %s", err)
 	} else {
-		defer os.RemoveAll(remoteLogsPath)
+		defer os.RemoveAll(containerLogsPath)
+	}
+
+	syncthingLogsPath, err := generateSyncthingLogsFolder(ctx, dev, namespace, c)
+	if err != nil {
+		oktetoLog.Infof("error getting syncthing logs: %s", err)
+	} else {
+		defer os.RemoveAll(syncthingLogsPath)
 	}
 
 	now := time.Now()
@@ -93,17 +100,54 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, namespace string, 
 		files[appLogsPath] = "okteto.log"
 	}
 
-	if filesystem.FileExists(syncthing.GetLogFile(namespace, dev.Name)) {
-		files[syncthing.GetLogFile(namespace, dev.Name)] = "syncthing.log"
-	}
 	if podPath != "" {
 		files[podPath] = filepath.Base(podPath)
 	}
 	if manifestPath != "" {
 		files[manifestPath] = filepath.Base(manifestPath)
 	}
-	if remoteLogsPath != "" {
-		files[remoteLogsPath] = filepath.Base(remoteLogsPath)
+	if containerLogsPath != "" {
+		// Add all log files from the logs directory structure
+		err := filepath.Walk(containerLogsPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				// Get the relative path from containerLogsPath
+				relPath, err := filepath.Rel(filepath.Dir(containerLogsPath), path)
+				if err != nil {
+					oktetoLog.Infof("error getting relative path for %s: %s", path, err)
+					return nil
+				}
+				files[path] = relPath
+			}
+			return nil
+		})
+		if err != nil {
+			oktetoLog.Infof("error walking logs directory: %s", err)
+		}
+	}
+
+	if syncthingLogsPath != "" {
+		// Add all syncthing log files from the syncthing directory structure
+		err := filepath.Walk(syncthingLogsPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				// Get the relative path from syncthingLogsPath
+				relPath, err := filepath.Rel(filepath.Dir(syncthingLogsPath), path)
+				if err != nil {
+					oktetoLog.Infof("error getting relative path for %s: %s", path, err)
+					return nil
+				}
+				files[path] = relPath
+			}
+			return nil
+		})
+		if err != nil {
+			oktetoLog.Infof("error walking syncthing directory: %s", err)
+		}
 	}
 
 	k8sLogsPath := io.GetK8sLoggerFilePath(config.GetOktetoHome())
@@ -312,8 +356,8 @@ func generatePodFile(ctx context.Context, dev *model.Dev, namespace string, c ku
 	return podFilename, nil
 }
 
-func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (string, error) {
-	oktetoLog.Infof("generating remote syncthing logs for dev '%s'", dev.Name)
+func generateContainerLogsFolder(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (string, error) {
+	oktetoLog.Infof("generating container logs for dev '%s'", dev.Name)
 
 	var devApp apps.App
 	if dev.Autocreate {
@@ -354,31 +398,154 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, namesp
 		return "", err
 	}
 
-	oktetoLog.Infof("retrieving logs from pod '%s', container '%s'", pod.Name, dev.Container)
+	oktetoLog.Infof("retrieving logs from pod '%s'", pod.Name)
 
-	remoteLogs, err := pods.ContainerLogs(ctx, dev.Container, pod.Name, namespace, false, c)
-	if err != nil {
-		return "", err
-	}
-
+	// Create temp directory for logs
 	tempdir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", fmt.Errorf("error creating temp dir: %w", err)
 	}
-	remoteLogsPath := filepath.Join(tempdir, "remote-syncthing.log")
-	fileRemoteLog, err := os.OpenFile(remoteLogsPath, os.O_RDWR|os.O_CREATE, 0600)
-	if err != nil {
-		return "", err
+	logsDir := filepath.Join(tempdir, "logs")
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating logs dir: %w", err)
 	}
-	defer func() {
-		if err := fileRemoteLog.Close(); err != nil {
-			oktetoLog.Debugf("Error closing file %s: %s", remoteLogsPath, err)
-		}
-	}()
 
-	fmt.Fprint(fileRemoteLog, remoteLogs)
-	if err := fileRemoteLog.Sync(); err != nil {
-		return "", err
+	// Create subdirectories for init containers and main containers
+	initContainersDir := filepath.Join(logsDir, "initContainers")
+	containersDir := filepath.Join(logsDir, "containers")
+	if err := os.MkdirAll(initContainersDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating initContainers dir: %w", err)
 	}
-	return remoteLogsPath, nil
+	if err := os.MkdirAll(containersDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating containers dir: %w", err)
+	}
+
+	// Get logs from all init containers
+	for _, container := range pod.Spec.InitContainers {
+		containerName := container.Name
+		oktetoLog.Infof("retrieving logs from init container '%s'", containerName)
+
+		containerLogs, err := pods.ContainerLogs(ctx, containerName, pod.Name, namespace, false, c)
+		if err != nil {
+			oktetoLog.Infof("error getting logs for init container '%s': %s", containerName, err)
+			continue
+		}
+
+		logFilePath := filepath.Join(initContainersDir, fmt.Sprintf("%s.log", containerName))
+		if err := os.WriteFile(logFilePath, []byte(containerLogs), 0600); err != nil {
+			oktetoLog.Infof("error writing logs for init container '%s': %s", containerName, err)
+		}
+	}
+
+	// Get logs from all main containers
+	for _, container := range pod.Spec.Containers {
+		containerName := container.Name
+		oktetoLog.Infof("retrieving logs from container '%s'", containerName)
+
+		containerLogs, err := pods.ContainerLogs(ctx, containerName, pod.Name, namespace, false, c)
+		if err != nil {
+			oktetoLog.Infof("error getting logs for container '%s': %s", containerName, err)
+			continue
+		}
+
+		logFilePath := filepath.Join(containersDir, fmt.Sprintf("%s.log", containerName))
+		if err := os.WriteFile(logFilePath, []byte(containerLogs), 0600); err != nil {
+			oktetoLog.Infof("error writing logs for container '%s': %s", containerName, err)
+		}
+	}
+
+	return logsDir, nil
+}
+
+func generateSyncthingLogsFolder(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (string, error) {
+	oktetoLog.Infof("generating syncthing logs for dev '%s'", dev.Name)
+
+	// Create temp directory for syncthing logs
+	tempdir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("error creating temp dir: %w", err)
+	}
+	syncthingDir := filepath.Join(tempdir, "syncthing")
+	if err := os.MkdirAll(syncthingDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating syncthing dir: %w", err)
+	}
+
+	// Create subdirectories for local and remote
+	localDir := filepath.Join(syncthingDir, "local")
+	remoteDir := filepath.Join(syncthingDir, "remote")
+	if err := os.MkdirAll(localDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating local dir: %w", err)
+	}
+	if err := os.MkdirAll(remoteDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating remote dir: %w", err)
+	}
+
+	// Copy local syncthing logs
+	localSyncthingLogPath := syncthing.GetLogFile(namespace, dev.Name)
+	if filesystem.FileExists(localSyncthingLogPath) {
+		oktetoLog.Infof("copying local syncthing logs")
+		localLogs, err := os.ReadFile(localSyncthingLogPath)
+		if err != nil {
+			oktetoLog.Infof("error reading local syncthing logs: %s", err)
+		} else {
+			destPath := filepath.Join(localDir, "syncthing.log")
+			if err := os.WriteFile(destPath, localLogs, 0600); err != nil {
+				oktetoLog.Infof("error writing local syncthing logs: %s", err)
+			}
+		}
+	}
+
+	// Get remote syncthing logs
+	var devApp apps.App
+	if dev.Autocreate {
+		devCopy := *dev
+		devCopy.Name = model.DevCloneName(dev.Name)
+		app, err := apps.Get(ctx, &devCopy, namespace, c)
+		if err != nil {
+			oktetoLog.Infof("failed to get autocreate app: %s", err)
+			return syncthingDir, nil
+		}
+		devApp = app
+	} else {
+		app, err := apps.Get(ctx, dev, namespace, c)
+		if err != nil {
+			oktetoLog.Infof("failed to get app: %s", err)
+			return syncthingDir, nil
+		}
+
+		if !apps.IsDevModeOn(app) {
+			oktetoLog.Infof("app '%s' is not in dev mode", dev.Name)
+			return syncthingDir, nil
+		}
+
+		devApp = app.DevClone()
+	}
+
+	// Refresh to get latest state
+	if err := devApp.Refresh(ctx, c); err != nil {
+		oktetoLog.Infof("failed to refresh app: %s", err)
+		return syncthingDir, nil
+	}
+
+	// Get the running pod
+	pod, err := devApp.GetRunningPod(ctx, c)
+	if err != nil {
+		oktetoLog.Infof("failed to get running pod: %s", err)
+		return syncthingDir, nil
+	}
+
+	oktetoLog.Infof("retrieving remote syncthing logs from pod '%s'", pod.Name)
+
+	// Try to get logs from syncthing container (usually the dev container)
+	remoteLogs, err := pods.ContainerLogs(ctx, dev.Container, pod.Name, namespace, false, c)
+	if err != nil {
+		oktetoLog.Infof("error getting remote syncthing logs: %s", err)
+	} else {
+		destPath := filepath.Join(remoteDir, "syncthing.log")
+		if err := os.WriteFile(destPath, []byte(remoteLogs), 0600); err != nil {
+			oktetoLog.Infof("error writing remote syncthing logs: %s", err)
+		}
+	}
+
+	return syncthingDir, nil
 }
