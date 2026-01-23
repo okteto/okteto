@@ -62,6 +62,11 @@ func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Clien
 	return i.buildkitClientFactory.GetBuildkitClient(ctx)
 }
 
+// GetType returns the connector type name for logging
+func (i *IngressConnector) GetType() string {
+	return "ingress"
+}
+
 // Stop is a no-op for the ingress connector since it doesn't maintain a persistent connection
 func (i *IngressConnector) Stop() {
 	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed

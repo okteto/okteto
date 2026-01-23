@@ -117,11 +117,9 @@ func (bcf *ClientFactory) SetTLSServerName(serverName string) {
 
 // GetBuildkitClient returns a buildkit client
 func (bcf *ClientFactory) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
-	bcf.logger.Logger().Infof("getting buildkit service client")
 	cert := bcf.cert
 
 	if cert != "" {
-		bcf.logger.Logger().Infof("using certificate from context")
 		certBytes, err := bcf.certDecoder.DecodeString(cert)
 		if err != nil {
 			return nil, fmt.Errorf("certificate decoding error: %w", err)

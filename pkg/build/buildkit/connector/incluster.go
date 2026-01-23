@@ -257,6 +257,11 @@ func (ic *InClusterConnector) WaitUntilIsReady(ctx context.Context) error {
 	return nil
 }
 
+// GetType returns the connector type name for logging
+func (ic *InClusterConnector) GetType() string {
+	return "in-cluster"
+}
+
 // Stop clears podIP to force a new pod assignment and connection verification on next Start()
 func (ic *InClusterConnector) Stop() {
 
