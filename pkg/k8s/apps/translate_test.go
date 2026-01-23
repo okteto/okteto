@@ -863,6 +863,46 @@ dev:
 
 }
 
+func Test_ServiceInheritsPriorityClassName(t *testing.T) {
+	manifest := []byte(`
+dev:
+  web:
+    image: web:latest
+    priorityClassName: main-priority
+    sync:
+      - .:/app
+    services:
+      - name: worker
+        image: worker:latest
+        sync:
+          - worker:/src`)
+
+	manifest1, err := model.Read(manifest)
+	require.NoError(t, err)
+
+	dev1 := manifest1.Dev["web"]
+	dev2 := dev1.Services[0]
+
+	// Create a deployment for the service
+	d2 := deployments.Sandbox(dev2, "n")
+	d2.UID = types.UID("deploy2")
+	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
+
+	translationRules := make(map[string]*Translation)
+	ctx := context.Background()
+
+	c := fake.NewSimpleClientset(d2)
+	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
+
+	tr2 := translationRules[dev2.Name]
+	require.NoError(t, tr2.translate())
+
+	// Verify the service pod spec has inherited the main dev's priorityClassName
+	if tr2.DevApp.PodSpec().PriorityClassName != "main-priority" {
+		t.Fatalf("Service did not inherit priorityClassName from main dev. Expected 'main-priority', got '%s'", tr2.DevApp.PodSpec().PriorityClassName)
+	}
+}
+
 func Test_translateWithoutVolumes(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:

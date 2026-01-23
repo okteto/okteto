@@ -52,7 +52,6 @@ dev:
     - 8084:8080
     services:
     - name: e2etest-other
-      priorityClassName: clie2etest
       sync:
       - .:/usr/src/app
 `
