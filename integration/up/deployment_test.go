@@ -46,6 +46,15 @@ dev:
     - "echo -n $VAR > var.html && python -m http.server 8080"
     workdir: /usr/src/app
     priorityClassName: clie2etest
+    timeout:
+      resources: 300s
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
     sync:
     - .:/usr/src/app
     forward:
