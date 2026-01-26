@@ -218,13 +218,6 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		defer os.Remove(buildOptions.File)
 	}
 
-	// create a temp folder - this will be remove once the build has finished
-	secretTempFolder, err := createSecretTempFolder()
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(secretTempFolder)
-
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
 	buildSolver := buildkit.NewBuildkitRunner(ob.connector, reg, run, ob.OktetoContext, ob.Fs, ioCtrl)
@@ -427,15 +420,6 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	return joinPath
-}
-
-func createSecretTempFolder() (string, error) {
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
-	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
-	}
-
-	return secretTempFolder, nil
 }
 
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
