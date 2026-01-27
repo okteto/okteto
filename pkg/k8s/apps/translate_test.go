@@ -453,8 +453,8 @@ dev:
 	}
 
 	expectedPodLabels := map[string]string{
-		"app":                                              "web",
-		model.InteractiveDevLabel:                          dev1.Name,
+		"app":                     "web",
+		model.InteractiveDevLabel: dev1.Name,
 		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
@@ -618,8 +618,8 @@ dev:
 		t.Fatalf("Wrong dev d2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
 	expectedPodLabels = map[string]string{
-		"app":                                              "worker",
-		model.DetachedDevLabel:                             dev2.Name,
+		"app":                  "worker",
+		model.DetachedDevLabel: dev2.Name,
 		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
@@ -1958,8 +1958,8 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		t.Fatalf("Wrong dev sfs1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
 	}
 	expectedPodLabels := map[string]string{
-		"app":                                              "web",
-		model.InteractiveDevLabel:                          dev1.Name,
+		"app":                     "web",
+		model.InteractiveDevLabel: dev1.Name,
 		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
@@ -2126,8 +2126,8 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		t.Fatalf("Wrong dev sfs2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
 	expectedPodLabels = map[string]string{
-		"app":                                              "worker",
-		model.DetachedDevLabel:                             dev2.Name,
+		"app":                  "worker",
+		model.DetachedDevLabel: dev2.Name,
 		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
