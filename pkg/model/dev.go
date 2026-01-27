@@ -837,6 +837,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 	if main.PersistentVolumeEnabled() {
 		rule.MainVolumeName = main.GetVolumeName()
 		rule.VolumeAccessMode = main.PersistentVolumeAccessMode()
+		rule.DevName = main.Name
 	}
 
 	if dev.IsHybridModeEnabled() {

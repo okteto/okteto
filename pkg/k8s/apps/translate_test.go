@@ -158,7 +158,7 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -455,7 +455,7 @@ dev:
 	expectedPodLabels := map[string]string{
 		"app":                     "web",
 		model.InteractiveDevLabel: dev1.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
@@ -517,7 +517,7 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -620,7 +620,7 @@ dev:
 	expectedPodLabels = map[string]string{
 		"app":                  "worker",
 		model.DetachedDevLabel: dev2.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
@@ -1681,7 +1681,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -1960,7 +1960,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	expectedPodLabels := map[string]string{
 		"app":                     "web",
 		model.InteractiveDevLabel: dev1.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
@@ -2026,7 +2026,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -2128,7 +2128,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	expectedPodLabels = map[string]string{
 		"app":                  "worker",
 		model.DetachedDevLabel: dev2.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)

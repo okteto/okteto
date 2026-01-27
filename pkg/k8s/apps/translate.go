@@ -104,7 +104,7 @@ func (tr *Translation) translate() error {
 
 	// Add volume label to enable pod affinity for shared persistent volumes
 	if tr.MainDev.PersistentVolumeEnabled() {
-		volumeLabel := fmt.Sprintf("dev.okteto.com/volume-%s", tr.MainDev.GetVolumeName())
+		volumeLabel := fmt.Sprintf("dev.okteto.com/volume-%s-%s", tr.MainDev.Name, tr.MainDev.GetVolumeName())
 		tr.DevApp.TemplateObjectMeta().Labels[volumeLabel] = "true"
 	}
 
@@ -736,7 +736,7 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	}
 
 	// Add affinity rule: schedule on same node as pods with this volume label
-	volumeLabel := fmt.Sprintf("dev.okteto.com/volume-%s", rule.MainVolumeName)
+	volumeLabel := fmt.Sprintf("dev.okteto.com/volume-%s-%s", rule.DevName, rule.MainVolumeName)
 	spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
 		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
 		apiv1.PodAffinityTerm{
