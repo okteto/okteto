@@ -51,6 +51,7 @@ okteto/
 ## Strict Rules
 
 ### NEVER:
+
 - Invent new CLI commands, flags, or arguments without explicit requirements
 - Modify code without reading it first - always Read before Edit
 - Skip copyright headers (all `.go` files require Apache 2.0 header with year 2023-2025)
@@ -58,6 +59,7 @@ okteto/
 - Break existing CLI interfaces or change flag behavior without discussion
 
 ### ALWAYS:
+
 - Read existing code before making changes to understand patterns
 - Run `make lint` before considering changes complete
 - Write tests for new functionality or bug fixes
@@ -83,7 +85,9 @@ okteto/
 - `make dep` - Tidy Go modules
 
 ## Priority Rules
+
 If there is a conflict:
+
 1. **Follow this file**
 2. **Follow existing code**
 3. **Ask before inventing new patterns**

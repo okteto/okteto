@@ -3,6 +3,7 @@
 ## Cobra Command Organization
 
 ### Structure in `cmd/`
+
 - **Top-level commands**: Single file at `cmd/` root (e.g., `cmd/version.go`, `cmd/status.go`)
 - **Commands with subcommands**: Directory at `cmd/` with files for each subcommand
   - Example: `cmd/context/` contains `create.go`, `use.go`, `list.go`, `show.go`, etc.
@@ -10,7 +11,9 @@
 - **Main parent command**: Often a file named after the directory (e.g., `cmd/context/context.go`)
 
 ### Registration in `main.go`
+
 Commands registered in order:
+
 ```go
 root.AddCommand(cmd.Version())
 root.AddCommand(contextCMD.Context())
@@ -23,7 +26,9 @@ root.AddCommand(up.Up(...))
 ## Command Implementation Pattern
 
 ### 1. Options Struct
+
 Defines command-specific flags and runtime state:
+
 ```go
 type Options struct {
     ManifestPathFlag string  // User-provided -f flag
@@ -35,7 +40,9 @@ type Options struct {
 ```
 
 ### 2. Command Constructor Function
+
 Returns `*cobra.Command` with dependencies injected:
+
 ```go
 func Deploy(ctx context.Context, at analytics, insights, ioCtrl, k8sLogger) *cobra.Command {
     opts := &Options{}
@@ -53,13 +60,16 @@ func Deploy(ctx context.Context, at analytics, insights, ioCtrl, k8sLogger) *cob
 ```
 
 ### 3. Flag Definitions
+
 - Use `cmd.Flags().StringVarP()` for flags with shorthand
 - Use `cmd.Flags().BoolVar()` for boolean flags
 - Mark hidden flags: `cmd.Flags().MarkHidden("flag-name")`
 - Set default values in function signature or via flag definition
 
 ### 4. RunE Function
+
 Main execution logic:
+
 - Parse args
 - Connect to okteto context
 - Load manifest via `discovery` or direct path
@@ -69,6 +79,7 @@ Main execution logic:
 - Return error (sets exit code and displays to user)
 
 ### 5. Error Handling
+
 - Return errors from `RunE` (command framework handles display)
 - Use `oktetoErrors.UserError{E: err, Hint: "..."}` for actionable hints
 - Set `cmd.SilenceUsage = true` in `RunE` to avoid usage on errors
@@ -76,11 +87,13 @@ Main execution logic:
 ## Common Patterns
 
 ### Manifest Loading
+
 ```go
 manifest, err := contextCMD.LoadManifestWithContext(ctx, opts.ManifestPath, opts.Namespace)
 ```
 
 ### Context & Namespace Setup
+
 ```go
 ctxStore := okteto.GetContextStore()
 if !okteto.IsOkteto() {
@@ -89,6 +102,7 @@ if !okteto.IsOkteto() {
 ```
 
 ### Analytics Tracking
+
 ```go
 defer func() {
     analytics.TrackDeploy(err == nil)
@@ -96,7 +110,9 @@ defer func() {
 ```
 
 ### Signal Handling
+
 Long-running commands (up, deploy) use context cancellation:
+
 ```go
 ctx, cancel := context.WithCancel(ctx)
 defer cancel()
@@ -112,12 +128,15 @@ go func() {
 ## Shared Command Utilities
 
 ### `cmd/utils/`
+
 - `MaximumNArgsAccepted()` - Arg count validation
 - Flag parsing helpers
 - Common validation logic
 
 ### `cmd/namespace/`, `cmd/context/`
+
 Reusable functions for:
+
 - Namespace selection/creation
 - Context switching
 - Kubeconfig manipulation

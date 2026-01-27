@@ -3,12 +3,14 @@
 ## Test Organization
 
 ### Unit Tests
+
 - Located alongside source: `*_test.go` in same directory as `*.go`
 - Use standard `testing` package + `github.com/stretchr/testify/require`
 - Run via `make test` (includes race detection and coverage)
 - No external dependencies (use mocks/fakes)
 
 ### Integration Tests
+
 - Located in `integration/` directory
 - Organized by command: `integration/build/`, `integration/deploy/`, `integration/up/`, etc.
 - Require build tag: `//go:build integration` at top of file
@@ -20,7 +22,9 @@
 ## Testing Framework
 
 ### Required Package
+
 Use `github.com/stretchr/testify/require` (NOT `assert`):
+
 ```go
 require.NoError(t, err)
 require.Equal(t, expected, actual)
@@ -28,13 +32,16 @@ require.True(t, condition)
 ```
 
 ### Why `require` over `assert`
+
 - `require` stops test execution on failure
 - `assert` continues after failure (can cause cascading errors)
 
 ## Test Structure
 
 ### Table-Driven Tests
+
 Preferred pattern for multiple scenarios:
+
 ```go
 tests := []struct {
     name     string
@@ -64,12 +71,15 @@ for _, tt := range tests {
 ```
 
 ### No Branching in Tests
+
 **CRITICAL RULE**: Test bodies must be linear, no `if/switch/for` logic:
+
 - Each test case should have a single execution path
 - If logic is needed, split into multiple test cases
 - Use table-driven tests to cover multiple scenarios
 
 **Bad:**
+
 ```go
 func TestFoo(t *testing.T) {
     if someCondition {
@@ -81,6 +91,7 @@ func TestFoo(t *testing.T) {
 ```
 
 **Good:**
+
 ```go
 func TestFoo_ConditionA(t *testing.T) {
     require.Equal(t, a, b)
@@ -94,12 +105,16 @@ func TestFoo_ConditionB(t *testing.T) {
 ## Mocking & Fakes
 
 ### Test Helpers Location
+
 `internal/test/` contains reusable test utilities:
+
 - `internal/test/client/` - Fake Kubernetes and Okteto clients
 - `internal/test/` - Context setup, test filesystem helpers
 
 ### Mock Pattern
+
 Implement fake structs for interfaces:
+
 ```go
 type fakeExecutor struct {
     err      error
@@ -116,7 +131,9 @@ func (fe *fakeExecutor) Execute(cmd model.DeployCommand, args []string) error {
 ```
 
 ### Using testify/mock
+
 For complex mocking, use `github.com/stretchr/testify/mock`:
+
 ```go
 type fakeDivertDriver struct {
     mock.Mock
@@ -131,24 +148,30 @@ func (fd *fakeDivertDriver) Deploy(ctx context.Context) error {
 ## Integration Test Patterns
 
 ### Build Tags
+
 Always include at top of integration test files:
+
 ```go
 //go:build integration
 // +build integration
 ```
 
 ### Cluster Access
+
 Integration tests assume:
+
 - Kubernetes cluster is accessible
 - Environment variables configured (OKTETO_URL, token, etc.)
 - Sufficient permissions to create/delete resources
 
 ### Test Isolation
+
 - Use `t.TempDir()` for temporary directories
 - Create unique namespaces per test
 - Clean up resources in deferred functions
 
 ### Running Okteto CLI
+
 ```go
 oktetoPath, err := integration.GetOktetoPath()
 require.NoError(t, err)
