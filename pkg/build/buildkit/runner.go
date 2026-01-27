@@ -56,7 +56,7 @@ type runnerMetadata struct {
 }
 
 // SolveOptBuilderFactory is a function that creates a SolveOptBuilderInterface
-type SolveOptBuilderFactory func(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (SolveOptBuilderInterface, error)
+type SolveOptBuilderFactory func(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller, secretMgr secretBuildManager) (SolveOptBuilderInterface, error)
 
 // Runner runs a build using buildkit
 type Runner struct {
@@ -91,8 +91,8 @@ type SolveOptBuilderInterface interface {
 type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
 
 // defaultSolveOptBuilderFactory is the default factory that creates a SolveOptBuilder
-func defaultSolveOptBuilderFactory(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (SolveOptBuilderInterface, error) {
-	return NewSolveOptBuilder(cf, reg, okCtx, fs, logger)
+func defaultSolveOptBuilderFactory(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller, secretMgr secretBuildManager) (SolveOptBuilderInterface, error) {
+	return NewSolveOptBuilder(cf, reg, okCtx, fs, logger, secretMgr)
 }
 
 // NewBuildkitRunner creates a new buildkit runner
@@ -122,7 +122,13 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		return err
 	}
 
-	optBuilder, err := r.solveOptBuilderFactory(r.connector, r.registry, r.okCtx, r.fs, r.logger)
+	secretMgr, err := newSecretManager(r.fs)
+	if err != nil {
+		return err
+	}
+	defer secretMgr.Cleanup()
+
+	optBuilder, err := r.solveOptBuilderFactory(r.connector, r.registry, r.okCtx, r.fs, r.logger, secretMgr)
 	if err != nil {
 		return err
 	}

@@ -104,7 +104,7 @@ func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) B
 		return newInClusterConnectorWithFallback(okCtx, logger)
 	}
 
-	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, true) {
+	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
 		return newPortForwarderWithFallback(okCtx, logger)
 	}
 
@@ -114,7 +114,7 @@ func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) B
 // shouldUseInClusterConnector returns true when running inside an Okteto-managed environment
 // where we can connect directly to BuildKit via pod IP
 func shouldUseInClusterConnector() bool {
-	if !env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, true) {
+	if !env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, false) {
 		return false
 	}
 	return env.LoadBoolean(constants.OktetoDeployRemote) || // Remote commands (deploy --remote, destroy --remote, test)
@@ -217,13 +217,6 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		}
 		defer os.Remove(buildOptions.File)
 	}
-
-	// create a temp folder - this will be remove once the build has finished
-	secretTempFolder, err := createSecretTempFolder()
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(secretTempFolder)
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
@@ -427,15 +420,6 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	return joinPath
-}
-
-func createSecretTempFolder() (string, error) {
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
-	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
-	}
-
-	return secretTempFolder, nil
 }
 
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
