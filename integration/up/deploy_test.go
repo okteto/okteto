@@ -147,8 +147,8 @@ func TestUpWithDeploy(t *testing.T) {
 	require.Contains(t, files, "okteto-summary.txt")
 	require.Contains(t, files, "okteto.log")
 	require.Contains(t, files, "pod.yaml")
-	require.Contains(t, files, "syncthing/remote/syncthing.log")
-	require.Contains(t, files, "syncthing/local/syncthing.log")
+	require.Contains(t, files, filepath.Clean("syncthing/remote/syncthing.log"))
+	require.Contains(t, files, filepath.Clean("syncthing/local/syncthing.log"))
 
 	// Clean up the zip file
 	require.NoError(t, os.Remove(zipPath))
