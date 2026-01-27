@@ -119,6 +119,8 @@ func TestDevToTranslationRule(t *testing.T) {
 			Requests: ResourceList{},
 		},
 		PersistentVolume: true,
+		MainVolumeName:   dev.GetVolumeName(),
+		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
@@ -216,6 +218,8 @@ func TestDevToTranslationRule(t *testing.T) {
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
+		MainVolumeName:   dev.GetVolumeName(),
+		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
 		Environment: env.Environment{
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
@@ -323,6 +327,8 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
+		MainVolumeName:   dev.GetVolumeName(),
+		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
@@ -421,6 +427,8 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 			FSGroup:    ptr.To(int64(0)),
 		},
 		PersistentVolume: true,
+		MainVolumeName:   dev.GetVolumeName(),
+		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),

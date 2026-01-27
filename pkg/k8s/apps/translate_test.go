@@ -154,6 +154,17 @@ dev:
 						},
 						TopologyKey: "kubernetes.io/hostname",
 					},
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Operator: metav1.LabelSelectorOpExists,
+								},
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
 				},
 			},
 		},
@@ -441,7 +452,11 @@ dev:
 		}
 	}
 
-	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
+	expectedPodLabels := map[string]string{
+		"app":                                              "web",
+		model.InteractiveDevLabel:                          dev1.Name,
+		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -494,6 +509,17 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								model.InteractiveDevLabel: "web",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Operator: metav1.LabelSelectorOpExists,
+								},
 							},
 						},
 						TopologyKey: "kubernetes.io/hostname",
@@ -591,7 +617,11 @@ dev:
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev d2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
-	expectedPodLabels = map[string]string{"app": "worker", model.DetachedDevLabel: dev2.Name}
+	expectedPodLabels = map[string]string{
+		"app":                                              "worker",
+		model.DetachedDevLabel:                             dev2.Name,
+		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -1647,6 +1677,17 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						},
 						TopologyKey: "kubernetes.io/hostname",
 					},
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Operator: metav1.LabelSelectorOpExists,
+								},
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
 				},
 			},
 		},
@@ -1916,7 +1957,11 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev sfs1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
 	}
-	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
+	expectedPodLabels := map[string]string{
+		"app":                                              "web",
+		model.InteractiveDevLabel:                          dev1.Name,
+		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -1973,6 +2018,17 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								model.InteractiveDevLabel: "web",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()),
+									Operator: metav1.LabelSelectorOpExists,
+								},
 							},
 						},
 						TopologyKey: "kubernetes.io/hostname",
@@ -2069,7 +2125,11 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev sfs2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
-	expectedPodLabels = map[string]string{"app": "worker", model.DetachedDevLabel: dev2.Name}
+	expectedPodLabels = map[string]string{
+		"app":                                              "worker",
+		model.DetachedDevLabel:                             dev2.Name,
+		fmt.Sprintf("dev.okteto.com/volume-%s", dev1.GetVolumeName()): "true",
+	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
 	}

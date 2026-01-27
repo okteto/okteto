@@ -834,6 +834,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		Affinity:          (*apiv1.Affinity)(dev.Affinity),
 	}
 
+	if main.PersistentVolumeEnabled() {
+		rule.MainVolumeName = main.GetVolumeName()
+		rule.VolumeAccessMode = main.PersistentVolumeAccessMode()
+	}
+
 	if dev.IsHybridModeEnabled() {
 		rule.WorkDir = "/okteto"
 	}
