@@ -66,7 +66,7 @@ func newAutoDown(ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at analyticsTra
 }
 
 // run is the main function that runs the AutoDown logic if enabled
-func (a *autoDownRunner) run(ctx context.Context, dev *model.Dev, namespace string, k8sClient kubernetes.Interface) error {
+func (a *autoDownRunner) run(ctx context.Context, dev *model.Dev, namespace, manifestName string, k8sClient kubernetes.Interface) error {
 	if !a.autoDown {
 		a.ioCtrl.Logger().Infof("AutoDown is disabled, skipping AutoDown logic")
 		return nil
@@ -86,7 +86,7 @@ func (a *autoDownRunner) run(ctx context.Context, dev *model.Dev, namespace stri
 		app = apps.NewDeploymentApp(deployments.Sandbox(dev, namespace))
 	}
 
-	trMap, err := apps.GetTranslations(ctx, namespace, dev, app, false, k8sClient)
+	trMap, err := apps.GetTranslations(ctx, namespace, manifestName, dev, app, false, k8sClient)
 	if err != nil {
 		return err
 	}

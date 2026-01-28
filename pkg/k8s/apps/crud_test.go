@@ -685,7 +685,7 @@ func TestGetTranslations_InheritKubernetesResources(t *testing.T) {
 			clientset := fake.NewSimpleClientset(tt.deployment)
 
 			app := NewDeploymentApp(tt.deployment)
-			translations, err := GetTranslations(ctx, "test", tt.dev, app, false, clientset)
+			translations, err := GetTranslations(ctx, "test", "test-manifest", tt.dev, app, false, clientset)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, translations)
@@ -823,7 +823,7 @@ func TestGetTranslations_InheritKubernetesNodeSelector(t *testing.T) {
 			clientset := fake.NewSimpleClientset(tt.deployment)
 
 			app := NewDeploymentApp(tt.deployment)
-			translations, err := GetTranslations(ctx, "test", tt.dev, app, false, clientset)
+			translations, err := GetTranslations(ctx, "test", "test-manifest", tt.dev, app, false, clientset)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, translations)

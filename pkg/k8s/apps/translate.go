@@ -14,6 +14,8 @@
 package apps
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path"
 	"strconv"
@@ -103,8 +105,8 @@ func (tr *Translation) translate() error {
 	}
 
 	// Add volume label to enable pod affinity for shared persistent volumes
-	if tr.MainDev.PersistentVolumeEnabled() {
-		volumeLabel := fmt.Sprintf("dev.okteto.com/volume-%s-%s", tr.MainDev.Name, tr.MainDev.GetVolumeName())
+	if tr.MainDev.PersistentVolumeEnabled() && len(tr.Rules) > 0 && tr.Rules[0].ManifestName != "" {
+		volumeLabel := getVolumeLabelKey(tr.Rules[0].ManifestName, tr.MainDev.GetVolumeName())
 		tr.DevApp.TemplateObjectMeta().Labels[volumeLabel] = "true"
 	}
 
@@ -736,7 +738,7 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	}
 
 	// Add affinity rule: schedule on same node as pods with this volume label
-	volumeLabel := fmt.Sprintf("dev.okteto.com/volume-%s-%s", rule.DevName, rule.MainVolumeName)
+	volumeLabel := getVolumeLabelKey(rule.ManifestName, rule.MainVolumeName)
 	spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
 		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
 		apiv1.PodAffinityTerm{
@@ -751,6 +753,18 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 			},
 		},
 	)
+}
+
+// getVolumeLabelKey generates a safe volume label key using a hash of manifestName and volumeName
+func getVolumeLabelKey(manifestName, volumeName string) string {
+	// Create a unique identifier from manifestName and volumeName
+	identifier := fmt.Sprintf("%s-%s", manifestName, volumeName)
+
+	// Use first 8 chars of SHA256 hash to keep it short but unique
+	hash := sha256.Sum256([]byte(identifier))
+	shortHash := hex.EncodeToString(hash[:])[:8]
+
+	return fmt.Sprintf("dev.okteto.com/volume-%s", shortHash)
 }
 
 // GetInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources

@@ -46,7 +46,8 @@ type TranslationRule struct {
 	PersistentVolume  bool                             `json:"persistentVolume" yaml:"persistentVolume"`
 	MainVolumeName    string                           `json:"mainVolumeName,omitempty"`
 	VolumeAccessMode  apiv1.PersistentVolumeAccessMode `json:"volumeAccessMode,omitempty"`
-	DevName           string                           `json:"devName,omitempty"`
+	Namespace         string                           `json:"namespace,omitempty"`
+	ManifestName      string                           `json:"manifestName,omitempty"`
 }
 
 // IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

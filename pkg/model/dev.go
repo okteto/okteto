@@ -814,7 +814,7 @@ func TranslatePodAffinity(tr *TranslationRule, name string) {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, namespace, manifestName, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:         dev.Container,
 		ImagePullPolicy:   dev.ImagePullPolicy,
@@ -837,7 +837,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 	if main.PersistentVolumeEnabled() {
 		rule.MainVolumeName = main.GetVolumeName()
 		rule.VolumeAccessMode = main.PersistentVolumeAccessMode()
-		rule.DevName = main.Name
+		rule.Namespace = namespace
+		rule.ManifestName = manifestName
 	}
 
 	if dev.IsHybridModeEnabled() {

@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -125,7 +126,7 @@ dev:
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
-	rule1 := dev1.ToTranslationRule(dev1, "n", "cindy", false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", "test-manifest", "cindy", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -158,7 +159,7 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -455,7 +456,7 @@ dev:
 	expectedPodLabels := map[string]string{
 		"app":                     "web",
 		model.InteractiveDevLabel: dev1.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
@@ -498,7 +499,7 @@ dev:
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
+	require.NoError(t, loadServiceTranslations(ctx, "n", "test-manifest", dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
 	require.NoError(t, tr2.translate())
 	d2DevPodOK := apiv1.PodSpec{
@@ -517,7 +518,7 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -620,7 +621,7 @@ dev:
 	expectedPodLabels = map[string]string{
 		"app":                  "worker",
 		model.DetachedDevLabel: dev2.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
@@ -732,7 +733,7 @@ dev:
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
+	require.NoError(t, loadServiceTranslations(ctx, "n", "test-manifest", dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
 	require.NoError(t, tr2.translate())
 
@@ -851,7 +852,7 @@ dev:
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	require.NoError(t, loadServiceTranslations(ctx, "n", dev1, false, translationRules, c))
+	require.NoError(t, loadServiceTranslations(ctx, "n", "test-manifest", dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
 	require.NoError(t, tr2.translate())
 
@@ -907,7 +908,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev, "n")
-	rule := dev.ToTranslationRule(dev, "n", "cindy", true)
+	rule := dev.ToTranslationRule(dev, "n", "test-manifest", "cindy", true)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1524,7 +1525,7 @@ func Test_translateMultipleEnvVars(t *testing.T) {
 	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev, "n")
-	rule := dev.ToTranslationRule(dev, "n", "cindy", false)
+	rule := dev.ToTranslationRule(dev, "n", "test-manifest", "cindy", false)
 	tr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
@@ -1648,7 +1649,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = ptr.To(int32(2))
 
-	rule1 := dev1.ToTranslationRule(dev1, "n", "cindy", false)
+	rule1 := dev1.ToTranslationRule(dev1, "n", "test-manifest", "cindy", false)
 	tr1 := &Translation{
 		MainDev: dev1,
 		Dev:     dev1,
@@ -1681,7 +1682,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -1960,7 +1961,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	expectedPodLabels := map[string]string{
 		"app":                     "web",
 		model.InteractiveDevLabel: dev1.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
@@ -2004,7 +2005,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	trMap := make(map[string]*Translation)
 	ctx := context.Background()
 	c := fake.NewSimpleClientset(sfs2)
-	err = loadServiceTranslations(ctx, "n", dev1, false, trMap, c)
+	err = loadServiceTranslations(ctx, "n", "test-manifest", dev1, false, trMap, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2026,7 +2027,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -2128,7 +2129,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	expectedPodLabels = map[string]string{
 		"app":                  "worker",
 		model.DetachedDevLabel: dev2.Name,
-		fmt.Sprintf("dev.okteto.com/volume-%s-%s", dev1.Name, dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
@@ -2537,4 +2538,58 @@ func TestDev_GetInheritedResourcesFromContainer(t *testing.T) {
 			assert.Equal(t, tt.expected, resources)
 		})
 	}
+}
+
+func TestGetVolumeLabelKey(t *testing.T) {
+	tests := []struct {
+		name         string
+		manifestName string
+		volumeName   string
+	}{
+		{
+			name:         "short names",
+			manifestName: "my-app",
+			volumeName:   "web-okteto",
+		},
+		{
+			name:         "long names",
+			manifestName: "very-long-manifest-name-that-exceeds-limit",
+			volumeName:   "very-long-volume-name-that-also-exceeds-limit",
+		},
+		{
+			name:         "special characters",
+			manifestName: "manifest-123",
+			volumeName:   "volume_with_underscores",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getVolumeLabelKey(tt.manifestName, tt.volumeName)
+
+			// Verify it doesn't exceed 63 characters
+			assert.LessOrEqual(t, len(result), 63, "Label key exceeds Kubernetes limit of 63 characters")
+
+			// Verify it always starts with the prefix
+			assert.True(t, strings.HasPrefix(result, "dev.okteto.com/volume-"), "Label key should start with dev.okteto.com/volume-")
+
+			// Verify it always uses the hash format: dev.okteto.com/volume-<8-char-hash>
+			expectedLen := len("dev.okteto.com/volume-") + 8
+			assert.Equal(t, expectedLen, len(result), "Label should always use 8 character hash")
+		})
+	}
+
+	// Test that same inputs produce same hash
+	t.Run("consistent hashing", func(t *testing.T) {
+		result1 := getVolumeLabelKey("my-app", "web-okteto")
+		result2 := getVolumeLabelKey("my-app", "web-okteto")
+		assert.Equal(t, result1, result2, "Same inputs should produce same hash")
+	})
+
+	// Test that different inputs produce different hashes
+	t.Run("unique hashing", func(t *testing.T) {
+		result1 := getVolumeLabelKey("app1", "volume1")
+		result2 := getVolumeLabelKey("app2", "volume2")
+		assert.NotEqual(t, result1, result2, "Different inputs should produce different hashes")
+	})
 }

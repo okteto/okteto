@@ -75,7 +75,7 @@ func TestDevToTranslationRule(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule1 := dev.ToTranslationRule(dev, "n", "username", false)
+	rule1 := dev.ToTranslationRule(dev, "n", "test-manifest", "username", false)
 	rule1OK := &TranslationRule{
 		Marker:            config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		OktetoBinImageTag: config.NewImageConfig(io.NewIOController()).GetCliImage(),
@@ -121,7 +121,8 @@ func TestDevToTranslationRule(t *testing.T) {
 		PersistentVolume: true,
 		MainVolumeName:   dev.GetVolumeName(),
 		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
-		DevName:          "web",
+		Namespace:        "n",
+		ManifestName:     "test-manifest",
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
@@ -187,7 +188,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	assert.Equal(t, string(marshalled1), string(marshalled1OK))
 
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule(dev, "n", "username", false)
+	rule2 := dev2.ToTranslationRule(dev, "n", "test-manifest", "username", false)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",
@@ -221,7 +222,8 @@ func TestDevToTranslationRule(t *testing.T) {
 		PersistentVolume: true,
 		MainVolumeName:   dev.GetVolumeName(),
 		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
-		DevName:          "web",
+		Namespace:        "n",
+		ManifestName:     "test-manifest",
 		Environment: env.Environment{
 			{Name: "HISTSIZE", Value: "10000000"},
 			{Name: "HISTFILESIZE", Value: "10000000"},
@@ -270,7 +272,7 @@ func TestAffinittiesIfWriteMany(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule(dev, "n", "username", false)
+	rule2 := dev2.ToTranslationRule(dev, "n", "test-manifest", "username", false)
 	assert.Nil(t, rule2.Affinity)
 }
 
@@ -296,7 +298,7 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, "n", "username", false)
+	rule := dev.ToTranslationRule(dev, "n", "test-manifest", "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		OktetoBinImageTag: "image",
@@ -331,7 +333,8 @@ func TestDevToTranslationRuleInitContainer(t *testing.T) {
 		PersistentVolume: true,
 		MainVolumeName:   dev.GetVolumeName(),
 		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
-		DevName:          "web",
+		Namespace:        "n",
+		ManifestName:     "test-manifest",
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
@@ -397,7 +400,7 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 
 	dev := manifest.Dev["web"]
 
-	rule := dev.ToTranslationRule(dev, "n", "username", false)
+	rule := dev.ToTranslationRule(dev, "n", "test-manifest", "username", false)
 	ruleOK := &TranslationRule{
 		Marker:            config.NewImageConfig(io.NewIOController()).GetCliImage(),
 		OktetoBinImageTag: config.NewImageConfig(io.NewIOController()).GetCliImage(),
@@ -432,7 +435,8 @@ func TestDevToTranslationDebugEnabled(t *testing.T) {
 		PersistentVolume: true,
 		MainVolumeName:   dev.GetVolumeName(),
 		VolumeAccessMode: dev.PersistentVolumeAccessMode(),
-		DevName:          "web",
+		Namespace:        "n",
+		ManifestName:     "test-manifest",
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
@@ -518,7 +522,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule(test.manifest, "n", "username", false)
+		rule := test.manifest.ToTranslationRule(test.manifest, "n", "test-manifest", "username", false)
 		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
@@ -632,7 +636,7 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 
 		dev := manifest.Dev[test.name]
 
-		rule := dev.ToTranslationRule(dev, "n", "username", false)
+		rule := dev.ToTranslationRule(dev, "n", "test-manifest", "username", false)
 		marshalled, err := yaml.Marshal(rule.SecurityContext)
 		assert.NoError(t, err)
 		marshalledOK, err := yaml.Marshal(test.translated)
