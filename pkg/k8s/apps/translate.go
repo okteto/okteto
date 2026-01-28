@@ -106,7 +106,7 @@ func (tr *Translation) translate() error {
 
 	// Add volume label to enable pod affinity for shared persistent volumes
 	if tr.MainDev.PersistentVolumeEnabled() && len(tr.Rules) > 0 && tr.Rules[0].ManifestName != "" {
-		volumeLabel := getVolumeLabelKey(tr.Rules[0].ManifestName, tr.MainDev.GetVolumeName())
+		volumeLabel := getVolumeLabelKey(tr.Rules[0].ManifestName, tr.MainDev.Name)
 		tr.DevApp.TemplateObjectMeta().Labels[volumeLabel] = "true"
 	}
 
