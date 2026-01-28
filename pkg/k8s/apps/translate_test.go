@@ -2592,4 +2592,11 @@ func TestGetVolumeLabelKey(t *testing.T) {
 		result2 := getVolumeLabelKey("app2", "volume2")
 		assert.NotEqual(t, result1, result2, "Different inputs should produce different hashes")
 	})
+
+	// Test that -okteto suffix is removed
+	t.Run("removes -okteto suffix", func(t *testing.T) {
+		result1 := getVolumeLabelKey("my-app", "web-okteto")
+		result2 := getVolumeLabelKey("my-app", "web")
+		assert.Equal(t, result1, result2, "Volume names with and without -okteto suffix should produce same hash")
+	})
 }

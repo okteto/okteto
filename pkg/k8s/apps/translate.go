@@ -757,6 +757,9 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 
 // getVolumeLabelKey generates a safe volume label key using a hash of manifestName and volumeName
 func getVolumeLabelKey(manifestName, volumeName string) string {
+	// Remove -okteto suffix from volumeName if present
+	volumeName = strings.TrimSuffix(volumeName, "-okteto")
+
 	// Create a unique identifier from manifestName and volumeName
 	identifier := fmt.Sprintf("%s-%s", manifestName, volumeName)
 
