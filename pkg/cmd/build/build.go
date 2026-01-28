@@ -65,6 +65,8 @@ type BuildkitConnector interface {
 	Stop()
 	// GetBuildkitClient returns the buildkit client
 	GetBuildkitClient(ctx context.Context) (*client.Client, error)
+	// GetType returns the connector type name for logging
+	GetType() string
 }
 
 // OktetoBuilder runs the build of an image
@@ -194,7 +196,7 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 }
 
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run buildkit.SolveBuildFn) error {
-	oktetoLog.Infof("building your image on %s", ob.OktetoContext.GetCurrentBuilder())
+	oktetoLog.Infof("building your image using %s connector", ob.connector.GetType())
 
 	repoURL := ""
 	if buildOptions.Manifest != nil && buildOptions.Manifest.ManifestPath != "" {
@@ -207,19 +209,14 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 
 	var err error
 	if buildOptions.File != "" {
+		// Preserve the original user-facing path before translation
+		buildOptions.OriginalDockerfile = buildOptions.File
 		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext, repoURL, buildOptions.File, buildOptions.Target)
 		if err != nil {
 			return err
 		}
 		defer os.Remove(buildOptions.File)
 	}
-
-	// create a temp folder - this will be remove once the build has finished
-	secretTempFolder, err := createSecretTempFolder()
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(secretTempFolder)
 
 	reg := registry.NewOktetoRegistry(GetRegistryConfigFromOktetoConfig(ob.OktetoContext))
 
@@ -354,16 +351,17 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 	}
 
 	opts := &types.BuildOptions{
-		Manifest:    manifest,
-		CacheFrom:   b.CacheFrom,
-		Target:      b.Target,
-		Path:        b.Context,
-		Tag:         b.Image,
-		File:        file,
-		BuildArgs:   build.SerializeArgs(args),
-		NoCache:     o.NoCache,
-		ExportCache: b.ExportCache,
-		Platform:    o.Platform,
+		Manifest:           manifest,
+		CacheFrom:          b.CacheFrom,
+		Target:             b.Target,
+		Path:               b.Context,
+		Tag:                b.Image,
+		File:               file,
+		OriginalDockerfile: b.Dockerfile,
+		BuildArgs:          build.SerializeArgs(args),
+		NoCache:            o.NoCache,
+		ExportCache:        b.ExportCache,
+		Platform:           o.Platform,
 	}
 
 	// if secrets are present at the cmd flag, copy them to opts.Secrets
@@ -422,15 +420,6 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	return joinPath
-}
-
-func createSecretTempFolder() (string, error) {
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
-	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
-	}
-
-	return secretTempFolder, nil
 }
 
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile

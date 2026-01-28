@@ -16,9 +16,7 @@ package connector
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/moby/buildkit/client"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
 )
@@ -32,7 +30,6 @@ type IngressOktetoContextInterface interface {
 type IngressConnector struct {
 	buildkitClientFactory *ClientFactory
 	waiter                *Waiter
-	metrics               *ConnectorMetrics
 }
 
 // NewIngressConnector creates a new ingress connector. It connects to the buildkit server via ingress.
@@ -44,35 +41,30 @@ func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Control
 		config.GetCertificatePath(),
 		ioCtrl)
 	waiter := NewBuildkitClientWaiter(ioCtrl)
-	sessionID := uuid.New().String()
 
 	return &IngressConnector{
 		buildkitClientFactory: buildkitClientFactory,
 		waiter:                waiter,
-		metrics:               NewConnectorMetrics(analytics.ConnectorTypeIngress, sessionID),
 	}
 }
 
 // Start is a no-op for the ingress connector since it doesn't maintain a persistent connection
 func (i *IngressConnector) Start(ctx context.Context) error {
-	i.metrics.StartTracking()
 	return nil
 }
 
 // WaitUntilIsReady waits for the buildkit server to be ready
 func (i *IngressConnector) WaitUntilIsReady(ctx context.Context) error {
-	err := i.waiter.WaitUntilIsUp(ctx, i.GetBuildkitClient)
-	i.metrics.SetServiceReadyDuration(i.waiter.GetWaitingTime())
-	if err != nil {
-		i.metrics.TrackFailure()
-	} else {
-		i.metrics.TrackSuccess()
-	}
-	return err
+	return i.waiter.WaitUntilIsUp(ctx, i.GetBuildkitClient)
 }
 
 func (i *IngressConnector) GetBuildkitClient(ctx context.Context) (*client.Client, error) {
 	return i.buildkitClientFactory.GetBuildkitClient(ctx)
+}
+
+// GetType returns the connector type name for logging
+func (i *IngressConnector) GetType() string {
+	return "ingress"
 }
 
 // Stop is a no-op for the ingress connector since it doesn't maintain a persistent connection

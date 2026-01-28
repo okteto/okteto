@@ -55,6 +55,11 @@ func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error 
 		}
 	}
 
+	// Setup helm version based on environment variable
+	if err := setupHelmVersion(); err != nil {
+		return err
+	}
+
 	envStepper := NewEnvStepper(oktetoEnvFile.Name())
 	envStepper.WithFS(dr.Fs)
 

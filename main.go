@@ -69,7 +69,7 @@ func init() {
 		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
 		seed = time.Now().UnixNano()
 	}
-	rand.New(rand.NewSource(seed))
+	rand.Seed(seed)
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []utilRuntime.ErrorHandler{

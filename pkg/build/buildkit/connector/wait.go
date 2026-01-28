@@ -71,6 +71,16 @@ func NewBuildkitClientWaiter(logger *io.Controller) *Waiter {
 	}
 }
 
+// NewBuildkitClientWaiterWithConfig creates a new buildkitWaiter with custom configuration
+func NewBuildkitClientWaiterWithConfig(logger *io.Controller, maxWaitTime, retryInterval time.Duration) *Waiter {
+	return &Waiter{
+		maxWaitTime:   maxWaitTime,
+		retryInterval: retryInterval,
+		sleeper:       &DefaultSleeper{},
+		logger:        logger,
+	}
+}
+
 func (bw *Waiter) GetWaitingTime() time.Duration {
 	return bw.waitingTime
 }

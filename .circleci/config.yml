@@ -170,7 +170,6 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-actions
 
   e2e-build:
@@ -188,7 +187,6 @@ jobs:
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-build
 
   e2e-deploy:
@@ -209,7 +207,6 @@ jobs:
             export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-deploy
 
   e2e-up:
@@ -229,7 +226,6 @@ jobs:
             export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-up
           environment:
             OKTETO_SKIP_CLEANUP: "true"
@@ -251,7 +247,6 @@ jobs:
             export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto
 
   e2e-okteto-test:
@@ -271,7 +266,6 @@ jobs:
             export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
             echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             make integration-okteto-test
 
   test-e2e-setup:
@@ -291,7 +285,6 @@ jobs:
           name: Build Dockerfile for current commit
           command: |
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
-            $(pwd)/artifacts/bin/okteto-Linux-x86_64 analytics --disable
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 build --platform "linux/amd64" --build-arg VERSION_STRING=$CIRCLE_SHA1 -f Dockerfile . -t okteto.global/cli-e2e:${CIRCLE_SHA1}
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -345,7 +338,6 @@ jobs:
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             $env:Path+=";$($HOME)\project\artifacts\bin"
-            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
 
@@ -382,7 +374,6 @@ jobs:
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
             $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
-            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
 
@@ -419,7 +410,6 @@ jobs:
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
             $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
-            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/test -tags="integration" --count=1 -v -timeout 20m
 
@@ -456,7 +446,6 @@ jobs:
             $env:SSH_AUTH_SOCK = (Get-Command ssh-agent).Definition -replace 'ssh-agent.exe','ssh-agent.sock'
             $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
             echo OKTETO_CLI_IMAGE=$env:OKTETO_CLI_IMAGE
-            & "$($HOME)\project\artifacts\bin\okteto.exe" analytics --disable
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 

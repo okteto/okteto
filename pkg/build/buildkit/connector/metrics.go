@@ -23,19 +23,15 @@ import (
 // ConnectorMetrics collects metrics for BuildKit connector analytics.
 // It is designed to be embedded or composed into any connector type.
 type ConnectorMetrics struct {
-	sessionID             string
-	connectorType         analytics.ConnectorType
-	tracker               *analytics.Tracker
-	mu                    sync.Mutex
-	StartTime             time.Time // Exported for use by connectors
-	wasFallback           bool
-	wasQueued             bool
-	queueWaitDuration     time.Duration
-	maxQueuePosition      int
-	lastQueueReason       string
-	podReused             bool
-	waitingForPodTimedOut bool
-	serviceReadyDuration  time.Duration
+	sessionID         string
+	connectorType     analytics.ConnectorType
+	tracker           *analytics.Tracker
+	mu                sync.Mutex
+	StartTime         time.Time // Exported for use by connectors
+	queueWaitDuration time.Duration
+	maxQueuePosition  int
+	lastQueueReason   string
+	errReason         string
 }
 
 // NewConnectorMetrics creates a new ConnectorMetrics for the given connector type and session ID
@@ -52,11 +48,9 @@ func (m *ConnectorMetrics) StartTracking() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.StartTime = time.Now()
-	m.wasQueued = false
 	m.queueWaitDuration = 0
 	m.maxQueuePosition = 0
 	m.lastQueueReason = ""
-	m.waitingForPodTimedOut = false
 }
 
 // RecordQueueStatus updates queue metrics from a BuildKit API response
@@ -64,7 +58,6 @@ func (m *ConnectorMetrics) RecordQueueStatus(queuePosition int, reason string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if queuePosition > 0 {
-		m.wasQueued = true
 		if queuePosition > m.maxQueuePosition {
 			m.maxQueuePosition = queuePosition
 		}
@@ -72,32 +65,11 @@ func (m *ConnectorMetrics) RecordQueueStatus(queuePosition int, reason string) {
 	}
 }
 
-// SetPodReused marks whether an existing pod was reused
-func (m *ConnectorMetrics) SetPodReused(reused bool) {
+// SetErrReason sets the error reason for the connection failure
+func (m *ConnectorMetrics) SetErrReason(reason string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.podReused = reused
-}
-
-// SetTimedOut marks the connection as timed out
-func (m *ConnectorMetrics) SetWaitingForPodTimedOut(timedOut bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.waitingForPodTimedOut = timedOut
-}
-
-// SetWasFallback marks whether this connector was used as a fallback
-func (m *ConnectorMetrics) SetWasFallback(wasFallback bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.wasFallback = wasFallback
-}
-
-// SetServiceReadyDuration sets the time waited for the service to be ready
-func (m *ConnectorMetrics) SetServiceReadyDuration(d time.Duration) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.serviceReadyDuration = d
+	m.errReason = reason
 }
 
 // TrackSuccess sends a success event to analytics
@@ -119,17 +91,13 @@ func (m *ConnectorMetrics) track(success bool) {
 	}
 
 	metadata := &analytics.BuildkitConnectorMetadata{
-		SessionID:             m.sessionID,
-		ConnectorType:         m.connectorType,
-		Success:               success,
-		WasFallback:           m.wasFallback,
-		WasQueued:             m.wasQueued,
-		QueueWaitDuration:     m.queueWaitDuration,
-		MaxQueuePosition:      m.maxQueuePosition,
-		QueueReason:           m.lastQueueReason,
-		ServiceReadyDuration:  m.serviceReadyDuration,
-		PodReused:             m.podReused,
-		WaitingForPodTimedOut: m.waitingForPodTimedOut,
+		SessionID:         m.sessionID,
+		ConnectorType:     m.connectorType,
+		Success:           success,
+		QueueWaitDuration: m.queueWaitDuration,
+		MaxQueuePosition:  m.maxQueuePosition,
+		QueueReason:       m.lastQueueReason,
+		ErrReason:         m.errReason,
 	}
 	m.tracker.TrackBuildkitConnection(metadata)
 }

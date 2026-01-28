@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"strconv"
 
@@ -59,9 +60,15 @@ func IsPortAvailable(iface string, port int) bool {
 	return true
 }
 
-// GetAvailablePortInRange returns the first available port in the specified range
+// GetAvailablePortInRange returns the first available port in the specified range,
+// starting from a random offset to reduce collisions in parallel builds
 func GetAvailablePortInRange(iface string, minPort, maxPort int) (int, error) {
-	for port := minPort; port <= maxPort; port++ {
+	rangeSize := maxPort - minPort + 1
+	startOffset := rand.Intn(rangeSize)
+
+	// Try ports starting from random offset, wrapping around
+	for i := 0; i < rangeSize; i++ {
+		port := minPort + (startOffset+i)%rangeSize
 		if IsPortAvailable(iface, port) {
 			return port, nil
 		}

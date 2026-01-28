@@ -52,6 +52,11 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 		}
 	}
 
+	// Setup helm version based on environment variable
+	if err := setupHelmVersion(); err != nil {
+		return err
+	}
+
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		lastCommandName = command.Name
