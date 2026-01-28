@@ -206,16 +206,7 @@ func TestDevToTranslationRule(t *testing.T) {
 		PriorityClassName: "class",
 		Affinity: &apiv1.Affinity{
 			PodAffinity: &apiv1.PodAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-					{
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								InteractiveDevLabel: "web",
-							},
-						},
-						TopologyKey: "kubernetes.io/hostname",
-					},
-				},
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{},
 			},
 		},
 		Resources:        ResourceRequirements{},

@@ -508,14 +508,6 @@ dev:
 				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
 					{
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								model.InteractiveDevLabel: "web",
-							},
-						},
-						TopologyKey: "kubernetes.io/hostname",
-					},
-					{
-						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
 									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
@@ -2015,14 +2007,6 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		Affinity: &apiv1.Affinity{
 			PodAffinity: &apiv1.PodAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-					{
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								model.InteractiveDevLabel: "web",
-							},
-						},
-						TopologyKey: "kubernetes.io/hostname",
-					},
 					{
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
