@@ -236,13 +236,29 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 	}
 
 	if buildOptions.Tag != "" {
+		exportAttrs := map[string]string{
+			"name": buildOptions.Tag,
+			"push": "true",
+		}
+
+		// Alpha feature: allow customizing build compression via environment variables
+		// OKTETO_ALPHA_BUILD_COMPRESSION: compression type (gzip, estargz, zstd, uncompressed)
+		// OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL: compression level (0-22 for zstd, 0-9 for gzip)
+		// OKTETO_ALPHA_BUILD_FORCE_COMPRESSION: force recompression of already compressed layers
+		if compression := os.Getenv("OKTETO_ALPHA_BUILD_COMPRESSION"); compression != "" {
+			exportAttrs["compression"] = compression
+		}
+		if compressionLevel := os.Getenv("OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL"); compressionLevel != "" {
+			exportAttrs["compression-level"] = compressionLevel
+		}
+		if forceCompression := os.Getenv("OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"); forceCompression != "" {
+			exportAttrs["force-compression"] = forceCompression
+		}
+
 		opt.Exports = []client.ExportEntry{
 			{
-				Type: "image",
-				Attrs: map[string]string{
-					"name": buildOptions.Tag,
-					"push": "true",
-				},
+				Type:  "image",
+				Attrs: exportAttrs,
 			},
 		}
 	}
