@@ -165,11 +165,12 @@ Integration tests assume:
 - Sufficient permissions to create/delete resources
 
 **IMPORTANT for AI agents**: Before running integration tests, verify that the required environment variables are configured. If not available, ask the user to provide:
+
 - `OKTETO_USER` - Okteto username
 - `OKTETO_PATH` - Path to okteto binary (typically `bin/okteto`)
-- `OKTETO_APPS_SUBDOMAIN` - Apps subdomain 
+- `OKTETO_APPS_SUBDOMAIN` - Apps subdomain
 - `OKTETO_TOKEN` - Authentication token
-- `OKTETO_URL` - Okteto instance URL 
+- `OKTETO_URL` - Okteto instance URL
 - `OKTETO_NAMESPACE_PREFIX` - Namespace prefix
 
 Never run integration tests without confirming these environment variables are set.
