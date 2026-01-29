@@ -29,7 +29,6 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -48,13 +47,13 @@ const (
 
 // SolveOptBuilder is a builder for SolveOpt
 type SolveOptBuilder struct {
-	logger           *io.Controller
-	imageCtrl        registry.ImageCtrl
-	reg              IsInOktetoRegistryChecker
-	okCtx            OktetoContextInterface
-	clientFactory    clientFactory
-	fs               afero.Fs
-	secretTempFolder string
+	logger        *io.Controller
+	imageCtrl     registry.ImageCtrl
+	reg           IsInOktetoRegistryChecker
+	okCtx         OktetoContextInterface
+	clientFactory clientFactory
+	fs            afero.Fs
+	secretMgr     secretBuildManager
 }
 
 // OktetoContextInterface is an interface to interact with the okteto context
@@ -85,20 +84,15 @@ type IsInOktetoRegistryChecker interface {
 }
 
 // NewSolveOptBuilder creates a new SolveOptBuilder
-func NewSolveOptBuilder(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller) (*SolveOptBuilder, error) {
-	secretTempFolder, err := getSecretTempFolder(fs)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSolveOptBuilder(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller, secretMgr secretBuildManager) (*SolveOptBuilder, error) {
 	return &SolveOptBuilder{
-		logger:           logger,
-		imageCtrl:        registry.NewImageCtrl(okCtx),
-		reg:              reg,
-		fs:               fs,
-		secretTempFolder: secretTempFolder,
-		clientFactory:    cf,
-		okCtx:            okCtx,
+		logger:        logger,
+		imageCtrl:     registry.NewImageCtrl(okCtx),
+		reg:           reg,
+		fs:            fs,
+		secretMgr:     secretMgr,
+		clientFactory: cf,
+		okCtx:         okCtx,
 	}, nil
 }
 
@@ -242,13 +236,29 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 	}
 
 	if buildOptions.Tag != "" {
+		exportAttrs := map[string]string{
+			"name": buildOptions.Tag,
+			"push": "true",
+		}
+
+		// Alpha feature: allow customizing build compression via environment variables
+		// OKTETO_ALPHA_BUILD_COMPRESSION: compression type (gzip, estargz, zstd, uncompressed)
+		// OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL: compression level (0-22 for zstd, 0-9 for gzip)
+		// OKTETO_ALPHA_BUILD_FORCE_COMPRESSION: force recompression of already compressed layers
+		if compression := os.Getenv("OKTETO_ALPHA_BUILD_COMPRESSION"); compression != "" {
+			exportAttrs["compression"] = compression
+		}
+		if compressionLevel := os.Getenv("OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL"); compressionLevel != "" {
+			exportAttrs["compression-level"] = compressionLevel
+		}
+		if forceCompression := os.Getenv("OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"); forceCompression != "" {
+			exportAttrs["force-compression"] = forceCompression
+		}
+
 		opt.Exports = []client.ExportEntry{
 			{
-				Type: "image",
-				Attrs: map[string]string{
-					"name": buildOptions.Tag,
-					"push": "true",
-				},
+				Type:  "image",
+				Attrs: exportAttrs,
 			},
 		}
 	}
@@ -330,17 +340,6 @@ func (b *SolveOptBuilder) extendRegistries(image string) string {
 	return image
 }
 
-// getSecretTempFolder returns the secret temp folder
-func getSecretTempFolder(fs afero.Fs) (string, error) {
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
-
-	if err := fs.MkdirAll(secretTempFolder, PermissionsOwnerOnly); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
-	}
-
-	return secretTempFolder, nil
-}
-
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
 func (b *SolveOptBuilder) replaceSecretsSourceEnvWithTempFile(buildOptions *types.BuildOptions) error {
 	// for each secret at buildOptions extract the src
@@ -383,7 +382,7 @@ func (b *SolveOptBuilder) createTempFileWithExpandedEnvsAtSource(sourceFile stri
 	}
 
 	// create temp file
-	tmpfile, err := afero.TempFile(b.fs, b.secretTempFolder, "secret-")
+	tmpfile, err := afero.TempFile(b.fs, b.secretMgr.GetSecretTempFolder(), "secret-")
 	if err != nil {
 		return "", err
 	}

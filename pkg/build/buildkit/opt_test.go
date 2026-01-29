@@ -101,8 +101,11 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			b := &SolveOptBuilder{
-				fs:               tt.fs,
-				secretTempFolder: tt.secretTempFolder,
+				fs: tt.fs,
+				secretMgr: &secretManager{
+					fs:               tt.fs,
+					secretTempFolder: tt.secretTempFolder,
+				},
 			}
 			initialSecrets := make([]string, len(tt.buildOptions.Secrets))
 			copy(initialSecrets, tt.buildOptions.Secrets)

@@ -16,6 +16,7 @@ package doctor
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -473,17 +474,16 @@ func Test_generatePodFileError(t *testing.T) {
 	}
 }
 
-func Test_generateRemoteSyncthingLogsFileError(t *testing.T) {
+func Test_generateSyncthingLogsFolder(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name          string
-		dev           *model.Dev
-		objects       []runtime.Object
-		errorContains string
+		name    string
+		dev     *model.Dev
+		objects []runtime.Object
 	}{
 		{
-			name: "autocreate with running pod - fails on logs",
+			name: "autocreate with running pod",
 			dev: &model.Dev{
 				Name:       "test",
 				Autocreate: true,
@@ -535,8 +535,6 @@ func Test_generateRemoteSyncthingLogsFileError(t *testing.T) {
 					},
 				},
 			},
-			// Fake client doesn't support pod logs streaming, so it fails trying to get logs
-			errorContains: "not found",
 		},
 		{
 			name: "regular deployment not in dev mode",
@@ -554,7 +552,6 @@ func Test_generateRemoteSyncthingLogsFileError(t *testing.T) {
 					},
 				},
 			},
-			errorContains: "not in development mode",
 		},
 		{
 			name: "deployment not found",
@@ -563,8 +560,7 @@ func Test_generateRemoteSyncthingLogsFileError(t *testing.T) {
 				Autocreate: false,
 				Container:  "dev",
 			},
-			objects:       []runtime.Object{},
-			errorContains: "doesn't exist",
+			objects: []runtime.Object{},
 		},
 	}
 
@@ -572,11 +568,13 @@ func Test_generateRemoteSyncthingLogsFileError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			clientset := fake.NewSimpleClientset(tt.objects...)
 
-			result, err := generateRemoteSyncthingLogsFile(ctx, tt.dev, "test", clientset)
+			result, err := generateSyncthingLogsFolder(ctx, tt.dev, "test", clientset)
 
-			require.Error(t, err)
-			require.Contains(t, err.Error(), tt.errorContains)
-			require.Empty(t, result)
+			// The function should not return error, it handles failures gracefully
+			require.NoError(t, err)
+			require.NotEmpty(t, result)
+			// Clean up temp directory
+			defer os.RemoveAll(filepath.Dir(result))
 		})
 	}
 }

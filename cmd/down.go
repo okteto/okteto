@@ -136,7 +136,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 				}
 
 				if apps.IsDevModeOn(app) {
-					if err := dc.Down(ctx, dev, okteto.GetContext().Namespace, rm); err != nil {
+					if err := dc.Down(ctx, dev, okteto.GetContext().Namespace, manifest.Name, rm); err != nil {
 						at.TrackDown(false)
 						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
 					}
