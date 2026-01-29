@@ -12,6 +12,7 @@ okteto/
 ├── integration/      # Integration tests requiring Kubernetes cluster
 ├── samples/          # Example projects for different languages
 ├── main.go           # Entry point - wires up all commands
+├── Dockerfile        # Container image definition
 └── Makefile          # Build, test, lint automation
 ```
 
