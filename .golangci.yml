@@ -16,7 +16,7 @@ linters-settings:
   goheader:
     values:
       regexp:
-        YEAR: 2023|2024|2025
+        YEAR: 202[3-9]|20[3-9][0-9]
     template-path: .copyright-header.tmpl
   mnd:
     checks: [argument, case, condition]
