@@ -6,7 +6,7 @@
 
 - Located alongside source: `*_test.go` in same directory as `*.go`
 - Use standard `testing` package + `github.com/stretchr/testify/require`
-- Run via `make test` (includes race detection and coverage)
+- Run via `make test` or `okteto test` (includes race detection and coverage)
 - No external dependencies (use mocks/fakes)
 
 ### Integration Tests
