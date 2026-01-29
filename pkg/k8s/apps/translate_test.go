@@ -159,7 +159,7 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.Name),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -456,7 +456,7 @@ dev:
 	expectedPodLabels := map[string]string{
 		"app":                     "web",
 		model.InteractiveDevLabel: dev1.Name,
-		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.Name): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
@@ -510,7 +510,7 @@ dev:
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.Name),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -613,7 +613,7 @@ dev:
 	expectedPodLabels = map[string]string{
 		"app":                  "worker",
 		model.DetachedDevLabel: dev2.Name,
-		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.Name): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
@@ -1674,7 +1674,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.Name),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -1953,7 +1953,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	expectedPodLabels := map[string]string{
 		"app":                     "web",
 		model.InteractiveDevLabel: dev1.Name,
-		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.Name): "true",
 	}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
@@ -2011,7 +2011,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									Key:      getVolumeLabelKey("test-manifest", dev1.GetVolumeName()),
+									Key:      getVolumeLabelKey("test-manifest", dev1.Name),
 									Operator: metav1.LabelSelectorOpExists,
 								},
 							},
@@ -2113,7 +2113,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	expectedPodLabels = map[string]string{
 		"app":                  "worker",
 		model.DetachedDevLabel: dev2.Name,
-		getVolumeLabelKey("test-manifest", dev1.GetVolumeName()): "true",
+		getVolumeLabelKey("test-manifest", dev1.Name): "true",
 	}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
@@ -2575,12 +2575,5 @@ func TestGetVolumeLabelKey(t *testing.T) {
 		result1 := getVolumeLabelKey("app1", "volume1")
 		result2 := getVolumeLabelKey("app2", "volume2")
 		assert.NotEqual(t, result1, result2, "Different inputs should produce different hashes")
-	})
-
-	// Test that -okteto suffix is removed
-	t.Run("removes -okteto suffix", func(t *testing.T) {
-		result1 := getVolumeLabelKey("my-app", "web-okteto")
-		result2 := getVolumeLabelKey("my-app", "web")
-		assert.Equal(t, result1, result2, "Volume names with and without -okteto suffix should produce same hash")
 	})
 }

@@ -115,7 +115,7 @@ func (tr *Translation) translate() error {
 	for _, rule := range tr.Rules {
 		devContainer := GetDevContainer(tr.DevApp.PodSpec(), rule.Container)
 		TranslateDevContainer(devContainer, rule)
-		TranslatePodSpec(tr.DevApp.PodSpec(), rule)
+		TranslatePodSpec(tr.DevApp.PodSpec(), rule, tr.MainDev.Name)
 		TranslateOktetoDevSecret(tr.DevApp.PodSpec(), tr.Dev.Name, rule.Secrets)
 
 		if rule.IsMainDevContainer() {
@@ -191,14 +191,14 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 }
 
-func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule) {
+func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule, devName string) {
 	TranslateOktetoVolumes(podSpec, rule)
 	TranslatePodSecurityContext(podSpec, rule.SecurityContext)
 	TranslatePodServiceAccount(podSpec, rule.ServiceAccount)
 	TranslatePodPriorityClassName(podSpec, rule.PriorityClassName)
 
 	TranslateOktetoNodeSelector(podSpec, rule.NodeSelector)
-	TranslateOktetoAffinity(podSpec, rule)
+	TranslateOktetoAffinity(podSpec, rule, devName)
 }
 
 // TranslateProbes translates the probes attached to a container
@@ -696,7 +696,7 @@ func TranslateOktetoNodeSelector(spec *apiv1.PodSpec, nodeSelector map[string]st
 	spec.NodeSelector = nodeSelector
 }
 
-func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
+func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule, devName string) {
 	if rule.Affinity != nil {
 		if rule.Affinity.NodeAffinity == nil && rule.Affinity.PodAffinity == nil && rule.Affinity.PodAntiAffinity == nil {
 			return
@@ -738,7 +738,7 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	}
 
 	// Add affinity rule: schedule on same node as pods with this volume label
-	volumeLabel := getVolumeLabelKey(rule.ManifestName, rule.MainVolumeName)
+	volumeLabel := getVolumeLabelKey(rule.ManifestName, devName)
 	spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
 		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
 		apiv1.PodAffinityTerm{
@@ -756,12 +756,9 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 }
 
 // getVolumeLabelKey generates a safe volume label key using a hash of manifestName and volumeName
-func getVolumeLabelKey(manifestName, volumeName string) string {
-	// Remove -okteto suffix from volumeName if present
-	volumeName = strings.TrimSuffix(volumeName, "-okteto")
-
+func getVolumeLabelKey(manifestName, devName string) string {
 	// Create a unique identifier from manifestName and volumeName
-	identifier := fmt.Sprintf("%s-%s", manifestName, volumeName)
+	identifier := fmt.Sprintf("%s-%s", manifestName, devName)
 
 	// Use first 8 chars of SHA256 hash to keep it short but unique
 	hash := sha256.Sum256([]byte(identifier))
