@@ -14,6 +14,8 @@
 package apps
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path"
 	"strconv"
@@ -24,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -101,12 +104,18 @@ func (tr *Translation) translate() error {
 		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.getDevName()
 	}
 
+	// Add volume label to enable pod affinity for shared persistent volumes
+	if tr.MainDev.PersistentVolumeEnabled() && len(tr.Rules) > 0 && tr.Rules[0].ManifestName != "" {
+		volumeLabel := getVolumeLabelKey(tr.Rules[0].ManifestName, tr.MainDev.Name)
+		tr.DevApp.TemplateObjectMeta().Labels[volumeLabel] = "true"
+	}
+
 	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = ptr.To(int64(0))
 
 	for _, rule := range tr.Rules {
 		devContainer := GetDevContainer(tr.DevApp.PodSpec(), rule.Container)
 		TranslateDevContainer(devContainer, rule)
-		TranslatePodSpec(tr.DevApp.PodSpec(), rule)
+		TranslatePodSpec(tr.DevApp.PodSpec(), rule, tr.MainDev.Name)
 		TranslateOktetoDevSecret(tr.DevApp.PodSpec(), tr.Dev.Name, rule.Secrets)
 
 		if rule.IsMainDevContainer() {
@@ -116,6 +125,7 @@ func (tr *Translation) translate() error {
 			TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
 		}
 	}
+
 	return nil
 }
 
@@ -181,14 +191,14 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 }
 
-func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule) {
+func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule, devName string) {
 	TranslateOktetoVolumes(podSpec, rule)
 	TranslatePodSecurityContext(podSpec, rule.SecurityContext)
 	TranslatePodServiceAccount(podSpec, rule.ServiceAccount)
 	TranslatePodPriorityClassName(podSpec, rule.PriorityClassName)
 
 	TranslateOktetoNodeSelector(podSpec, rule.NodeSelector)
-	TranslateOktetoAffinity(podSpec, rule.Affinity)
+	TranslateOktetoAffinity(podSpec, rule, devName)
 }
 
 // TranslateProbes translates the probes attached to a container
@@ -686,13 +696,75 @@ func TranslateOktetoNodeSelector(spec *apiv1.PodSpec, nodeSelector map[string]st
 	spec.NodeSelector = nodeSelector
 }
 
-func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
-	if affinity != nil {
-		if affinity.NodeAffinity == nil && affinity.PodAffinity == nil && affinity.PodAntiAffinity == nil {
+func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule, devName string) {
+	if rule.Affinity != nil {
+		if rule.Affinity.NodeAffinity == nil && rule.Affinity.PodAffinity == nil && rule.Affinity.PodAntiAffinity == nil {
 			return
 		}
-		spec.Affinity = affinity
+		spec.Affinity = rule.Affinity
 	}
+
+	// Add pod affinity rules for persistent volumes to ensure all pods sharing
+	// the same persistent volume are scheduled on the same node. This is necessary for
+	// ReadWriteOnce persistent volume claims that can only be mounted on a single node.
+	if !rule.PersistentVolume {
+		return
+	}
+
+	// Skip if the volume supports ReadWriteMany (can be mounted on multiple nodes)
+	if rule.VolumeAccessMode == apiv1.ReadWriteMany {
+		return
+	}
+
+	// Check if this rule mounts the main dev volume
+	usesMainVolume := false
+	for _, vol := range rule.Volumes {
+		if vol.Name == rule.MainVolumeName {
+			usesMainVolume = true
+			break
+		}
+	}
+
+	if !usesMainVolume {
+		return
+	}
+
+	// Initialize affinity structures if needed
+	if spec.Affinity == nil {
+		spec.Affinity = &apiv1.Affinity{}
+	}
+	if spec.Affinity.PodAffinity == nil {
+		spec.Affinity.PodAffinity = &apiv1.PodAffinity{}
+	}
+
+	// Add affinity rule: schedule on same node as pods with this volume label
+	volumeLabel := getVolumeLabelKey(rule.ManifestName, devName)
+	spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		apiv1.PodAffinityTerm{
+			TopologyKey: "kubernetes.io/hostname",
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      volumeLabel,
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
+			},
+		},
+	)
+}
+
+// getVolumeLabelKey generates a safe volume label key using a hash of manifestName and volumeName
+func getVolumeLabelKey(manifestName, devName string) string {
+	// Create a unique identifier from manifestName and volumeName
+	identifier := fmt.Sprintf("%s-%s", manifestName, devName)
+
+	// Use first 8 chars of SHA256 hash to keep it short but unique
+	hash := sha256.Sum256([]byte(identifier))
+	shortHash := hex.EncodeToString(hash[:])[:8]
+
+	return fmt.Sprintf("dev.okteto.com/volume-%s", shortHash)
 }
 
 // GetInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources

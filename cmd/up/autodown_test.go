@@ -158,7 +158,7 @@ func TestAutoDownRunner_Run(t *testing.T) {
 
 			fakeK8sClient := fake.NewSimpleClientset()
 
-			err := ad.run(context.Background(), tt.dev, tt.namespace, fakeK8sClient)
+			err := ad.run(context.Background(), tt.dev, tt.namespace, "test-manifest", fakeK8sClient)
 
 			if tt.expectedError {
 				assert.Error(t, err)
@@ -194,7 +194,7 @@ func TestAutoDownRunner_Run_WithAppNotFound(t *testing.T) {
 
 	fakeK8sClient := fake.NewSimpleClientset()
 
-	err := ad.run(context.Background(), dev, namespace, fakeK8sClient)
+	err := ad.run(context.Background(), dev, namespace, "test-manifest", fakeK8sClient)
 
 	// Should not error as not found is handled gracefully
 	assert.ErrorIs(t, err, assert.AnError)

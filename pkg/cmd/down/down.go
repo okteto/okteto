@@ -52,7 +52,7 @@ func New(fs afero.Fs, k8sClientProvider okteto.K8sClientProvider, at analyticsTr
 	}
 }
 
-func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, rm bool) error {
+func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace, manifestName string, rm bool) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -79,7 +79,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace string, 
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev, namespace))
 		}
 
-		trMap, err := apps.GetTranslations(ctx, namespace, dev, app, false, k8sClient)
+		trMap, err := apps.GetTranslations(ctx, namespace, manifestName, dev, app, false, k8sClient)
 		if err != nil {
 			exit <- err
 			return
@@ -155,7 +155,7 @@ func (d *Operation) AllDown(ctx context.Context, manifest *model.Manifest, names
 
 		if apps.IsDevModeOn(app) {
 			oktetoLog.StopSpinner()
-			if err := d.Down(ctx, dev, namespace, rm); err != nil {
+			if err := d.Down(ctx, dev, namespace, manifest.Name, rm); err != nil {
 				d.AnalyticsTracker.TrackDown(false)
 				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(namespace, dev.Name))
 			}
