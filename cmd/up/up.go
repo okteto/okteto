@@ -506,7 +506,7 @@ func (up *upContext) start() error {
 		up.interruptReceived = true
 		up.shutdown()
 
-		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
+		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, up.Manifest.Name, k8sClient); err != nil {
 			return err
 		}
 		oktetoLog.Println()
@@ -519,7 +519,7 @@ func (up *upContext) start() error {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
-		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, k8sClient); err != nil {
+		if err := up.autoDown.run(context.Background(), up.Dev, up.Namespace, up.Manifest.Name, k8sClient); err != nil {
 			return err
 		}
 	case err := <-pidFileCh:

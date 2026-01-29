@@ -37,7 +37,6 @@ import (
 	"gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -800,21 +799,10 @@ func TranslatePodAffinity(tr *TranslationRule, name string) {
 	if tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
 		tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []apiv1.PodAffinityTerm{}
 	}
-	tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
-		tr.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
-		apiv1.PodAffinityTerm{
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					InteractiveDevLabel: name,
-				},
-			},
-			TopologyKey: "kubernetes.io/hostname",
-		},
-	)
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset bool) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, namespace, manifestName, username string, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:         dev.Container,
 		ImagePullPolicy:   dev.ImagePullPolicy,
@@ -832,6 +820,13 @@ func (dev *Dev) ToTranslationRule(main *Dev, namespace, username string, reset b
 		Lifecycle:         dev.Lifecycle,
 		NodeSelector:      dev.NodeSelector,
 		Affinity:          (*apiv1.Affinity)(dev.Affinity),
+	}
+
+	if main.PersistentVolumeEnabled() {
+		rule.MainVolumeName = main.GetVolumeName()
+		rule.VolumeAccessMode = main.PersistentVolumeAccessMode()
+		rule.Namespace = namespace
+		rule.ManifestName = manifestName
 	}
 
 	if dev.IsHybridModeEnabled() {

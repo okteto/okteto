@@ -106,16 +106,16 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 }
 
 // GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
+func GetTranslations(ctx context.Context, namespace, manifestName string, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
-		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, okteto.GetContext().Username, reset)},
+		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, namespace, manifestName, okteto.GetContext().Username, reset)},
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
-	if err := loadServiceTranslations(ctx, namespace, dev, reset, result, c); err != nil {
+	if err := loadServiceTranslations(ctx, namespace, manifestName, dev, reset, result, c); err != nil {
 		return nil, err
 	}
 
@@ -143,14 +143,14 @@ func GetTranslations(ctx context.Context, namespace string, dev *model.Dev, app 
 	return result, nil
 }
 
-func loadServiceTranslations(ctx context.Context, namespace string, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
+func loadServiceTranslations(ctx context.Context, namespace, manifestName string, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
 		app, err := Get(ctx, s, namespace, c)
 		if err != nil {
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev, okteto.GetContext().Username, okteto.GetContext().Username, reset)
+		rule := s.ToTranslationRule(dev, namespace, manifestName, okteto.GetContext().Username, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)
