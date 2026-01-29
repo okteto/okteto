@@ -24,17 +24,53 @@ Fix all vulnerabilities in the Okteto CLI Docker image using systematic vulnerab
 - For full scan: `trivy image okteto-cli:test`
 - Analyze scan results to identify specific packages and CVEs that need attention
 
-### 2. Vulnerability Remediation
+### 2. Generate CVE Summary Table
+
+Before attempting any fixes, create a summary table showing the current state:
+
+```markdown
+## CVE Summary
+
+| Binario                 | CVEs HIGH | CVEs CRITICAL | Estado                 |
+| ----------------------- | --------- | ------------- | ---------------------- |
+| syncthing               | X         | Y             | ✅/⚠️/❌ [Description] |
+| kustomize               | X         | Y             | ✅/⚠️/❌ [Description] |
+| kubectl                 | X         | Y             | ✅/⚠️/❌ [Description] |
+| helm/helm3/helm4        | X         | Y             | ✅/⚠️/❌ [Description] |
+| okteto                  | X         | Y             | ✅/⚠️/❌ [Description] |
+| git                     | X         | Y             | ✅/⚠️/❌ [Description] |
+| clean/remote/supervisor | X         | Y             | ✅/⚠️/❌ [Description] |
+
+Total: X CRITICAL, Y HIGH
+```
+
+Status indicators:
+
+- ✅ Clean - No vulnerabilities
+- ⚠️ Warning - False positive or minor issue
+- ❌ Action needed - Real CVEs requiring fixes
+
+Then list each CVE found with details:
+
+- CVE ID
+- Component and version
+- Vulnerability description
+- Fixed version available
+- Impact/severity
+
+### 3. Vulnerability Remediation
 
 - Repeat the build and scan process after each set of changes
 - Continue until all CRITICAL and HIGH vulnerabilities are resolved or you cannot fix more CVEs
 
 **Version update policy**:
+
 - **Patch updates** (v1.2.3 → v1.2.4): Apply automatically
 - **Minor updates** (v1.2.3 → v1.3.0): Ask user for confirmation before updating
 - **Major updates** (v1.x → v2.x): Ask user for confirmation before updating
 
 **For Dockerfile binaries** (kubectl, helm, kustomize, git, etc.):
+
 - Check release pages for available versions:
   - kubectl: https://github.com/kubernetes/kubernetes/releases
   - helm: https://github.com/helm/helm/releases
@@ -44,11 +80,12 @@ Fix all vulnerabilities in the Okteto CLI Docker image using systematic vulnerab
 - Follow version update policy above
 
 **For Go dependencies** (okteto binary):
+
 - Update to specific patched version: `go get -u <module>@<patch-version>`
 - Clean up: `go mod tidy`
 - Follow version update policy above
 
-### 3. Functionality Verification
+### 4. Functionality Verification
 
 Once vulnerabilities are fixed, verify the CLI still works correctly:
 
@@ -75,9 +112,11 @@ If you did any change, create a PR for vulnerability fixes:
 
 - **Clear status statement**: First line must clearly state whether ALL CRITICAL/HIGH vulnerabilities have been fixed or not
 - **Before/after scans**: Include trivy scan results before and after changes using:
+
   ```
   trivy image --severity CRITICAL,HIGH okteto-cli:test
   ```
+
 - **Summary of changes**: List specific updates (e.g., "kubectl 1.34.3 → 1.35.0", "github.com/foo/bar v1.2.3 → v1.2.4")
 
 ### Commit Message Format
