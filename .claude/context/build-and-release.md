@@ -96,7 +96,7 @@ Run: `golangci-lint run -v --timeout 5m`
 
 Template: `.copyright-header.tmpl`
 Enforced by: `golangci-lint` goheader linter
-Valid years: 2023, 2024, 2025 (regex in `.golangci.yml`)
+Valid years: 2023 onwards (regex in `.golangci.yml`: `202[3-9]|20[3-9][0-9]`)
 
 ## CI Expectations
 
