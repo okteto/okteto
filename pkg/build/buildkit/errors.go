@@ -172,6 +172,8 @@ func IsRetryable(err error) bool {
 		return true
 	case strings.Contains(err.Error(), "Canceled") && strings.Contains(err.Error(), "context canceled"):
 		return true
+	case strings.Contains(err.Error(), "NotFound") && strings.Contains(err.Error(), "no such job"):
+		return true
 
 	default:
 		return false
