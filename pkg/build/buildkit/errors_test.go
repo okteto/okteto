@@ -223,6 +223,11 @@ func Test_isTransientError(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "contains 'NotFound' and 'no such job'",
+			err:      fmt.Errorf("rpc error: code = NotFound desc = no such job"),
+			expected: true,
+		},
+		{
 			name:     "contains other error",
 			err:      fmt.Errorf("some other error"),
 			expected: false,
