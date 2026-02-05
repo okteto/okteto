@@ -5,10 +5,9 @@ import (
 	"os"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
-
 	remoteOS "github.com/okteto/tools/remote/pkg/os"
 	"github.com/okteto/tools/remote/pkg/ssh"
+	log "github.com/sirupsen/logrus"
 )
 
 // CommitString is the commit used to build the server

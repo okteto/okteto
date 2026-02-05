@@ -25,7 +25,7 @@ var exceptByName = map[string]struct{}{
 }
 
 func shouldKill(p *process.Process) bool {
-	pid := int32(p.Pid)
+	pid := p.Pid
 	if pid == 1 {
 		// PID 1 is always protected. With shareProcessNamespace: true, this is /pause
 		// (Kubernetes infrastructure), not the container root. Container root processes
@@ -64,7 +64,7 @@ func shouldKill(p *process.Process) bool {
 }
 
 func isChildrenOfExceptByParent(p *process.Process) bool {
-	pid := int32(p.Pid)
+	pid := p.Pid
 	if pid == 1 {
 		return false
 	}

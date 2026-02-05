@@ -4,7 +4,7 @@ import "log"
 
 func Setup(secretPath, configPath string) error {
 	log.Default().Printf("starting setup")
-	if err := copy(secretPath, configPath); err != nil {
+	if err := copyFiles(secretPath, configPath); err != nil {
 		return err
 	}
 	log.Default().Printf("copy done")

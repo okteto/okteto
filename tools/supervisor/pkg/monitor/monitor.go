@@ -148,6 +148,8 @@ func (m *Monitor) checkState(p *Process, wg *sync.WaitGroup) {
 		p.logger.Printf("%s started 3", p.Name)
 	case started:
 		//do nothing
+	case stopping:
+		//do nothing
 	default:
 		log.Errorf("unexpected state: %s", p.state)
 	}

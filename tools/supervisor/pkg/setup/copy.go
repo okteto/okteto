@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-func copy(src, dst string) error {
+func copyFiles(src, dst string) error {
 	log.Default().Printf("copying %s to %s", src, dst)
 
 	fs, err := os.Stat(dst)
