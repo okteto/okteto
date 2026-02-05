@@ -52,6 +52,21 @@ Core business logic organized by domain:
 - `validator/` - Manifest validation
 - `env/` - Environment variable handling
 
+### `tools/`
+
+Internal utilities that run inside development containers:
+
+- `tools/remote/` - SSH server for remote access to dev containers
+- `tools/supervisor/` - Process supervisor for managing application processes
+- `tools/clean/` - Cleanup utility for container environments
+- Unified Go module (`tools/go.mod`) with shared dependency management
+- Built from source during Docker image creation (see `tools-builder` stage in Dockerfile)
+- Not part of the CLI binary - bundled separately in `/usr/bin-image/bin/` in the Docker image
+
+**Build:**
+- Local: `cd tools && make build` (outputs to `bin/`)
+- Docker: Automatically built via `tools-builder` stage in main Dockerfile
+
 ### `internal/`
 
 - `internal/test/` - Test utilities (fake K8s clients, fake Okteto clients, context helpers)

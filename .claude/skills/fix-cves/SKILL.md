@@ -12,7 +12,9 @@ Fix all vulnerabilities in the Okteto CLI Docker image using systematic vulnerab
 - The source code and Dockerfile for this image are in this repository
 - The Dockerfile includes multiple binaries: kubectl, helm, kustomize, git, syncthing, and the Okteto CLI itself
 - Go dependencies for the Okteto CLI binary are in `go.mod` and `go.sum`
+- Go dependencies for internal tools (remote, supervisor, clean) are in `tools/go.mod` and `tools/go.sum`
 - Binary versions are defined as ARG variables at the top of the Dockerfile (lines 3-18)
+- Internal tools (remote, supervisor, clean) are built from source in the `tools-builder` stage
 - Focus on CRITICAL and HIGH severity vulnerabilities first, then address medium/low as needed
 
 ## WORKFLOW
@@ -85,12 +87,22 @@ Then list each CVE found with details:
 - Clean up: `go mod tidy`
 - Follow version update policy above
 
+**For internal tools** (remote, supervisor, clean):
+
+- Tools are built from source in `tools/` directory
+- Update Go dependencies in `tools/go.mod`: `cd tools && go get -u <module>@<patch-version>`
+- Clean up: `cd tools && go mod tidy`
+- Run tools tests: `cd tools && make test`
+- Follow version update policy above
+
 ### 4. Functionality Verification
 
 Once vulnerabilities are fixed, verify the CLI still works correctly:
 
-- Run unit tests: `make test`
-- Run linting: `make lint`
+- Run CLI unit tests: `make test`
+- Run CLI linting: `make lint`
+- Run tools tests: `cd tools && make test`
+- Run tools linting: `cd tools && make lint`
 - Test the Docker image: `docker run okteto-cli:test version`
 
 ## IMPORTANT CONSTRAINTS

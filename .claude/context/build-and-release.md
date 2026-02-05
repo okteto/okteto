@@ -9,6 +9,13 @@
 - `make build` - Build `bin/okteto` binary for local platform
 - `make dep` - Tidy Go modules (`go mod tidy`)
 
+**Tools (from tools/ directory):**
+
+- `cd tools && make build` - Build all tools (remote, supervisor, clean) to `../bin/`
+- `cd tools && make test` - Run tools unit tests
+- `cd tools && make lint` - Lint tools code
+- `cd tools && make remote` / `make supervisor` / `make clean-tool` - Build individual tools
+
 **Testing:**
 
 - `make test` - Run unit tests with race detection and coverage
@@ -115,12 +122,30 @@ Code expects CI to enforce:
 - No force pushes to main/master
 - Hooks must not be skipped (no `--no-verify`)
 
+## Docker Image Build
+
+The Okteto CLI Docker image includes both the CLI binary and internal tools:
+
+**Dockerfile stages:**
+
+1. `tools-builder` - Builds remote, supervisor, and clean from `tools/` directory
+2. `builder` - Builds the main okteto CLI binary
+3. Final stage - Copies all binaries plus kubectl, helm, kustomize, git, syncthing
+
+**Tools integration:**
+
+- Tools are built from source (no external Docker images)
+- Source code lives in `tools/` directory
+- Import paths: `github.com/okteto/tools/{remote,supervisor,clean}`
+- Installed in image at: `/usr/bin-image/bin/{okteto-remote,okteto-supervisor,clean}`
+
 ## Release Process
 
 1. Version is set via `VERSION_STRING` environment variable
 2. `make build-all` compiles for all platforms
 3. Checksums generated for each binary
 4. Binaries and checksums published (process not in this repo)
+5. Docker image built with integrated tools
 
 ## Development Workflow
 
