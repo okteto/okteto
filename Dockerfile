@@ -7,10 +7,6 @@ ARG KUSTOMIZE_VERSION=5.8.0
 # Okteto components
 
 ARG SYNCTHING_VERSION=2.0.14
-ARG OKTETO_REMOTE_VERSION=0.6.8
-
-ARG OKTETO_SUPERVISOR_VERSION=1.0.4
-ARG OKTETO_CLEAN_VERSION=0.3.2
 # Base images
 ARG GOLANG_VERSION=1.24.12
 ARG ALPINE_VERSION=3.20
@@ -26,14 +22,42 @@ RUN apk add --no-cache ca-certificates
 # File synchronization tool
 FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
 
-# Remote execution component
-FROM okteto/remote:${OKTETO_REMOTE_VERSION} AS remote
+# Stage 2.1: Build Okteto tools (remote, supervisor, clean) from source
+FROM golang:${GOLANG_VERSION}-bookworm AS tools-builder
+WORKDIR /app
+ARG VERSION_STRING=docker
 
-# Process supervisor component
-FROM okteto/supervisor:${OKTETO_SUPERVISOR_VERSION} AS supervisor
+# Copy tools module and download dependencies
+COPY tools/go.mod tools/go.sum ./
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
-# Cleanup utility
-FROM okteto/clean:${OKTETO_CLEAN_VERSION} AS clean
+# Copy tools source code
+COPY tools/ ./
+
+# Build remote
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 go build -o /usr/local/bin/remote \
+    -ldflags "-X main.CommitString=${VERSION_STRING}" \
+    -tags "osusergo netgo static_build" \
+    ./remote/cmd/
+
+# Build supervisor
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 go build -o /usr/local/bin/supervisor \
+    -ldflags "-X main.CommitString=${VERSION_STRING}" \
+    -tags "osusergo netgo static_build" \
+    ./supervisor/cmd/
+
+# Build clean
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 go build -o /usr/local/bin/clean \
+    -tags "osusergo netgo static_build" \
+    ./clean/
 
 # Stage 3: Set up Go build environment for Kubernetes tools and Okteto CLI
 FROM golang:${GOLANG_VERSION}-bookworm AS golang-builder
@@ -160,10 +184,10 @@ COPY --link --chmod=755 --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 COPY --link --chmod=755 --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
 
 # Step 4: Copy Okteto supporting utilities
-COPY --link --chmod=755 --from=remote /usr/local/bin/remote /usr/bin-image/bin/okteto-remote
-COPY --link --chmod=755 --from=supervisor /usr/local/bin/supervisor /usr/bin-image/bin/okteto-supervisor
+COPY --link --chmod=755 --from=tools-builder /usr/local/bin/remote /usr/bin-image/bin/okteto-remote
+COPY --link --chmod=755 --from=tools-builder /usr/local/bin/supervisor /usr/bin-image/bin/okteto-supervisor
 COPY --link --chmod=755 --from=syncthing /bin/syncthing /usr/bin-image/bin/syncthing
-COPY --link --chmod=755 --from=clean /usr/local/bin/clean /usr/bin-image/bin/clean
+COPY --link --chmod=755 --from=tools-builder /usr/local/bin/clean /usr/bin-image/bin/clean
 COPY --link --chmod=755 scripts/start.sh /usr/bin-image/bin/start.sh
 COPY --link --chmod=755 --from=git-builder /usr/bin/git /usr/bin/git
 
