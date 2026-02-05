@@ -64,6 +64,7 @@ Internal utilities that run inside development containers:
 - Not part of the CLI binary - bundled separately in `/usr/bin-image/bin/` in the Docker image
 
 **Build:**
+
 - Local: `cd tools && make build` (outputs to `bin/`)
 - Docker: Automatically built via `tools-builder` stage in main Dockerfile
 

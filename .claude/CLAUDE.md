@@ -108,6 +108,7 @@ The `tools/` directory contains utilities that run inside development containers
 - **clean** (`tools/clean/`) - Cleanup utility for container environments
 
 These tools are:
+
 - Built from source during Docker image creation (see `tools-builder` stage in Dockerfile)
 - Installed in the CLI image at `/usr/bin-image/bin/{okteto-remote,okteto-supervisor,clean}`
 - Managed as a single Go module (`tools/go.mod`) with unified dependencies

@@ -36,7 +36,7 @@ type Process struct {
 	state      state
 }
 
-// NewProcess returns an intialized process
+// NewProcess returns an initialized process
 func NewProcess(name string, path string, args []string) *Process {
 	p := &Process{
 		Name:  name,
