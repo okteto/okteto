@@ -1,6 +1,5 @@
 package ssh
 
-// pragma: allowlist secret
 const hostKeyBytes = `-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIKaaS8eETpK6OV6HDXmQ1hwpUNSLtDd2gAwafY+8khpUoAoGCCqGSM49
 AwEHoUQDQgAEdqpICiM7YTvLv6sO3VA/MrnmIuCeZ4aPbPh8/os1vx/PfD+DaCht
