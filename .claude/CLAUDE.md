@@ -8,17 +8,20 @@ A Go CLI tool that accelerates Kubernetes application development. Developers wr
 okteto/
 ├── cmd/              # CLI commands (Cobra-based): up, down, build, deploy, destroy, etc.
 ├── pkg/              # Shared packages: k8s, model, analytics, okteto client, types
+├── tools/            # Internal tools (remote, supervisor, clean) - see Tools section below
 ├── internal/         # Internal code (test utilities)
 ├── integration/      # Integration tests requiring Kubernetes cluster
 ├── samples/          # Example projects for different languages
 ├── main.go           # Entry point - wires up all commands
-├── Dockerfile        # Container image definition
+├── Dockerfile        # Container image definition (includes tools build)
 └── Makefile          # Build, test, lint automation
 ```
 
 **Command structure**: Each command in `cmd/` may have subcommands in subdirectories (e.g., `cmd/namespace/create.go`, `cmd/context/use.go`).
 
 **Package organization**: `pkg/` contains domain packages. Core packages include `k8s` (Kubernetes operations), `model` (data structures), `okteto` (API client), `types` (manifest types).
+
+**Tools directory**: `tools/` contains internal utilities (remote, supervisor, clean) that are compiled and bundled into the Okteto CLI Docker image. These tools run inside development containers.
 
 ## Go Conventions
 
@@ -84,6 +87,32 @@ okteto/
 - `make lint` - Run golangci-lint and pre-commit checks
 - `make integration` - Run integration tests (requires Kubernetes cluster)
 - `make dep` - Tidy Go modules
+
+### Tools Commands
+
+Tools are internal utilities compiled into the CLI Docker image:
+
+- `cd tools && make build` - Build all tools (remote, supervisor, clean) to `bin/`
+- `cd tools && make test` - Run tools unit tests
+- `cd tools && make lint` - Lint tools code
+- `cd tools && make remote` - Build only remote binary
+- `cd tools && make supervisor` - Build only supervisor binary
+- `cd tools && make clean-tool` - Build only clean binary
+
+## Tools (Internal Utilities)
+
+The `tools/` directory contains utilities that run inside development containers:
+
+- **remote** (`tools/remote/`) - SSH server for remote access to dev containers
+- **supervisor** (`tools/supervisor/`) - Process supervisor for managing application processes
+- **clean** (`tools/clean/`) - Cleanup utility for container environments
+
+These tools are:
+
+- Built from source during Docker image creation (see `tools-builder` stage in Dockerfile)
+- Installed in the CLI image at `/usr/bin-image/bin/{okteto-remote,okteto-supervisor,clean}`
+- Managed as a single Go module (`tools/go.mod`) with unified dependencies
+- Not intended for direct user interaction (internal to Okteto's development workflow)
 
 ## Priority Rules
 

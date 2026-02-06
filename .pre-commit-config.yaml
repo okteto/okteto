@@ -68,7 +68,7 @@ repos:
         args: [--allow-missing-credentials]
       - id: detect-private-key
         description: checks for the existence of private keys
-        exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^pkg/deployable/certs\.go$
+        exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^pkg/deployable/certs\.go$|^tools/remote/pkg/ssh/key\.go$
       - id: end-of-file-fixer
         description: makes sure files end in a newline and only a newline
         exclude: schema.json
