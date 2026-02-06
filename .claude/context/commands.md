@@ -1,5 +1,7 @@
 # Commands
 
+> **See also**: [architecture.md](architecture.md) for CLI execution flow and overall package structure.
+
 ## Cobra Command Organization
 
 ### Structure in `cmd/`
@@ -150,3 +152,5 @@ Reusable functions for:
 5. Register in `main.go` via `root.AddCommand()`
 6. Follow existing command patterns for consistency
 7. Add tests in `*_test.go` alongside command file
+
+> **See also**: [testing.md](testing.md) for test structure, patterns, and the critical no-branching rule for tests.

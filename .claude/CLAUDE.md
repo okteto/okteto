@@ -23,6 +23,8 @@ okteto/
 
 **Tools directory**: `tools/` contains internal utilities (remote, supervisor, clean) that are compiled and bundled into the Okteto CLI Docker image. These tools run inside development containers.
 
+> **See also**: [context/architecture.md](.claude/context/architecture.md) for detailed package interactions, CLI execution flow, and manifest-driven design patterns.
+
 ## Go Conventions
 
 - **Go version**: check go.mod (do not assume)
@@ -42,6 +44,8 @@ okteto/
 - **Context awareness**: All commands respect current Okteto context and Kubernetes namespace
 - **Manifest-driven**: All commands (up, deploy, destroy) operate on `okteto.yml` manifests
 
+> **See also**: [context/commands.md](.claude/context/commands.md) for detailed command implementation patterns, Cobra usage, and adding new commands.
+
 ## Testing Rules
 
 - **Test files**: Co-locate with source as `*_test.go`
@@ -51,6 +55,8 @@ okteto/
 - **Coverage**: Aim for meaningful test coverage, especially for core business logic
 - **Table-driven tests**: Prefer table-driven tests for multiple scenarios
 - **Mocking**: Use interfaces for dependencies to enable testing
+
+> **See also**: [context/testing.md](.claude/context/testing.md) for test structure patterns, mocking strategies, integration test setup, and the no-branching rule.
 
 ## Strict Rules
 
@@ -99,6 +105,8 @@ Tools are internal utilities compiled into the CLI Docker image:
 - `cd tools && make supervisor` - Build only supervisor binary
 - `cd tools && make clean-tool` - Build only clean binary
 
+> **See also**: [context/build-and-release.md](.claude/context/build-and-release.md) for detailed build system, cross-platform compilation, Docker image build process, linting configuration, and release workflow.
+
 ## Tools (Internal Utilities)
 
 The `tools/` directory contains utilities that run inside development containers:
@@ -113,6 +121,8 @@ These tools are:
 - Installed in the CLI image at `/usr/bin-image/bin/{okteto-remote,okteto-supervisor,clean}`
 - Managed as a single Go module (`tools/go.mod`) with unified dependencies
 - Not intended for direct user interaction (internal to Okteto's development workflow)
+
+**Security**: To fix CVEs in the Docker image (including tools and bundled binaries), use the `/fix-cves` skill which automates vulnerability scanning with Trivy and systematic remediation. See [skills/fix-cves/SKILL.md](.claude/skills/fix-cves/SKILL.md) for the complete workflow.
 
 ## Priority Rules
 
