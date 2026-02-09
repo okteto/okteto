@@ -28,6 +28,7 @@ You are helping the user start development on a new feature for the Okteto CLI.
 Use AskUserQuestion to gather all requirements in one structured form:
 
 ### Question 1: Feature Type
+
 - **Header**: "Type"
 - **Question**: "What type of feature are you adding?"
 - **Options**:
@@ -37,6 +38,7 @@ Use AskUserQuestion to gather all requirements in one structured form:
   - Internal tool (remote/supervisor/clean)
 
 ### Question 2: Scope
+
 - **Header**: "Scope"
 - **Question**: "How would you describe the scope of this feature?"
 - **Options**:
@@ -46,6 +48,7 @@ Use AskUserQuestion to gather all requirements in one structured form:
   - Unknown - Need to explore first
 
 ### Question 3: User-Facing
+
 - **Header**: "Visibility"
 - **Question**: "Is this feature user-facing or internal?"
 - **Options**:
@@ -65,21 +68,25 @@ Wait for the user's detailed description.
 Based on the scope and type:
 
 **If Small:**
+
 - Read relevant existing code
 - Propose implementation directly
 
 **If Medium:**
+
 - Use Task tool with Explore agent to find similar patterns
 - Use EnterPlanMode to create implementation plan
 - Present plan for approval
 
 **If Large:**
+
 - Use Task tool with Explore agent to understand architecture
 - Use EnterPlanMode to create detailed implementation plan
 - Identify all files that need changes
 - Present plan for approval
 
 **If Unknown:**
+
 - Use Explore agent to understand codebase
 - Re-assess scope
 - Then follow appropriate path above
@@ -87,6 +94,7 @@ Based on the scope and type:
 ## Step 5: Summary & Confirmation
 
 Present a summary:
+
 ```
 Branch: [branch-name]
 Feature Type: [type]
