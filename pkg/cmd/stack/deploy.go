@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	forwardK8s "github.com/okteto/okteto/pkg/k8s/forward"
+	"github.com/okteto/okteto/pkg/k8s/httproutes"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -43,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -85,6 +87,36 @@ type Stack struct {
 const (
 	maxRestartsToConsiderFailed = 3
 )
+
+// shouldUseHTTPRoute determines if Gateway API HTTPRoute should be used instead of Ingress
+// Returns true if gateway info is available from cluster metadata
+func shouldUseHTTPRoute(ctx context.Context) (bool, types.ClusterMetadata) {
+	// Only attempt to get metadata if running in Okteto context
+	if !okteto.GetContext().IsOkteto {
+		return false, types.ClusterMetadata{}
+	}
+
+	// Get cluster metadata to check for gateway configuration
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		oktetoLog.Debugf("failed to create okteto client for metadata retrieval: %s", err)
+		return false, types.ClusterMetadata{}
+	}
+
+	metadata, err := oktetoClient.User().GetClusterMetadata(ctx, okteto.GetContext().Namespace)
+	if err != nil {
+		oktetoLog.Debugf("failed to get cluster metadata: %s", err)
+		return false, types.ClusterMetadata{}
+	}
+
+	// Check if gateway is configured in the cluster
+	if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
+		oktetoLog.Infof("Gateway API is not configured in the cluster, using Ingress for endpoints")
+		return false, metadata
+	}
+
+	return true, metadata
+}
 
 func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
@@ -163,10 +195,27 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 		addImageMetadataToStack(s, options)
 
-		iClient, err := ingresses.GetClient(c)
-		if err != nil {
-			exit <- fmt.Errorf("error getting ingress client: %w", err)
-			return
+		// Check if we should use Gateway API HTTPRoute instead of Ingress
+		useHTTPRoute, clusterMetadata := shouldUseHTTPRoute(ctx)
+
+		var iClient *ingresses.Client
+		var httpRouteClient *httproutes.Client
+		var err error
+
+		if useHTTPRoute {
+			// Create Gateway API client for HTTPRoute
+			httpRouteClient, err = httproutes.NewHTTPRouteClient(config)
+			if err != nil {
+				exit <- fmt.Errorf("error creating httproute client: %w", err)
+				return
+			}
+			oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (gateway: %s/%s)", clusterMetadata.GatewayNamespace, clusterMetadata.GatewayName)
+		} else {
+			iClient, err = ingresses.GetClient(c)
+			if err != nil {
+				exit <- fmt.Errorf("error getting ingress client: %w", err)
+				return
+			}
 		}
 
 		for _, serviceName := range options.ServicesToDeploy {
@@ -178,18 +227,25 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				exit <- err
 				return
 			}
-			// get the public ports from the compose service - this will be deployed into ingresses
+			// get the public ports from the compose service - this will be deployed into ingresses/httproutes
 			ingressPortsToDeploy := getSvcPublicPorts(serviceName, s)
 			for _, ingressPort := range ingressPortsToDeploy {
 				ingressName := serviceName
-				// If more than one port, ingressName will have <serviceName>-<PORT>, each port will have an ingress
+				// If more than one port, ingressName will have <serviceName>-<PORT>, each port will have an ingress/httproute
 				if len(ingressPortsToDeploy) > 1 {
 					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
 				}
 
-				if err := deployK8sEndpoint(ctx, ingressName, serviceName, ingressPort, s, iClient); err != nil {
-					exit <- err
-					return
+				if useHTTPRoute {
+					if err := deployK8sEndpointHTTPRoute(ctx, ingressName, serviceName, ingressPort, s, httpRouteClient, clusterMetadata); err != nil {
+						exit <- err
+						return
+					}
+				} else {
+					if err := deployK8sEndpoint(ctx, ingressName, serviceName, ingressPort, s, iClient); err != nil {
+						exit <- err
+						return
+					}
 				}
 			}
 		}
@@ -212,7 +268,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 
 		// compose has capacity to deploy endpoints for its services
-		// each endpoint gets an ingress when using the endpoints spec at compose
+		// each endpoint gets an ingress/httproute when using the endpoints spec at compose
 		// the endpoint would have paths for services as defined at the spec
 		for _, endpointName := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
 			endpoint := s.Endpoints[endpointName]
@@ -232,18 +288,34 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				endpoint.Labels[model.StackEndpointNameLabel] = endpointName
 			}
 
-			translateOptions := &ingresses.TranslateOptions{
-				Name:      format.ResourceK8sMetaString(s.Name),
-				Namespace: s.Namespace,
-			}
-			ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
-			// check for labels collision in the case of a compose - before creation or update (deploy)
-			if skipIngressDeployForStackNameLabel(ctx, iClient, ingress) {
-				continue
-			}
-			if err := iClient.Deploy(ctx, ingress); err != nil {
-				exit <- err
-				return
+			if useHTTPRoute {
+				// Deploy HTTPRoute
+				translateOptions := &httproutes.TranslateOptions{
+					Name:             format.ResourceK8sMetaString(s.Name),
+					Namespace:        s.Namespace,
+					GatewayName:      clusterMetadata.GatewayName,
+					GatewayNamespace: clusterMetadata.GatewayNamespace,
+				}
+				httpRoute := httproutes.Translate(endpointName, endpoint, translateOptions)
+				if err := httpRouteClient.Deploy(ctx, httpRoute); err != nil {
+					exit <- err
+					return
+				}
+			} else {
+				// Deploy Ingress
+				translateOptions := &ingresses.TranslateOptions{
+					Name:      format.ResourceK8sMetaString(s.Name),
+					Namespace: s.Namespace,
+				}
+				ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
+				// check for labels collision in the case of a compose - before creation or update (deploy)
+				if skipIngressDeployForStackNameLabel(ctx, iClient, ingress) {
+					continue
+				}
+				if err := iClient.Deploy(ctx, ingress); err != nil {
+					exit <- err
+					return
+				}
 			}
 		}
 
@@ -460,6 +532,38 @@ func deployK8sEndpoint(ctx context.Context, ingressName, svcName string, port mo
 		return nil
 	}
 	return c.Deploy(ctx, ingress)
+}
+
+func deployK8sEndpointHTTPRoute(ctx context.Context, httpRouteName, svcName string, port model.Port, s *model.Stack, c *httproutes.Client, metadata types.ClusterMetadata) error {
+	// create a new endpoint for this port httproute deployment
+	endpoint := model.Endpoint{
+		Labels:      translateLabels(svcName, s),
+		Annotations: translateAnnotations(s.Services[svcName]),
+		Rules: []model.EndpointRule{
+			{
+				Path:    "/",
+				Service: svcName,
+				Port:    port.ContainerPort,
+			},
+		},
+	}
+	// add specific stack labels
+	if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+		endpoint.Labels[model.StackNameLabel] = format.ResourceK8sMetaString(s.Name)
+	}
+	if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+		endpoint.Labels[model.StackEndpointNameLabel] = httpRouteName
+	}
+
+	translateOptions := &httproutes.TranslateOptions{
+		Name:             format.ResourceK8sMetaString(s.Name),
+		Namespace:        s.Namespace,
+		GatewayName:      metadata.GatewayName,
+		GatewayNamespace: metadata.GatewayNamespace,
+	}
+	httpRoute := httproutes.Translate(httpRouteName, endpoint, translateOptions)
+
+	return c.Deploy(ctx, httpRoute)
 }
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
