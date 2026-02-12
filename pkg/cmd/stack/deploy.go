@@ -89,8 +89,16 @@ const (
 )
 
 // shouldUseHTTPRoute determines if Gateway API HTTPRoute should be used instead of Ingress
-// Returns true if gateway info is available from cluster metadata
+// Returns true if gateway info is available from cluster metadata, unless overridden by env var
+// Env var OKTETO_COMPOSE_ENDPOINTS_TYPE can be set to "gateway" or "ingress" to force a specific type
 func shouldUseHTTPRoute(ctx context.Context) (bool, types.ClusterMetadata) {
+	// Check if env var explicitly forces a specific endpoint type
+	endpointType := os.Getenv(oktetoComposeEndpointsTypeEnvVar)
+	if endpointType == "ingress" {
+		oktetoLog.Infof("Using Ingress for endpoints (forced by %s=ingress)", oktetoComposeEndpointsTypeEnvVar)
+		return false, types.ClusterMetadata{}
+	}
+
 	// Only attempt to get metadata if running in Okteto context
 	if !okteto.GetContext().IsOkteto {
 		return false, types.ClusterMetadata{}
@@ -109,6 +117,13 @@ func shouldUseHTTPRoute(ctx context.Context) (bool, types.ClusterMetadata) {
 		return false, types.ClusterMetadata{}
 	}
 
+	// If env var forces "gateway", use it regardless of metadata (will fail if gateway not configured)
+	if endpointType == "gateway" {
+		oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (forced by %s=gateway)", oktetoComposeEndpointsTypeEnvVar)
+		return true, metadata
+	}
+
+	// Default: automatic detection based on cluster metadata
 	// Check if gateway is configured in the cluster
 	if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
 		oktetoLog.Infof("Gateway API is not configured in the cluster, using Ingress for endpoints")
