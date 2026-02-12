@@ -1,5 +1,7 @@
 # Testing
 
+> **See also**: [build-and-release.md](build-and-release.md) for build commands, linting configuration, and pre-commit hooks that run before tests.
+
 ## Test Organization
 
 ### Unit Tests
