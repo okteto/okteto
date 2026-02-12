@@ -89,9 +89,9 @@ const (
 )
 
 // shouldUseHTTPRoute determines if Gateway API HTTPRoute should be used instead of Ingress
-// Returns true if gateway info is available from cluster metadata, unless overridden by env var
+// Returns true if gateway info is available from context, unless overridden by env var
 // Env var OKTETO_COMPOSE_ENDPOINTS_TYPE can be set to "gateway" or "ingress" to force a specific type
-func shouldUseHTTPRoute(ctx context.Context) (bool, types.ClusterMetadata) {
+func shouldUseHTTPRoute() (bool, types.ClusterMetadata) {
 	// Check if env var explicitly forces a specific endpoint type
 	endpointType := os.Getenv(oktetoComposeEndpointsTypeEnvVar)
 	if endpointType == "ingress" {
@@ -99,22 +99,18 @@ func shouldUseHTTPRoute(ctx context.Context) (bool, types.ClusterMetadata) {
 		return false, types.ClusterMetadata{}
 	}
 
-	// Only attempt to get metadata if running in Okteto context
+	// Only check gateway metadata if running in Okteto context
 	if !okteto.GetContext().IsOkteto {
 		return false, types.ClusterMetadata{}
 	}
 
-	// Get cluster metadata to check for gateway configuration
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		oktetoLog.Debugf("failed to create okteto client for metadata retrieval: %s", err)
-		return false, types.ClusterMetadata{}
-	}
+	// Get gateway metadata from context
+	octxGateway := okteto.GetContext().Gateway
+	metadata := types.ClusterMetadata{}
 
-	metadata, err := oktetoClient.User().GetClusterMetadata(ctx, okteto.GetContext().Namespace)
-	if err != nil {
-		oktetoLog.Debugf("failed to get cluster metadata: %s", err)
-		return false, types.ClusterMetadata{}
+	if octxGateway != nil {
+		metadata.GatewayName = octxGateway.Name
+		metadata.GatewayNamespace = octxGateway.Namespace
 	}
 
 	// If env var forces "gateway", use it regardless of metadata (will fail if gateway not configured)
@@ -123,7 +119,7 @@ func shouldUseHTTPRoute(ctx context.Context) (bool, types.ClusterMetadata) {
 		return true, metadata
 	}
 
-	// Default: automatic detection based on cluster metadata
+	// Default: automatic detection based on gateway metadata in context
 	// Check if gateway is configured in the cluster
 	if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
 		oktetoLog.Infof("Gateway API is not configured in the cluster, using Ingress for endpoints")
@@ -211,7 +207,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		addImageMetadataToStack(s, options)
 
 		// Check if we should use Gateway API HTTPRoute instead of Ingress
-		useHTTPRoute, clusterMetadata := shouldUseHTTPRoute(ctx)
+		useHTTPRoute, clusterMetadata := shouldUseHTTPRoute()
 
 		var iClient *ingresses.Client
 		var httpRouteClient *httproutes.Client
