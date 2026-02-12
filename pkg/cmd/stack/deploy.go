@@ -99,11 +99,6 @@ func shouldUseHTTPRoute() (bool, types.ClusterMetadata) {
 		return false, types.ClusterMetadata{}
 	}
 
-	// Only check gateway metadata if running in Okteto context
-	if !okteto.GetContext().IsOkteto {
-		return false, types.ClusterMetadata{}
-	}
-
 	// Get gateway metadata from context
 	octxGateway := okteto.GetContext().Gateway
 	metadata := types.ClusterMetadata{}
