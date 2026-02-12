@@ -212,11 +212,11 @@ func TestDestroyWithError(t *testing.T) {
 
 func TestDeploy(t *testing.T) {
 	var tests = []struct {
-		name            string
-		existingRoute   *gatewayv1.HTTPRoute
-		httpRoute       *gatewayv1.HTTPRoute
-		expectCreate    bool
-		expectedLabels  map[string]string
+		name           string
+		existingRoute  *gatewayv1.HTTPRoute
+		httpRoute      *gatewayv1.HTTPRoute
+		expectCreate   bool
+		expectedLabels map[string]string
 	}{
 		{
 			name: "create new httproute",

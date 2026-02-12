@@ -28,11 +28,11 @@ func TestTranslate(t *testing.T) {
 	gatewayNamespace := gatewayv1.Namespace("gateway-ns")
 
 	tests := []struct {
-		name                        string
-		endpointName                string
-		endpoint                    model.Endpoint
-		opts                        *TranslateOptions
-		expectedHTTPRouteName       string
+		name                         string
+		endpointName                 string
+		endpoint                     model.Endpoint
+		opts                         *TranslateOptions
+		expectedHTTPRouteName        string
 		expectedHTTPRouteAnnotations map[string]string
 		expectedHTTPRouteLabels      map[string]string
 		expectedHTTPRouteRules       []gatewayv1.HTTPRouteRule
@@ -384,12 +384,12 @@ func TestSetAnnotations(t *testing.T) {
 			name: "with custom annotations",
 			endpoint: model.Endpoint{
 				Annotations: model.Annotations{
-					"custom-annotation": "custom-value",
+					"custom-annotation":                        "custom-value",
 					"nginx.ingress.kubernetes.io/ssl-redirect": "true",
 				},
 			},
 			expectedAnnotations: map[string]string{
-				"custom-annotation": "custom-value",
+				"custom-annotation":                        "custom-value",
 				"nginx.ingress.kubernetes.io/ssl-redirect": "true",
 			},
 		},
