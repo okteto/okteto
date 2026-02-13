@@ -142,13 +142,13 @@ func getNamespaceOutput(namespaces []types.Namespace) []namespaceOutput {
 	var namespaceSlice []namespaceOutput
 	currentNamespace := okteto.GetContext().Namespace
 	for _, ns := range namespaces {
-		previewOutput := namespaceOutput{
+		output := namespaceOutput{
 			Namespace:  ns.ID,
 			Status:     ns.Status,
 			Persistent: ns.Persistent,
 			Current:    ns.ID == currentNamespace,
 		}
-		namespaceSlice = append(namespaceSlice, previewOutput)
+		namespaceSlice = append(namespaceSlice, output)
 	}
 	return namespaceSlice
 }
