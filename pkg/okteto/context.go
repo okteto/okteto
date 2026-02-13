@@ -83,6 +83,13 @@ type Context struct {
 	Analytics          bool                 `json:"-" yaml:"-"`
 	IsTrial            bool                 `json:"-" yaml:"-"`
 	DivertCRDSEnabled  bool                 `json:"-" yaml:"-"`
+	Gateway            *GatewayMetadata     `json:"-" yaml:"-"`
+}
+
+// GatewayMetadata contains Gateway API configuration for the cluster
+type GatewayMetadata struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // ContextViewer contains info to show

@@ -29,4 +29,6 @@ type ClusterMetadata struct {
 	Certificate         []byte
 	IsTrialLicense      bool
 	DivertCRDSEnabled   bool
+	GatewayName         string
+	GatewayNamespace    string
 }

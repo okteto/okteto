@@ -286,6 +286,10 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.CliClusterVersion = string(v.Value)
 		case "divertCRDSEnabled":
 			metadata.DivertCRDSEnabled = string(v.Value) == "true"
+		case "gatewayName":
+			metadata.GatewayName = string(v.Value)
+		case "gatewayNamespace":
+			metadata.GatewayNamespace = string(v.Value)
 		}
 	}
 	if metadata.PipelineRunnerImage == "" {
