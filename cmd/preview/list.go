@@ -42,11 +42,12 @@ type listFlags struct {
 }
 
 type previewOutput struct {
-	Name     string   `json:"name" yaml:"name"`
-	Scope    string   `json:"scope" yaml:"scope"`
-	Branch   string   `json:"branch" yaml:"branch"`
-	Labels   []string `json:"labels" yaml:"labels"`
-	Sleeping bool     `json:"sleeping" yaml:"sleeping"`
+	Name       string   `json:"name" yaml:"name"`
+	Scope      string   `json:"scope" yaml:"scope"`
+	Branch     string   `json:"branch" yaml:"branch"`
+	Labels     []string `json:"labels" yaml:"labels"`
+	Sleeping   bool     `json:"sleeping" yaml:"sleeping"`
+	Persistent bool     `json:"persistent" yaml:"persistent"`
 }
 
 type listPreviewCommand struct {
@@ -145,7 +146,7 @@ func displayListPreviews(previews []previewOutput, outputFormat string) error {
 			return nil
 		}
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-		fmt.Fprint(w, "Name\tScope\tSleeping\tBranch\tLabels\n")
+		fmt.Fprint(w, "Name\tScope\tSleeping\tPersistent\tBranch\tLabels\n")
 		for _, preview := range previews {
 			output := getPreviewDefaultOutput(preview)
 			fmt.Fprint(w, output)
@@ -161,7 +162,7 @@ func getPreviewDefaultOutput(preview previewOutput) string {
 	if len(preview.Labels) > 0 {
 		previewLabels = strings.Join(preview.Labels, ", ")
 	}
-	return fmt.Sprintf("%s\t%s\t%v\t%s\t%s\n", preview.Name, preview.Scope, preview.Sleeping, preview.Branch, previewLabels)
+	return fmt.Sprintf("%s\t%s\t%v\t%v\t%s\t%s\n", preview.Name, preview.Scope, preview.Sleeping, preview.Persistent, preview.Branch, previewLabels)
 }
 
 // getPreviewOutput transforms type.Preview into previewOutput type
@@ -169,11 +170,12 @@ func getPreviewOutput(previews []types.Preview) []previewOutput {
 	var previewSlice []previewOutput
 	for _, p := range previews {
 		previewOutput := previewOutput{
-			Name:     p.ID,
-			Scope:    p.Scope,
-			Sleeping: p.Sleeping,
-			Labels:   p.PreviewLabels,
-			Branch:   p.Branch,
+			Name:       p.ID,
+			Scope:      p.Scope,
+			Sleeping:   p.Sleeping,
+			Persistent: p.Persistent,
+			Labels:     p.PreviewLabels,
+			Branch:     p.Branch,
 		}
 		previewSlice = append(previewSlice, previewOutput)
 	}
