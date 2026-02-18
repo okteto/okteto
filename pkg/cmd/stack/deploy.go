@@ -290,6 +290,13 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 		addImageMetadataToStack(s, options)
 
+		// Determine deployer type for cleanup logic
+		useHTTPRoute, _, err := ShouldUseHTTPRoute()
+		if err != nil {
+			exit <- err
+			return
+		}
+
 		for _, serviceName := range options.ServicesToDeploy {
 			if len(s.Services[serviceName].Ports) == 0 {
 				continue
@@ -359,7 +366,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 		}
 
-		if err := destroyServicesNotInStack(ctx, s, c); err != nil {
+		if err := destroyServicesNotInStack(ctx, s, c, config, useHTTPRoute); err != nil {
 			exit <- err
 			return
 		}
