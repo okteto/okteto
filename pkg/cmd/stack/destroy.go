@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/httproutes"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -25,9 +26,10 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
-func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
+func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, useHTTPRoute bool) error {
 	if err := destroyDeployments(ctx, s, c); err != nil {
 		return err
 	}
@@ -40,8 +42,14 @@ func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c kubernetes
 		return err
 	}
 
-	err := destroyIngresses(ctx, s, c)
-	if err != nil {
+	// Clean up both Ingress and HTTPRoute resources to handle switching between endpoint types
+	// When using HTTPRoute, destroy ALL ingresses (even for endpoints still in stack)
+	// When using Ingress, destroy ALL httproutes (even for endpoints still in stack)
+	if err := destroyIngresses(ctx, s, c, useHTTPRoute); err != nil {
+		return err
+	}
+
+	if err := destroyHTTPRoutes(ctx, s, config, !useHTTPRoute); err != nil {
 		return err
 	}
 
@@ -124,7 +132,7 @@ func destroyJobs(ctx context.Context, s *model.Stack, c kubernetes.Interface) er
 	return nil
 }
 
-func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
+func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interface, destroyAll bool) error {
 	iClient, err := ingresses.GetClient(c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %w", err)
@@ -148,20 +156,68 @@ func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interfac
 		}
 	}
 	for i := range iList {
-		if _, ok := s.Endpoints[iList[i].GetName()]; ok {
-			continue
-		}
-		if _, ok := publicSvcsMap[iList[i].GetName()]; ok {
-			continue
-		}
-		if iList[i].GetLabels()[model.StackEndpointNameLabel] == "" {
-			// ingress created with "public"
-			continue
+		// When destroyAll=true (switching to HTTPRoute), skip all checks and destroy everything
+		if !destroyAll {
+			if _, ok := s.Endpoints[iList[i].GetName()]; ok {
+				continue
+			}
+			if _, ok := publicSvcsMap[iList[i].GetName()]; ok {
+				continue
+			}
+			if iList[i].GetLabels()[model.StackEndpointNameLabel] == "" {
+				// ingress created with "public"
+				continue
+			}
 		}
 		if err := iClient.Destroy(ctx, iList[i].GetName(), iList[i].GetNamespace()); err != nil {
 			return fmt.Errorf("error destroying ingress '%s': %w", iList[i].GetName(), err)
 		}
 		oktetoLog.Success("Endpoint '%s' destroyed", iList[i].GetName())
+	}
+	return nil
+}
+
+func destroyHTTPRoutes(ctx context.Context, s *model.Stack, config *rest.Config, destroyAll bool) error {
+	hrClient, err := httproutes.NewHTTPRouteClient(config)
+	if err != nil {
+		return fmt.Errorf("error creating httproute client: %w", err)
+	}
+
+	hrList, err := hrClient.List(ctx, s.Namespace, s.GetLabelSelector())
+	if err != nil {
+		return err
+	}
+	publicSvcsMap := map[string]bool{}
+	for svcName, svcInfo := range s.Services {
+		if len(svcInfo.Ports) > 0 {
+			httpRoutePorts := getSvcPublicPorts(svcName, s)
+			if len(httpRoutePorts) == 1 {
+				publicSvcsMap[svcName] = true
+			} else if len(httpRoutePorts) > 1 {
+				for _, p := range httpRoutePorts {
+					publicSvcsMap[fmt.Sprintf("%s-%d", svcName, p.ContainerPort)] = true
+				}
+			}
+		}
+	}
+	for i := range hrList {
+		// When destroyAll=true (switching to Ingress), skip all checks and destroy everything
+		if !destroyAll {
+			if _, ok := s.Endpoints[hrList[i].GetName()]; ok {
+				continue
+			}
+			if _, ok := publicSvcsMap[hrList[i].GetName()]; ok {
+				continue
+			}
+			if hrList[i].GetLabels()[model.StackEndpointNameLabel] == "" {
+				// httproute created with "public"
+				continue
+			}
+		}
+		if err := hrClient.Destroy(ctx, hrList[i].GetName(), hrList[i].GetNamespace()); err != nil {
+			return fmt.Errorf("error destroying httproute '%s': %w", hrList[i].GetName(), err)
+		}
+		oktetoLog.Success("Endpoint '%s' destroyed", hrList[i].GetName())
 	}
 	return nil
 }

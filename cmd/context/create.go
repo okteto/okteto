@@ -289,6 +289,14 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
 	okteto.GetContext().DivertCRDSEnabled = clusterMetadata.DivertCRDSEnabled
 
+	// Populate gateway metadata if available
+	if clusterMetadata.GatewayName != "" && clusterMetadata.GatewayNamespace != "" {
+		okteto.GetContext().Gateway = &okteto.GatewayMetadata{
+			Name:      clusterMetadata.GatewayName,
+			Namespace: clusterMetadata.GatewayNamespace,
+		}
+	}
+
 	if clusterMetadata.CliMinVersion != "" {
 		skip := env.LoadBoolean("OKTETO_SKIP_CLUSTER_CLI_VERSION")
 		if !skip {
