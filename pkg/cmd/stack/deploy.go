@@ -82,26 +82,27 @@ type Stack struct {
 	Insights         buildTrackerInterface
 	IoCtrl           *io.Controller
 	Divert           Divert
+	EndpointDeployer EndpointDeployer
 }
 
 const (
 	maxRestartsToConsiderFailed = 3
 )
 
-// endpointDeployer is an interface for deploying endpoints (Ingress or HTTPRoute)
-type endpointDeployer interface {
+// EndpointDeployer is an interface for deploying endpoints (Ingress or HTTPRoute)
+type EndpointDeployer interface {
 	// DeployServiceEndpoint deploys an endpoint for a specific service port
 	DeployServiceEndpoint(ctx context.Context, name, serviceName string, port model.Port, stack *model.Stack) error
 	// DeployComposeEndpoint deploys an endpoint from the compose endpoints spec
 	DeployComposeEndpoint(ctx context.Context, name string, endpoint model.Endpoint, stack *model.Stack) error
 }
 
-// shouldUseHTTPRoute determines if Gateway API HTTPRoute should be used instead of Ingress
+// ShouldUseHTTPRoute determines if Gateway API HTTPRoute should be used instead of Ingress
 // Returns true if gateway should be used, cluster metadata, and an error if configuration is invalid
 // Priority order:
 // 1. OKTETO_COMPOSE_ENDPOINTS_TYPE (feature flag) - if set, takes absolute precedence
 // 2. OKTETO_DEFAULT_GATEWAY_TYPE (default) - only evaluated if feature flag is not set
-func shouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
+func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 	// Get gateway metadata from context
 	octxGateway := okteto.GetContext().Gateway
 	metadata := types.ClusterMetadata{}
@@ -193,6 +194,25 @@ func (d *httpRouteDeployer) DeployComposeEndpoint(ctx context.Context, name stri
 	return d.client.Deploy(ctx, httpRoute)
 }
 
+// NewIngressDeployer creates a new Ingress endpoint deployer
+func NewIngressDeployer(client *ingresses.Client, stackName, namespace string) EndpointDeployer {
+	return &ingressDeployer{
+		client:    client,
+		stackName: stackName,
+		namespace: namespace,
+	}
+}
+
+// NewHTTPRouteDeployer creates a new HTTPRoute endpoint deployer
+func NewHTTPRouteDeployer(client *httproutes.Client, stackName, namespace string, clusterMetadata types.ClusterMetadata) EndpointDeployer {
+	return &httpRouteDeployer{
+		client:          client,
+		stackName:       stackName,
+		namespace:       namespace,
+		clusterMetadata: clusterMetadata,
+	}
+}
+
 func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
@@ -236,7 +256,7 @@ func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *Dep
 		return err
 	}
 
-	err := deploy(ctx, s, sd.K8sClient, sd.Config, options, sd.Divert)
+	err := deploy(ctx, s, sd.K8sClient, sd.Config, options, sd.Divert, sd.EndpointDeployer)
 	if err != nil {
 		output = fmt.Sprintf("%s\nCompose '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -255,7 +275,7 @@ func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *Dep
 }
 
 // deploy deploys a stack to kubernetes
-func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert) error {
+func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *DeployOptions, divert Divert, endpointDeployer EndpointDeployer) error {
 	DisplayWarnings(s)
 
 	oktetoLog.Spinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
@@ -269,43 +289,6 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 	go func() {
 
 		addImageMetadataToStack(s, options)
-
-		// Check if we should use Gateway API HTTPRoute instead of Ingress and create deployer
-		useHTTPRoute, clusterMetadata, err := shouldUseHTTPRoute()
-		if err != nil {
-			exit <- err
-			return
-		}
-
-		var deployer endpointDeployer
-
-		if useHTTPRoute {
-			// Create HTTPRoute deployer
-			httpRouteClient, err := httproutes.NewHTTPRouteClient(config)
-			if err != nil {
-				exit <- fmt.Errorf("error creating httproute client: %w", err)
-				return
-			}
-			oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (gateway: %s/%s)", clusterMetadata.GatewayNamespace, clusterMetadata.GatewayName)
-			deployer = &httpRouteDeployer{
-				client:          httpRouteClient,
-				stackName:       s.Name,
-				namespace:       s.Namespace,
-				clusterMetadata: clusterMetadata,
-			}
-		} else {
-			// Create Ingress deployer
-			ingressClient, err := ingresses.GetClient(c)
-			if err != nil {
-				exit <- fmt.Errorf("error getting ingress client: %w", err)
-				return
-			}
-			deployer = &ingressDeployer{
-				client:    ingressClient,
-				stackName: s.Name,
-				namespace: s.Namespace,
-			}
-		}
 
 		for _, serviceName := range options.ServicesToDeploy {
 			if len(s.Services[serviceName].Ports) == 0 {
@@ -325,7 +308,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
 				}
 
-				if err := deployer.DeployServiceEndpoint(ctx, ingressName, serviceName, ingressPort, s); err != nil {
+				if err := endpointDeployer.DeployServiceEndpoint(ctx, ingressName, serviceName, ingressPort, s); err != nil {
 					exit <- err
 					return
 				}
@@ -370,7 +353,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				endpoint.Labels[model.StackEndpointNameLabel] = endpointName
 			}
 
-			if err := deployer.DeployComposeEndpoint(ctx, endpointName, endpoint, s); err != nil {
+			if err := endpointDeployer.DeployComposeEndpoint(ctx, endpointName, endpoint, s); err != nil {
 				exit <- err
 				return
 			}

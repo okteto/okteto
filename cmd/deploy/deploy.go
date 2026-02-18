@@ -40,6 +40,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
+	"github.com/okteto/okteto/pkg/k8s/httproutes"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -855,6 +856,30 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		}
 	}
 
+	// Determine which endpoint deployer to use (Ingress or HTTPRoute)
+	useHTTPRoute, clusterMetadata, err := stack.ShouldUseHTTPRoute()
+	if err != nil {
+		return err
+	}
+
+	var endpointDeployer stack.EndpointDeployer
+	if useHTTPRoute {
+		// Create HTTPRoute deployer
+		httpRouteClient, err := httproutes.NewHTTPRouteClient(cfg)
+		if err != nil {
+			return fmt.Errorf("error creating httproute client: %w", err)
+		}
+		oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (gateway: %s/%s)", clusterMetadata.GatewayNamespace, clusterMetadata.GatewayName)
+		endpointDeployer = stack.NewHTTPRouteDeployer(httpRouteClient, composeSectionInfo.Stack.Name, composeSectionInfo.Stack.Namespace, clusterMetadata)
+	} else {
+		// Create Ingress deployer
+		ingressClient, err := ingresses.GetClient(c)
+		if err != nil {
+			return fmt.Errorf("error getting ingress client: %w", err)
+		}
+		endpointDeployer = stack.NewIngressDeployer(ingressClient, composeSectionInfo.Stack.Name, composeSectionInfo.Stack.Namespace)
+	}
+
 	sd := stack.Stack{
 		K8sClient:        c,
 		Config:           cfg,
@@ -862,6 +887,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		Insights:         dc.InsightsTracker,
 		IoCtrl:           dc.IoCtrl,
 		Divert:           divertDriver,
+		EndpointDeployer: endpointDeployer,
 	}
 	return sd.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }

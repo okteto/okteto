@@ -1400,7 +1400,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 				defer os.Unsetenv(oktetoDefaultGatewayTypeEnvVar)
 			}
 
-			useRoute, metadata, err := shouldUseHTTPRoute()
+			useRoute, metadata, err := ShouldUseHTTPRoute()
 
 			if tt.expectedError {
 				assert.Error(t, err)
