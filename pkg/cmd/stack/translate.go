@@ -64,6 +64,9 @@ const (
 	// oktetoComposeEndpointsTypeEnvVar defines the endpoint type: "gateway" or "ingress". Defaults to automatic detection based on cluster gateway metadata.
 	oktetoComposeEndpointsTypeEnvVar = "OKTETO_COMPOSE_ENDPOINTS_TYPE"
 
+	// oktetoDefaultGatewayTypeEnvVar defines the default gateway type: "gateway" or "ingress". Only used if oktetoComposeEndpointsTypeEnvVar is not set.
+	oktetoDefaultGatewayTypeEnvVar = "OKTETO_DEFAULT_GATEWAY_TYPE"
+
 	// dependsOnAnnotation represents the annotation to define the depends_on field
 	dependsOnAnnotation = "dev.okteto.com/depends-on"
 )

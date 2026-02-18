@@ -1279,11 +1279,13 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 	defer func() { okteto.CurrentStore = originalStore }()
 
 	tests := []struct {
-		name             string
-		envVar           string
-		gateway          *okteto.GatewayMetadata
-		expectedUseRoute bool
-		expectedMetadata types.ClusterMetadata
+		name               string
+		envVar             string
+		defaultGatewayType string
+		gateway            *okteto.GatewayMetadata
+		expectedUseRoute   bool
+		expectedMetadata   types.ClusterMetadata
+		expectedError      bool
 	}{
 		{
 			name:             "env var forces ingress",
@@ -1291,6 +1293,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: false,
 			expectedMetadata: types.ClusterMetadata{},
+			expectedError:    false,
 		},
 		{
 			name:             "env var forces gateway",
@@ -1298,6 +1301,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
+			expectedError:    false,
 		},
 		{
 			name:             "env var forces gateway without metadata",
@@ -1305,6 +1309,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          nil,
 			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{},
+			expectedError:    false,
 		},
 		{
 			name:             "gateway configured in context",
@@ -1312,6 +1317,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
+			expectedError:    false,
 		},
 		{
 			name:             "no gateway configured",
@@ -1319,6 +1325,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          nil,
 			expectedUseRoute: false,
 			expectedMetadata: types.ClusterMetadata{},
+			expectedError:    false,
 		},
 		{
 			name:             "gateway without namespace",
@@ -1326,6 +1333,43 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway"},
 			expectedUseRoute: false,
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway"},
+			expectedError:    false,
+		},
+		{
+			name:               "default gateway type forces ingress",
+			envVar:             "",
+			defaultGatewayType: "ingress",
+			gateway:            &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
+			expectedUseRoute:   false,
+			expectedMetadata:   types.ClusterMetadata{},
+			expectedError:      false,
+		},
+		{
+			name:               "default gateway type forces gateway with metadata",
+			envVar:             "",
+			defaultGatewayType: "gateway",
+			gateway:            &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
+			expectedUseRoute:   true,
+			expectedMetadata:   types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
+			expectedError:      false,
+		},
+		{
+			name:               "default gateway type forces gateway without metadata - error",
+			envVar:             "",
+			defaultGatewayType: "gateway",
+			gateway:            nil,
+			expectedUseRoute:   false,
+			expectedMetadata:   types.ClusterMetadata{},
+			expectedError:      true,
+		},
+		{
+			name:               "feature flag takes precedence over default gateway type",
+			envVar:             "ingress",
+			defaultGatewayType: "gateway",
+			gateway:            &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
+			expectedUseRoute:   false,
+			expectedMetadata:   types.ClusterMetadata{},
+			expectedError:      false,
 		},
 	}
 
@@ -1350,11 +1394,22 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 				defer os.Unsetenv(oktetoComposeEndpointsTypeEnvVar)
 			}
 
-			useRoute, metadata := shouldUseHTTPRoute()
+			// Set default gateway type env var if specified
+			if tt.defaultGatewayType != "" {
+				os.Setenv(oktetoDefaultGatewayTypeEnvVar, tt.defaultGatewayType)
+				defer os.Unsetenv(oktetoDefaultGatewayTypeEnvVar)
+			}
 
-			assert.Equal(t, tt.expectedUseRoute, useRoute)
-			assert.Equal(t, tt.expectedMetadata.GatewayName, metadata.GatewayName)
-			assert.Equal(t, tt.expectedMetadata.GatewayNamespace, metadata.GatewayNamespace)
+			useRoute, metadata, err := shouldUseHTTPRoute()
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedUseRoute, useRoute)
+				assert.Equal(t, tt.expectedMetadata.GatewayName, metadata.GatewayName)
+				assert.Equal(t, tt.expectedMetadata.GatewayNamespace, metadata.GatewayNamespace)
+			}
 		})
 	}
 }

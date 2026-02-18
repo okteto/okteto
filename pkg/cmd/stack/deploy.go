@@ -97,16 +97,11 @@ type endpointDeployer interface {
 }
 
 // shouldUseHTTPRoute determines if Gateway API HTTPRoute should be used instead of Ingress
-// Returns true if gateway info is available from context, unless overridden by env var
-// Env var OKTETO_COMPOSE_ENDPOINTS_TYPE can be set to "gateway" or "ingress" to force a specific type
-func shouldUseHTTPRoute() (bool, types.ClusterMetadata) {
-	// Check if env var explicitly forces a specific endpoint type
-	endpointType := os.Getenv(oktetoComposeEndpointsTypeEnvVar)
-	if endpointType == "ingress" {
-		oktetoLog.Infof("Using Ingress for endpoints (forced by %s=ingress)", oktetoComposeEndpointsTypeEnvVar)
-		return false, types.ClusterMetadata{}
-	}
-
+// Returns true if gateway should be used, cluster metadata, and an error if configuration is invalid
+// Priority order:
+// 1. OKTETO_COMPOSE_ENDPOINTS_TYPE (feature flag) - if set, takes absolute precedence
+// 2. OKTETO_DEFAULT_GATEWAY_TYPE (default) - only evaluated if feature flag is not set
+func shouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 	// Get gateway metadata from context
 	octxGateway := okteto.GetContext().Gateway
 	metadata := types.ClusterMetadata{}
@@ -116,20 +111,39 @@ func shouldUseHTTPRoute() (bool, types.ClusterMetadata) {
 		metadata.GatewayNamespace = octxGateway.Namespace
 	}
 
-	// If env var forces "gateway", use it regardless of metadata (will fail if gateway not configured)
+	// Priority 1: Check feature flag (OKTETO_COMPOSE_ENDPOINTS_TYPE) - takes absolute precedence
+	endpointType := os.Getenv(oktetoComposeEndpointsTypeEnvVar)
+	if endpointType == "ingress" {
+		oktetoLog.Infof("Using Ingress for endpoints (forced by %s=ingress)", oktetoComposeEndpointsTypeEnvVar)
+		return false, types.ClusterMetadata{}, nil
+	}
 	if endpointType == "gateway" {
 		oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (forced by %s=gateway)", oktetoComposeEndpointsTypeEnvVar)
-		return true, metadata
+		return true, metadata, nil
 	}
 
-	// Default: automatic detection based on gateway metadata in context
-	// Check if gateway is configured in the cluster
+	// Priority 2: Check default gateway type (OKTETO_DEFAULT_GATEWAY_TYPE)
+	defaultGatewayType := os.Getenv(oktetoDefaultGatewayTypeEnvVar)
+	if defaultGatewayType == "ingress" {
+		oktetoLog.Infof("Using Ingress for endpoints (set by %s=ingress)", oktetoDefaultGatewayTypeEnvVar)
+		return false, types.ClusterMetadata{}, nil
+	}
+	if defaultGatewayType == "gateway" {
+		// If gateway is requested but metadata is empty, return error
+		if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
+			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoDefaultGatewayTypeEnvVar)
+		}
+		oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (set by %s=gateway)", oktetoDefaultGatewayTypeEnvVar)
+		return true, metadata, nil
+	}
+
+	// Priority 3: Automatic detection based on gateway metadata in context
 	if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
 		oktetoLog.Infof("Gateway API is not configured in the cluster, using Ingress for endpoints")
-		return false, metadata
+		return false, metadata, nil
 	}
 
-	return true, metadata
+	return true, metadata, nil
 }
 
 // ingressDeployer deploys endpoints using Kubernetes Ingress
@@ -257,7 +271,11 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		addImageMetadataToStack(s, options)
 
 		// Check if we should use Gateway API HTTPRoute instead of Ingress and create deployer
-		useHTTPRoute, clusterMetadata := shouldUseHTTPRoute()
+		useHTTPRoute, clusterMetadata, err := shouldUseHTTPRoute()
+		if err != nil {
+			exit <- err
+			return
+		}
 
 		var deployer endpointDeployer
 
