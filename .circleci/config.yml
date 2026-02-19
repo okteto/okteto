@@ -268,6 +268,23 @@ jobs:
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
             make integration-okteto-test
 
+  e2e-gateway:
+    executor: golang-ci
+    steps:
+      - checkout:
+          method: blobless
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: ./artifacts
+      - run:
+          name: Run gateway integration tests
+          command: |
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
+            make integration-gateway
+
   test-e2e-setup:
     executor: golang-ci
     steps:
@@ -449,6 +466,41 @@ jobs:
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 
+  e2e-gateway-windows:
+    executor:
+      name: win/server-2022
+      version: 2024.04.1
+    environment:
+      OKTETO_CONTEXT: https://okteto.integration.dev.okteto.net
+      OKTETO_APPS_SUBDOMAIN: integration.dev.okteto.net
+      OKTETO_NAMESPACE_PREFIX: integration
+      OKTETO_SKIP_CLUSTER_CLI_VERSION: true
+    steps:
+      - checkout:
+          method: blobless
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - attach_workspace:
+          at: .\artifacts
+      - run:
+          name: Install kubectl and helm
+          command: |
+            go version
+            choco install kubernetes-cli -y
+            choco install kubernetes-helm -y
+      - run:
+          name: Run gateway integration tests
+          environment:
+            OKTETO_SKIP_CLEANUP: "true"
+          command: |
+            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            $env:Path+=";$($HOME)\project\artifacts\bin"
+            $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
+            echo OKTETO_CLI_IMAGE=$env:OKTETO_CLI_IMAGE
+            & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
+            go test github.com/okteto/okteto/integration/gateway -tags="integration" --count=1 -v -timeout 30m
+
   push-image-tag:
     executor: golang-ci
     steps:
@@ -625,6 +677,13 @@ workflows:
             branches:
               only:
                 - master
+      - e2e-gateway-windows:
+          requires:
+            - test-e2e-setup
+          filters:
+            branches:
+              only:
+                - master
       - e2e-build:
           requires:
             - test-e2e-setup
@@ -661,6 +720,13 @@ workflows:
               only:
                 - master
       - e2e-okteto-test:
+          requires:
+            - test-e2e-setup
+          filters:
+            branches:
+              only:
+                - master
+      - e2e-gateway:
           requires:
             - test-e2e-setup
           filters:
@@ -728,6 +794,9 @@ workflows:
       - e2e-okteto-test:
           requires:
             - test-e2e-setup
+      - e2e-gateway:
+          requires:
+            - test-e2e-setup
       - release-branch-job:
           requires:
             - build-binaries
@@ -736,6 +805,7 @@ workflows:
             - e2e-up
             - e2e-actions
             - e2e-okteto
+            - e2e-gateway
             - run-unit-test
             - run-windows-unit-test
 
@@ -854,6 +924,9 @@ workflows:
       - e2e-okteto-test:
           requires:
             - test-e2e-setup
+      - e2e-gateway:
+          requires:
+            - test-e2e-setup
       - e2e-build-windows:
           requires:
             - test-e2e-setup
@@ -864,6 +937,9 @@ workflows:
           requires:
             - test-e2e-setup
       - e2e-okteto-test-windows:
+          requires:
+            - test-e2e-setup
+      - e2e-gateway-windows:
           requires:
             - test-e2e-setup
 
@@ -895,6 +971,9 @@ workflows:
       - e2e-okteto-test:
           requires:
             - test-e2e-setup
+      - e2e-gateway:
+          requires:
+            - test-e2e-setup
 
   # run-e2e-windows is triggered by okteto-bot via Github Actions when adding the run-e2e-windows label to the PR
   # e2e test for windows platform are run
@@ -916,5 +995,8 @@ workflows:
           requires:
             - test-e2e-setup
       - e2e-okteto-test-windows:
+          requires:
+            - test-e2e-setup
+      - e2e-gateway-windows:
           requires:
             - test-e2e-setup
