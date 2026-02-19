@@ -1,0 +1,74 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":enableVulnerabilityAlertsWithLabel(security)"
+  ],
+  "timezone": "Europe/Madrid",
+  "semanticCommits": "enabled",
+  "commitMessagePrefix": "chore(deps):",
+  "automerge": false,
+  "platformAutomerge": false,
+  "prConcurrentLimit": 1,
+  "prHourlyLimit": 1,
+  "rebaseWhen": "conflicted",
+  "enabledManagers": ["gomod"],
+  "postUpdateOptions": ["gomodTidy"],
+  "labels": ["dependencies", "release/internal"],
+  "ignoreDeps": [
+    "github.com/moby/buildkit"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["every month"]
+  },
+  "packageRules": [
+    {
+      "description": "Ignore indirect dependencies - they follow direct ones",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "enabled": false
+    },
+    {
+      "description": "Manage Go toolchain version updates as a group",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["golang"],
+      "groupName": "go toolchain"
+    },
+    {
+      "description": "Label PRs for the main module",
+      "matchManagers": ["gomod"],
+      "matchFileNames": ["go.mod"],
+      "addLabels": ["go"]
+    },
+    {
+      "description": "Label PRs for the tools module",
+      "matchManagers": ["gomod"],
+      "matchFileNames": ["tools/go.mod"],
+      "addLabels": ["go", "tools"]
+    },
+    {
+      "description": "Kubernetes ecosystem - must stay in sync",
+      "matchPackagePrefixes": ["k8s.io/"],
+      "groupName": "kubernetes"
+    },
+    {
+      "description": "Docker ecosystem - must stay in sync",
+      "matchPackagePrefixes": ["github.com/docker/"],
+      "groupName": "docker"
+    },
+    {
+      "description": "Go stdlib extensions",
+      "matchPackagePrefixes": ["golang.org/x/", "google.golang.org/"],
+      "groupName": "golang-stdlib-extensions"
+    },
+    {
+      "description": "Wait 7 days before updating to avoid broken releases",
+      "matchUpdateTypes": ["patch", "minor", "major"],
+      "minimumReleaseAge": "7 days"
+    }
+  ]
+}
