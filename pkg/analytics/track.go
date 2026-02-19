@@ -63,6 +63,28 @@ var (
 	mixpanelClient mixpanel.Mixpanel
 )
 
+// eventsAllowedDuringDeploy defines which events should be tracked
+// even when origin is "okteto-deploy" (i.e., during nested deploy operations)
+var eventsAllowedDuringDeploy = map[string]bool{
+	// Build events
+	buildEvent:                    true,
+	buildTransientErrorEvent:      true,
+	buildPullErrorEvent:           true,
+	buildWithManifestVsDockerfile: true,
+	imageBuildEvent:               true,
+	buildkitConnectionEvent:       true,
+
+	// Management events
+	namespaceEvent:       true,
+	namespaceCreateEvent: true,
+	namespaceDeleteEvent: true,
+	contextEvent:         true,
+	deleteContexts:       true,
+
+	// Deploy stack
+	deployStackEvent: true,
+}
+
 func init() {
 	c := &http.Client{
 		Timeout: time.Second * 5,
@@ -253,9 +275,12 @@ func track(event string, success bool, props map[string]interface{}) {
 	}
 
 	// skip events from nested okteto deploys and manifest dependencies
+	// unless the event is explicitly allowed
 	origin := config.GetDeployOrigin()
 	if origin == "okteto-deploy" {
-		return
+		if !eventsAllowedDuringDeploy[event] {
+			return
+		}
 	}
 
 	mpOS := ""

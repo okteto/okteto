@@ -133,3 +133,53 @@ func Test_disabledInOktetoCluster(t *testing.T) {
 		})
 	}
 }
+
+func Test_eventsAllowedDuringDeploy(t *testing.T) {
+	// Verify the allowlist contains exactly the expected events
+	expectedEvents := map[string]bool{
+		// Build events
+		buildEvent:                    true,
+		buildTransientErrorEvent:      true,
+		buildPullErrorEvent:           true,
+		buildWithManifestVsDockerfile: true,
+		imageBuildEvent:               true,
+		buildkitConnectionEvent:       true,
+
+		// Management events
+		namespaceEvent:       true,
+		namespaceCreateEvent: true,
+		namespaceDeleteEvent: true,
+		contextEvent:         true,
+		deleteContexts:       true,
+
+		// Deploy stack
+		deployStackEvent: true,
+	}
+
+	// Verify all expected events are in the allowlist
+	for event := range expectedEvents {
+		if !eventsAllowedDuringDeploy[event] {
+			t.Errorf("Expected event %q to be in allowlist but it was not", event)
+		}
+	}
+
+	// Verify no unexpected events are in the allowlist
+	for event := range eventsAllowedDuringDeploy {
+		if !expectedEvents[event] {
+			t.Errorf("Unexpected event %q found in allowlist", event)
+		}
+	}
+
+	// Verify Deploy event is NOT in the allowlist (by design)
+	if eventsAllowedDuringDeploy[deployEvent] {
+		t.Error("Deploy event should not be in allowlist")
+	}
+
+	// Verify Up/Down events are NOT in the allowlist (by design)
+	if eventsAllowedDuringDeploy[upEvent] {
+		t.Error("Up event should not be in allowlist")
+	}
+	if eventsAllowedDuringDeploy[downEvent] {
+		t.Error("Down event should not be in allowlist")
+	}
+}
