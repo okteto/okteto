@@ -109,10 +109,10 @@ Tests for compose endpoints with Gateway API (HTTPRoute) and Ingress:
 - `make integration-gateway ARGS="ingress"` - Run only Ingress tests
 
 These tests verify:
+
 - `OKTETO_COMPOSE_ENDPOINTS_TYPE=gateway` creates HTTPRoute resources (not Ingress)
 - `OKTETO_COMPOSE_ENDPOINTS_TYPE=ingress` creates Ingress resources (not HTTPRoute)
 - Full lifecycle: namespace → deploy → up → file sync → pod recovery → down → cleanup
-
 
 ### Tools Commands
 
