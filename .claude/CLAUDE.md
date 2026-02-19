@@ -85,8 +85,34 @@ okteto/
 - `make build` - Build `okteto` binary to `bin/okteto`
 - `make test` - Run unit tests with race detection and coverage
 - `make lint` - Run golangci-lint and pre-commit checks
-- `make integration` - Run integration tests (requires Kubernetes cluster)
+- `make integration` - Run all integration tests (requires Kubernetes cluster)
 - `make dep` - Tidy Go modules
+
+### Integration Test Commands
+
+Integration tests are organized by package and can be run individually:
+
+- `make integration-actions` - Run actions integration tests
+- `make integration-build` - Run build integration tests
+- `make integration-deploy` - Run deploy integration tests
+- `make integration-okteto` - Run okteto integration tests
+- `make integration-up` - Run up integration tests
+- `make integration-okteto-test` - Run okteto test integration tests
+- `make integration-gateway` - Run gateway/ingress integration tests (see below)
+
+#### Gateway Integration Tests
+
+Tests for compose endpoints with Gateway API (HTTPRoute) and Ingress:
+
+- `make integration-gateway` - Run all gateway/ingress tests
+- `make integration-gateway ARGS="gateway"` - Run only Gateway (HTTPRoute) tests
+- `make integration-gateway ARGS="ingress"` - Run only Ingress tests
+
+These tests verify:
+
+- `OKTETO_COMPOSE_ENDPOINTS_TYPE=gateway` creates HTTPRoute resources (not Ingress)
+- `OKTETO_COMPOSE_ENDPOINTS_TYPE=ingress` creates Ingress resources (not HTTPRoute)
+- Full lifecycle: namespace → deploy → up → file sync → pod recovery → down → cleanup
 
 ### Tools Commands
 

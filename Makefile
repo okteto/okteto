@@ -71,6 +71,16 @@ integration-up:
 integration-okteto-test:
 	go test github.com/okteto/okteto/integration/test -tags="integration" --count=1 -v -timeout 45m
 
+.PHONY: integration-gateway
+integration-gateway:
+	@if [ "$(ARGS)" = "gateway" ]; then \
+		go test github.com/okteto/okteto/integration/gateway -tags="integration" --count=1 -v -timeout 30m -run="Gateway"; \
+	elif [ "$(ARGS)" = "ingress" ]; then \
+		go test github.com/okteto/okteto/integration/gateway -tags="integration" --count=1 -v -timeout 30m -run="Ingress"; \
+	else \
+		go test github.com/okteto/okteto/integration/gateway -tags="integration" --count=1 -v -timeout 30m; \
+	fi
+
 .PHONY: build
 build:
 	$(BUILDCOMMAND) -o ${BINDIR}/okteto
