@@ -1,5 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "includePaths": [
+    "go.mod",
+    "tools/go.mod"
+  ],
   "extends": [
     "config:recommended",
     ":enableVulnerabilityAlertsWithLabel(security)"
@@ -9,7 +13,7 @@
   "commitMessagePrefix": "chore(deps):",
   "automerge": false,
   "platformAutomerge": false,
-  "prConcurrentLimit": 1,
+  "prConcurrentLimit": 5,
   "prHourlyLimit": 1,
   "rebaseWhen": "conflicted",
   "enabledManagers": ["gomod"],
@@ -33,10 +37,9 @@
       "enabled": false
     },
     {
-      "description": "Manage Go toolchain version updates as a group",
+      "description": "Default: ungrouped Go dependencies update on Fridays",
       "matchManagers": ["gomod"],
-      "matchDepTypes": ["golang"],
-      "groupName": "go toolchain"
+      "schedule": ["on friday"]
     },
     {
       "description": "Label PRs for the main module",
@@ -53,22 +56,46 @@
     {
       "description": "Kubernetes ecosystem - must stay in sync",
       "matchPackagePrefixes": ["k8s.io/"],
-      "groupName": "kubernetes"
+      "groupName": "kubernetes",
+      "schedule": ["on monday"]
     },
     {
-      "description": "Docker ecosystem - must stay in sync",
+      "description": "Docker & container ecosystem - must stay in sync",
       "matchPackagePrefixes": ["github.com/docker/"],
-      "groupName": "docker"
+      "matchPackageNames": [
+        "github.com/google/go-containerregistry",
+        "github.com/moby/term"
+      ],
+      "groupName": "docker",
+      "schedule": ["on tuesday"]
     },
     {
       "description": "Go stdlib extensions",
-      "matchPackagePrefixes": ["golang.org/x/", "google.golang.org/"],
-      "groupName": "golang-stdlib-extensions"
+      "matchPackagePrefixes": ["golang.org/x/", "google.golang.org/", "gopkg.in/"],
+      "groupName": "golang-stdlib-extensions",
+      "schedule": ["on wednesday"]
     },
     {
-      "description": "Wait 7 days before updating to avoid broken releases",
+      "description": "CLI framework & logging",
+      "matchPackageNames": [
+        "github.com/spf13/cobra",
+        "github.com/spf13/afero",
+        "github.com/sirupsen/logrus",
+        "github.com/fatih/color",
+        "github.com/briandowns/spinner",
+        "github.com/cheggaaa/pb/v3",
+        "github.com/manifoldco/promptui",
+        "github.com/vbauerster/mpb/v7",
+        "github.com/juju/ansiterm",
+        "github.com/pkg/errors"
+      ],
+      "groupName": "cli-and-logging",
+      "schedule": ["on thursday"]
+    },
+    {
+      "description": "Wait 30 days before updating to avoid broken releases",
       "matchUpdateTypes": ["patch", "minor", "major"],
-      "minimumReleaseAge": "7 days"
+      "minimumReleaseAge": "30 days"
     }
   ]
 }

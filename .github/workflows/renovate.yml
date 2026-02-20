@@ -1,0 +1,27 @@
+name: Renovate
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily run at 04:00 UTC. Renovate schedules in .github/renovate.json decide what PRs to open/update.
+    - cron: "0 4 * * *"
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@v44.2.5
+        with:
+          configurationFile: .github/renovate.json
+          token: ${{ secrets.RENOVATEBOT_GITHUB_TOKEN }}
+        env:
+          LOG_LEVEL: debug
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
