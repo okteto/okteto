@@ -1,0 +1,101 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "includePaths": [
+    "go.mod",
+    "tools/go.mod"
+  ],
+  "extends": [
+    "config:recommended",
+    ":enableVulnerabilityAlertsWithLabel(security)"
+  ],
+  "timezone": "Europe/Madrid",
+  "semanticCommits": "enabled",
+  "commitMessagePrefix": "chore(deps):",
+  "automerge": false,
+  "platformAutomerge": false,
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 1,
+  "rebaseWhen": "conflicted",
+  "enabledManagers": ["gomod"],
+  "postUpdateOptions": ["gomodTidy"],
+  "labels": ["dependencies", "release/internal"],
+  "ignoreDeps": [
+    "github.com/moby/buildkit"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["every month"]
+  },
+  "packageRules": [
+    {
+      "description": "Ignore indirect dependencies - they follow direct ones",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "enabled": false
+    },
+    {
+      "description": "Default: ungrouped Go dependencies update on Fridays",
+      "matchManagers": ["gomod"],
+      "schedule": ["on friday"]
+    },
+    {
+      "description": "Label PRs for the main module",
+      "matchManagers": ["gomod"],
+      "matchFileNames": ["go.mod"],
+      "addLabels": ["go"]
+    },
+    {
+      "description": "Label PRs for the tools module",
+      "matchManagers": ["gomod"],
+      "matchFileNames": ["tools/go.mod"],
+      "addLabels": ["go", "tools"]
+    },
+    {
+      "description": "Kubernetes ecosystem - must stay in sync",
+      "matchPackagePrefixes": ["k8s.io/"],
+      "groupName": "kubernetes",
+      "schedule": ["on monday"]
+    },
+    {
+      "description": "Docker & container ecosystem - must stay in sync",
+      "matchPackagePrefixes": ["github.com/docker/"],
+      "matchPackageNames": [
+        "github.com/google/go-containerregistry",
+        "github.com/moby/term"
+      ],
+      "groupName": "docker",
+      "schedule": ["on tuesday"]
+    },
+    {
+      "description": "Go stdlib extensions",
+      "matchPackagePrefixes": ["golang.org/x/", "google.golang.org/", "gopkg.in/"],
+      "groupName": "golang-stdlib-extensions",
+      "schedule": ["on wednesday"]
+    },
+    {
+      "description": "CLI framework & logging",
+      "matchPackageNames": [
+        "github.com/spf13/cobra",
+        "github.com/spf13/afero",
+        "github.com/sirupsen/logrus",
+        "github.com/fatih/color",
+        "github.com/briandowns/spinner",
+        "github.com/cheggaaa/pb/v3",
+        "github.com/manifoldco/promptui",
+        "github.com/vbauerster/mpb/v7",
+        "github.com/juju/ansiterm",
+        "github.com/pkg/errors"
+      ],
+      "groupName": "cli-and-logging",
+      "schedule": ["on thursday"]
+    },
+    {
+      "description": "Wait 30 days before updating to avoid broken releases",
+      "matchUpdateTypes": ["patch", "minor", "major"],
+      "minimumReleaseAge": "30 days"
+    }
+  ]
+}
