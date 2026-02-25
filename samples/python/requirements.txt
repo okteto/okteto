@@ -4,4 +4,4 @@ itsdangerous==2.1.2
 Jinja2==3.1.6
 MarkupSafe==2.1.2
 pydevd-pycharm==231.7515.12
-Werkzeug==3.1.5
+Werkzeug==3.1.6
