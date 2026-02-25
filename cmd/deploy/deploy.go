@@ -877,6 +877,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		if err != nil {
 			return fmt.Errorf("error getting ingress client: %w", err)
 		}
+		oktetoLog.Infof("Using Ingress for endpoints")
 		endpointDeployer = stack.NewIngressDeployer(ingressClient, composeSectionInfo.Stack.Name, composeSectionInfo.Stack.Namespace)
 	}
 

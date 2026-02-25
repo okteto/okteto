@@ -31,8 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	forwardK8s "github.com/okteto/okteto/pkg/k8s/forward"
-	"github.com/okteto/okteto/pkg/k8s/httproutes"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -112,7 +110,7 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 		metadata.GatewayNamespace = octxGateway.Namespace
 	}
 
-	// Priority 1: Check feature flag (OKTETO_COMPOSE_ENDPOINTS_TYPE) - takes absolute precedence
+	// Check feature flag (OKTETO_COMPOSE_ENDPOINTS_TYPE) - takes absolute precedence
 	endpointType := os.Getenv(oktetoComposeEndpointsTypeEnvVar)
 	if endpointType == "ingress" {
 		oktetoLog.Infof("Using Ingress for endpoints (forced by %s=ingress)", oktetoComposeEndpointsTypeEnvVar)
@@ -123,7 +121,7 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 		return true, metadata, nil
 	}
 
-	// Priority 2: Check default gateway type (OKTETO_DEFAULT_GATEWAY_TYPE)
+	// Check default gateway type (OKTETO_DEFAULT_GATEWAY_TYPE)
 	defaultGatewayType := os.Getenv(oktetoDefaultGatewayTypeEnvVar)
 	if defaultGatewayType == "ingress" {
 		oktetoLog.Infof("Using Ingress for endpoints (set by %s=ingress)", oktetoDefaultGatewayTypeEnvVar)
@@ -138,80 +136,9 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 		return true, metadata, nil
 	}
 
-	// Priority 3: Automatic detection based on gateway metadata in context
-	if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
-		oktetoLog.Infof("Gateway API is not configured in the cluster, using Ingress for endpoints")
-		return false, metadata, nil
-	}
-
 	return true, metadata, nil
 }
 
-// ingressDeployer deploys endpoints using Kubernetes Ingress
-type ingressDeployer struct {
-	client    *ingresses.Client
-	stackName string
-	namespace string
-}
-
-func (d *ingressDeployer) DeployServiceEndpoint(ctx context.Context, name, serviceName string, port model.Port, stack *model.Stack) error {
-	return deployK8sEndpoint(ctx, name, serviceName, port, stack, d.client)
-}
-
-func (d *ingressDeployer) DeployComposeEndpoint(ctx context.Context, name string, endpoint model.Endpoint, stack *model.Stack) error {
-	translateOptions := &ingresses.TranslateOptions{
-		Name:      format.ResourceK8sMetaString(d.stackName),
-		Namespace: d.namespace,
-	}
-	ingress := ingresses.Translate(name, endpoint, translateOptions)
-	// check for labels collision in the case of a compose - before creation or update (deploy)
-	if skipIngressDeployForStackNameLabel(ctx, d.client, ingress) {
-		return nil
-	}
-	return d.client.Deploy(ctx, ingress)
-}
-
-// httpRouteDeployer deploys endpoints using Gateway API HTTPRoute
-type httpRouteDeployer struct {
-	client          *httproutes.Client
-	stackName       string
-	namespace       string
-	clusterMetadata types.ClusterMetadata
-}
-
-func (d *httpRouteDeployer) DeployServiceEndpoint(ctx context.Context, name, serviceName string, port model.Port, stack *model.Stack) error {
-	return deployK8sEndpointHTTPRoute(ctx, name, serviceName, port, stack, d.client, d.clusterMetadata)
-}
-
-func (d *httpRouteDeployer) DeployComposeEndpoint(ctx context.Context, name string, endpoint model.Endpoint, stack *model.Stack) error {
-	translateOptions := &httproutes.TranslateOptions{
-		Name:             format.ResourceK8sMetaString(d.stackName),
-		Namespace:        d.namespace,
-		GatewayName:      d.clusterMetadata.GatewayName,
-		GatewayNamespace: d.clusterMetadata.GatewayNamespace,
-	}
-	httpRoute := httproutes.Translate(name, endpoint, translateOptions)
-	return d.client.Deploy(ctx, httpRoute)
-}
-
-// NewIngressDeployer creates a new Ingress endpoint deployer
-func NewIngressDeployer(client *ingresses.Client, stackName, namespace string) EndpointDeployer {
-	return &ingressDeployer{
-		client:    client,
-		stackName: stackName,
-		namespace: namespace,
-	}
-}
-
-// NewHTTPRouteDeployer creates a new HTTPRoute endpoint deployer
-func NewHTTPRouteDeployer(client *httproutes.Client, stackName, namespace string, clusterMetadata types.ClusterMetadata) EndpointDeployer {
-	return &httpRouteDeployer{
-		client:          client,
-		stackName:       stackName,
-		namespace:       namespace,
-		clusterMetadata: clusterMetadata,
-	}
-}
 
 func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
@@ -394,26 +321,6 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 	return nil
 }
 
-func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress) bool {
-	// err is not checked here, we just want to check if the ingress already exists for this labels
-	old, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace())
-	if err != nil {
-		oktetoLog.Infof("error getting ingress '%s': %s", ingress.GetName(), err)
-		return false
-	}
-	if old != nil {
-		if old.GetLabels()[model.StackNameLabel] == "" {
-			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName(), old.GetName())
-			return true
-		}
-		if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
-			oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
-			return true
-		}
-	}
-	return false
-}
-
 func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
 
 	volumesToDeploySet := map[string]bool{}
@@ -544,73 +451,6 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 	}
 
 	return nil
-}
-
-func deployK8sEndpoint(ctx context.Context, ingressName, svcName string, port model.Port, s *model.Stack, c *ingresses.Client) error {
-
-	// create a new endpoint for this port ingress deployment
-	endpoint := model.Endpoint{
-		Labels:      translateLabels(svcName, s),
-		Annotations: translateAnnotations(s.Services[svcName]),
-		Rules: []model.EndpointRule{
-			{
-				Path:    "/",
-				Service: svcName,
-				Port:    port.ContainerPort,
-			},
-		},
-	}
-	// add specific stack labels
-	if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
-		endpoint.Labels[model.StackNameLabel] = format.ResourceK8sMetaString(s.Name)
-	}
-	if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
-		endpoint.Labels[model.StackEndpointNameLabel] = ingressName
-	}
-
-	translateOptions := &ingresses.TranslateOptions{
-		Name:      format.ResourceK8sMetaString(s.Name),
-		Namespace: s.Namespace,
-	}
-	ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
-
-	// check for labels collision in the case of a compose - before creation or update (deploy)
-	if skipIngressDeployForStackNameLabel(ctx, c, ingress) {
-		return nil
-	}
-	return c.Deploy(ctx, ingress)
-}
-
-func deployK8sEndpointHTTPRoute(ctx context.Context, httpRouteName, svcName string, port model.Port, s *model.Stack, c *httproutes.Client, metadata types.ClusterMetadata) error {
-	// create a new endpoint for this port httproute deployment
-	endpoint := model.Endpoint{
-		Labels:      translateLabels(svcName, s),
-		Annotations: translateAnnotations(s.Services[svcName]),
-		Rules: []model.EndpointRule{
-			{
-				Path:    "/",
-				Service: svcName,
-				Port:    port.ContainerPort,
-			},
-		},
-	}
-	// add specific stack labels
-	if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
-		endpoint.Labels[model.StackNameLabel] = format.ResourceK8sMetaString(s.Name)
-	}
-	if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
-		endpoint.Labels[model.StackEndpointNameLabel] = httpRouteName
-	}
-
-	translateOptions := &httproutes.TranslateOptions{
-		Name:             format.ResourceK8sMetaString(s.Name),
-		Namespace:        s.Namespace,
-		GatewayName:      metadata.GatewayName,
-		GatewayNamespace: metadata.GatewayNamespace,
-	}
-	httpRoute := httproutes.Translate(httpRouteName, endpoint, translateOptions)
-
-	return c.Deploy(ctx, httpRoute)
 }
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
