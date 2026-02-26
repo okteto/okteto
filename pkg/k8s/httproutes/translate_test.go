@@ -14,10 +14,10 @@
 package httproutes
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/require"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -298,29 +298,12 @@ func TestTranslate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := Translate(tt.endpointName, tt.endpoint, tt.opts)
 
-			if result.Name != tt.expectedHTTPRouteName {
-				t.Errorf("Wrong HTTPRoute name: got '%s', expected '%s'", result.Name, tt.expectedHTTPRouteName)
-			}
-
-			if result.Namespace != tt.opts.Namespace {
-				t.Errorf("Wrong HTTPRoute namespace: got '%s', expected '%s'", result.Namespace, tt.opts.Namespace)
-			}
-
-			if !reflect.DeepEqual(result.Annotations, tt.expectedHTTPRouteAnnotations) {
-				t.Errorf("Wrong HTTPRoute annotations: got '%v', expected '%v'", result.Annotations, tt.expectedHTTPRouteAnnotations)
-			}
-
-			if !reflect.DeepEqual(result.Labels, tt.expectedHTTPRouteLabels) {
-				t.Errorf("Wrong HTTPRoute labels: got '%v', expected '%v'", result.Labels, tt.expectedHTTPRouteLabels)
-			}
-
-			if !reflect.DeepEqual(result.Spec.Rules, tt.expectedHTTPRouteRules) {
-				t.Errorf("Wrong HTTPRoute rules: got '%v', expected '%v'", result.Spec.Rules, tt.expectedHTTPRouteRules)
-			}
-
-			if !reflect.DeepEqual(result.Spec.ParentRefs, tt.expectedParentRefs) {
-				t.Errorf("Wrong HTTPRoute ParentRefs: got '%v', expected '%v'", result.Spec.ParentRefs, tt.expectedParentRefs)
-			}
+			require.Equal(t, tt.expectedHTTPRouteName, result.Name)
+			require.Equal(t, tt.opts.Namespace, result.Namespace)
+			require.Equal(t, tt.expectedHTTPRouteAnnotations, result.Annotations)
+			require.Equal(t, tt.expectedHTTPRouteLabels, result.Labels)
+			require.Equal(t, tt.expectedHTTPRouteRules, result.Spec.Rules)
+			require.Equal(t, tt.expectedParentRefs, result.Spec.ParentRefs)
 		})
 	}
 }
@@ -366,10 +349,7 @@ func TestSetLabels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := setLabels(tt.endpoint, tt.opts)
-
-			if !reflect.DeepEqual(result, tt.expectedLabels) {
-				t.Errorf("Wrong labels: got '%v', expected '%v'", result, tt.expectedLabels)
-			}
+			require.Equal(t, tt.expectedLabels, result)
 		})
 	}
 }
@@ -405,10 +385,7 @@ func TestSetAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := setAnnotations(tt.endpoint)
-
-			if !reflect.DeepEqual(result, tt.expectedAnnotations) {
-				t.Errorf("Wrong annotations: got '%v', expected '%v'", result, tt.expectedAnnotations)
-			}
+			require.Equal(t, tt.expectedAnnotations, result)
 		})
 	}
 }

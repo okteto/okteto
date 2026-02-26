@@ -137,28 +137,28 @@ func Test_displayListNamespaces(t *testing.T) {
 			name:   "default format",
 			format: "",
 			input: []namespaceOutput{
-				{Namespace: "test", Status: "Active", Current: true},
-				{Namespace: "test2", Status: "Sleeping", Current: false},
+				{Namespace: "test", Status: "Active", Persistent: true, Current: true},
+				{Namespace: "test2", Status: "Sleeping", Persistent: false, Current: false},
 			},
-			expectedOutput: "Namespace  Status\ntest *     Active\ntest2      Sleeping\n",
+			expectedOutput: "Namespace  Status    Persistent\ntest *     Active    true\ntest2      Sleeping  false\n",
 		},
 		{
 			name:   "json format",
 			format: "json",
 			input: []namespaceOutput{
-				{Namespace: "test", Status: "Active", Current: true},
-				{Namespace: "test2", Status: "Sleeping", Current: false},
+				{Namespace: "test", Status: "Active", Persistent: true, Current: true},
+				{Namespace: "test2", Status: "Sleeping", Persistent: false, Current: false},
 			},
-			expectedOutput: "[\n {\n  \"namespace\": \"test\",\n  \"status\": \"Active\",\n  \"current\": true\n },\n {\n  \"namespace\": \"test2\",\n  \"status\": \"Sleeping\",\n  \"current\": false\n }\n]\n",
+			expectedOutput: "[\n {\n  \"namespace\": \"test\",\n  \"status\": \"Active\",\n  \"persistent\": true,\n  \"current\": true\n },\n {\n  \"namespace\": \"test2\",\n  \"status\": \"Sleeping\",\n  \"persistent\": false,\n  \"current\": false\n }\n]\n",
 		},
 		{
 			name:   "yaml format",
 			format: "yaml",
 			input: []namespaceOutput{
-				{Namespace: "test", Status: "Active", Current: true},
-				{Namespace: "test2", Status: "Sleeping", Current: false},
+				{Namespace: "test", Status: "Active", Persistent: true, Current: true},
+				{Namespace: "test2", Status: "Sleeping", Persistent: false, Current: false},
 			},
-			expectedOutput: "- namespace: test\n  status: Active\n  current: true\n- namespace: test2\n  status: Sleeping\n  current: false\n",
+			expectedOutput: "- namespace: test\n  status: Active\n  persistent: true\n  current: true\n- namespace: test2\n  status: Sleeping\n  persistent: false\n  current: false\n",
 		},
 	}
 

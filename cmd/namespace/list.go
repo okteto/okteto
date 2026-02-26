@@ -40,9 +40,10 @@ type listFlags struct {
 }
 
 type namespaceOutput struct {
-	Namespace string `json:"namespace" yaml:"namespace"`
-	Status    string `json:"status" yaml:"status"`
-	Current   bool   `json:"current" yaml:"current"`
+	Namespace  string `json:"namespace" yaml:"namespace"`
+	Status     string `json:"status" yaml:"status"`
+	Persistent bool   `json:"persistent" yaml:"persistent"`
+	Current    bool   `json:"current" yaml:"current"`
 }
 
 // List all namespace in current context
@@ -114,13 +115,13 @@ func (nc *Command) displayListNamespaces(namespaces []namespaceOutput, output st
 			return nil
 		}
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-		fmt.Fprintf(w, "Namespace\tStatus\n")
+		fmt.Fprintf(w, "Namespace\tStatus\tPersistent\n")
 		for _, space := range namespaces {
 			id := space.Namespace
 			if id == okteto.GetContext().Namespace {
 				id += " *"
 			}
-			fmt.Fprintf(w, "%s\t%v\n", id, space.Status)
+			fmt.Fprintf(w, "%s\t%v\t%v\n", id, space.Status, space.Persistent)
 		}
 		w.Flush()
 	}
@@ -141,12 +142,13 @@ func getNamespaceOutput(namespaces []types.Namespace) []namespaceOutput {
 	var namespaceSlice []namespaceOutput
 	currentNamespace := okteto.GetContext().Namespace
 	for _, ns := range namespaces {
-		previewOutput := namespaceOutput{
-			Namespace: ns.ID,
-			Status:    ns.Status,
-			Current:   ns.ID == currentNamespace,
+		output := namespaceOutput{
+			Namespace:  ns.ID,
+			Status:     ns.Status,
+			Persistent: ns.Persistent,
+			Current:    ns.ID == currentNamespace,
 		}
-		namespaceSlice = append(namespaceSlice, previewOutput)
+		namespaceSlice = append(namespaceSlice, output)
 	}
 	return namespaceSlice
 }

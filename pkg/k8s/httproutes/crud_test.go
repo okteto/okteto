@@ -16,11 +16,9 @@ package httproutes
 import (
 	"context"
 	"errors"
-	"fmt"
-	"reflect"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sTesting "k8s.io/client-go/testing"
@@ -42,16 +40,11 @@ func TestCreate(t *testing.T) {
 		gatewayClient: clientset,
 	}
 	err := hrClient.Create(ctx, httpRoute)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	retrieved, err := clientset.GatewayV1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(retrieved, httpRoute) {
-		t.Fatalf("Didn't created correctly")
-	}
+	require.NoError(t, err)
+	require.Equal(t, httpRoute, retrieved)
 }
 
 func TestUpdate(t *testing.T) {
@@ -79,17 +72,11 @@ func TestUpdate(t *testing.T) {
 		},
 	}
 	err := hrClient.Update(ctx, updatedHTTPRoute)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	retrieved, err := clientset.GatewayV1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(retrieved, updatedHTTPRoute) {
-		t.Fatalf("Didn't updated correctly")
-	}
+	require.NoError(t, err)
+	require.Equal(t, updatedHTTPRoute, retrieved)
 }
 
 func TestGet(t *testing.T) {
@@ -107,12 +94,8 @@ func TestGet(t *testing.T) {
 	}
 
 	retrieved, err := hrClient.Get(ctx, httpRoute.Name, httpRoute.Namespace)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(retrieved, httpRoute) {
-		t.Fatalf("Didn't get correctly")
-	}
+	require.NoError(t, err)
+	require.Equal(t, httpRoute, retrieved)
 }
 
 func TestList(t *testing.T) {
@@ -129,13 +112,8 @@ func TestList(t *testing.T) {
 		gatewayClient: clientset,
 	}
 	hrList, err := hrClient.List(ctx, httpRoute.Namespace, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(hrList) != 1 {
-		t.Fatal(fmt.Errorf("Expected 1 httproute, found %d", len(hrList)))
-	}
+	require.NoError(t, err)
+	require.Len(t, hrList, 1)
 }
 
 func TestDestroy(t *testing.T) {
@@ -178,10 +156,7 @@ func TestDestroy(t *testing.T) {
 			}
 
 			err := hrClient.Destroy(ctx, tt.hrName, tt.namespace)
-
-			if err != nil {
-				t.Fatalf("unexpected error '%s'", err)
-			}
+			require.NoError(t, err)
 		})
 	}
 }
@@ -201,22 +176,16 @@ func TestDestroyWithError(t *testing.T) {
 	}
 
 	err := hrClient.Destroy(ctx, httpRouteName, namespace)
-
-	if err == nil {
-		t.Fatal("an error was expected but no error was returned")
-	}
-	if !strings.Contains(err.Error(), kubernetesError) {
-		t.Fatalf("Got '%s' error but expected '%s'", err.Error(), kubernetesError)
-	}
+	require.Error(t, err)
+	require.ErrorContains(t, err, kubernetesError)
 }
 
 func TestDeploy(t *testing.T) {
 	var tests = []struct {
-		name           string
-		existingRoute  *gatewayv1.HTTPRoute
-		httpRoute      *gatewayv1.HTTPRoute
-		expectCreate   bool
-		expectedLabels map[string]string
+		name            string
+		existingObjects []runtime.Object
+		httpRoute       *gatewayv1.HTTPRoute
+		expectedLabels  map[string]string
 	}{
 		{
 			name: "create new httproute",
@@ -227,17 +196,18 @@ func TestDeploy(t *testing.T) {
 					Labels:    map[string]string{"key": "value"},
 				},
 			},
-			expectCreate:   true,
 			expectedLabels: map[string]string{"key": "value"},
 		},
 		{
 			name: "update existing httproute",
-			existingRoute: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "test-route",
-					Namespace:       "test",
-					Labels:          map[string]string{"key": "value"},
-					ResourceVersion: "1",
+			existingObjects: []runtime.Object{
+				&gatewayv1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "test-route",
+						Namespace:       "test",
+						Labels:          map[string]string{"key": "value"},
+						ResourceVersion: "1",
+					},
 				},
 			},
 			httpRoute: &gatewayv1.HTTPRoute{
@@ -247,7 +217,6 @@ func TestDeploy(t *testing.T) {
 					Labels:    map[string]string{"key": "value", "key2": "value2"},
 				},
 			},
-			expectCreate:   false,
 			expectedLabels: map[string]string{"key": "value", "key2": "value2"},
 		},
 	}
@@ -255,30 +224,17 @@ func TestDeploy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			var clientset *gatewayfake.Clientset
-			if tt.existingRoute != nil {
-				clientset = gatewayfake.NewSimpleClientset(tt.existingRoute)
-			} else {
-				clientset = gatewayfake.NewSimpleClientset()
-			}
-
+			clientset := gatewayfake.NewSimpleClientset(tt.existingObjects...)
 			hrClient := Client{
 				gatewayClient: clientset,
 			}
 
 			err := hrClient.Deploy(ctx, tt.httpRoute)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			retrieved, err := clientset.GatewayV1().HTTPRoutes(tt.httpRoute.Namespace).Get(ctx, tt.httpRoute.Name, metav1.GetOptions{})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(retrieved.Labels, tt.expectedLabels) {
-				t.Fatalf("Expected labels %v, got %v", tt.expectedLabels, retrieved.Labels)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedLabels, retrieved.Labels)
 		})
 	}
 }

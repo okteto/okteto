@@ -15,7 +15,8 @@ package types
 
 // Namespace represents an Okteto k8s namespace
 type Namespace struct {
-	ID       string `json:"id" yaml:"id"`
-	Status   string `json:"status" yaml:"status"`
-	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
+	ID         string `json:"id" yaml:"id"`
+	Status     string `json:"status" yaml:"status"`
+	Sleeping   bool   `json:"sleeping" yaml:"sleeping"`
+	Persistent bool   `json:"persistent" yaml:"persistent"`
 }

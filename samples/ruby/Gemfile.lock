@@ -6,7 +6,7 @@ GEM
     multi_json (1.15.0)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
-    rack (3.2.3)
+    rack (3.2.5)
     rack-protection (4.2.0)
       base64 (>= 0.1.0)
       logger (>= 1.6.0)

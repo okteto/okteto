@@ -74,8 +74,9 @@ type sleepNamespaceMutation struct {
 }
 
 type namespaceStatus struct {
-	Id     graphql.String
-	Status graphql.String
+	Id         graphql.String
+	Status     graphql.String
+	Persistent graphql.Boolean
 }
 
 type namespaceID struct {
@@ -112,8 +113,9 @@ func (c *namespaceClient) List(ctx context.Context) ([]types.Namespace, error) {
 	result := make([]types.Namespace, 0)
 	for _, space := range queryStruct.Response {
 		result = append(result, types.Namespace{
-			ID:     string(space.Id),
-			Status: string(space.Status),
+			ID:         string(space.Id),
+			Status:     string(space.Status),
+			Persistent: bool(space.Persistent),
 		})
 	}
 
@@ -211,7 +213,8 @@ func (c *namespaceClient) Get(ctx context.Context, namespace string) (*types.Nam
 	}
 
 	return &types.Namespace{
-		ID:     string(queryStruct.Response.Id),
-		Status: string(queryStruct.Response.Status),
+		ID:         string(queryStruct.Response.Id),
+		Status:     string(queryStruct.Response.Status),
+		Persistent: bool(queryStruct.Response.Persistent),
 	}, nil
 }

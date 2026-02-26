@@ -869,7 +869,6 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		if err != nil {
 			return fmt.Errorf("error creating httproute client: %w", err)
 		}
-		oktetoLog.Infof("Using Gateway API HTTPRoute for endpoints (gateway: %s/%s)", clusterMetadata.GatewayNamespace, clusterMetadata.GatewayName)
 		endpointDeployer = stack.NewHTTPRouteDeployer(httpRouteClient, composeSectionInfo.Stack.Name, composeSectionInfo.Stack.Namespace, clusterMetadata)
 	} else {
 		// Create Ingress deployer
@@ -877,6 +876,7 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 		if err != nil {
 			return fmt.Errorf("error getting ingress client: %w", err)
 		}
+		oktetoLog.Infof("Using Ingress for endpoints")
 		endpointDeployer = stack.NewIngressDeployer(ingressClient, composeSectionInfo.Stack.Name, composeSectionInfo.Stack.Namespace)
 	}
 

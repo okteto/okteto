@@ -139,6 +139,12 @@ The Okteto CLI Docker image includes both the CLI binary and internal tools:
 - Import paths: `github.com/okteto/tools/{remote,supervisor,clean}`
 - Installed in image at: `/usr/bin-image/bin/{okteto-remote,okteto-supervisor,clean}`
 
+> **See also**: [architecture.md](architecture.md) for detailed tools directory structure and package organization.
+
+**Security & CVE Management:**
+
+To fix vulnerabilities in the Docker image (including all bundled binaries and Go dependencies), use the `/fix-cves` skill. This automates the workflow for scanning with Trivy, updating vulnerable dependencies, and verifying fixes. See [../skills/fix-cves/SKILL.md](../skills/fix-cves/SKILL.md) for the complete remediation process.
+
 ## Release Process
 
 1. Version is set via `VERSION_STRING` environment variable

@@ -17,22 +17,19 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/format"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -117,39 +114,13 @@ func Test_deploySvc(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := deploySvc(ctx, tt.stack, tt.svcName, client, divertDriver)
-			if err != nil {
-				t.Fatal("Not deployed correctly")
-			}
+			require.NoError(t, err)
 		})
 	}
 }
 
-func Test_reDeploySvc(t *testing.T) {
+func Test_reDeploySvc_deployment(t *testing.T) {
 	ctx := context.Background()
-	oldJobSucceeded := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
-		Name:      "serviceName",
-		Namespace: "test",
-		Labels: map[string]string{
-			model.StackNameLabel:  "okteto",
-			model.DeployedByLabel: "okteto",
-		},
-	},
-		Status: batchv1.JobStatus{
-			Succeeded: 1,
-		},
-	}
-	oldSfs := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
-		Name:      "serviceName",
-		Namespace: "test",
-		Labels: map[string]string{
-			model.StackNameLabel:  "okteto",
-			model.DeployedByLabel: "okteto",
-		},
-	},
-		Status: appsv1.StatefulSetStatus{
-			ReadyReplicas: 1,
-		},
-	}
 	oldDep := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 		Name:      "serviceName",
 		Namespace: "test",
@@ -162,114 +133,105 @@ func Test_reDeploySvc(t *testing.T) {
 			ReadyReplicas: 1,
 		},
 	}
-	fakeClient := fake.NewSimpleClientset(oldJobSucceeded, oldSfs, oldDep)
-	var tests = []struct {
-		name      string
-		component string
-		stack     *model.Stack
-		svcName   string
-	}{
-		{
-			name:      "redeploy deployment",
-			component: "deployment",
-			svcName:   "serviceName",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "testName",
-				Services: map[string]*model.Service{
-					"serviceName": {
-						Image:         "test_image",
-						RestartPolicy: apiv1.RestartPolicyAlways,
-					},
-				},
-			},
-		},
-		{
-			name:      "redeploy sfs",
-			svcName:   "serviceName",
-			component: "sfs",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "testName",
-				Services: map[string]*model.Service{
-					"serviceName": {
-						Image:         "test_image",
-						RestartPolicy: apiv1.RestartPolicyAlways,
-						Volumes: []build.VolumeMounts{
-							{
-								LocalPath:  "a",
-								RemotePath: "b",
-							},
-						},
-					},
-				},
-				Volumes: map[string]*model.VolumeSpec{
-					"a": {},
-				},
-			},
-		},
-		{
-			name:      "redeploy job",
-			svcName:   "serviceName",
-			component: "job",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "testName",
-				Services: map[string]*model.Service{
-					"serviceName": {
-						Image:         "test_image",
-						RestartPolicy: apiv1.RestartPolicyNever,
-					},
-				},
+	fakeClient := fake.NewSimpleClientset(oldDep)
+	stack := &model.Stack{
+		Namespace: "test",
+		Name:      "testName",
+		Services: map[string]*model.Service{
+			"serviceName": {
+				Image:         "test_image",
+				RestartPolicy: apiv1.RestartPolicyAlways,
 			},
 		},
 	}
 
-	divertDriver := divert.NewNoop()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient, divertDriver)
-			if err != nil {
-				t.Fatal("Not re-deployed correctly")
-			}
+	err := deploySvc(ctx, stack, "serviceName", fakeClient, divert.NewNoop())
+	require.NoError(t, err)
 
-			if tt.component == "deployment" {
-				d, err := fakeClient.AppsV1().Deployments(tt.stack.Namespace).Get(ctx, tt.svcName, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if d.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(tt.stack.Name) {
-					t.Fatal()
-				}
-				if d.Labels[model.DeployedByLabel] != format.ResourceK8sMetaString(tt.stack.Name) {
-					t.Fatal()
-				}
-			}
-			if tt.component == "sfs" {
-				sfs, err := fakeClient.AppsV1().StatefulSets(tt.stack.Namespace).Get(ctx, tt.svcName, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if sfs.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(tt.stack.Name) {
-					t.Fatal()
-				}
-				if sfs.Labels[model.DeployedByLabel] != format.ResourceK8sMetaString(tt.stack.Name) {
-					t.Fatal()
-				}
-
-			}
-			if tt.component == "job" {
-				job, err := fakeClient.BatchV1().Jobs(tt.stack.Namespace).Get(ctx, tt.svcName, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if job.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(tt.stack.Name) {
-					t.Fatal()
-				}
-			}
-		})
-	}
+	d, err := fakeClient.AppsV1().Deployments("test").Get(ctx, "serviceName", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, format.ResourceK8sMetaString("testName"), d.Labels[model.StackNameLabel])
+	require.Equal(t, format.ResourceK8sMetaString("testName"), d.Labels[model.DeployedByLabel])
 }
+
+func Test_reDeploySvc_sfs(t *testing.T) {
+	ctx := context.Background()
+	oldSfs := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Name:      "serviceName",
+		Namespace: "test",
+		Labels: map[string]string{
+			model.StackNameLabel:  "okteto",
+			model.DeployedByLabel: "okteto",
+		},
+	},
+		Status: appsv1.StatefulSetStatus{
+			ReadyReplicas: 1,
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(oldSfs)
+	stack := &model.Stack{
+		Namespace: "test",
+		Name:      "testName",
+		Services: map[string]*model.Service{
+			"serviceName": {
+				Image:         "test_image",
+				RestartPolicy: apiv1.RestartPolicyAlways,
+				Volumes: []build.VolumeMounts{
+					{
+						LocalPath:  "a",
+						RemotePath: "b",
+					},
+				},
+			},
+		},
+		Volumes: map[string]*model.VolumeSpec{
+			"a": {},
+		},
+	}
+
+	err := deploySvc(ctx, stack, "serviceName", fakeClient, divert.NewNoop())
+	require.NoError(t, err)
+
+	sfs, err := fakeClient.AppsV1().StatefulSets("test").Get(ctx, "serviceName", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, format.ResourceK8sMetaString("testName"), sfs.Labels[model.StackNameLabel])
+	require.Equal(t, format.ResourceK8sMetaString("testName"), sfs.Labels[model.DeployedByLabel])
+}
+
+func Test_reDeploySvc_job(t *testing.T) {
+	ctx := context.Background()
+	oldJob := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+		Name:      "serviceName",
+		Namespace: "test",
+		Labels: map[string]string{
+			model.StackNameLabel:  "okteto",
+			model.DeployedByLabel: "okteto",
+		},
+	},
+		Status: batchv1.JobStatus{
+			Succeeded: 1,
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(oldJob)
+	stack := &model.Stack{
+		Namespace: "test",
+		Name:      "testName",
+		Services: map[string]*model.Service{
+			"serviceName": {
+				Image:         "test_image",
+				RestartPolicy: apiv1.RestartPolicyNever,
+			},
+		},
+	}
+
+	err := deploySvc(ctx, stack, "serviceName", fakeClient, divert.NewNoop())
+	require.NoError(t, err)
+
+	job, err := fakeClient.BatchV1().Jobs("test").Get(ctx, "serviceName", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, format.ResourceK8sMetaString("testName"), job.Labels[model.StackNameLabel])
+}
+
 func Test_deployDeployment(t *testing.T) {
 	ctx := context.Background()
 	stack := &model.Stack{
@@ -286,14 +248,10 @@ func Test_deployDeployment(t *testing.T) {
 
 	divertDriver := divert.NewNoop()
 	_, err := deployDeployment(ctx, "test", stack, client, divertDriver)
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 
 	_, err = client.AppsV1().Deployments("ns").Get(ctx, "test", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 }
 
 func Test_deployVolumes(t *testing.T) {
@@ -320,14 +278,10 @@ func Test_deployVolumes(t *testing.T) {
 	client := fake.NewSimpleClientset()
 
 	err := deployVolume(ctx, "a", stack, client)
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 
 	_, err = client.CoreV1().PersistentVolumeClaims("ns").Get(ctx, "a", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 }
 
 func Test_deploySfs(t *testing.T) {
@@ -355,14 +309,10 @@ func Test_deploySfs(t *testing.T) {
 
 	divertDriver := divert.NewNoop()
 	_, err := deployStatefulSet(ctx, "test", stack, client, divertDriver)
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 
 	_, err = client.AppsV1().StatefulSets("ns").Get(ctx, "test", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 }
 
 func Test_deployJob(t *testing.T) {
@@ -381,62 +331,36 @@ func Test_deployJob(t *testing.T) {
 
 	divertDriver := divert.NewNoop()
 	_, err := deployJob(ctx, "test", stack, client, divertDriver)
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 
 	_, err = client.BatchV1().Jobs("ns").Get(ctx, "test", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal("Not deployed correctly")
-	}
+	require.NoError(t, err)
 }
 
-func Test_ValidateDeploySomeServices(t *testing.T) {
-	var tests = []struct {
-		name             string
-		stack            *model.Stack
-		svcsToBeDeployed []string
-		expectedErr      bool
-	}{
-		{
-			name: "not defined svc",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
-					"db": {},
-					"api": {DependsOn: model.DependsOn{
-						"db": model.DependsOnConditionSpec{},
-					}},
-				},
-			},
-			svcsToBeDeployed: []string{"nginx", "db"},
-			expectedErr:      true,
-		},
-		{
-			name: "ok",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
-					"db": {},
-					"api": {DependsOn: model.DependsOn{
-						"db": model.DependsOnConditionSpec{},
-					}},
-				},
-			},
-			svcsToBeDeployed: []string{"api", "db"},
-			expectedErr:      false,
+func TestValidateDefinedServices_undefinedService(t *testing.T) {
+	stack := &model.Stack{
+		Services: map[string]*model.Service{
+			"db": {},
+			"api": {DependsOn: model.DependsOn{
+				"db": model.DependsOnConditionSpec{},
+			}},
 		},
 	}
+	err := ValidateDefinedServices(stack, []string{"nginx", "db"})
+	require.Error(t, err)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateDefinedServices(tt.stack, tt.svcsToBeDeployed)
-			if err == nil && tt.expectedErr {
-				t.Fatal("Expected err but not thrown")
-			}
-			if err != nil && !tt.expectedErr {
-				t.Fatal("Not Expected err but not thrown")
-			}
-		})
+func TestValidateDefinedServices_ok(t *testing.T) {
+	stack := &model.Stack{
+		Services: map[string]*model.Service{
+			"db": {},
+			"api": {DependsOn: model.DependsOn{
+				"db": model.DependsOnConditionSpec{},
+			}},
+		},
 	}
+	err := ValidateDefinedServices(stack, []string{"api", "db"})
+	require.NoError(t, err)
 }
 
 func Test_AddSomeServices(t *testing.T) {
@@ -648,10 +572,7 @@ func Test_AddSomeServices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			options := &DeployOptions{ServicesToDeploy: tt.svcsToBeDeployed}
 			options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, tt.stack, options.ServicesToDeploy, fakeClient)
-
-			if !reflect.DeepEqual(tt.expectedSvcsToBeDeployed, options.ServicesToDeploy) {
-				t.Errorf("Expected %v but got %v", tt.expectedSvcsToBeDeployed, options.ServicesToDeploy)
-			}
+			require.ElementsMatch(t, tt.expectedSvcsToBeDeployed, options.ServicesToDeploy)
 		})
 	}
 }
@@ -663,7 +584,7 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 	}
 	tests := []struct {
 		args     args
-		expected map[string]bool
+		expected []string
 		name     string
 	}{
 		{
@@ -710,20 +631,14 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 					},
 				},
 			},
-			expected: map[string]bool{"volume b": true, "volume c": true},
+			expected: []string{"volume b", "volume c"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getVolumesToDeployFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
-			resultSet := make(map[string]bool, len(result))
-			for _, v := range result {
-				resultSet[v] = true
-			}
-			if !reflect.DeepEqual(resultSet, tt.expected) {
-				t.Errorf("expected %v, got %v", tt.expected, result)
-			}
+			require.ElementsMatch(t, tt.expected, result)
 		})
 	}
 }
@@ -735,7 +650,7 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 	}
 	tests := []struct {
 		args     args
-		expected map[string]bool
+		expected []string
 		name     string
 	}{
 		{
@@ -753,7 +668,7 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 					"a": true,
 				},
 			},
-			expected: map[string]bool{"manifest": true},
+			expected: []string{"manifest"},
 		},
 		{
 			name: "no endpoints",
@@ -763,20 +678,14 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 					"manifest": true,
 				},
 			},
-			expected: map[string]bool{},
+			expected: []string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getEndpointsToDeployFromServicesToDeploy(tt.args.endpoints, tt.args.servicesToDeploy)
-			resultSet := make(map[string]bool, len(result))
-			for _, v := range result {
-				resultSet[v] = true
-			}
-			if !reflect.DeepEqual(resultSet, tt.expected) {
-				t.Errorf("expected %v, got %v", tt.expected, result)
-			}
+			require.ElementsMatch(t, tt.expected, result)
 		})
 	}
 }
@@ -862,10 +771,10 @@ func TestDeployK8sService(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
 			err := deployK8sService(context.Background(), "test", tt.stack, fakeClient)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			svc, err := services.Get(context.Background(), "test", "ns", fakeClient)
-			assert.NoError(t, err)
-			assert.Equal(t, svc.ObjectMeta.Labels[model.StackNameLabel], tt.expectedNameLabel)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedNameLabel, svc.ObjectMeta.Labels[model.StackNameLabel])
 		})
 	}
 }
@@ -1014,267 +923,12 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
 			err := getErrorDueToRestartLimit(context.Background(), tt.stack, "test2", tt.previousDeployedServicesRestarts, fakeClient)
-			assert.Equal(t, tt.err, err)
-		})
-	}
-
-}
-
-func TestDeployK8sEndpoint(t *testing.T) {
-	tests := []struct {
-		name      string
-		stack     *model.Stack
-		ingresses []runtime.Object
-	}{
-		{
-			name: "deploy public endpoints",
-			stack: &model.Stack{
-				Namespace: "test",
-				Services: model.ComposeServices{
-					"test": &model.Service{},
-				},
-			},
-		},
-		{
-			name: "deploy private endpoints",
-			stack: &model.Stack{
-				Namespace: "test",
-				Services: model.ComposeServices{
-					"test": &model.Service{
-						Annotations: model.Annotations{
-							"dev.okteto.com/private": "true",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "skip deploy endpoint 1",
-			stack: &model.Stack{
-				Namespace: "test",
-				Services: model.ComposeServices{
-					"test": &model.Service{
-						Annotations: model.Annotations{
-							"dev.okteto.com/private": "true",
-						},
-					},
-				},
-			},
-			ingresses: []runtime.Object{
-				&networkingv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							model.StackNameLabel: "",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "skip deploy endpoint 2",
-			stack: &model.Stack{
-				Name:      "test",
-				Namespace: "test",
-				Services: model.ComposeServices{
-					"test": &model.Service{
-						Annotations: model.Annotations{
-							"dev.okteto.com/private": "true",
-						},
-					},
-				},
-			},
-			ingresses: []runtime.Object{
-				&networkingv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							model.StackNameLabel: "test",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fake.NewSimpleClientset(tt.ingresses...)
-			c := ingresses.NewIngressClient(fakeClient, true)
-			err := deployK8sEndpoint(context.Background(), "test", "test", model.Port{ContainerPort: 80}, tt.stack, c)
-			assert.NoError(t, err)
-
-			obj, err := c.Get(context.Background(), "test", "test")
-			assert.NoError(t, err)
-			assert.NotNil(t, obj)
-		})
-	}
-}
-
-func TestIngressDeployer_DeployServiceEndpoint(t *testing.T) {
-	tests := []struct {
-		name      string
-		stack     *model.Stack
-		ingresses []runtime.Object
-	}{
-		{
-			name: "deploy new ingress endpoint",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "test-stack",
-				Services: model.ComposeServices{
-					"test-service": &model.Service{},
-				},
-			},
-		},
-		{
-			name: "update existing ingress endpoint",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "test-stack",
-				Services: model.ComposeServices{
-					"test-service": &model.Service{},
-				},
-			},
-			ingresses: []runtime.Object{
-				&networkingv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-endpoint",
-						Namespace: "test",
-						Labels: map[string]string{
-							model.StackNameLabel: "test-stack",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fake.NewSimpleClientset(tt.ingresses...)
-			c := ingresses.NewIngressClient(fakeClient, true)
-			deployer := &ingressDeployer{
-				client:    c,
-				stackName: tt.stack.Name,
-				namespace: tt.stack.Namespace,
-			}
-
-			err := deployer.DeployServiceEndpoint(context.Background(), "test-endpoint", "test-service", model.Port{ContainerPort: 80}, tt.stack)
-			assert.NoError(t, err)
-
-			// Verify the ingress was created/updated
-			obj, err := c.Get(context.Background(), "test-endpoint", "test")
-			assert.NoError(t, err)
-			assert.NotNil(t, obj)
-		})
-	}
-}
-
-func TestIngressDeployer_DeployComposeEndpoint(t *testing.T) {
-	tests := []struct {
-		name      string
-		stack     *model.Stack
-		endpoint  model.Endpoint
-		ingresses []runtime.Object
-	}{
-		{
-			name: "deploy new compose endpoint",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "test-stack",
-				Services: model.ComposeServices{
-					"test-service": &model.Service{},
-				},
-			},
-			endpoint: model.Endpoint{
-				Rules: []model.EndpointRule{
-					{
-						Service: "test-service",
-						Port:    8080,
-						Path:    "/",
-					},
-				},
-			},
-		},
-		{
-			name: "update existing compose endpoint",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "test-stack",
-				Services: model.ComposeServices{
-					"test-service": &model.Service{},
-				},
-			},
-			endpoint: model.Endpoint{
-				Rules: []model.EndpointRule{
-					{
-						Service: "test-service",
-						Port:    8080,
-						Path:    "/api",
-					},
-				},
-			},
-			ingresses: []runtime.Object{
-				&networkingv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-endpoint",
-						Namespace: "test",
-						Labels: map[string]string{
-							model.StackNameLabel: "test-stack",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "skip deploy when stack name label differs",
-			stack: &model.Stack{
-				Namespace: "test",
-				Name:      "test-stack",
-				Services: model.ComposeServices{
-					"test-service": &model.Service{},
-				},
-			},
-			endpoint: model.Endpoint{
-				Rules: []model.EndpointRule{
-					{
-						Service: "test-service",
-						Port:    8080,
-						Path:    "/",
-					},
-				},
-			},
-			ingresses: []runtime.Object{
-				&networkingv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-endpoint",
-						Namespace: "test",
-						Labels: map[string]string{
-							model.StackNameLabel: "different-stack",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fake.NewSimpleClientset(tt.ingresses...)
-			c := ingresses.NewIngressClient(fakeClient, true)
-			deployer := &ingressDeployer{
-				client:    c,
-				stackName: tt.stack.Name,
-				namespace: tt.stack.Namespace,
-			}
-
-			err := deployer.DeployComposeEndpoint(context.Background(), "test-endpoint", tt.endpoint, tt.stack)
-			assert.NoError(t, err)
+			require.Equal(t, tt.err, err)
 		})
 	}
 }
 
 func TestShouldUseHTTPRoute(t *testing.T) {
-	// Save original context and restore after test
 	originalStore := okteto.CurrentStore
 	defer func() { okteto.CurrentStore = originalStore }()
 
@@ -1285,7 +939,6 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 		gateway            *okteto.GatewayMetadata
 		expectedUseRoute   bool
 		expectedMetadata   types.ClusterMetadata
-		expectedError      bool
 	}{
 		{
 			name:             "env var forces ingress",
@@ -1293,7 +946,6 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: false,
 			expectedMetadata: types.ClusterMetadata{},
-			expectedError:    false,
 		},
 		{
 			name:             "env var forces gateway",
@@ -1301,7 +953,6 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
-			expectedError:    false,
 		},
 		{
 			name:             "env var forces gateway without metadata",
@@ -1309,58 +960,38 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:          nil,
 			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{},
-			expectedError:    false,
 		},
 		{
 			name:             "gateway configured in context",
-			envVar:           "",
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
-			expectedError:    false,
 		},
 		{
 			name:             "no gateway configured",
-			envVar:           "",
 			gateway:          nil,
-			expectedUseRoute: false,
+			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{},
-			expectedError:    false,
 		},
 		{
 			name:             "gateway without namespace",
-			envVar:           "",
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway"},
-			expectedUseRoute: false,
+			expectedUseRoute: true,
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway"},
-			expectedError:    false,
 		},
 		{
 			name:               "default gateway type forces ingress",
-			envVar:             "",
 			defaultGatewayType: "ingress",
 			gateway:            &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute:   false,
 			expectedMetadata:   types.ClusterMetadata{},
-			expectedError:      false,
 		},
 		{
 			name:               "default gateway type forces gateway with metadata",
-			envVar:             "",
 			defaultGatewayType: "gateway",
 			gateway:            &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute:   true,
 			expectedMetadata:   types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
-			expectedError:      false,
-		},
-		{
-			name:               "default gateway type forces gateway without metadata - error",
-			envVar:             "",
-			defaultGatewayType: "gateway",
-			gateway:            nil,
-			expectedUseRoute:   false,
-			expectedMetadata:   types.ClusterMetadata{},
-			expectedError:      true,
 		},
 		{
 			name:               "feature flag takes precedence over default gateway type",
@@ -1369,13 +1000,11 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			gateway:            &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute:   false,
 			expectedMetadata:   types.ClusterMetadata{},
-			expectedError:      false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup test context
 			okteto.CurrentStore = &okteto.ContextStore{
 				CurrentContext: "test",
 				Contexts: map[string]*okteto.Context{
@@ -1387,29 +1016,35 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 					},
 				},
 			}
-
-			// Set env var if specified
-			if tt.envVar != "" {
-				os.Setenv(oktetoComposeEndpointsTypeEnvVar, tt.envVar)
-				defer os.Unsetenv(oktetoComposeEndpointsTypeEnvVar)
-			}
-
-			// Set default gateway type env var if specified
-			if tt.defaultGatewayType != "" {
-				os.Setenv(oktetoDefaultGatewayTypeEnvVar, tt.defaultGatewayType)
-				defer os.Unsetenv(oktetoDefaultGatewayTypeEnvVar)
-			}
+			t.Setenv(oktetoComposeEndpointsTypeEnvVar, tt.envVar)
+			t.Setenv(oktetoDefaultGatewayTypeEnvVar, tt.defaultGatewayType)
 
 			useRoute, metadata, err := ShouldUseHTTPRoute()
-
-			if tt.expectedError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedUseRoute, useRoute)
-				assert.Equal(t, tt.expectedMetadata.GatewayName, metadata.GatewayName)
-				assert.Equal(t, tt.expectedMetadata.GatewayNamespace, metadata.GatewayNamespace)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedUseRoute, useRoute)
+			require.Equal(t, tt.expectedMetadata.GatewayName, metadata.GatewayName)
+			require.Equal(t, tt.expectedMetadata.GatewayNamespace, metadata.GatewayNamespace)
 		})
 	}
+}
+
+func TestShouldUseHTTPRouteError(t *testing.T) {
+	originalStore := okteto.CurrentStore
+	defer func() { okteto.CurrentStore = originalStore }()
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+				UserID:    "user-id",
+				Gateway:   nil,
+			},
+		},
+	}
+	t.Setenv(oktetoDefaultGatewayTypeEnvVar, "gateway")
+
+	_, _, err := ShouldUseHTTPRoute()
+	require.Error(t, err)
 }

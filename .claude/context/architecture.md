@@ -68,6 +68,8 @@ Internal utilities that run inside development containers:
 - Local: `cd tools && make build` (outputs to `bin/`)
 - Docker: Automatically built via `tools-builder` stage in main Dockerfile
 
+> **See also**: [build-and-release.md](build-and-release.md) for complete build system details, Docker image build process, and CVE remediation workflow.
+
 ### `internal/`
 
 - `internal/test/` - Test utilities (fake K8s clients, fake Okteto clients, context helpers)
