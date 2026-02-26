@@ -139,7 +139,6 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 	return true, metadata, nil
 }
 
-
 func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
