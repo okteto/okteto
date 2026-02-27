@@ -18,7 +18,7 @@
   "rebaseWhen": "conflicted",
   "enabledManagers": ["gomod"],
   "postUpdateOptions": ["gomodTidy"],
-  "labels": ["dependencies", "release/internal"],
+  "labels": ["dependencies", "release/internal", "run-e2e"],
   "ignoreDeps": [
     "github.com/moby/buildkit"
   ],
