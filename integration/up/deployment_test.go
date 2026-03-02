@@ -290,6 +290,86 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
+func TestUpResetFlag(t *testing.T) {
+	t.Parallel()
+	// Prepare environment
+	dir := t.TempDir()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+		OktetoHome: dir,
+	}))
+
+	indexPath := filepath.Join(dir, "index.html")
+	require.NoError(t, writeFile(indexPath, testNamespace))
+	log.Printf("original 'index.html' content: %s", testNamespace)
+
+	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yml"), k8sManifestTemplate))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2Exec))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
+
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, "deployment.yml"),
+		Name:       "e2etest",
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
+
+	upOptions := &commands.UpOptions{
+		Name:         "e2etest",
+		Namespace:    testNamespace,
+		Workdir:      dir,
+		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		OktetoHome:   dir,
+		Token:        token,
+	}
+	downOpts := &commands.DownOptions{
+		Namespace:    testNamespace,
+		ManifestPath: upOptions.ManifestPath,
+		Workdir:      dir,
+		Token:        token,
+	}
+
+	// First up: verify sync works
+	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
+	require.NoError(t, err)
+
+	indexLocalEndpoint := "http://localhost:8084/index.html"
+	require.Equal(t, testNamespace, integration.GetContentFromURL(indexLocalEndpoint, timeout))
+
+	updatedContent := fmt.Sprintf("%s-before-reset", testNamespace)
+	require.NoError(t, writeFile(indexPath, updatedContent))
+	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, updatedContent, timeout, upResult.ErrorChan))
+
+	// Stop before relaunching with --reset
+	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
+	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
+
+	// Second up with --reset: verify sync still works after reset
+	upOptions.Reset = true
+	upResultReset, err := commands.RunOktetoUp(oktetoPath, upOptions)
+	require.NoError(t, err)
+
+	contentAfterReset := fmt.Sprintf("%s-after-reset", testNamespace)
+	require.NoError(t, writeFile(indexPath, contentAfterReset))
+	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, contentAfterReset, timeout, upResultReset.ErrorChan))
+
+	// Cleanup
+	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
+	require.True(t, commands.HasUpCommandFinished(upResultReset.Pid.Pid))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
 func compareDeployment(ctx context.Context, deployment *appsv1.Deployment, c kubernetes.Interface) error {
 	after, err := integration.GetDeployment(ctx, deployment.GetNamespace(), deployment.GetName(), c)
 	if err != nil {
