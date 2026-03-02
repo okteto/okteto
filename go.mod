@@ -33,7 +33,7 @@ require (
 	github.com/moby/term v0.5.2
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29
+	github.com/shurcooL/graphql v0.0.0-20240915155400-7ee5256398cf
 	github.com/sirupsen/logrus v1.9.3
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.11.0
