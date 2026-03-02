@@ -1,6 +1,6 @@
 # Base image versions - Centralized version control for easier updates
 # Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
-ARG KUBECTL_VERSION=1.34.3
+ARG KUBECTL_VERSION=1.34.5
 ARG HELM3_VERSION=3.20.0
 ARG HELM4_VERSION=4.1.0
 ARG KUSTOMIZE_VERSION=5.8.0
