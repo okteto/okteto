@@ -254,9 +254,6 @@ func track(event string, success bool, props map[string]interface{}) {
 
 	// skip events from nested okteto deploys and manifest dependencies
 	origin := config.GetDeployOrigin()
-	if origin == "okteto-deploy" {
-		return
-	}
 
 	mpOS := ""
 	switch runtime.GOOS {
