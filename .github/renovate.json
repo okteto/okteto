@@ -1,9 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "includePaths": [
-    "go.mod",
-    "tools/go.mod"
-  ],
+  "includePaths": ["go.mod", "tools/go.mod"],
   "extends": [
     "config:recommended",
     ":enableVulnerabilityAlertsWithLabel(security)"
@@ -19,9 +16,7 @@
   "enabledManagers": ["gomod"],
   "postUpdateOptions": ["gomodTidy"],
   "labels": ["dependencies", "release/internal", "run-e2e"],
-  "ignoreDeps": [
-    "github.com/moby/buildkit"
-  ],
+  "ignoreDeps": ["github.com/moby/buildkit"],
   "vulnerabilityAlerts": {
     "enabled": true
   },
@@ -55,25 +50,29 @@
     },
     {
       "description": "Kubernetes ecosystem - must stay in sync",
-      "matchPackagePrefixes": ["k8s.io/"],
       "groupName": "kubernetes",
-      "schedule": ["on monday"]
+      "schedule": ["on monday"],
+      "matchPackageNames": ["k8s.io/{/,}**"]
     },
     {
       "description": "Docker & container ecosystem - must stay in sync",
-      "matchPackagePrefixes": ["github.com/docker/"],
       "matchPackageNames": [
         "github.com/google/go-containerregistry",
-        "github.com/moby/term"
+        "github.com/moby/term",
+        "github.com/docker/{/,}**"
       ],
       "groupName": "docker",
       "schedule": ["on tuesday"]
     },
     {
       "description": "Go stdlib extensions",
-      "matchPackagePrefixes": ["golang.org/x/", "google.golang.org/", "gopkg.in/"],
       "groupName": "golang-stdlib-extensions",
-      "schedule": ["on wednesday"]
+      "schedule": ["on wednesday"],
+      "matchPackageNames": [
+        "golang.org/x/{/,}**",
+        "google.golang.org/{/,}**",
+        "gopkg.in/{/,}**"
+      ]
     },
     {
       "description": "CLI framework & logging",
