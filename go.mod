@@ -41,11 +41,11 @@ require (
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/stern/stern v1.22.0
 	github.com/vbauerster/mpb/v7 v7.5.3
-	golang.org/x/crypto v0.45.0
-	golang.org/x/oauth2 v0.30.0
-	golang.org/x/sync v0.18.0
-	golang.org/x/term v0.37.0
-	google.golang.org/grpc v1.75.1
+	golang.org/x/crypto v0.47.0
+	golang.org/x/oauth2 v0.35.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/term v0.39.0
+	google.golang.org/grpc v1.78.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.32.3
@@ -154,9 +154,9 @@ require (
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
-	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/api v0.162.0 // indirect
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
@@ -212,7 +212,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.7.0 // indirect
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -252,8 +252,8 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
 	go.opentelemetry.io/otel/metric v1.40.0 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251029180050-ab9386a59fda // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
 )
 
 replace github.com/moby/buildkit => github.com/okteto/buildkit v0.0.0-20250702110947-403f68808de1
