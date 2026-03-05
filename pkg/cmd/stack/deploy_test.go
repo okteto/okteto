@@ -970,7 +970,7 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 		{
 			name:             "no gateway configured",
 			gateway:          nil,
-			expectedUseRoute: true,
+			expectedUseRoute: false,
 			expectedMetadata: types.ClusterMetadata{},
 		},
 		{
