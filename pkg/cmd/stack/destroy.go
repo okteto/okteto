@@ -178,6 +178,14 @@ func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interfac
 }
 
 func destroyHTTPRoutes(ctx context.Context, s *model.Stack, config *rest.Config, destroyAll bool) error {
+	available, err := httproutes.IsAvailable(ctx, config)
+	if err != nil {
+		return err
+	}
+	if !available {
+		return nil
+	}
+
 	hrClient, err := httproutes.NewHTTPRouteClient(config)
 	if err != nil {
 		return fmt.Errorf("error creating httproute client: %w", err)

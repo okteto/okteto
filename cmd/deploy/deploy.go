@@ -864,6 +864,13 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 
 	var endpointDeployer stack.EndpointDeployer
 	if useHTTPRoute {
+		available, err := httproutes.IsAvailable(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		if !available {
+			return fmt.Errorf("Gateway API (HTTPRoute) is not installed in this cluster. Set OKTETO_COMPOSE_ENDPOINTS_TYPE=ingress or install the Gateway API CRDs")
+		}
 		// Create HTTPRoute deployer
 		httpRouteClient, err := httproutes.NewHTTPRouteClient(cfg)
 		if err != nil {

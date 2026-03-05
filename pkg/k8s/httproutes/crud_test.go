@@ -19,8 +19,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sTesting "k8s.io/client-go/testing"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayfake "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/fake"
@@ -114,6 +116,19 @@ func TestList(t *testing.T) {
 	hrList, err := hrClient.List(ctx, httpRoute.Namespace, "")
 	require.NoError(t, err)
 	require.Len(t, hrList, 1)
+}
+
+func TestListCRDNotInstalled(t *testing.T) {
+	ctx := context.Background()
+	clientset := gatewayfake.NewSimpleClientset()
+	clientset.PrependReactor("list", "httproutes", func(_ k8sTesting.Action) (bool, runtime.Object, error) {
+		return true, nil, k8serrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "httproutes"}, "")
+	})
+	hrClient := Client{gatewayClient: clientset}
+
+	hrList, err := hrClient.List(ctx, "test", "")
+	require.NoError(t, err)
+	require.Empty(t, hrList)
 }
 
 func TestDestroy(t *testing.T) {

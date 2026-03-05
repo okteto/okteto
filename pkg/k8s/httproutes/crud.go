@@ -19,7 +19,9 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -63,6 +65,9 @@ func (c *Client) List(ctx context.Context, namespace, labels string) ([]metav1.O
 	result := []metav1.Object{}
 	httpRouteList, err := c.gatewayClient.GatewayV1().HTTPRoutes(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})
 	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return result, nil
+		}
 		return nil, err
 	}
 
@@ -111,6 +116,9 @@ func (c *Client) GetEndpointsBySelector(ctx context.Context, namespace, labels s
 	result := make([]string, 0)
 	httpRouteList, err := c.gatewayClient.GatewayV1().HTTPRoutes(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})
 	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return result, nil
+		}
 		return nil, err
 	}
 
@@ -136,4 +144,20 @@ func (c *Client) GetEndpointsBySelector(ctx context.Context, namespace, labels s
 	}
 
 	return result, nil
+}
+
+// IsAvailable checks whether the Gateway API CRDs are installed in the cluster
+func IsAvailable(ctx context.Context, config *rest.Config) (bool, error) {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return false, fmt.Errorf("error creating discovery client: %w", err)
+	}
+	_, err = discoveryClient.ServerResourcesForGroupVersion("gateway.networking.k8s.io/v1")
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("error checking gateway api availability: %w", err)
+	}
+	return true, nil
 }
