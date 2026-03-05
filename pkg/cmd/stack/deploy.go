@@ -136,7 +136,13 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 		return true, metadata, nil
 	}
 
-	return true, metadata, nil
+	if metadata.GatewayName != "" && metadata.GatewayNamespace != "" {
+		oktetoLog.Infof("Using HTTPRoute for endpoints with the configured gateway %s/%s (auto-detected from cluster context)", metadata.GatewayNamespace, metadata.GatewayName)
+		return true, metadata, nil
+	}
+
+	oktetoLog.Infof("Using Ingress for endpoints (no gateway configured in cluster context)")
+	return false, types.ClusterMetadata{}, nil
 }
 
 func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployOptions) error {
