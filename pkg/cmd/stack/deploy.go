@@ -136,7 +136,7 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 		return true, metadata, nil
 	}
 
-	if metadata.GatewayName != "" {
+	if metadata.GatewayName != "" && metadata.GatewayNamespace != "" {
 		oktetoLog.Infof("Using HTTPRoute for endpoints with the configured gateway %s/%s (auto-detected from cluster context)", metadata.GatewayNamespace, metadata.GatewayName)
 		return true, metadata, nil
 	}

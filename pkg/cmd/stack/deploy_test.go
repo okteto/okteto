@@ -976,8 +976,8 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 		{
 			name:             "gateway without namespace",
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway"},
-			expectedUseRoute: true,
-			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway"},
+			expectedUseRoute: false,
+			expectedMetadata: types.ClusterMetadata{},
 		},
 		{
 			name:               "default gateway type forces ingress",
