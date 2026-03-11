@@ -16,8 +16,6 @@ jobs:
       gha_meta: "run-e2e-windows"
       branch: ${{ github.head_ref }}
       pr_number: ${{ github.event.pull_request.number }}
-      event_action: ${{ github.event.action }}
-      event_label: ${{ github.event.label.name }}
     secrets:
       CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
 
@@ -28,8 +26,6 @@ jobs:
       gha_meta: "run-e2e-unix"
       branch: ${{ github.head_ref }}
       pr_number: ${{ github.event.pull_request.number }}
-      event_action: ${{ github.event.action }}
-      event_label: ${{ github.event.label.name }}
     secrets:
       CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
 
@@ -40,7 +36,5 @@ jobs:
       gha_meta: "run-e2e"
       branch: ${{ github.head_ref }}
       pr_number: ${{ github.event.pull_request.number }}
-      event_action: ${{ github.event.action }}
-      event_label: ${{ github.event.label.name }}
     secrets:
       CCI_TOKEN: ${{ secrets.CCI_TOKEN }}

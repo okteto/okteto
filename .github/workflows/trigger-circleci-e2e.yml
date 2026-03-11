@@ -15,14 +15,6 @@ on:
         description: Pull request number
         required: true
         type: string
-      event_action:
-        description: GitHub event action (labeled, synchronize, etc.)
-        required: true
-        type: string
-      event_label:
-        description: Label name that triggered the event (if action is labeled)
-        required: true
-        type: string
     secrets:
       CCI_TOKEN:
         required: true
@@ -34,9 +26,8 @@ jobs:
       group: ${{ inputs.gha_meta }}-${{ inputs.pr_number }}
       cancel-in-progress: true
     steps:
-      - name: Debounce (wait 5 min unless this label was just added)
-        if: inputs.event_action != 'labeled' || inputs.event_label != inputs.gha_meta
-        run: sleep 300
+      - name: Debounce (wait 2 min)
+        run: sleep 120
 
       - name: Cancel active CircleCI runs for this branch
         run: |
