@@ -1,0 +1,66 @@
+name: Trigger CircleCI e2e (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      gha_meta:
+        description: CircleCI pipeline parameter (run-e2e, run-e2e-unix, run-e2e-windows)
+        required: true
+        type: string
+      branch:
+        description: PR head branch name
+        required: true
+        type: string
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      event_action:
+        description: GitHub event action (labeled, synchronize, etc.)
+        required: true
+        type: string
+      event_label:
+        description: Label name that triggered the event (if action is labeled)
+        required: true
+        type: string
+    secrets:
+      CCI_TOKEN:
+        required: true
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ inputs.gha_meta }}-${{ inputs.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - name: Debounce (wait 5 min unless this label was just added)
+        if: inputs.event_action != 'labeled' || inputs.event_label != inputs.gha_meta
+        run: sleep 300
+
+      - name: Cancel active CircleCI runs for this branch
+        run: |
+          PROJECT_SLUG="gh/${{ github.repository }}"
+
+          PIPELINE_IDS=$(curl -sf -H "Circle-Token: ${{ secrets.CCI_TOKEN }}" \
+            "https://circleci.com/api/v2/project/${PROJECT_SLUG}/pipeline?branch=${{ inputs.branch }}" | \
+            jq -r '.items[].id')
+
+          for PIPELINE_ID in $PIPELINE_IDS; do
+            WORKFLOW_IDS=$(curl -sf -H "Circle-Token: ${{ secrets.CCI_TOKEN }}" \
+              "https://circleci.com/api/v2/pipeline/${PIPELINE_ID}/workflow" | \
+              jq -r '.items[] | select(.status == "running" or .status == "on_hold" or .status == "failing") | .id')
+
+            for WORKFLOW_ID in $WORKFLOW_IDS; do
+              echo "Canceling workflow ${WORKFLOW_ID} from pipeline ${PIPELINE_ID}"
+              curl -sf -X POST -H "Circle-Token: ${{ secrets.CCI_TOKEN }}" \
+                "https://circleci.com/api/v2/workflow/${WORKFLOW_ID}/cancel" || true
+            done
+          done
+
+      - name: Trigger CircleCI pipeline
+        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.2.0
+        with:
+          GHA_Meta: ${{ inputs.gha_meta }}
+        env:
+          CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
