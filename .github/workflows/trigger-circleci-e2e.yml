@@ -34,13 +34,20 @@ jobs:
           PROJECT_SLUG="gh/${{ github.repository }}"
 
           PIPELINE_IDS=$(curl -sf -H "Circle-Token: ${{ secrets.CCI_TOKEN }}" \
-            "https://circleci.com/api/v2/project/${PROJECT_SLUG}/pipeline?branch=${{ inputs.branch }}" | \
-            jq -r '.items[].id')
+            "https://circleci.com/api/v2/project/${PROJECT_SLUG}/pipeline?branch=${{ inputs.branch }}" 2>/dev/null \
+            | jq -r '.items[].id' 2>/dev/null || true)
+
+          if [ -z "$PIPELINE_IDS" ]; then
+            echo "No CircleCI pipelines found for branch ${{ inputs.branch }}"
+            exit 0
+          fi
 
           for PIPELINE_ID in $PIPELINE_IDS; do
             WORKFLOW_IDS=$(curl -sf -H "Circle-Token: ${{ secrets.CCI_TOKEN }}" \
-              "https://circleci.com/api/v2/pipeline/${PIPELINE_ID}/workflow" | \
-              jq -r '.items[] | select(.status == "running" or .status == "on_hold" or .status == "failing") | .id')
+              "https://circleci.com/api/v2/pipeline/${PIPELINE_ID}/workflow" 2>/dev/null \
+              | jq -r --arg name "${{ inputs.gha_meta }}" \
+                '.items[] | select(.name == $name) | select(.status == "running" or .status == "on_hold" or .status == "failing") | .id' \
+              2>/dev/null || true)
 
             for WORKFLOW_ID in $WORKFLOW_IDS; do
               echo "Canceling workflow ${WORKFLOW_ID} from pipeline ${PIPELINE_ID}"
