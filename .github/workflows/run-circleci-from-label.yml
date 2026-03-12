@@ -10,7 +10,10 @@ on:
 
 jobs:
   run-e2e-windows:
-    if: contains(github.event.pull_request.labels.*.name, 'run-e2e-windows') && !contains(github.event.pull_request.labels.*.name, 'run-e2e')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-e2e-windows') &&
+      !contains(github.event.pull_request.labels.*.name, 'run-e2e') &&
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled' || github.event.label.name == 'run-e2e-windows')
     uses: ./.github/workflows/trigger-circleci-e2e.yml
     with:
       gha_meta: "run-e2e-windows"
@@ -20,7 +23,10 @@ jobs:
       CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
 
   run-e2e-unix:
-    if: contains(github.event.pull_request.labels.*.name, 'run-e2e-unix') && !contains(github.event.pull_request.labels.*.name, 'run-e2e')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-e2e-unix') &&
+      !contains(github.event.pull_request.labels.*.name, 'run-e2e') &&
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled' || github.event.label.name == 'run-e2e-unix')
     uses: ./.github/workflows/trigger-circleci-e2e.yml
     with:
       gha_meta: "run-e2e-unix"
@@ -30,7 +36,9 @@ jobs:
       CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
 
   run-e2e:
-    if: contains(github.event.pull_request.labels.*.name, 'run-e2e')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-e2e') &&
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled' || github.event.label.name == 'run-e2e')
     uses: ./.github/workflows/trigger-circleci-e2e.yml
     with:
       gha_meta: "run-e2e"
