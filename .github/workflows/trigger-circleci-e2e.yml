@@ -15,6 +15,11 @@ on:
         description: Pull request number
         required: true
         type: string
+      cancel_only:
+        description: Only cancel active runs, do not trigger a new one
+        required: false
+        type: boolean
+        default: false
     secrets:
       CCI_TOKEN:
         required: true
@@ -27,6 +32,7 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Debounce (wait 2 min)
+        if: ${{ !inputs.cancel_only }}
         run: sleep 120
 
       - name: Cancel active CircleCI runs for this branch
@@ -57,6 +63,7 @@ jobs:
           done
 
       - name: Trigger CircleCI pipeline
+        if: ${{ !inputs.cancel_only }}
         uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.2.0
         with:
           GHA_Meta: ${{ inputs.gha_meta }}

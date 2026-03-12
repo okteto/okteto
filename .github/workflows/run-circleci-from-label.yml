@@ -46,3 +46,36 @@ jobs:
       pr_number: ${{ github.event.pull_request.number }}
     secrets:
       CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
+
+  cancel-e2e-windows:
+    if: github.event.action == 'unlabeled' && github.event.label.name == 'run-e2e-windows'
+    uses: ./.github/workflows/trigger-circleci-e2e.yml
+    with:
+      gha_meta: "run-e2e-windows"
+      branch: ${{ github.head_ref }}
+      pr_number: ${{ github.event.pull_request.number }}
+      cancel_only: true
+    secrets:
+      CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
+
+  cancel-e2e-unix:
+    if: github.event.action == 'unlabeled' && github.event.label.name == 'run-e2e-unix'
+    uses: ./.github/workflows/trigger-circleci-e2e.yml
+    with:
+      gha_meta: "run-e2e-unix"
+      branch: ${{ github.head_ref }}
+      pr_number: ${{ github.event.pull_request.number }}
+      cancel_only: true
+    secrets:
+      CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
+
+  cancel-e2e:
+    if: github.event.action == 'unlabeled' && github.event.label.name == 'run-e2e'
+    uses: ./.github/workflows/trigger-circleci-e2e.yml
+    with:
+      gha_meta: "run-e2e"
+      branch: ${{ github.head_ref }}
+      pr_number: ${{ github.event.pull_request.number }}
+      cancel_only: true
+    secrets:
+      CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
