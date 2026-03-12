@@ -39,7 +39,7 @@ func Translate(endpointName string, endpoint model.Endpoint, opts *TranslateOpti
 	pathMatchType := gatewayv1.PathMatchPathPrefix
 	rules := make([]gatewayv1.HTTPRouteRule, 0)
 	for _, rule := range endpoint.Rules {
-		port := gatewayv1.PortNumber(rule.Port)
+		port := rule.Port
 		httpRouteRule := gatewayv1.HTTPRouteRule{
 			Matches: []gatewayv1.HTTPRouteMatch{
 				{
