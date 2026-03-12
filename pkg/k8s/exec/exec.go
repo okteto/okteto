@@ -27,7 +27,23 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	kexec "k8s.io/kubectl/pkg/cmd/exec"
+	kterm "k8s.io/kubectl/pkg/util/term"
 )
+
+type terminalSizeQueueAdapter struct {
+	delegate kterm.TerminalSizeQueue
+}
+
+func (a *terminalSizeQueueAdapter) Next() *remotecommand.TerminalSize {
+	next := a.delegate.Next()
+	if next == nil {
+		return nil
+	}
+	return &remotecommand.TerminalSize{
+		Width:  next.Width,
+		Height: next.Height,
+	}
+}
 
 // Exec executes the command in the development container
 func Exec(ctx context.Context, c kubernetes.Interface, config *rest.Config, podNamespace, podName, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
@@ -48,7 +64,9 @@ func Exec(ctx context.Context, c kubernetes.Interface, config *rest.Config, podN
 	var sizeQueue remotecommand.TerminalSizeQueue
 	if t.Raw {
 		// this call spawns a goroutine to monitor/update the terminal size
-		sizeQueue = t.MonitorSize(t.GetSize())
+		sizeQueue = &terminalSizeQueueAdapter{
+			delegate: t.MonitorSize(t.GetSize()),
+		}
 
 		// unset p.Err if it was previously set because both stdout and stderr go over p.Out when tty is
 		// true
