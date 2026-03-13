@@ -13,7 +13,7 @@ require (
 	github.com/compose-spec/godotenv v1.1.1
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v28.5.2+incompatible
+	github.com/docker/cli v29.2.0+incompatible
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/docker-credential-helpers v0.9.5
@@ -173,13 +173,14 @@ require (
 )
 
 require (
-	github.com/bluekeyes/go-gitdiff v0.8.0
+	github.com/bluekeyes/go-gitdiff v0.8.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heimdalr/dag v1.4.0
 	github.com/kubeark/jsonschema v0.1.2
 	github.com/moby/patternmatcher v0.6.0
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
+	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
 	sigs.k8s.io/gateway-api v1.5.0
