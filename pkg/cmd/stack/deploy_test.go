@@ -955,13 +955,6 @@ func TestShouldUseHTTPRoute(t *testing.T) {
 			expectedMetadata: types.ClusterMetadata{GatewayName: "test-gateway", GatewayNamespace: "gateway-ns"},
 		},
 		{
-			name:             "env var forces gateway without metadata",
-			envVar:           "gateway",
-			gateway:          nil,
-			expectedUseRoute: true,
-			expectedMetadata: types.ClusterMetadata{},
-		},
-		{
 			name:             "gateway configured in context",
 			gateway:          &okteto.GatewayMetadata{Name: "test-gateway", Namespace: "gateway-ns"},
 			expectedUseRoute: true,
@@ -1032,19 +1025,39 @@ func TestShouldUseHTTPRouteError(t *testing.T) {
 	originalStore := okteto.CurrentStore
 	defer func() { okteto.CurrentStore = originalStore }()
 
-	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "test",
-		Contexts: map[string]*okteto.Context{
-			"test": {
-				Name:      "test",
-				Namespace: "namespace",
-				UserID:    "user-id",
-				Gateway:   nil,
-			},
+	tests := []struct {
+		name               string
+		envVar             string
+		defaultGatewayType string
+	}{
+		{
+			name:               "default gateway type forces gateway without metadata",
+			defaultGatewayType: "gateway",
+		},
+		{
+			name:   "env var forces gateway without metadata",
+			envVar: "gateway",
 		},
 	}
-	t.Setenv(oktetoDefaultGatewayTypeEnvVar, "gateway")
 
-	_, _, err := ShouldUseHTTPRoute()
-	require.Error(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.ContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.Context{
+					"test": {
+						Name:      "test",
+						Namespace: "namespace",
+						UserID:    "user-id",
+						Gateway:   nil,
+					},
+				},
+			}
+			t.Setenv(oktetoComposeEndpointsTypeEnvVar, tt.envVar)
+			t.Setenv(oktetoDefaultGatewayTypeEnvVar, tt.defaultGatewayType)
+
+			_, _, err := ShouldUseHTTPRoute()
+			require.Error(t, err)
+		})
+	}
 }
