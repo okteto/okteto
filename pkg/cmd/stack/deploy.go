@@ -117,6 +117,9 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 		return false, types.ClusterMetadata{}, nil
 	}
 	if endpointType == "gateway" {
+		if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
+			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoDefaultGatewayTypeEnvVar)
+		}
 		oktetoLog.Infof("Using HTTPRoute for endpoints with the configured gateway %s/%s (forced by %s=gateway)", metadata.GatewayNamespace, metadata.GatewayName, oktetoComposeEndpointsTypeEnvVar)
 		return true, metadata, nil
 	}
