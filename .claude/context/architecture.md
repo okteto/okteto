@@ -1,5 +1,24 @@
 # Architecture
 
+## Repository Structure
+
+```
+okteto/
+├── cmd/              # CLI commands (Cobra-based): up, down, build, deploy, destroy, etc.
+├── pkg/              # Shared packages: k8s, model, analytics, okteto client, types
+├── tools/            # Internal tools (remote, supervisor, clean) — bundled in Docker image
+├── internal/         # Internal code (test utilities)
+├── integration/      # Integration tests requiring Kubernetes cluster
+├── samples/          # Example projects for different languages
+├── main.go           # Entry point — wires up all commands
+├── Dockerfile        # Container image definition (includes tools build)
+└── Makefile          # Build, test, lint automation
+```
+
+**Command structure**: Each command in `cmd/` may have subcommands in subdirectories (e.g., `cmd/namespace/create.go`, `cmd/context/use.go`).
+
+**Package organization**: `pkg/` contains domain packages. Core packages include `k8s` (Kubernetes operations), `model` (data structures), `okteto` (API client), `types` (manifest types).
+
 ## CLI Execution Flow
 
 1. `main.go` initializes root Cobra command with global flags

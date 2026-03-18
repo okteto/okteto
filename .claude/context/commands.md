@@ -1,6 +1,14 @@
 # Commands
 
-> **See also**: [architecture.md](architecture.md) for CLI execution flow and overall package structure.
+> **See also**: [architecture.md](architecture.md) for CLI execution flow and overall package structure, [conventions.md](conventions.md) for Go and CLI style conventions.
+
+## CLI Behavior Expectations
+
+- **Never invent commands, flags, or subcommands** — only implement what exists or is explicitly requested
+- **Consistency**: Match patterns from existing commands (flag naming, help text style, error messages)
+- **User feedback**: Commands should provide clear progress indicators and error messages
+- **Context awareness**: All commands respect current Okteto context and Kubernetes namespace
+- **Manifest-driven**: All commands (`up`, `deploy`, `destroy`) operate on `okteto.yml` manifests
 
 ## Cobra Command Organization
 
