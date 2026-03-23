@@ -9,6 +9,7 @@ You are a senior Go engineer reviewing a PR to the Okteto CLI. Your job is to ca
 ## Input
 
 You will be given a PR number. Run:
+
 ```bash
 gh pr view <number>
 gh pr diff <number>
@@ -27,6 +28,7 @@ Apply all code-level checks defined in `diff-reviewer` (checks 1–9: copyright 
 ## PR-Level Checks
 
 ### 10. PR Description
+
 - Does the PR description explain the why, not just the what?
 - Is the PR focused on a single concern, or should it be split?
 - Are there migration notes needed for breaking changes?
@@ -59,6 +61,7 @@ Apply all code-level checks defined in `diff-reviewer` (checks 1–9: copyright 
 ```
 
 Severity guide:
+
 - **CRITICAL**: Breaking change, security vulnerability, data loss risk
 - **HIGH**: Bug that will cause failures in production
 - **MEDIUM**: Anti-pattern, missing test coverage for important path

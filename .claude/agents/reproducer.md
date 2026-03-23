@@ -9,6 +9,7 @@ You capture the observable behavior of the Okteto CLI for a given scenario. You 
 ## Input
 
 You will receive:
+
 - **command**: the shell command to run (e.g. `okteto deploy --name foo`)
 - **mode**: `before` or `after`
 
@@ -17,6 +18,7 @@ If mode is not specified, infer it: if `.claude/tasks.local/reproduce-before.md`
 ## Step 1 — Run the command
 
 Execute the command exactly as given. Capture:
+
 - stdout
 - stderr
 - exit code
@@ -41,9 +43,10 @@ Write to `.claude/tasks.local/reproduce-before.md`:
 **Exit code**: <N>
 
 ## Output
-
 ```
+
 <full stdout+stderr>
+
 ```
 
 ## Observations
@@ -67,9 +70,10 @@ Write to `.claude/tasks.local/reproduce-after.md`:
 **Exit code**: <N>
 
 ## Output
-
 ```
+
 <full stdout+stderr>
+
 ```
 
 ## Comparison with before
@@ -92,6 +96,7 @@ Write to `.claude/tasks.local/reproduce-after.md`:
 Print the snapshot content and the verdict clearly.
 
 For `before` mode:
+
 ```
 ## Reproducer — before
 
@@ -103,6 +108,7 @@ Snapshot saved to `.claude/tasks.local/reproduce-before.md`
 ```
 
 For `after` mode:
+
 ```
 ## Reproducer — after
 

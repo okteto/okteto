@@ -5,11 +5,13 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 ## Workflow Guidelines
 
 ### 1. Plan Mode Default
+
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan — don't keep pushing
 - Use plan mode for verification steps, not just building
 
 ### 2. Subagent Strategy
+
 - Use subagents to keep main context window clean
 - Offload research, exploration, and parallel analysis to subagents
 - One focused task per subagent
@@ -17,6 +19,7 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 **Available agents** (`.claude/agents/`):
 
 **Usual workflow**:
+
 ```
 1. explore        → find relevant code
 2. reproducer     → run command, save "before" snapshot (confirms bug is reproducible)
@@ -32,22 +35,26 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 ```
 
 ### 3. Self-Improvement Loop
+
 - After ANY correction from the user: update `.claude/lessons.local.md` with the pattern
 - Write rules that prevent the same mistake
 - Review lessons at session start when relevant
 - Verify if those corrections should be on one of the claude files (agents, context, skills...)
 
 ### 4. Verification Before Done
+
 - Never mark a task complete without proving it works
 - Run tests, check logs, demonstrate correctness
 - Ask: "Would a staff engineer approve this?"
 
 ### 5. Demand Elegance (Balanced)
+
 - For non-trivial changes: pause and ask "is there a more elegant way?"
 - If a fix feels hacky: implement the elegant solution instead
 - Skip for simple, obvious fixes — don't over-engineer
 
 ### 6. Autonomous Bug Fixing
+
 - When given a bug report: just fix it — no hand-holding needed
 - Point at logs, errors, failing tests — then resolve them
 
@@ -66,6 +73,7 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 ## Strict Rules
 
 ### NEVER:
+
 - Invent new CLI commands, flags, or arguments without explicit requirements
 - Modify code without reading it first
 - Skip copyright headers (all `.go` files require Apache 2.0 header, years 2023-2025)
@@ -74,6 +82,7 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 - Add branching (`if/switch`) inside test function bodies — split into multiple tests
 
 ### ALWAYS:
+
 - Run `make lint` before considering changes complete
 - Write tests for new functionality or bug fixes
 - Sign commits with `git commit -s` (DCO requirement)

@@ -25,6 +25,7 @@ gh pr view 2>/dev/null || echo "no PR"
 ```
 
 Also read:
+
 - `.claude/context/conventions.md` — project conventions
 
 ## Step 2 — Read the PR template
@@ -34,6 +35,7 @@ Read `.github/pull_request_template.md` using the Read tool. Use whatever sectio
 ## Step 3 — Understand the change
 
 From the diff and commit log, determine:
+
 - **What** changed (files, packages, surface area)
 - **Why** it changed (bug fix, feature, refactor — infer from commits and code)
 - **Impact** on users or developers (CLI behaviour, new flags, breaking changes)
@@ -54,9 +56,11 @@ Fill every section from the template you just read. Follow these rules:
 ## Step 5 — Write the PR title
 
 Follow conventional commits format:
+
 ```
 <type>(<scope>): <subject>
 ```
+
 - Same type/scope rules as conventional commits (`feat`, `fix`, `refactor`, `chore`, `test`, `ci`, `docs`, `perf`)
 - Subject: imperative, lowercase, no period, ≤ 72 chars total
 - Add `!` for breaking changes: `feat(cmd)!: rename --context flag to --kube-context`
@@ -92,6 +96,7 @@ If the user provides corrections, update the draft and show it again before proc
 Once the user approves, create or update the PR.
 
 If no PR exists:
+
 ```bash
 gh pr create --title "<title>" --body "$(cat <<'EOF'
 <filled template>
@@ -100,6 +105,7 @@ EOF
 ```
 
 If a PR already exists:
+
 ```bash
 gh pr edit --title "<title>" --body "$(cat <<'EOF'
 <filled template>
@@ -110,6 +116,7 @@ EOF
 ## Step 8 — Output a summary
 
 Print:
+
 ```
 ## PR ready
 

@@ -48,6 +48,7 @@ okteto/
 ## Key Patterns
 
 ### Command Structure (Options + RunE)
+
 ```go
 // Every command follows this pattern
 type Options struct {
@@ -78,12 +79,14 @@ func (o *Options) Run(ctx context.Context) error {
 ```
 
 ### Finding Similar Implementations
+
 - To find how a command is structured: `Grep "type Options struct" cmd/<command>/`
 - To find how an interface is used: `Grep "interface {" pkg/<package>/`
 - To find fake/mock usage: `Grep "fake" internal/test/`
 - To trace a call chain: start from `cmd/` and follow function calls into `pkg/`
 
 ### Manifest Loading
+
 ```go
 // Commands load manifests via:
 manifest, err := model.GetManifestV2(opts.ManifestPath)
@@ -92,6 +95,7 @@ manifest, err := contextCMD.LoadManifestWithContext(ctx, opts)
 ```
 
 ### Context Flow
+
 ```go
 // Get current Okteto context:
 okCtx := okteto.GetContextStore().CurrentContext
@@ -100,21 +104,25 @@ okCtx := okteto.GetContextStore().CurrentContext
 
 ## Research Strategies
 
-**"How does command X work?"**
+### "How does command X work?"
+
 1. Read `cmd/<x>/` directory listing
 2. Read the main `*.go` file for the Options struct and RunE
 3. Follow into `pkg/` for business logic
 
-**"How is interface X implemented?"**
+### "How is interface X implemented?"
+
 1. `Grep "type X interface" pkg/`
 2. `Grep "func.*X)" pkg/` to find implementations
 3. `Grep "fake.*X\|X.*fake" internal/test/` for test fakes
 
-**"Where is feature Y handled?"**
+### "Where is feature Y handled?"
+
 1. `Grep "Y" cmd/ pkg/ --include="*.go"` for keyword
 2. Narrow by reading matching files
 
-**"What pattern does file Z follow?"**
+### "What pattern does file Z follow?"
+
 1. Read Z in full
 2. Find similar files with `Glob "*_similar_name*.go"`
 3. Compare patterns
@@ -122,6 +130,7 @@ okCtx := okteto.GetContextStore().CurrentContext
 ## Output Format
 
 Answer the research question directly with:
+
 1. The answer (code snippets, file paths, line numbers)
 2. Where to find more detail
 3. Any gotchas or patterns to be aware of
