@@ -34,7 +34,7 @@ deploy:
 
 	childManifestContent = `
 deploy:
-  image: aquasec/trivy:latest
+  image: aquasec/trivy:canary
   commands:
     - name: trivy helm
       command: trivy help
