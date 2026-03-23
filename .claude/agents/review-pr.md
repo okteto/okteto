@@ -26,7 +26,7 @@ Apply all code-level checks defined in `diff-reviewer` (checks 1–9: copyright 
 
 ## PR-Level Checks
 
-### 10. PR Description
+### PR Description
 - Does the PR description explain the why, not just the what?
 - Is the PR focused on a single concern, or should it be split?
 - Are there migration notes needed for breaking changes?
