@@ -44,7 +44,7 @@ func NewImageBuildMetadata() *ImageBuildMetadata {
 	return &ImageBuildMetadata{}
 }
 
-func (m *ImageBuildMetadata) toProps() map[string]interface{} {
+func (m *ImageBuildMetadata) toMixpanelProps() map[string]interface{} {
 	props := map[string]interface{}{
 		"name":                            m.Name,
 		"repoURL":                         m.RepoURL,

@@ -38,5 +38,5 @@ func TestMixpanelBackend_TrackImageBuild(t *testing.T) {
 
 	require.Equal(t, imageBuildEvent, capturedEvent)
 	require.True(t, capturedSuccess)
-	require.Equal(t, meta.toProps(), capturedProps)
+	require.Equal(t, meta.toMixpanelProps(), capturedProps)
 }

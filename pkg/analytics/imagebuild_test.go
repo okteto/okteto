@@ -55,7 +55,7 @@ func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
 	}
 }
 
-func Test_ImageBuildMetadata_toProps(t *testing.T) {
+func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 	m := &ImageBuildMetadata{
 		Name:                     "test-service",
 		RepoURL:                  "http://myrepo.url",
@@ -81,7 +81,7 @@ func Test_ImageBuildMetadata_toProps(t *testing.T) {
 		"initiator":                       "me",
 	}
 
-	require.Equal(t, expectedProps, m.toProps())
+	require.Equal(t, expectedProps, m.toMixpanelProps())
 }
 
 func Test_NewImageBuildMetadata(t *testing.T) {
