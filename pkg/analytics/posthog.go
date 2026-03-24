@@ -59,13 +59,13 @@ func newPostHogBackend() *posthogBackend {
 // Calling it with an uninitialized okteto context will call GetContext() which Fatalf's.
 //
 // Note: user_id is included as an explicit property (per product spec) in addition to
-// being set as DistinctId on posthog.Capture. Both use getTrackID() so they are identical.
+// being set as DistinctId on posthog.Capture.
 func commonPostHogProperties() posthog.Properties {
 	return posthog.Properties{
 		// Common (all PostHog sources)
 		"customer_name": okteto.GetContext().CompanyName,
 		"cluster_id":    okteto.GetContext().Name,
-		"user_id":       getTrackID(),
+		"user_id":       okteto.GetContext().UserID,
 		// TBD: "customer_id", "repository_hash"
 		// CLI common
 		"cli_version": config.VersionString,
@@ -88,7 +88,7 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 	maps.Copy(props, m.toPostHogProps())
 
 	if err := b.client.Enqueue(posthog.Capture{
-		DistinctId: getTrackID(),
+		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogImageBuildEvent,
 		Properties: props,
 	}); err != nil {
