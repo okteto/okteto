@@ -124,3 +124,35 @@ func Test_NewImageBuildMetadata(t *testing.T) {
 	require.Empty(t, NewImageBuildMetadata())
 	require.IsType(t, &ImageBuildMetadata{}, NewImageBuildMetadata())
 }
+
+func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
+	m := &ImageBuildMetadata{
+		Name:                     "api",
+		Success:                  true,
+		BuildDuration:            30 * time.Second,
+		WaitForBuildkitAvailable: 5 * time.Second,
+		ErrorCategory:            "",
+		BuildContextSize:         20_000_000,
+	}
+
+	props := m.toPostHogProps()
+
+	require.Equal(t, "api", props["service"])
+	require.Equal(t, 30, props["duration_seconds"])
+	require.Equal(t, 5, props["queue_duration_seconds"])
+	require.Equal(t, true, props["result"])
+	require.Equal(t, int64(20_000_000), props["build_context_ss"])
+	require.NotContains(t, props, "errorCategory", "errorCategory must be omitted on success")
+}
+
+func Test_ImageBuildMetadata_toPostHogProps_withError(t *testing.T) {
+	m := &ImageBuildMetadata{
+		Success:       false,
+		ErrorCategory: "registry_pull_error",
+	}
+
+	props := m.toPostHogProps()
+
+	require.Equal(t, false, props["result"])
+	require.Equal(t, "registry_pull_error", props["errorCategory"])
+}

@@ -29,11 +29,13 @@ type ImageBuildMetadata struct {
 	RepoURL                  string
 	BuildContextHash         string
 	Initiator                string
+	ErrorCategory            string // PostHog: error category, empty on success
 	WaitForBuildkitAvailable time.Duration
 	BuildContextHashDuration time.Duration
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
 	CloneDuration            time.Duration
+	BuildContextSize         int64 // PostHog: build context size in bytes
 	CacheHit                 bool
 	Success                  bool
 }
@@ -63,6 +65,22 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 		props["repoURL"] = hashString(m.RepoURL)
 	}
 
+	return props
+}
+
+// toPostHogProps returns the PostHog-specific property map for an image_build event.
+// Only includes errorCategory when the build failed.
+func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
+	props := map[string]interface{}{
+		"service":                m.Name,
+		"duration_seconds":       int(m.BuildDuration.Seconds()),
+		"queue_duration_seconds": int(m.WaitForBuildkitAvailable.Seconds()),
+		"result":                 m.Success,
+		"build_context_ss":       m.BuildContextSize,
+	}
+	if !m.Success && m.ErrorCategory != "" {
+		props["errorCategory"] = m.ErrorCategory
+	}
 	return props
 }
 
