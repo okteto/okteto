@@ -237,18 +237,7 @@ func TrackContextDelete(ctxs int, success bool) {
 }
 
 func track(event string, success bool, props map[string]interface{}) {
-	if !get().Enabled {
-		oktetoLog.Info("failed to send analytics: analytics has been disabled")
-		return
-	}
-
-	if !okteto.IsContextInitialized() {
-		oktetoLog.Info("failed to send analytics: okteto context not initialized")
-		return
-	}
-
-	if disabledByOktetoAdmin() {
-		oktetoLog.Info("failed to send analytics: analytics disabled by admin")
+	if !analyticsEnabled() {
 		return
 	}
 
