@@ -19,11 +19,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/posthog/posthog-go"
-	"github.com/stretchr/testify/require"
-
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/posthog/posthog-go"
+	"github.com/stretchr/testify/require"
 )
 
 // mockPostHogClient captures Enqueue calls for assertion.
