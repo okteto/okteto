@@ -19,7 +19,7 @@ import "context"
 // It is a thin wrapper — no Mixpanel behaviour changes.
 type mixpanelBackend struct {
 	// trackFn is injectable for tests; production uses the package-level track().
-	trackFn func(event string, success bool, props map[string]interface{})
+	trackFn func(event string, success bool, props map[string]any)
 }
 
 func newMixpanelBackend() *mixpanelBackend {
