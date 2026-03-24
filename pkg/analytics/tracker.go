@@ -13,12 +13,27 @@
 
 package analytics
 
-type Tracker struct {
-	trackFn func(event string, success bool, props map[string]interface{})
+import "context"
+
+// analyticsBackend is implemented by each analytics provider.
+// Add a new method here when an event gains PostHog coverage.
+type analyticsBackend interface {
+	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
 }
 
+// Tracker dispatches analytics events to all registered backends.
+type Tracker struct {
+	trackFn  func(event string, success bool, props map[string]interface{})
+	backends []analyticsBackend
+}
+
+// NewAnalyticsTracker creates a Tracker wired to all active backends.
 func NewAnalyticsTracker() *Tracker {
 	return &Tracker{
 		trackFn: track,
+		backends: []analyticsBackend{
+			newMixpanelBackend(),
+			newPostHogBackend(),
+		},
 	}
 }

@@ -84,6 +84,9 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
 	return props
 }
 
-func (a *Tracker) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
-	a.trackFn(imageBuildEvent, m.Success, m.toProps())
+// TrackImageBuild sends an image build event to all registered backends.
+func (a *Tracker) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
+	for _, b := range a.backends {
+		b.TrackImageBuild(ctx, m)
+	}
 }
