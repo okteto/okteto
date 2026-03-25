@@ -46,7 +46,7 @@ require (
 	golang.org/x/term v0.40.0
 	google.golang.org/grpc v1.79.3
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.35.1
 	k8s.io/apimachinery v0.35.3
 	k8s.io/cli-runtime v0.35.1
@@ -160,7 +160,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/component-base v0.35.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
@@ -179,6 +178,7 @@ require (
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/vbauerster/mpb/v7 v7.5.3
+	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
 	sigs.k8s.io/gateway-api v1.5.0
