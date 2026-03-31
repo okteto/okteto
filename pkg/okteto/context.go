@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -42,6 +43,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -456,6 +458,28 @@ func GetDynamicClient() (dynamic.Interface, *rest.Config, error) {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
 	return getDynamicClient(GetContext().Cfg)
+}
+
+// GetRolloutsClient returns an Argo Rollouts client for the current okteto context
+func GetRolloutsClient() (rolloutsclientset.Interface, *rest.Config, error) {
+	if GetContext().Cfg == nil {
+		return nil, nil, fmt.Errorf("okteto context not initialized")
+	}
+
+	clientConfig := clientcmd.NewDefaultClientConfig(*GetContext().Cfg, nil)
+	config, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+	config.WarningHandler = rest.NoWarnings{}
+	config.Timeout = GetKubernetesTimeout()
+
+	client, err := rolloutsclientset.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return client, config, nil
 }
 
 // GetDiscoveryClient return a kubernetes discovery client for the current okteto context

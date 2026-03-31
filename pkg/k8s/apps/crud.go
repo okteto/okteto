@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"time"
 
+	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	k8srollouts "github.com/okteto/okteto/pkg/k8s/rollouts"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -37,6 +39,19 @@ type ErrApplicationNotFound struct {
 func (e ErrApplicationNotFound) Error() string {
 	return fmt.Sprintf("the application '%s' referred by your okteto manifest doesn't exist", e.Name)
 }
+
+var newRolloutsClient = func() (rolloutsclientset.Interface, error) {
+	if okteto.GetContext().Cfg == nil {
+		return nil, oktetoErrors.ErrNotFound
+	}
+
+	rc, _, err := okteto.GetRolloutsClient()
+	if err != nil {
+		return nil, oktetoErrors.ErrNotFound
+	}
+	return rc, nil
+}
+
 func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, namespace, c)
 
@@ -51,7 +66,23 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	sfs, err := statefulsets.GetByDev(ctx, dev, namespace, c)
 	if err != nil {
 		if oktetoErrors.IsNotFound(err) {
-			return nil, ErrApplicationNotFound{Name: dev.Name}
+			rc, rcErr := newRolloutsClient()
+			if rcErr != nil {
+				if oktetoErrors.IsNotFound(rcErr) {
+					return nil, ErrApplicationNotFound{Name: dev.Name}
+				}
+				return nil, rcErr
+			}
+
+			r, rErr := k8srollouts.GetByDev(ctx, dev, namespace, rc)
+			if rErr != nil {
+				if oktetoErrors.IsNotFound(rErr) {
+					return nil, ErrApplicationNotFound{Name: dev.Name}
+				}
+				return nil, rErr
+			}
+
+			return NewRolloutApp(r, rc), nil
 		}
 		return nil, err
 	}

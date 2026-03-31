@@ -17,13 +17,19 @@ import (
 	"context"
 	"testing"
 
+	rolloutsv1alpha1 "github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
+	rolloutsfake "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned/fake"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/utils/ptr"
 )
 
 type mockAnalyticsTracker struct {
@@ -199,4 +205,57 @@ func TestAutoDownRunner_Run_WithAppNotFound(t *testing.T) {
 	// Should not error as not found is handled gracefully
 	assert.ErrorIs(t, err, assert.AnError)
 	at.AssertExpectations(t)
+}
+
+func TestAutoDownRunner_Run_WithRolloutApp(t *testing.T) {
+	ioCtrl := io.NewIOController()
+	k8sLogger := io.NewK8sLogger()
+	at := &mockAnalyticsTracker{}
+	downCmd := &mockDownCmdRunner{}
+	downCmd.On("Run", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	dev := &model.Dev{
+		Name:      "test-dev",
+		Container: "main",
+	}
+	namespace := "test-namespace"
+
+	rollout := &rolloutsv1alpha1.Rollout{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: namespace,
+			UID:       "rollout-uid",
+		},
+		Spec: rolloutsv1alpha1.RolloutSpec{
+			Replicas: ptr.To(int32(1)),
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name:  "main",
+							Image: "image",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ad := &autoDownRunner{
+		autoDown:         true,
+		ioCtrl:           ioCtrl,
+		k8sLogger:        k8sLogger,
+		analyticsTracker: at,
+		downCmd:          downCmd,
+		getApp: func(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
+			return apps.NewRolloutApp(rollout.DeepCopy(), rolloutsfake.NewSimpleClientset(rollout.DeepCopy())), false, nil
+		},
+	}
+
+	fakeK8sClient := fake.NewSimpleClientset()
+
+	err := ad.run(context.Background(), dev, namespace, "test-manifest", fakeK8sClient)
+
+	assert.NoError(t, err)
+	downCmd.AssertExpectations(t)
 }

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	rolloutsv1alpha1 "github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,5 +41,23 @@ func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, c kube
 			}
 		}
 	}
+	return nil, oktetoErrors.ErrNotFound
+}
+
+// GetReplicaSetByRollout given a rollout, returns its current replica set or an error.
+func GetReplicaSetByRollout(ctx context.Context, r *rolloutsv1alpha1.Rollout, c kubernetes.Interface) (*appsv1.ReplicaSet, error) {
+	rsList, err := c.AppsV1().ReplicaSets(r.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get replicasets: %w", err)
+	}
+
+	for i := range rsList.Items {
+		for _, or := range rsList.Items[i].OwnerReferences {
+			if or.UID == r.UID && rsList.Items[i].Labels[rolloutsv1alpha1.DefaultRolloutUniqueLabelKey] == r.Status.CurrentPodHash {
+				return &rsList.Items[i], nil
+			}
+		}
+	}
+
 	return nil, oktetoErrors.ErrNotFound
 }

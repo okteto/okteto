@@ -44,6 +44,7 @@ type autoDownRunner struct {
 	k8sLogger        *io.K8sLogger
 	analyticsTracker analyticsTrackerInterface
 	downCmd          downCmdRunner
+	getApp           func(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface, isRetry bool) (apps.App, bool, error)
 }
 
 type downCmdRunner interface {
@@ -62,6 +63,7 @@ func newAutoDown(ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at analyticsTra
 		k8sLogger:        k8sLogger,
 		analyticsTracker: at,
 		downCmd:          downCmd,
+		getApp:           utils.GetApp,
 	}
 }
 
@@ -75,7 +77,12 @@ func (a *autoDownRunner) run(ctx context.Context, dev *model.Dev, namespace, man
 	sp := a.ioCtrl.Out().Spinner("Running okteto down...")
 	sp.Start()
 	defer sp.Stop()
-	app, _, err := utils.GetApp(ctx, dev, namespace, k8sClient, false)
+	getApp := a.getApp
+	if getApp == nil {
+		getApp = utils.GetApp
+	}
+
+	app, _, err := getApp(ctx, dev, namespace, k8sClient, false)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return err

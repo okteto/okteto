@@ -16,6 +16,8 @@ package okteto
 const (
 	// Deployment k8s deployemnt kind
 	Deployment = "Deployment"
+	// Rollout k8s Argo Rollout kind
+	Rollout = "Rollout"
 	// StatefulSet k8s statefulset kind
 	StatefulSet = "StatefulSet"
 	// Job k8s Job kind
