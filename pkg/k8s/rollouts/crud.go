@@ -17,12 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
-	"strings"
 
 	rolloutsv1alpha1 "github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/conditions"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -100,60 +99,10 @@ func CheckConditionErrors(rollout *rolloutsv1alpha1.Rollout, dev *model.Dev) err
 		}
 
 		if c.Type == rolloutsv1alpha1.RolloutReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
-			if strings.Contains(c.Message, "exceeded quota") {
-				oktetoLog.Infof("%s: %s", oktetoErrors.ErrQuota, c.Message)
-				if strings.Contains(c.Message, "requested: pods=") {
-					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
-				}
-				if strings.Contains(c.Message, "requested: requests.storage=") {
-					return fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace")
-				}
-				return oktetoErrors.ErrQuota
-			} else if isResourcesRelatedError(c.Message) {
-				return getResourceLimitError(c.Message, dev)
-			}
-			return fmt.Errorf("%s", c.Message)
+			return conditions.FailedCreateError(c.Message, dev)
 		}
 	}
 	return nil
-}
-
-func isResourcesRelatedError(errorMessage string) bool {
-	return strings.Contains(errorMessage, "maximum cpu usage") || strings.Contains(errorMessage, "maximum memory usage")
-}
-
-func getResourceLimitError(errorMessage string, dev *model.Dev) error {
-	var errorToReturn string
-	const regexMaxSubstring = 2
-	if strings.Contains(errorMessage, "maximum cpu usage") {
-		cpuMaximumRegex := regexp.MustCompile(`cpu usage per Pod is (\d*\w*)`)
-		maximumCpuPerPodMatchGroups := cpuMaximumRegex.FindStringSubmatch(errorMessage)
-		if len(maximumCpuPerPodMatchGroups) < regexMaxSubstring {
-			errorToReturn += "The value of resources.limits.cpu in your okteto manifest exceeds the maximum CPU limit per pod. "
-		} else {
-			var manifestCPU string
-			if limitCPU, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
-				manifestCPU = limitCPU.String()
-			}
-			maximumCPUPerPod := maximumCpuPerPodMatchGroups[1]
-			errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s). ", manifestCPU, maximumCPUPerPod)
-		}
-	}
-	if strings.Contains(errorMessage, "maximum memory usage") {
-		memoryMaximumRegex := regexp.MustCompile(`memory usage per Pod is (\d*\w*)`)
-		maximumMemoryPerPodMatchGroups := memoryMaximumRegex.FindStringSubmatch(errorMessage)
-		if len(maximumMemoryPerPodMatchGroups) < regexMaxSubstring {
-			errorToReturn += "The value of resources.limits.memory in your okteto manifest exceeds the maximum memory limit per pod."
-		} else {
-			var manifestMemory string
-			if limitMemory, ok := dev.Resources.Limits[apiv1.ResourceMemory]; ok {
-				manifestMemory = limitMemory.String()
-			}
-			maximumMemoryPerPod := maximumMemoryPerPodMatchGroups[1]
-			errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum memory limit per pod (%s). ", manifestMemory, maximumMemoryPerPod)
-		}
-	}
-	return fmt.Errorf("%s", strings.TrimSpace(errorToReturn))
 }
 
 // Deploy creates or updates a rollout.
