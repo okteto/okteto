@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
@@ -110,7 +111,10 @@ func (i *RolloutApp) DevClone() App {
 
 	delete(clone.Annotations, model.OktetoAutoCreateAnnotation)
 	clone.Spec.Strategy = rolloutsv1alpha1.RolloutStrategy{
-		Canary: &rolloutsv1alpha1.CanaryStrategy{},
+		Canary: &rolloutsv1alpha1.CanaryStrategy{
+			MaxSurge:       ptr.To(intstr.FromInt(0)),
+			MaxUnavailable: ptr.To(intstr.FromInt(1)),
+		},
 	}
 
 	return NewRolloutApp(clone, i.rc)

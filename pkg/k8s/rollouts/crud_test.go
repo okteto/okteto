@@ -136,6 +136,55 @@ func TestDeployAndPatchAnnotations(t *testing.T) {
 	assert.Equal(t, "value", updated.Annotations["after"])
 }
 
+func TestDeployUpdatesExistingRollout(t *testing.T) {
+	ctx := context.Background()
+	existing := &rolloutsv1alpha1.Rollout{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "test",
+			Namespace:       "test",
+			ResourceVersion: "7",
+			Annotations:     map[string]string{"before": "value"},
+		},
+	}
+
+	client := rolloutsfake.NewSimpleClientset(existing.DeepCopy())
+
+	existing.Annotations["after"] = "value"
+	updated, err := Deploy(ctx, existing, client)
+	assert.NoError(t, err)
+	assert.Equal(t, "value", updated.Annotations["after"])
+
+	reloaded, err := Get(ctx, "test", "test", client)
+	assert.NoError(t, err)
+	assert.Equal(t, "value", reloaded.Annotations["after"])
+}
+
+func TestDeployHydratesResourceVersionBeforeUpdate(t *testing.T) {
+	ctx := context.Background()
+	existing := &rolloutsv1alpha1.Rollout{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "test",
+			Namespace:       "test",
+			ResourceVersion: "11",
+			Annotations:     map[string]string{"before": "value"},
+		},
+	}
+
+	client := rolloutsfake.NewSimpleClientset(existing.DeepCopy())
+
+	desired := existing.DeepCopy()
+	desired.ResourceVersion = ""
+	desired.Annotations["after"] = "value"
+
+	updated, err := Deploy(ctx, desired, client)
+	assert.NoError(t, err)
+	assert.Equal(t, "11", updated.ResourceVersion)
+
+	reloaded, err := Get(ctx, "test", "test", client)
+	assert.NoError(t, err)
+	assert.Equal(t, "value", reloaded.Annotations["after"])
+}
+
 func TestCheckConditionErrors(t *testing.T) {
 	r := &rolloutsv1alpha1.Rollout{
 		Status: rolloutsv1alpha1.RolloutStatus{

@@ -107,7 +107,15 @@ func CheckConditionErrors(rollout *rolloutsv1alpha1.Rollout, dev *model.Dev) err
 
 // Deploy creates or updates a rollout.
 func Deploy(ctx context.Context, r *rolloutsv1alpha1.Rollout, c rolloutsclientset.Interface) (*rolloutsv1alpha1.Rollout, error) {
-	r.ResourceVersion = ""
+	if r.ResourceVersion == "" {
+		existing, err := c.ArgoprojV1alpha1().Rollouts(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
+		if err == nil {
+			r.ResourceVersion = existing.ResourceVersion
+		} else if !oktetoErrors.IsNotFound(err) {
+			return nil, err
+		}
+	}
+
 	result, err := c.ArgoprojV1alpha1().Rollouts(r.Namespace).Update(ctx, r, metav1.UpdateOptions{})
 	if err == nil {
 		return result, nil
@@ -117,6 +125,7 @@ func Deploy(ctx context.Context, r *rolloutsv1alpha1.Rollout, c rolloutsclientse
 		return nil, err
 	}
 
+	r.ResourceVersion = ""
 	return c.ArgoprojV1alpha1().Rollouts(r.Namespace).Create(ctx, r, metav1.CreateOptions{})
 }
 
