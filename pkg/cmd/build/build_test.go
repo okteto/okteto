@@ -744,7 +744,6 @@ func removeFile(s string) error {
 	return nil
 }
 
-
 func Test_createTempFileWithExpandedEnvsAtSource(t *testing.T) {
 	fakeFs := afero.NewMemMapFs()
 

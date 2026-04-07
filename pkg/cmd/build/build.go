@@ -420,6 +420,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 
 	return joinPath
 }
+
 // createTempFileWithExpandedEnvsAtSource creates a temp file with the expanded values of envs in local secrets
 func createTempFileWithExpandedEnvsAtSource(fs afero.Fs, sourceFile, tempFolder string) (string, error) {
 	srcFile, err := fs.Open(sourceFile)
