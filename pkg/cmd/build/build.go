@@ -16,7 +16,6 @@ package build
 import (
 	"bufio"
 	"context"
-	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -420,40 +419,6 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	return joinPath
-}
-
-// replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile
-func replaceSecretsSourceEnvWithTempFile(fs afero.Fs, secretTempFolder string, buildOptions *types.BuildOptions) error {
-	// for each secret at buildOptions extract the src
-	// read the content of the file
-	// create a new file under secretTempFolder with the expanded content
-	// replace the src of the secret with the tempSrc
-	for indx, s := range buildOptions.Secrets {
-		csvReader := csv.NewReader(strings.NewReader(s))
-		fields, err := csvReader.Read()
-		if err != nil {
-			return fmt.Errorf("error reading the csv secret, %w", err)
-		}
-
-		newFields := make([]string, len(fields))
-		for indx, field := range fields {
-			key, value, found := strings.Cut(field, "=")
-			if !found {
-				return fmt.Errorf("secret format error")
-			}
-
-			if key == "src" || key == "source" {
-				tempFileName, err := createTempFileWithExpandedEnvsAtSource(fs, value, secretTempFolder)
-				if err != nil {
-					return fmt.Errorf("error creating the temp file with expanded values: %w", err)
-				}
-				value = tempFileName
-			}
-			newFields[indx] = fmt.Sprintf("%s=%s", key, value)
-		}
-		buildOptions.Secrets[indx] = strings.Join(newFields, ",")
-	}
-	return nil
 }
 
 // createTempFileWithExpandedEnvsAtSource creates a temp file with the expanded values of envs in local secrets
