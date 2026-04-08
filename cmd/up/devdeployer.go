@@ -84,6 +84,7 @@ func (dd *devDeployer) deployDevServices(ctx context.Context) error {
 // deploy replaces the devApp and the app
 func (dd *devDeployer) deploy(ctx context.Context, tr *apps.Translation) error {
 	delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
+	delete(tr.DevApp.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
 	if err := tr.DevApp.Deploy(ctx, dd.k8sClient); err != nil {
 		return err
 	}

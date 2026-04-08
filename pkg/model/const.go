@@ -42,6 +42,9 @@ const (
 	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
 
+	// RolloutAnnotation indicates the original rollout manifest when the development container was activated
+	RolloutAnnotation = "dev.okteto.com/rollout"
+
 	// StatefulsetAnnotation indicates the original statefulset manifest  when the development container was activated
 	StatefulsetAnnotation = "dev.okteto.com/statefulset"
 

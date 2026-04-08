@@ -18,6 +18,9 @@ import (
 	"os"
 	"testing"
 
+	rolloutsv1alpha1 "github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
+	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
+	rolloutsfake "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned/fake"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -41,6 +44,18 @@ func TestMain(m *testing.M) {
 		},
 	}
 	os.Exit(m.Run())
+}
+
+func useRolloutsClient(t *testing.T, client rolloutsclientset.Interface) {
+	t.Helper()
+
+	previous := newRolloutsClient
+	newRolloutsClient = func() (rolloutsclientset.Interface, error) {
+		return client, nil
+	}
+	t.Cleanup(func() {
+		newRolloutsClient = previous
+	})
 }
 
 func TestGetStatefulset(t *testing.T) {
@@ -110,6 +125,51 @@ func TestGetDeployment(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset(d)
+
+	dev := &model.Dev{
+		Name:  "test",
+		Image: "image",
+		PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			Enabled: true,
+		},
+	}
+	app, err := Get(ctx, dev, "test", clientset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if app.ObjectMeta().Name != "test" {
+		t.Fatal("not retrieved correctly")
+	}
+}
+
+func TestGetRollout(t *testing.T) {
+	ctx := context.Background()
+	r := &rolloutsv1alpha1.Rollout{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+		Spec: rolloutsv1alpha1.RolloutSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: "main",
+							VolumeMounts: []v1.VolumeMount{
+								{
+									MountPath: "/data",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	clientset := fake.NewSimpleClientset()
+	rolloutsClient := rolloutsfake.NewSimpleClientset(r)
+	useRolloutsClient(t, rolloutsClient)
 
 	dev := &model.Dev{
 		Name:  "test",
@@ -282,6 +342,13 @@ func TestListDevModeOn(t *testing.T) {
 					Enabled: true,
 				},
 			},
+			"rollout": &model.Dev{
+				Name:  "rollout",
+				Image: "image",
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
+			},
 			"autocreate": &model.Dev{
 				Name:  "autocreate",
 				Image: "image",
@@ -296,6 +363,7 @@ func TestListDevModeOn(t *testing.T) {
 		expectedError error
 		sfs           *appsv1.StatefulSet
 		ds            *appsv1.Deployment
+		rollout       *rolloutsv1alpha1.Rollout
 		name          string
 		expectedList  []string
 	}{
@@ -447,6 +515,28 @@ func TestListDevModeOn(t *testing.T) {
 			expectedList: []string{"dev", "sfs"},
 		},
 		{
+			name: "rollout-is-dev-mode",
+			sfs:  &appsv1.StatefulSet{},
+			ds:   &appsv1.Deployment{},
+			rollout: &rolloutsv1alpha1.Rollout{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "rollout",
+					Namespace: "test",
+					Labels: map[string]string{
+						constants.DevLabel: "true",
+					},
+				},
+				Spec: rolloutsv1alpha1.RolloutSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{{Name: "main"}},
+						},
+					},
+				},
+			},
+			expectedList: []string{"rollout"},
+		},
+		{
 			name: "err-dev-not-found",
 			sfs: &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -538,6 +628,11 @@ func TestListDevModeOn(t *testing.T) {
 	for _, tt := range tests {
 		ctx := context.Background()
 		clientset := fake.NewSimpleClientset(tt.sfs, tt.ds)
+		rolloutsClient := rolloutsfake.NewSimpleClientset()
+		if tt.rollout != nil {
+			rolloutsClient = rolloutsfake.NewSimpleClientset(tt.rollout)
+		}
+		useRolloutsClient(t, rolloutsClient)
 
 		result := ListDevModeOn(ctx, manifest.Dev, "test", clientset)
 		assert.ElementsMatch(t, tt.expectedList, result)
