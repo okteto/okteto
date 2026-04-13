@@ -369,8 +369,12 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 		opts.Secrets = o.Secrets
 	}
 	// add to the build the secrets from the manifest build
-	for id, src := range b.Secrets {
-		opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,src=%s", id, src))
+	for id, secret := range b.Secrets {
+		if secret.Env != "" {
+			opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,env=%s", id, secret.Env))
+		} else {
+			opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,src=%s", id, secret.File))
+		}
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()
