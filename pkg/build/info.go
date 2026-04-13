@@ -14,6 +14,7 @@
 package build
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -42,8 +43,41 @@ type Info struct {
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
+// Secret represents a single build secret — either a file path or an env var name.
+type Secret struct {
+	File string `yaml:"file,omitempty"`
+	Env  string `yaml:"env,omitempty"`
+}
+
+// UnmarshalYAML handles both short (string) and long (struct) forms:
+//
+//	my_secret: /path/to/file        → Secret{File: "/path/to/file"}
+//	my_secret:
+//	  file: /path/to/file           → Secret{File: "/path/to/file"}
+//	my_secret:
+//	  env: MY_ENV_VAR               → Secret{Env: "MY_ENV_VAR"}
+func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var shorthand string
+	if err := unmarshal(&shorthand); err == nil {
+		s.File = shorthand
+		return nil
+	}
+
+	type rawSecret Secret // avoid infinite recursion
+	var raw rawSecret
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	if raw.File != "" && raw.Env != "" {
+		return fmt.Errorf("secret cannot specify both 'file' and 'env'")
+	}
+	s.File = raw.File
+	s.Env = raw.Env
+	return nil
+}
+
 // Secrets represents the secrets to be injected to the build of the image
-type Secrets map[string]string
+type Secrets map[string]Secret
 
 // infoRaw represents the build info for serialization
 type infoRaw struct {
@@ -124,9 +158,13 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 	return nil
 }
 
-func (i *Info) expandSecrets() (err error) {
-	for k, v := range i.Secrets {
-		val := v
+func (i *Info) expandSecrets() error {
+	for k, s := range i.Secrets {
+		if s.File == "" {
+			// env-based secrets don't need path expansion
+			continue
+		}
+		val := s.File
 		if strings.HasPrefix(val, "~/") {
 			home, err := os.UserHomeDir()
 			if err != nil {
@@ -134,10 +172,12 @@ func (i *Info) expandSecrets() (err error) {
 			}
 			val = filepath.Join(home, val[2:])
 		}
-		i.Secrets[k], err = env.ExpandEnv(val)
+		expanded, err := env.ExpandEnv(val)
 		if err != nil {
 			return err
 		}
+		s.File = expanded
+		i.Secrets[k] = s
 	}
 	return nil
 }
