@@ -342,6 +342,11 @@ secrets:
 			input:       "secrets:\n  token:\n    file: /path\n    env: MY_TOKEN",
 			expectedErr: true,
 		},
+		{
+			name:        "unmarshal secret with unknown keys and no file or env is an error",
+			input:       "secrets:\n  errored:\n    aa: asa",
+			expectedErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
