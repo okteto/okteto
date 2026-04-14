@@ -22,13 +22,31 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 )
 
+const secretFormatHint = `
+
+Secrets in your Okteto manifest must be valid file paths or environment variable names. Use one of these formats:
+
+  # Short form (file path)
+  secrets:
+    my_secret: /path/to/secret/file
+
+  # Explicit file key
+  secrets:
+    my_secret:
+      file: /path/to/secret/file
+
+  # Environment variable as secret value
+  secrets:
+    my_secret:
+      env: MY_ENV_VAR`
+
 // Secret represents a single build secret — either a file path or an env var name.
 type Secret struct {
 	File string `yaml:"file,omitempty"`
 	Env  string `yaml:"env,omitempty"`
 }
 
-// UnmarshalYAML handles both short (string) and long (struct) forms:
+// UnmarshalYAML handles both short (string) and long (map) forms:
 //
 //	my_secret: /path/to/file        → Secret{File: "/path/to/file"}
 //	my_secret:
@@ -42,19 +60,28 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	type rawSecret Secret // avoid infinite recursion
-	var raw rawSecret
+	// Decode into a plain map so that unknown keys produce a clean, user-facing
+	// error rather than leaking internal type names (e.g. "build.rawSecret").
+	var raw map[string]string
 	if err := unmarshal(&raw); err != nil {
-		return err
+		return fmt.Errorf("%w%s", err, secretFormatHint)
 	}
-	if raw.File != "" && raw.Env != "" {
-		return fmt.Errorf("secret cannot specify both 'file' and 'env'")
+
+	for k := range raw {
+		if k != "file" && k != "env" {
+			return fmt.Errorf("unknown secret key %q — only 'file' and 'env' are allowed%s", k, secretFormatHint)
+		}
 	}
-	if raw.File == "" && raw.Env == "" {
-		return fmt.Errorf("secret must specify either 'file' or 'env'")
+
+	file, env := raw["file"], raw["env"]
+	if file != "" && env != "" {
+		return fmt.Errorf("secret cannot specify both 'file' and 'env'%s", secretFormatHint)
 	}
-	s.File = raw.File
-	s.Env = raw.Env
+	if file == "" && env == "" {
+		return fmt.Errorf("secret must specify either 'file' or 'env'%s", secretFormatHint)
+	}
+	s.File = file
+	s.Env = env
 	return nil
 }
 

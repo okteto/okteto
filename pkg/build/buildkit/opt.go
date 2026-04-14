@@ -114,7 +114,7 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 
 	// inject secrets to buildkit from temp folder
 	if err := b.replaceSecretsSourceEnvWithTempFile(buildOptions); err != nil {
-		return nil, fmt.Errorf("%w: secret should have the format 'id=mysecret,src=/local/secret'", err)
+		return nil, fmt.Errorf("failed to process build secrets: %w", err)
 	}
 
 	var localDirs map[string]string
