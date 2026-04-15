@@ -413,3 +413,71 @@ func Test_defaultOktetoClientCfg(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateBuildSecretFlagValid(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret string
+	}{
+		{
+			name:   "valid id and src",
+			secret: "id=mysecret,src=/local/secret",
+		},
+		{
+			name:   "valid id only",
+			secret: "id=mysecret",
+		},
+		{
+			name:   "valid src only",
+			secret: "src=/local/secret",
+		},
+		{
+			name:   "valid src then id",
+			secret: "src=/local/secret,id=mysecret",
+		},
+		{
+			name:   "file secret via --secret flag",
+			secret: "id=mysecret,src=/path/to/secret/file",
+		},
+		{
+			name:   "env var secret via --secret flag",
+			secret: "id=mysecret,env=MY_SECRET_VAR",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, validateBuildSecretFlag(tt.secret))
+		})
+	}
+}
+
+func TestValidateBuildSecretFlagInvalid(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret string
+	}{
+		{
+			name:   "no equals sign",
+			secret: "asdaa",
+		},
+		{
+			name:   "one valid field one bare word",
+			secret: "id=mysecret,badfield",
+		},
+		{
+			name:   "empty string",
+			secret: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Error(t, validateBuildSecretFlag(tt.secret))
+		})
+	}
+}
