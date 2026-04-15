@@ -847,6 +847,26 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 			expectedErr:             true,
 			expectedReplacedSecrets: false,
 		},
+		{
+			name:             "env secret passes through unchanged",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{"id=mysecret,env=MY_SECRET_VAR"},
+			},
+			expectedErr:             false,
+			expectedReplacedSecrets: false,
+		},
+		{
+			name:             "file secret src replaced with temp file",
+			fs:               fakeFs,
+			secretTempFolder: t.TempDir(),
+			buildOptions: &types.BuildOptions{
+				Secrets: []string{fmt.Sprintf("id=mysecret,src=%s", localSrcFile.Name())},
+			},
+			expectedErr:             false,
+			expectedReplacedSecrets: true,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt

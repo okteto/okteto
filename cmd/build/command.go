@@ -16,9 +16,11 @@ package build
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/linter"
@@ -137,6 +139,12 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 				}
 			}
 
+			for _, s := range options.Secrets {
+				if err := validateBuildSecretFlag(s); err != nil {
+					return err
+				}
+			}
+
 			analytics.TrackBuildWithManifestVsDockerfile(builder.IsV1())
 			return builder.Build(ctx, options)
 		},
@@ -222,6 +230,27 @@ func validateDockerfile(file string) error {
 		ReturnAsError: true,
 	}))
 	return err
+}
+
+// validateBuildSecretFlag checks that a single --secret flag value is well-formed.
+// Each secret must be a comma-separated list of key=value pairs, e.g. "id=mysecret,src=/local/secret".
+func validateBuildSecretFlag(secret string) error {
+	fields, err := csv.NewReader(strings.NewReader(secret)).Read()
+	if err != nil {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("invalid --secret flag value %q", secret),
+			Hint: "secret should have the format 'id=mysecret,src=/local/secret'",
+		}
+	}
+	for _, field := range fields {
+		if _, _, found := strings.Cut(field, "="); !found {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("invalid --secret flag value %q: %q is not a key=value pair", secret, field),
+				Hint: "secret should have the format 'id=mysecret,src=/local/secret'",
+			}
+		}
+	}
+	return nil
 }
 
 func getOktetoContext(ctx context.Context, options *types.BuildOptions, ioCtrl *io.Controller) (*okteto.ContextStateless, error) {
