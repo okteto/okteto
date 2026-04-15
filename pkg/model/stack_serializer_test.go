@@ -515,6 +515,14 @@ image: nginx`),
 				Dockerfile: "Dockerfile",
 			},
 		},
+		{
+			name:  "secrets short form list",
+			bytes: []byte("context: .\nsecrets:\n  - mysecret\n"),
+			expected: &composeBuildInfo{
+				Context: ".",
+				Secrets: []string{"mysecret"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2356,6 +2364,75 @@ services:
 			assert.NoError(t, err)
 			assert.Contains(t, stack.Services, "web")
 			assert.Equal(t, tt.expectedMode, stack.Services["web"].EndpointMode)
+		})
+	}
+}
+
+func TestComposeBuildSecretsResolution(t *testing.T) {
+	tests := []struct {
+		name            string
+		yaml            string
+		expectedSecrets build.Secrets
+		expectError     bool
+	}{
+		{
+			name: "file secret resolved via top-level",
+			yaml: `
+secrets:
+  server-cert:
+    file: ./server.cert
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - server-cert
+`,
+			expectedSecrets: build.Secrets{
+				"server-cert": build.Secret{File: "./server.cert"},
+			},
+		},
+		{
+			name: "env secret resolved via top-level",
+			yaml: `
+secrets:
+  npm_token:
+    environment: NPM_TOKEN
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedSecrets: build.Secrets{
+				"npm_token": build.Secret{Env: "NPM_TOKEN"},
+			},
+		},
+		{
+			name: "undefined secret reference returns error",
+			yaml: `
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - undefined_secret
+`,
+			expectError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack([]byte(tt.yaml), true)
+			if tt.expectError {
+				assert.Error(t, err)
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			assert.Equal(t, tt.expectedSecrets, s.Services["api"].Build.Secrets)
 		})
 	}
 }
