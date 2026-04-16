@@ -151,6 +151,9 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		UseOktetoDeployIgnoreFile:   true,
 		ContextAbsolutePathOverride: ctxPath,
 	}
+	for k, v := range deployable.GetGatewayEnvironment() {
+		runParams.OktetoCommandSpecificEnvVars[k] = v
+	}
 
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into

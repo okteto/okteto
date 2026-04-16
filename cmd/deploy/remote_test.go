@@ -179,6 +179,21 @@ func Test_newRemoteDeployer(t *testing.T) {
 }
 
 func TestDeployRemoteWithCtx(t *testing.T) {
+	originalStore := okteto.CurrentStore
+	defer func() { okteto.CurrentStore = originalStore }()
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Gateway: &okteto.GatewayMetadata{
+					Name:      "dev-gateway",
+					Namespace: "gateway-ns",
+				},
+			},
+		},
+	}
+
 	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
@@ -217,6 +232,8 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 		},
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+			"OKTETO_DEV_GATEWAY_NAME":       "dev-gateway",
+			"OKTETO_DEV_GATEWAY_NAMESPACE":  "gateway-ns",
 		},
 		Manifest:                    manifest,
 		Command:                     remote.DeployCommand,

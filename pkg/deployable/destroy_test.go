@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,11 +26,13 @@ import (
 type fakeDestroyExecutor struct {
 	err      error
 	executed []model.DeployCommand
+	envs     [][]string
 	cleaned  bool
 }
 
-func (fe *fakeDestroyExecutor) Execute(command model.DeployCommand, _ []string) error {
+func (fe *fakeDestroyExecutor) Execute(command model.DeployCommand, env []string) error {
 	fe.executed = append(fe.executed, command)
+	fe.envs = append(fe.envs, env)
 	if fe.err != nil {
 		return fe.err
 	}
@@ -117,12 +120,28 @@ func TestRunDestroyWithErrorAndForceDestroy(t *testing.T) {
 }
 
 func TestRunDestroyWithoutError(t *testing.T) {
+	originalStore := okteto.CurrentStore
+	defer func() { okteto.CurrentStore = originalStore }()
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Gateway: &okteto.GatewayMetadata{
+					Name:      "dev-gateway",
+					Namespace: "gateway-ns",
+				},
+			},
+		},
+	}
+
 	executor := &fakeDestroyExecutor{}
 	runner := &DestroyRunner{
 		Executor: executor,
 	}
 
 	params := DestroyParameters{
+		Variables: []string{"A=value1"},
 		Deployable: Entity{
 			Commands: []model.DeployCommand{
 				{
@@ -152,6 +171,12 @@ func TestRunDestroyWithoutError(t *testing.T) {
 	}
 	require.NoError(t, err)
 	require.ElementsMatch(t, expectedExecutedCommands, executor.executed)
+	require.Len(t, executor.envs, 2)
+	require.Equal(t, []string{
+		"A=value1",
+		"OKTETO_DEV_GATEWAY_NAME=dev-gateway",
+		"OKTETO_DEV_GATEWAY_NAMESPACE=gateway-ns",
+	}, executor.envs[0])
 }
 
 func TestCleanUp(t *testing.T) {
