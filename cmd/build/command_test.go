@@ -447,8 +447,8 @@ func TestValidateBuildSecretFlagValid(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt
+		t.Parallel()
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, validateBuildSecretFlag(tt.secret))
 		})
 	}
@@ -475,8 +475,8 @@ func TestValidateBuildSecretFlagInvalid(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt
+		t.Parallel()
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			assert.Error(t, validateBuildSecretFlag(tt.secret))
 		})
 	}
