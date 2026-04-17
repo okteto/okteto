@@ -114,6 +114,8 @@ func (f *fakeExternalResource) Deploy(ctx context.Context, name, ns string, exte
 }
 
 func TestDeployNotRemovingEnvFile(t *testing.T) {
+	setFakeOktetoContext(t)
+
 	fs := afero.NewMemMapFs()
 
 	_, err := fs.Create(".env")

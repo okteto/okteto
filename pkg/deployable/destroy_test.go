@@ -45,6 +45,8 @@ func (fe *fakeDestroyExecutor) CleanUp(_ error) {
 }
 
 func TestRunDestroyWithError(t *testing.T) {
+	setFakeOktetoContext(t)
+
 	executor := &fakeDestroyExecutor{
 		err: assert.AnError,
 	}
@@ -80,6 +82,8 @@ func TestRunDestroyWithError(t *testing.T) {
 }
 
 func TestRunDestroyWithErrorAndForceDestroy(t *testing.T) {
+	setFakeOktetoContext(t)
+
 	executor := &fakeDestroyExecutor{
 		err: assert.AnError,
 	}
