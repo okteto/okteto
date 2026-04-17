@@ -17,6 +17,7 @@ import (
 	"context"
 	"maps"
 	"runtime"
+	"time"
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -27,6 +28,9 @@ import (
 const (
 	// skipcq GSC-G101
 	posthogToken = "phc_hABE2tLx6OC3RdADvVeFYfwtQQhYSE5swoqkQQscU6K"
+
+	// posthogEndpoint is the Okteto-owned reverse proxy for PostHog.
+	posthogEndpoint = "https://ph.okteto.com"
 
 	posthogImageBuildEvent = "image_build"
 )
@@ -51,7 +55,11 @@ func newPostHogBackend() *posthogBackend {
 	if posthogToken == "" {
 		return &posthogBackend{}
 	}
-	return &posthogBackend{client: posthog.New(posthogToken)}
+	client, _ := posthog.NewWithConfig(posthogToken, posthog.Config{
+		Endpoint:        posthogEndpoint,
+		ShutdownTimeout: 500 * time.Millisecond,
+	})
+	return &posthogBackend{client: client}
 }
 
 // commonPostHogProperties returns properties sent on every PostHog event from the CLI.
