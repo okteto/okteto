@@ -51,6 +51,7 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 			oktetoLog.AddMaskedWord(v)
 		}
 	}
+	params.Variables = appendGatewayEnvVars(params.Variables)
 
 	// Setup helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {

@@ -54,6 +54,7 @@ func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error 
 			oktetoLog.AddMaskedWord(v)
 		}
 	}
+	params.Variables = appendGatewayEnvVars(params.Variables)
 
 	// Setup helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {

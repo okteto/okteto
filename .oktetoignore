@@ -35,6 +35,8 @@
 [test.unit]
 *
 !**/*.go
+!tools/go.mod
+!tools/go.sum
 !go.mod
 !go.sum
 !Makefile

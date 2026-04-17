@@ -114,6 +114,8 @@ func (f *fakeExternalResource) Deploy(ctx context.Context, name, ns string, exte
 }
 
 func TestDeployNotRemovingEnvFile(t *testing.T) {
+	setFakeOktetoContext(t)
+
 	fs := afero.NewMemMapFs()
 
 	_, err := fs.Create(".env")
@@ -245,6 +247,10 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Gateway: &okteto.GatewayMetadata{
+					Name:      "dev-gateway",
+					Namespace: "gateway-ns",
+				},
 			},
 		},
 		CurrentContext: "test",
@@ -287,6 +293,8 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 	expectedVariables := []string{
 		"A=value1",
 		"B=value2",
+		"OKTETO_DEV_GATEWAY_NAME=dev-gateway",
+		"OKTETO_DEV_GATEWAY_NAMESPACE=gateway-ns",
 	}
 	executor.On("Execute", expectedCommand1, expectedVariables).Return(nil).Once()
 	executor.On("Execute", expectedCommand2, expectedVariables).Return(nil).Once()

@@ -185,6 +185,12 @@ const (
 	// OktetoDomainEnvVar defines the domain the user is using
 	OktetoDomainEnvVar = "OKTETO_DOMAIN"
 
+	// OktetoDevGatewayNameEnvVar defines the configured gateway name for deploy/test/destroy commands
+	OktetoDevGatewayNameEnvVar = "OKTETO_DEV_GATEWAY_NAME"
+
+	// OktetoDevGatewayNamespaceEnvVar defines the configured gateway namespace for deploy/test/destroy commands
+	OktetoDevGatewayNamespaceEnvVar = "OKTETO_DEV_GATEWAY_NAMESPACE"
+
 	// SyncthingVersionEnvVar defines the syncthing version okteto should use
 	SyncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
 

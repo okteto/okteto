@@ -23,6 +23,8 @@ import (
 )
 
 func TestTestRunner(t *testing.T) {
+	setFakeOktetoContext(t)
+
 	executor := &fakeExecutor{}
 	runner := TestRunner{
 		Executor: executor,

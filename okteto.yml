@@ -22,7 +22,7 @@ dev:
     autocreate: true
 test:
   unit:
-    image: okteto/golang:1
+    image: okteto/golang-ci:2.9.2
     artifacts:
       - coverage.txt
       - coverage.html
