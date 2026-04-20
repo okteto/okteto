@@ -149,7 +149,7 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 
 	secrets := []string{}
 	for key, value := range buildInfo.Secrets {
-		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
+		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value.String()))
 	}
 	secretsText := strings.Join(secrets, ";")
 

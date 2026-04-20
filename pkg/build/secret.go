@@ -46,6 +46,14 @@ type Secret struct {
 	Env  string `yaml:"env,omitempty"`
 }
 
+// String returns a canonical representation used for hashing (e.g. "file:/path" or "env:VAR").
+func (s Secret) String() string {
+	if s.Env != "" {
+		return fmt.Sprintf("env:%s", s.Env)
+	}
+	return fmt.Sprintf("file:%s", s.File)
+}
+
 // UnmarshalYAML handles both short (string) and long (map) forms:
 //
 //	my_secret: /path/to/file        → Secret{File: "/path/to/file"}
