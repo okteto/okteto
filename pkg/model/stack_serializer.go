@@ -324,7 +324,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			sanitizedServicesNames[svcName] = newName
 			svcName = newName
 		}
-		s.Services[svcName], err = svcRaw.ToService(svcName, s, stackRaw.Secrets)
+		s.Services[svcName], err = svcRaw.toService(svcName, s, stackRaw.Secrets)
 		if err != nil {
 			return err
 		}
@@ -397,7 +397,7 @@ func getAccessiblePorts(ports []PortRaw) []PortRaw {
 	return accessiblePorts
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack, topLevelSecrets map[string]*secretTopLevel) (*Service, error) {
+func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSecrets map[string]*secretTopLevel) (*Service, error) {
 	svc := &Service{}
 	var err error
 
