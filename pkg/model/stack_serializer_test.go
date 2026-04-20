@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -2373,7 +2374,6 @@ func TestComposeBuildSecretsResolution(t *testing.T) {
 		name            string
 		yaml            string
 		expectedSecrets build.Secrets
-		expectError     bool
 	}{
 		{
 			name: "file secret resolved via top-level",
@@ -2409,6 +2409,21 @@ services:
 				"npm_token": build.Secret{Env: "NPM_TOKEN"},
 			},
 		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack([]byte(tt.yaml), true)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedSecrets, s.Services["api"].Build.Secrets)
+		})
+	}
+}
+
+func TestComposeBuildSecretsResolutionErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		yaml string
+	}{
 		{
 			name: "undefined secret reference returns error",
 			yaml: `
@@ -2419,7 +2434,6 @@ services:
       secrets:
         - undefined_secret
 `,
-			expectError: true,
 		},
 		{
 			name: "top-level secret with both file and environment returns error",
@@ -2435,7 +2449,6 @@ services:
       secrets:
         - npm_token
 `,
-			expectError: true,
 		},
 		{
 			name: "top-level secret with no file or environment returns error",
@@ -2449,20 +2462,12 @@ services:
       secrets:
         - bare_secret
 `,
-			expectError: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := ReadStack([]byte(tt.yaml), true)
-			if tt.expectError {
-				assert.Error(t, err)
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			assert.Equal(t, tt.expectedSecrets, s.Services["api"].Build.Secrets)
+			_, err := ReadStack([]byte(tt.yaml), true)
+			require.Error(t, err)
 		})
 	}
 }
