@@ -250,8 +250,11 @@ func (c *composeBuildInfo) toBuildInfo(topLevelSecrets map[string]*secretTopLeve
 		if !ok {
 			return nil, fmt.Errorf("secret %q is not defined in the top-level secrets section", name)
 		}
-		if def.File == "" && def.Environment == "" {
+		if def == nil || (def.File == "" && def.Environment == "") {
 			return nil, fmt.Errorf("secret %q has no 'file' or 'environment' defined", name)
+		}
+		if def.File != "" && def.Environment != "" {
+			return nil, fmt.Errorf("secret %q cannot define both 'file' and 'environment'", name)
 		}
 		if secrets == nil {
 			secrets = build.Secrets{}

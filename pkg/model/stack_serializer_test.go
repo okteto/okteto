@@ -2421,6 +2421,36 @@ services:
 `,
 			expectError: true,
 		},
+		{
+			name: "top-level secret with both file and environment returns error",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    environment: NPM_TOKEN
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectError: true,
+		},
+		{
+			name: "top-level secret with no file or environment returns error",
+			yaml: `
+secrets:
+  bare_secret:
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - bare_secret
+`,
+			expectError: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
