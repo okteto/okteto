@@ -232,22 +232,35 @@ func validateDockerfile(file string) error {
 	return err
 }
 
+const secretFlagHint = "secret should have the format 'id=mysecret,src=/local/secret'"
+
 // validateBuildSecretFlag checks that a single --secret flag value is well-formed.
-// Each secret must be a comma-separated list of key=value pairs, e.g. "id=mysecret,src=/local/secret".
+// Each secret must be a comma-separated list of key=value pairs and must include id=.
 func validateBuildSecretFlag(secret string) error {
 	fields, err := csv.NewReader(strings.NewReader(secret)).Read()
 	if err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("invalid --secret flag value %q", secret),
-			Hint: "secret should have the format 'id=mysecret,src=/local/secret'",
+			Hint: secretFlagHint,
 		}
 	}
+	hasID := false
 	for _, field := range fields {
-		if _, _, found := strings.Cut(field, "="); !found {
+		key, _, found := strings.Cut(field, "=")
+		if !found {
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("invalid --secret flag value %q: %q is not a key=value pair", secret, field),
-				Hint: "secret should have the format 'id=mysecret,src=/local/secret'",
+				Hint: secretFlagHint,
 			}
+		}
+		if key == "id" {
+			hasID = true
+		}
+	}
+	if !hasID {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("invalid --secret flag value %q: missing required 'id' field", secret),
+			Hint: secretFlagHint,
 		}
 	}
 	return nil

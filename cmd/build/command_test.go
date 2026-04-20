@@ -428,10 +428,6 @@ func TestValidateBuildSecretFlagValid(t *testing.T) {
 			secret: "id=mysecret",
 		},
 		{
-			name:   "valid src only",
-			secret: "src=/local/secret",
-		},
-		{
 			name:   "valid src then id",
 			secret: "src=/local/secret,id=mysecret",
 		},
@@ -469,6 +465,10 @@ func TestValidateBuildSecretFlagInvalid(t *testing.T) {
 		{
 			name:   "empty string",
 			secret: "",
+		},
+		{
+			name:   "src only without id",
+			secret: "src=/local/secret",
 		},
 	}
 
