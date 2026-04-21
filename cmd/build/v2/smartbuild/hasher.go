@@ -149,7 +149,15 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 
 	secrets := []string{}
 	for key, value := range buildInfo.Secrets {
-		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value.String()))
+		var secretStr string
+		if value.Env != "" {
+			secretStr = value.String()
+		} else {
+			// File secrets: use the raw path to match master's map[string]string format,
+			// so existing build caches are not invalidated.
+			secretStr = value.File
+		}
+		secrets = append(secrets, fmt.Sprintf("%s=%s", key, secretStr))
 	}
 	secretsText := strings.Join(secrets, ";")
 
