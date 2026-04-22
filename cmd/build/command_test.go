@@ -439,12 +439,16 @@ func TestValidateBuildSecretFlagValid(t *testing.T) {
 			name:   "env var secret via --secret flag",
 			secret: "id=mysecret,env=MY_SECRET_VAR",
 		},
+		{
+			name:   "uppercase ID key",
+			secret: "ID=mysecret,src=/local/secret",
+		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, validateBuildSecretFlag(tt.secret))
+			require.NoError(t, validateBuildSecretFlag(tt.secret))
 		})
 	}
 }
@@ -470,12 +474,24 @@ func TestValidateBuildSecretFlagInvalid(t *testing.T) {
 			name:   "src only without id",
 			secret: "src=/local/secret",
 		},
+		{
+			name:   "id with empty value",
+			secret: "id=,src=/local/secret",
+		},
+		{
+			name:   "id empty with env set",
+			secret: "id=,env=FOO",
+		},
+		{
+			name:   "env with empty value",
+			secret: "id=foo,env=",
+		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Error(t, validateBuildSecretFlag(tt.secret))
+			require.Error(t, validateBuildSecretFlag(tt.secret))
 		})
 	}
 }

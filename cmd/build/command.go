@@ -159,7 +159,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "image tag for exported cache when build (optional)s")
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", string(TTYFormat), "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables (optional)")
-	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
+	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret exposed to the build. Formats: id=mysecret,src=/local/secret (file) or id=mysecret,env=MY_ENV_VAR (env var)")
 	cmd.Flags().StringVar(&options.Platform, "platform", "", "specify which platform to build the container image for (optional)")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	return cmd
@@ -232,7 +232,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-const secretFlagHint = "secret should have the format 'id=mysecret,src=/local/secret'"
+const secretFlagHint = "secret should have the format 'id=mysecret,src=/local/secret' (file) or 'id=mysecret,env=MY_ENV_VAR' (env var)"
 
 // validateBuildSecretFlag checks that a single --secret flag value is well-formed.
 // Each secret must be a comma-separated list of key=value pairs and must include id=.
@@ -246,10 +246,17 @@ func validateBuildSecretFlag(secret string) error {
 	}
 	hasID := false
 	for _, field := range fields {
-		key, _, found := strings.Cut(field, "=")
+		key, value, found := strings.Cut(field, "=")
 		if !found {
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("invalid --secret flag value %q: %q is not a key=value pair", secret, field),
+				Hint: secretFlagHint,
+			}
+		}
+		key = strings.ToLower(key)
+		if value == "" {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("invalid --secret flag value %q: %q must not be empty", secret, key),
 				Hint: secretFlagHint,
 			}
 		}
