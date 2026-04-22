@@ -16,10 +16,9 @@ package build
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/env"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 const secretFormatHint = `
@@ -81,41 +80,33 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	file, env := strings.TrimSpace(raw["file"]), strings.TrimSpace(raw["env"])
-	if file != "" && env != "" {
+	file, envName := strings.TrimSpace(raw["file"]), strings.TrimSpace(raw["env"])
+	if file != "" && envName != "" {
 		return fmt.Errorf("secret cannot specify both 'file' and 'env'%s", secretFormatHint)
 	}
-	if file == "" && env == "" {
+	if file == "" && envName == "" {
 		return fmt.Errorf("secret must specify either 'file' or 'env'%s", secretFormatHint)
 	}
 	s.File = file
-	s.Env = env
+	s.Env = envName
 	return nil
 }
 
 // Secrets represents the secrets to be injected to the build of the image
 type Secrets map[string]Secret
 
-func (i *Info) expandSecrets() error {
-	for k, s := range i.Secrets {
-		if s.File == "" {
-			// env-based secrets don't need path expansion
-			continue
-		}
-		val := s.File
-		if strings.HasPrefix(val, "~/") {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return err
-			}
-			val = filepath.Join(home, val[2:])
-		}
-		expanded, err := env.ExpandEnv(val)
-		if err != nil {
-			return err
-		}
-		s.File = expanded
-		i.Secrets[k] = s
+// UnmarshalYAML deserializes the secrets map and warns about any env var secrets
+// that are not set, since an empty secret may cause the build to fail.
+func (s *Secrets) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	raw := map[string]Secret{}
+	if err := unmarshal(&raw); err != nil {
+		return err
 	}
+	for name, secret := range raw {
+		if secret.Env != "" && os.Getenv(secret.Env) == "" {
+			oktetoLog.Warning("secret %q uses env var %q which is not set — the build secret will be empty and the build may fail", name, secret.Env)
+		}
+	}
+	*s = raw
 	return nil
 }
