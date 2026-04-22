@@ -92,7 +92,6 @@ func TestAnalyticsEnabled(t *testing.T) {
 	tests := []struct {
 		name     string
 		setup    func()
-		teardown func()
 		expected bool
 	}{
 		{
@@ -109,10 +108,6 @@ func TestAnalyticsEnabled(t *testing.T) {
 					},
 				}
 			},
-			teardown: func() {
-				currentAnalytics = nil
-				okteto.CurrentStore = nil
-			},
 			expected: false,
 		},
 		{
@@ -120,10 +115,6 @@ func TestAnalyticsEnabled(t *testing.T) {
 			setup: func() {
 				currentAnalytics = &Analytics{Enabled: true}
 				okteto.CurrentStore = &okteto.ContextStore{CurrentContext: ""}
-			},
-			teardown: func() {
-				currentAnalytics = nil
-				okteto.CurrentStore = nil
 			},
 			expected: false,
 		},
@@ -141,10 +132,6 @@ func TestAnalyticsEnabled(t *testing.T) {
 					},
 				}
 			},
-			teardown: func() {
-				currentAnalytics = nil
-				okteto.CurrentStore = nil
-			},
 			expected: false,
 		},
 		{
@@ -161,17 +148,18 @@ func TestAnalyticsEnabled(t *testing.T) {
 					},
 				}
 			},
-			teardown: func() {
-				currentAnalytics = nil
-				okteto.CurrentStore = nil
-			},
 			expected: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			prevAnalytics := currentAnalytics
+			prevStore := okteto.CurrentStore
+			defer func() {
+				currentAnalytics = prevAnalytics
+				okteto.CurrentStore = prevStore
+			}()
 			tt.setup()
-			defer tt.teardown()
 			require.Equal(t, tt.expected, analyticsEnabled())
 		})
 	}

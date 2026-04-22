@@ -190,7 +190,7 @@ func TestRunnerRun(t *testing.T) {
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
 				},
-				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error {
+				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
 					return assert.AnError
 				},
 			},
@@ -208,7 +208,7 @@ func TestRunnerRun(t *testing.T) {
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
 				},
-				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error {
+				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
 					solveAttempts++
 					if solveAttempts <= 3 {
 						return fmt.Errorf("transport: error while dialing: dial tcp: i/o timeout")
@@ -233,7 +233,7 @@ func TestRunnerRun(t *testing.T) {
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
 				},
-				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error {
+				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
 					return fmt.Errorf("transport: error while dialing: dial tcp: i/o timeout")
 				},
 			},
@@ -251,7 +251,7 @@ func TestRunnerRun(t *testing.T) {
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
 				},
-				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error {
+				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
 					return nil
 				},
 				fakeRegistryImageChecker: &fakeRegistryImageChecker{
@@ -272,7 +272,7 @@ func TestRunnerRun(t *testing.T) {
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
 				},
-				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error {
+				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
 					return nil
 				},
 				fakeRegistryImageChecker: &fakeRegistryImageChecker{
@@ -293,7 +293,7 @@ func TestRunnerRun(t *testing.T) {
 				buildkitClientFactory: &fakeBuildkitClientFactory{
 					err: []error{},
 				},
-				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error {
+				fakeSolver: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
 					return nil
 				},
 				fakeRegistryImageChecker: &fakeRegistryImageChecker{
@@ -443,7 +443,9 @@ func TestNewBuildkitRunner(t *testing.T) {
 					clientFactory: &fakeBuildkitClientFactory{},
 				},
 				&fakeRegistryImageChecker{},
-				func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller) error { return nil },
+				func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
+					return nil
+				},
 				&fakeOktetoContext{},
 				afero.NewMemMapFs(),
 				io.NewIOController(),
@@ -460,6 +462,26 @@ func TestNewBuildkitRunner(t *testing.T) {
 			assert.Equal(t, tt.expected, runner.maxAttemptsBuildkitTransientErrors)
 		})
 	}
+}
+
+func TestRunnerGetMetadata(t *testing.T) {
+	r := &Runner{
+		connector: &fakeBuildkitConnector{
+			waiter:        &fakeBuildkitWaiter{},
+			clientFactory: &fakeBuildkitClientFactory{},
+		},
+		registry: &fakeRegistryImageChecker{},
+		solveBuild: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
+			return nil
+		},
+		metadata:               &runnerMetadata{build: &BuildMetadata{BuildContextSize: 1024}},
+		logger:                 io.NewIOController(),
+		okCtx:                  &fakeOktetoContext{},
+		fs:                     afero.NewMemMapFs(),
+		solveOptBuilderFactory: newFakeSolveOptBuilderFactory(&client.SolveOpt{}, nil),
+	}
+
+	assert.Equal(t, int64(1024), r.GetMetadata().BuildContextSize)
 }
 func TestCheckIfImageIsPushed(t *testing.T) {
 	tests := []struct {

@@ -16,10 +16,12 @@ package analytics
 import (
 	"context"
 	"maps"
+	"os"
 	"runtime"
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	posthog "github.com/posthog/posthog-go"
@@ -69,17 +71,99 @@ func newPostHogBackend() *posthogBackend {
 // Note: user_id is included as an explicit property (per product spec) in addition to
 // being set as DistinctId on posthog.Capture.
 func commonPostHogProperties() posthog.Properties {
+	agent := getAgent()
 	return posthog.Properties{
 		// Common (all PostHog sources)
 		"customer_name": okteto.GetContext().CompanyName,
-		"cluster_id":    okteto.GetContext().Name,
+		"cluster_id":    okteto.GetContext().ClusterID,
 		"user_id":       okteto.GetContext().UserID,
-		// TBD: "customer_id", "repository_hash"
+
 		// CLI common
-		"cli_version": config.VersionString,
-		"os":          runtime.GOOS,
-		"arch":        runtime.GOARCH,
-		"machine_id":  get().MachineID,
+		"cli_version":        config.VersionString,
+		"os":                 runtime.GOOS,
+		"arch":               runtime.GOARCH,
+		"machine_id":         get().MachineID,
+		"measurement_source": "cli",
+		"trigger_source":     getTriggerSource(),
+		"is_agent":           agent != "",
+		"agent_type":         agent,
+	}
+}
+
+func getTriggerSource() string {
+	if env.LoadBoolean("GITHUB_ACTIONS") {
+		return "github_actions"
+	}
+	if env.LoadBoolean("GITLAB_CI") {
+		return "gitlab_ci"
+	}
+	if env.LoadBoolean("CIRCLECI") {
+		return "circleci"
+	}
+	if os.Getenv("JENKINS_URL") != "" {
+		return "jenkins"
+	}
+	return "cli"
+}
+
+func getAgent() string {
+	if env.LoadBoolean("CODEX_CI") {
+		return "codex"
+	}
+	if env.LoadBoolean("GEMINI_CLI") {
+		return "gemini"
+	}
+	if env.LoadBoolean("CLAUDECODE") {
+		return "claude"
+	}
+	if os.Getenv("CURSOR_SANDBOX") != "" {
+		return "cursor"
+	}
+	return ""
+}
+
+// commonPostHogGroups returns the PostHog group memberships for an event.
+// PRECONDITION: must only be called after analyticsEnabled() returns true.
+func commonPostHogGroups() posthog.Groups {
+	ctx := okteto.GetContext()
+	g := posthog.NewGroups()
+	if ctx.CompanyName != "" {
+		g = g.Set("customer", ctx.CompanyName)
+	}
+	if ctx.ClusterID != "" {
+		g = g.Set("cluster", ctx.ClusterID)
+	}
+	return g
+}
+
+// IdentifyGroups sends $groupidentify calls for the customer and cluster groups.
+// Safe to call immediately after context is populated — skips silently if
+// analytics is disabled or either key is empty.
+func (b *posthogBackend) IdentifyGroups() {
+	if b.client == nil || !analyticsEnabled() {
+		return
+	}
+	ctx := okteto.GetContext()
+	if ctx.ClusterID != "" {
+		if err := b.client.Enqueue(posthog.GroupIdentify{
+			Type: "cluster",
+			Key:  ctx.ClusterID,
+			Properties: posthog.NewProperties().
+				Set("cluster_id", ctx.ClusterID).
+				Set("cluster_version", ctx.ClusterVersion),
+		}); err != nil {
+			oktetoLog.Infof("failed to send posthog group identify (cluster): %s", err)
+		}
+	}
+	if ctx.CompanyName != "" {
+		if err := b.client.Enqueue(posthog.GroupIdentify{
+			Type: "customer",
+			Key:  ctx.CompanyName,
+			Properties: posthog.NewProperties().
+				Set("customer_name", ctx.CompanyName),
+		}); err != nil {
+			oktetoLog.Infof("failed to send posthog group identify (customer): %s", err)
+		}
 	}
 }
 
@@ -99,6 +183,7 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogImageBuildEvent,
 		Properties: props,
+		Groups:     commonPostHogGroups(),
 	}); err != nil {
 		oktetoLog.Infof("failed to send posthog analytics: %s", err)
 	}

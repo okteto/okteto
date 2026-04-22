@@ -16,7 +16,11 @@ package okteto
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
@@ -25,17 +29,20 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"gopkg.in/yaml.v3"
 )
 
 type userClient struct {
-	client graphqlClientInterface
+	client     graphqlClientInterface
+	httpClient *http.Client
+	baseURL    string
 }
 
-func newUserClient(client graphqlClientInterface) *userClient {
-	return &userClient{client: client}
+func newUserClient(client graphqlClientInterface, httpClient *http.Client, baseURL string) *userClient {
+	return &userClient{client: client, httpClient: httpClient, baseURL: baseURL}
 }
 
 type getContextQuery struct {
@@ -119,6 +126,8 @@ type contextFileJSON struct {
 		Certificate string `yaml:"certificate"`
 	} `yaml:"contexts"`
 }
+
+const clusterInfoPathTemplate = "%s/clusterinfo"
 
 // GetContext returns the user context from Okteto API
 func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserContext, error) {
@@ -296,6 +305,52 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 		return metadata, fmt.Errorf("missing metadata")
 	}
 	return metadata, nil
+}
+
+func getClusterInfoURL(baseURL string) (*url.URL, error) {
+	return url.Parse(fmt.Sprintf(clusterInfoPathTemplate, baseURL))
+}
+
+func (c *userClient) GetClusterInfo(ctx context.Context) (*types.ClusterInfo, error) {
+	if c.httpClient == nil || c.baseURL == "" {
+		return nil, fmt.Errorf("clusterinfo client not configured")
+	}
+
+	endpoint, err := getClusterInfoURL(c.baseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			oktetoLog.Info("could not close the body: %s", err)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("clusterinfo request failed: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read clusterinfo response: %w", err)
+	}
+
+	var clusterInfo types.ClusterInfo
+	if err := json.Unmarshal(body, &clusterInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal clusterinfo response: %w", err)
+	}
+
+	return &clusterInfo, nil
 }
 
 func (c *userClient) GetRegistryCredentials(ctx context.Context, host string) (dockertypes.AuthConfig, error) {

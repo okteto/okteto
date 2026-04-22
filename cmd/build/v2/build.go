@@ -290,14 +290,17 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		buildDuration := time.Since(buildDurationStart)
 
 		waitForBuildkitAvailable := time.Duration(0)
+		buildContextSize := int64(0)
 		buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
 		if ok {
 			buildkitMetadata := buildkitRunner.GetMetadata()
 			if buildkitMetadata != nil {
 				waitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
+				buildContextSize = buildkitMetadata.BuildContextSize
 			}
 		}
 		svcToBuild.SetBuildDuration(buildDuration, waitForBuildkitAvailable, err == nil)
+		svcToBuild.Metadata().BuildContextSize = buildContextSize
 
 		if err != nil {
 			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)

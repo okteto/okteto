@@ -316,7 +316,8 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Cli
 	}
 	c.namespace = newNamespaceClient(c.client)
 	c.preview = newPreviewClient(c.client)
-	c.user = newUserClient(c.client)
+	baseURL := strings.TrimSuffix(url, "/graphql")
+	c.user = newUserClient(c.client, httpClient, baseURL)
 	c.pipeline = newPipelineClient(c.client, url)
 	c.stream = newStreamClient(httpClient)
 	c.kubetoken = newKubeTokenClient(httpClient)

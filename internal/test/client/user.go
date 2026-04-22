@@ -28,6 +28,7 @@ type FakeUserClient struct {
 	platformVariables       []env.Var
 	err                     []error
 	ClusterMetadata         types.ClusterMetadata
+	ClusterInfo             *types.ClusterInfo
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -66,6 +67,13 @@ func (c *FakeUserClient) GetClusterMetadata(_ context.Context, _ string) (types.
 		return types.ClusterMetadata{}, c.err[0]
 	}
 	return c.ClusterMetadata, nil
+}
+
+func (c *FakeUserClient) GetClusterInfo(_ context.Context) (*types.ClusterInfo, error) {
+	if len(c.err) > 0 {
+		return nil, c.err[0]
+	}
+	return c.ClusterInfo, nil
 }
 
 func (*FakeUserClient) GetRegistryCredentials(_ context.Context, _ string) (dockertypes.AuthConfig, error) {

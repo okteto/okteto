@@ -69,7 +69,7 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]interface{} {
 }
 
 // toPostHogProps returns the PostHog-specific property map for an image_build event.
-// Only includes errorCategory when the build failed.
+// errorCategory is omitted on success.
 func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
 	props := map[string]interface{}{
 		"service":                m.Name,
@@ -78,7 +78,7 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
 		"result":                 m.Success,
 		"build_context_ss":       m.BuildContextSize,
 	}
-	if !m.Success && m.ErrorCategory != "" {
+	if !m.Success {
 		props["errorCategory"] = m.ErrorCategory
 	}
 	return props

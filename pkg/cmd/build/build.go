@@ -223,6 +223,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	if err := buildSolver.Run(ctx, buildOptions, buildOptions.OutputMode); err != nil {
 		return err
 	}
+	ob.metadata = buildSolver.GetMetadata()
 
 	return nil
 }
