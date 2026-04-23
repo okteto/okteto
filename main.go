@@ -27,6 +27,7 @@ import (
 
 	"github.com/okteto/okteto/cmd"
 	"github.com/okteto/okteto/cmd/build"
+	connectCMD "github.com/okteto/okteto/cmd/connect"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
@@ -162,6 +163,7 @@ func main() {
 
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger, ioController))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
+	root.AddCommand(connectCMD.Connect(at, ioController, k8sLogger, fs))
 	root.AddCommand(cmd.Down(at, k8sLogger, fs))
 	root.AddCommand(cmd.Status(fs))
 	root.AddCommand(cmd.Doctor(k8sLogger, fs))
