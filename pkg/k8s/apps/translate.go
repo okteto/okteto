@@ -37,6 +37,13 @@ const (
 	// OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
 	OktetoInitVolumeContainerName = "okteto-init-volume"
 
+	// OktetoClaudeInstallerName is the name of the init container that installs Claude Code CLI
+	OktetoClaudeInstallerName = "okteto-claude-installer"
+	// oktetoClaudeBinVolume is the emptyDir volume that holds the Claude Code binary
+	oktetoClaudeBinVolume = "okteto-claude-bin"
+	// OktetoClaudeBinMountPath is where the Claude binary is mounted in the dev container
+	OktetoClaudeBinMountPath = "/okteto/claude-bin"
+
 	// syncthing
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
 	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
@@ -597,6 +604,80 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 	translateInitResources(c, rule.InitContainer.Resources)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 	spec.InitContainers = append(spec.InitContainers, *c)
+}
+
+// TranslateClaudeCodeInitContainer injects an init container that installs the Claude Code CLI
+// into a shared emptyDir volume at /okteto/claude-bin. It is idempotent: calling it more than
+// once on the same PodSpec has no effect. The dev container must mount the same volume and
+// prepend /okteto/claude-bin to its PATH to make `claude` available.
+func TranslateClaudeCodeInitContainer(spec *apiv1.PodSpec) {
+	for _, c := range spec.InitContainers {
+		if c.Name == OktetoClaudeInstallerName {
+			return
+		}
+	}
+	for _, v := range spec.Volumes {
+		if v.Name == oktetoClaudeBinVolume {
+			return
+		}
+	}
+
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
+	}
+	spec.Volumes = append(spec.Volumes, apiv1.Volume{
+		Name: oktetoClaudeBinVolume,
+		VolumeSource: apiv1.VolumeSource{
+			EmptyDir: &apiv1.EmptyDirVolumeSource{},
+		},
+	})
+
+	if spec.InitContainers == nil {
+		spec.InitContainers = []apiv1.Container{}
+	}
+	spec.InitContainers = append(spec.InitContainers, apiv1.Container{
+		Name:            OktetoClaudeInstallerName,
+		Image:           "node:lts-alpine",
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		// Install Claude Code CLI globally then copy the binary to the shared volume so
+		// it is available in PATH inside the dev container.
+		Command: []string{
+			"sh", "-c",
+			"npm install -g @anthropic-ai/claude-code && cp $(which claude) " + OktetoClaudeBinMountPath + "/",
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      oktetoClaudeBinVolume,
+				MountPath: OktetoClaudeBinMountPath,
+			},
+		},
+	})
+}
+
+// MountClaudeCodeBin mounts the okteto-claude-bin volume into a container and prepends
+// /okteto/claude-bin to its PATH so that `claude` is available after the installer init
+// container completes.
+func MountClaudeCodeBin(c *apiv1.Container) {
+	for _, vm := range c.VolumeMounts {
+		if vm.Name == oktetoClaudeBinVolume {
+			return
+		}
+	}
+	c.VolumeMounts = append(c.VolumeMounts, apiv1.VolumeMount{
+		Name:      oktetoClaudeBinVolume,
+		MountPath: OktetoClaudeBinMountPath,
+	})
+
+	for i, e := range c.Env {
+		if e.Name == "PATH" {
+			c.Env[i].Value = OktetoClaudeBinMountPath + ":" + e.Value
+			return
+		}
+	}
+	c.Env = append(c.Env, apiv1.EnvVar{
+		Name:  "PATH",
+		Value: OktetoClaudeBinMountPath + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+	})
 }
 
 func isOktetoSyncSecretVolumePresent(spec *apiv1.PodSpec) bool {

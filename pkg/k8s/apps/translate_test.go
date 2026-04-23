@@ -2577,3 +2577,79 @@ func TestGetVolumeLabelKey(t *testing.T) {
 		assert.NotEqual(t, result1, result2, "Different inputs should produce different hashes")
 	})
 }
+
+func TestTranslateClaudeCodeInitContainer(t *testing.T) {
+	t.Run("happy path adds init container and volume", func(t *testing.T) {
+		spec := &apiv1.PodSpec{}
+		TranslateClaudeCodeInitContainer(spec)
+
+		require.Len(t, spec.InitContainers, 1)
+		assert.Equal(t, OktetoClaudeInstallerName, spec.InitContainers[0].Name)
+		assert.Equal(t, "node:lts-alpine", spec.InitContainers[0].Image)
+		require.Len(t, spec.InitContainers[0].VolumeMounts, 1)
+		assert.Equal(t, oktetoClaudeBinVolume, spec.InitContainers[0].VolumeMounts[0].Name)
+
+		require.Len(t, spec.Volumes, 1)
+		assert.Equal(t, oktetoClaudeBinVolume, spec.Volumes[0].Name)
+		assert.NotNil(t, spec.Volumes[0].EmptyDir)
+	})
+
+	t.Run("idempotent when called twice", func(t *testing.T) {
+		spec := &apiv1.PodSpec{}
+		TranslateClaudeCodeInitContainer(spec)
+		TranslateClaudeCodeInitContainer(spec)
+
+		assert.Len(t, spec.InitContainers, 1, "should not duplicate init container")
+		assert.Len(t, spec.Volumes, 1, "should not duplicate volume")
+	})
+
+	t.Run("does not disturb existing init containers", func(t *testing.T) {
+		spec := &apiv1.PodSpec{
+			InitContainers: []apiv1.Container{
+				{Name: OktetoBinName},
+				{Name: OktetoInitVolumeContainerName},
+			},
+		}
+		TranslateClaudeCodeInitContainer(spec)
+
+		assert.Len(t, spec.InitContainers, 3)
+		assert.Equal(t, OktetoBinName, spec.InitContainers[0].Name)
+		assert.Equal(t, OktetoInitVolumeContainerName, spec.InitContainers[1].Name)
+		assert.Equal(t, OktetoClaudeInstallerName, spec.InitContainers[2].Name)
+	})
+}
+
+func TestMountClaudeCodeBin(t *testing.T) {
+	t.Run("adds volume mount and PATH env var", func(t *testing.T) {
+		c := &apiv1.Container{}
+		MountClaudeCodeBin(c)
+
+		require.Len(t, c.VolumeMounts, 1)
+		assert.Equal(t, oktetoClaudeBinVolume, c.VolumeMounts[0].Name)
+		assert.Equal(t, OktetoClaudeBinMountPath, c.VolumeMounts[0].MountPath)
+
+		require.Len(t, c.Env, 1)
+		assert.Equal(t, "PATH", c.Env[0].Name)
+		assert.Contains(t, c.Env[0].Value, OktetoClaudeBinMountPath+":")
+	})
+
+	t.Run("idempotent when called twice", func(t *testing.T) {
+		c := &apiv1.Container{}
+		MountClaudeCodeBin(c)
+		MountClaudeCodeBin(c)
+
+		assert.Len(t, c.VolumeMounts, 1, "should not duplicate volume mount")
+	})
+
+	t.Run("prepends to existing PATH", func(t *testing.T) {
+		c := &apiv1.Container{
+			Env: []apiv1.EnvVar{
+				{Name: "PATH", Value: "/usr/bin:/bin"},
+			},
+		}
+		MountClaudeCodeBin(c)
+
+		require.Len(t, c.Env, 1)
+		assert.Equal(t, OktetoClaudeBinMountPath+":/usr/bin:/bin", c.Env[0].Value)
+	})
+}
