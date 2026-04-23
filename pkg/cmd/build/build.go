@@ -370,6 +370,9 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 	// add to the build the secrets from the manifest build
 	for id, secret := range b.Secrets {
 		if secret.Env != "" {
+			if os.Getenv(secret.Env) == "" {
+				oktetoLog.Warning("secret %q uses env var %q which is not set — the build secret will be empty and the build may fail", id, secret.Env)
+			}
 			opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,env=%s", id, secret.Env))
 		} else {
 			opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,src=%s", id, secret.File))

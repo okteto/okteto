@@ -15,10 +15,7 @@ package build
 
 import (
 	"fmt"
-	"os"
 	"strings"
-
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 const secretFormatHint = `
@@ -95,17 +92,11 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Secrets represents the secrets to be injected to the build of the image
 type Secrets map[string]Secret
 
-// UnmarshalYAML deserializes the secrets map and warns about any env var secrets
-// that are not set, since an empty secret may cause the build to fail.
+// UnmarshalYAML deserializes the secrets map.
 func (s *Secrets) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	raw := map[string]Secret{}
 	if err := unmarshal(&raw); err != nil {
 		return err
-	}
-	for name, secret := range raw {
-		if secret.Env != "" && os.Getenv(secret.Env) == "" {
-			oktetoLog.Warning("secret %q uses env var %q which is not set — the build secret will be empty and the build may fail", name, secret.Env)
-		}
 	}
 	*s = raw
 	return nil
