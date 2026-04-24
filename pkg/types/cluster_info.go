@@ -17,5 +17,5 @@ type ClusterInfo struct {
 	AnalyticsContext string `json:"analyticsContext"`
 	ClusterVersion   string `json:"clusterVersion"`
 	CustomerName     string `json:"customerName"`
-	ClusterID        string `json:"clusterID"`
+	ClusterID        string `json:"clusterId"`
 }
