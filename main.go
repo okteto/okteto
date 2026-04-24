@@ -39,6 +39,7 @@ import (
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/registrytoken"
 	"github.com/okteto/okteto/cmd/remoterun"
+	sandboxCMD "github.com/okteto/okteto/cmd/sandbox"
 	"github.com/okteto/okteto/cmd/test"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -164,6 +165,7 @@ func main() {
 	root.AddCommand(namespace.Namespace(ctx, k8sLogger, ioController))
 	root.AddCommand(up.Up(at, insights, ioController, k8sLogger, fs))
 	root.AddCommand(connectCMD.Connect(at, ioController, k8sLogger, fs))
+	root.AddCommand(sandboxCMD.Sandbox(ctx))
 	root.AddCommand(cmd.Down(at, k8sLogger, fs))
 	root.AddCommand(cmd.Status(fs))
 	root.AddCommand(cmd.Doctor(k8sLogger, fs))
