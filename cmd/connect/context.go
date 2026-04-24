@@ -23,11 +23,19 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/afero"
 	apiv1 "k8s.io/api/core/v1"
 )
+
+// forwarder manages port forwarding for the dev session.
+type forwarder interface {
+	Add(forward.Forward) error
+	Start(string, string) error
+	Stop()
+}
 
 // connectContext holds all state for an active connect session.
 type connectContext struct {
@@ -36,6 +44,7 @@ type connectContext struct {
 	analyticsTracker  analyticsTrackerInterface
 	Fs                afero.Fs
 	K8sClientProvider okteto.K8sClientProvider
+	Forwarder         forwarder
 	Disconnect        chan error
 	Exit              chan error
 	Sy                *syncthing.Syncthing
@@ -94,6 +103,11 @@ func (c *connectContext) shutdown() {
 		if err := c.Sy.SoftTerminate(); err != nil {
 			oktetoLog.Infof("failed to stop syncthing during shutdown: %s", err.Error())
 		}
+	}
+
+	if c.Forwarder != nil {
+		oktetoLog.Infof("stopping forwarders")
+		c.Forwarder.Stop()
 	}
 
 	oktetoLog.Info("completed shutdown sequence")

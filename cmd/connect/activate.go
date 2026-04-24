@@ -135,6 +135,10 @@ func (c *connectContext) activate() error {
 		return fmt.Errorf("couldn't activate your development container\n    %w", err)
 	}
 
+	if err := c.forwards(ctx); err != nil {
+		return fmt.Errorf("couldn't connect to your development container: %w", err)
+	}
+
 	c.isRetry = true
 
 	if err := c.sync(ctx); err != nil {
