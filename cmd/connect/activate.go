@@ -220,6 +220,10 @@ func (c *connectContext) createDevContainer(ctx context.Context, app apps.App, c
 	}
 
 	if c.Dev.PersistentVolumeEnabled() {
+		if c.Dev.PersistentVolumeInfo.Labels == nil {
+			c.Dev.PersistentVolumeInfo.Labels = model.Labels{}
+		}
+		c.Dev.PersistentVolumeInfo.Labels["agent.okteto.com/pvc"] = c.Dev.Name
 		if err := volumes.CreateForDev(ctx, c.Dev, "", c.Namespace, k8sClient); err != nil {
 			return err
 		}
