@@ -192,7 +192,7 @@ func TestInferDevFromDeployment_ImageOverride(t *testing.T) {
 	assert.Equal(t, "custom:dev", dev.Image)
 }
 
-func TestInferDevFromDeployment_EmptyWorkdir(t *testing.T) {
+func TestInferDevFromDeployment_EmptyWorkdirDefaultsToRoot(t *testing.T) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "api",
@@ -216,8 +216,9 @@ func TestInferDevFromDeployment_EmptyWorkdir(t *testing.T) {
 	k8sClient := fake.NewSimpleClientset(deployment)
 	opts := &Options{}
 
-	_, err := inferDevFromDeployment(context.Background(), "api", "test-ns", opts, k8sClient)
-	require.Error(t, err)
+	manifest, err := inferDevFromDeployment(context.Background(), "api", "test-ns", opts, k8sClient)
+	require.NoError(t, err)
+	assert.Equal(t, "/", manifest.Dev["api"].Sync.Folders[0].RemotePath)
 }
 
 func TestInferDevFromDeployment_NotFound(t *testing.T) {

@@ -402,13 +402,11 @@ func getContainerInfo(app apps.App) (workdir, image string, err error) {
 		return "", "", fmt.Errorf("deployment has no containers")
 	}
 	c := podSpec.Containers[0]
-	if c.WorkingDir == "" {
-		return "", "", oktetoErrors.UserError{
-			E:    fmt.Errorf("could not infer working directory for deployment %q", app.ObjectMeta().Name),
-			Hint: "Set workingDir in your container spec. Support for a --remote-path flag is planned.",
-		}
+	workdir = c.WorkingDir
+	if workdir == "" {
+		workdir = "/"
 	}
-	return c.WorkingDir, c.Image, nil
+	return workdir, c.Image, nil
 }
 
 // addStignoreSecrets mirrors cmd/up/stignore.go:addStignoreSecrets.
