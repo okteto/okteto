@@ -570,9 +570,15 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 		spec.InitContainers = []apiv1.Container{}
 	}
 
+	image := rule.Image
+	if image == "scratch" {
+		// scratch has no shell; use busybox so the init container can start.
+		// cp will fail silently (nothing to seed) but the container exits 0.
+		image = "busybox"
+	}
 	c := &apiv1.Container{
 		Name:            OktetoInitVolumeContainerName,
-		Image:           rule.Image,
+		Image:           image,
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts:    []apiv1.VolumeMount{},
 	}
