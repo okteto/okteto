@@ -154,6 +154,9 @@ func (c *connectContext) activate() error {
 	}
 
 	c.success = true
+	if err := config.UpdateStateFile(c.Dev.Name, c.Namespace, config.Ready); err != nil {
+		oktetoLog.Infof("failed to write ready state: %s", err)
+	}
 
 	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(okteto.GetContext().Name)))
 	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), c.Namespace))
