@@ -295,7 +295,7 @@ dev:
 		Containers: []apiv1.Container{
 			{
 				Name:            "dev",
-				Image:           "web:latest",
+				Image:           "node:lts-slim",
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"/var/okteto/bin/start.sh"},
 				Args:            []string{"-r", "-s", "remote:/remote"},
@@ -540,7 +540,7 @@ dev:
 		Containers: []apiv1.Container{
 			{
 				Name:            "dev",
-				Image:           "worker:latest",
+				Image:           "node:lts-slim",
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"./run_worker.sh"},
 				Args:            []string{},
@@ -966,7 +966,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 		Containers: []apiv1.Container{
 			{
 				Name:            "dev",
-				Image:           "web:latest",
+				Image:           "node:lts-slim",
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"/var/okteto/bin/start.sh"},
 				Args:            []string{"-r", "-e"},
@@ -1809,7 +1809,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		Containers: []apiv1.Container{
 			{
 				Name:            "dev",
-				Image:           "web:latest",
+				Image:           "node:lts-slim",
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"/var/okteto/bin/start.sh"},
 				Args:            []string{"-r", "-s", "remote:/remote"},
@@ -2040,7 +2040,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 		Containers: []apiv1.Container{
 			{
 				Name:            "dev",
-				Image:           "worker:latest",
+				Image:           "node:lts-slim",
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"./run_worker.sh"},
 				Args:            []string{},

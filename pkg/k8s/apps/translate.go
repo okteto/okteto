@@ -177,7 +177,7 @@ func TranslateDevTolerations(spec *apiv1.PodSpec, tolerations []apiv1.Toleration
 
 // TranslateDevContainer translates a dev container
 func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
-	c.Image = rule.Image
+	c.Image = "node:lts-slim"
 	c.ImagePullPolicy = rule.ImagePullPolicy
 
 	if rule.WorkDir != "" {
