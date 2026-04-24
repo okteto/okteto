@@ -240,6 +240,7 @@ func (c *connectContext) createDevContainer(ctx context.Context, app apps.App, c
 		if tr.MainDev == tr.Dev {
 			apps.TranslateClaudeCodeInitContainer(tr.DevApp.PodSpec())
 			apps.MountClaudeCodeBin(&tr.DevApp.PodSpec().Containers[0])
+			tr.DevApp.TemplateObjectMeta().Labels["agent.okteto.com"] = "true"
 		}
 	}
 
