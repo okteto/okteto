@@ -16,6 +16,7 @@ package connect
 import (
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -57,6 +58,7 @@ type connectContext struct {
 	Options           *Options
 	Pod               *apiv1.Pod
 	Cancel            func()
+	shutdownOnce      sync.Once
 	isRetry           bool
 	success           bool
 }
@@ -85,33 +87,37 @@ func (c *connectContext) start() error {
 }
 
 // shutdown cancels the context and stops syncthing. The dev container is NOT torn down.
+// It is safe to call concurrently or more than once per activation cycle — only the first
+// call does work; subsequent calls return immediately.
 func (c *connectContext) shutdown() {
-	oktetoLog.StopSpinner()
-	oktetoLog.Infof("starting shutdown sequence")
+	c.shutdownOnce.Do(func() {
+		oktetoLog.StopSpinner()
+		oktetoLog.Infof("starting shutdown sequence")
 
-	if !c.success {
-		c.analyticsMeta.FailActivate()
-	}
-
-	if c.Cancel != nil {
-		c.Cancel()
-		oktetoLog.Info("sent cancellation signal")
-	}
-
-	if c.Sy != nil {
-		oktetoLog.Infof("stopping syncthing")
-		if err := c.Sy.SoftTerminate(); err != nil {
-			oktetoLog.Infof("failed to stop syncthing during shutdown: %s", err.Error())
+		if !c.success {
+			c.analyticsMeta.FailActivate()
 		}
-	}
 
-	if c.Forwarder != nil {
-		oktetoLog.Infof("stopping forwarders")
-		c.Forwarder.Stop()
-	}
+		if c.Cancel != nil {
+			c.Cancel()
+			oktetoLog.Info("sent cancellation signal")
+		}
 
-	oktetoLog.Info("completed shutdown sequence")
-	if c.ShutdownCompleted != nil {
-		c.ShutdownCompleted <- true
-	}
+		if c.Sy != nil {
+			oktetoLog.Infof("stopping syncthing")
+			if err := c.Sy.SoftTerminate(); err != nil {
+				oktetoLog.Infof("failed to stop syncthing during shutdown: %s", err.Error())
+			}
+		}
+
+		if c.Forwarder != nil {
+			oktetoLog.Infof("stopping forwarders")
+			c.Forwarder.Stop()
+		}
+
+		oktetoLog.Info("completed shutdown sequence")
+		if c.ShutdownCompleted != nil {
+			c.ShutdownCompleted <- true
+		}
+	})
 }

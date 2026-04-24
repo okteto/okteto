@@ -24,6 +24,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -32,9 +33,12 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -86,6 +90,7 @@ func (c *connectContext) activate() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	c.Cancel = cancel
 	c.ShutdownCompleted = make(chan bool, 1)
+	c.shutdownOnce = sync.Once{}
 	c.Sy = nil
 	defer func() {
 		c.shutdown()
@@ -153,7 +158,9 @@ func (c *connectContext) activate() error {
 	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(okteto.GetContext().Name)))
 	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), c.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), c.Dev.Name))
-	oktetoLog.Println(fmt.Sprintf("    %s    %s", oktetoLog.BlueString("Workdir:"), c.Dev.Sync.Folders[0].RemotePath))
+	for _, ep := range getIngressEndpoints(ctx, c.Dev.Name, c.Namespace, k8sClient) {
+		oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Endpoint:"), ep))
+	}
 	oktetoLog.Success("Files synchronized")
 	oktetoLog.Information("The dev container is running. Press Ctrl+C to stop syncing (the container stays running).")
 
@@ -209,6 +216,12 @@ func (c *connectContext) createDevContainer(ctx context.Context, app apps.App, c
 		return err
 	}
 
+	if c.Dev.PersistentVolumeEnabled() {
+		if err := volumes.CreateForDev(ctx, c.Dev, "", c.Namespace, k8sClient); err != nil {
+			return err
+		}
+	}
+
 	trMap, err := apps.GetTranslations(ctx, c.Namespace, c.Manifest.Name, c.Dev, app, false, k8sClient)
 	if err != nil {
 		return err
@@ -251,8 +264,52 @@ func (c *connectContext) createDevContainer(ctx context.Context, app apps.App, c
 	if err != nil {
 		return err
 	}
+
+	if err := waitForPodRunning(ctx, pod.Name, c.Namespace, k8sClient, c.Dev.Timeout.Resources); err != nil {
+		return err
+	}
+
 	c.Pod = pod
 	return nil
+}
+
+// waitForPodRunning polls until the pod phase is Running or the context / timeout expires.
+// GetRunningPodInLoop returns as soon as a pod exists in the correct ReplicaSet, which may
+// still be in Pending state (no host assigned). SSH port-forward fails on unscheduled pods,
+// so we must wait for the pod to be fully Running before starting the tunnel.
+func waitForPodRunning(ctx context.Context, podName, namespace string, k8sClient kubernetes.Interface, timeout time.Duration) error {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	to := time.Now().Add(timeout)
+
+	for {
+		pod, err := k8sClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		switch pod.Status.Phase {
+		case apiv1.PodRunning:
+			return nil
+		case apiv1.PodFailed, apiv1.PodSucceeded:
+			return fmt.Errorf("pod %s is in phase %s", podName, pod.Status.Phase)
+		case apiv1.PodPending, apiv1.PodUnknown:
+			// still starting; fall through to sleep and retry
+		}
+
+		if time.Now().After(to) {
+			return oktetoErrors.ErrKubernetesLongTimeToCreateDevContainer
+		}
+
+		oktetoLog.Infof("waiting for pod %s to be running (phase: %s)", podName, pod.Status.Phase)
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func (c *connectContext) setDevContainer(app apps.App) error {
@@ -404,7 +461,7 @@ func getContainerInfo(app apps.App) (workdir, image string, err error) {
 	c := podSpec.Containers[0]
 	workdir = c.WorkingDir
 	if workdir == "" {
-		workdir = "/"
+		workdir = "/app"
 	}
 	return workdir, c.Image, nil
 }
@@ -485,4 +542,28 @@ func addSyncFieldHash(dev *model.Dev) error {
 	}
 	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", sha512.Sum512(output))
 	return nil
+}
+
+// getIngressEndpoints returns the HTTPS URLs from any Ingress in the namespace
+// whose backend service name matches svcName.
+func getIngressEndpoints(ctx context.Context, svcName, namespace string, k8sClient kubernetes.Interface) []string {
+	ingresses, err := k8sClient.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		oktetoLog.Infof("could not list ingresses: %s", err)
+		return nil
+	}
+	var endpoints []string
+	for i := range ingresses.Items {
+		for _, rule := range ingresses.Items[i].Spec.Rules {
+			if rule.Host == "" || rule.HTTP == nil {
+				continue
+			}
+			for _, p := range rule.HTTP.Paths {
+				if p.Backend.Service != nil && p.Backend.Service.Name == svcName {
+					endpoints = append(endpoints, fmt.Sprintf("https://%s%s", rule.Host, p.Path))
+				}
+			}
+		}
+	}
+	return endpoints
 }

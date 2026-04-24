@@ -218,7 +218,7 @@ func TestInferDevFromDeployment_EmptyWorkdirDefaultsToRoot(t *testing.T) {
 
 	manifest, err := inferDevFromDeployment(context.Background(), "api", "test-ns", opts, k8sClient)
 	require.NoError(t, err)
-	assert.Equal(t, "/", manifest.Dev["api"].Sync.Folders[0].RemotePath)
+	assert.Equal(t, "/app", manifest.Dev["api"].Sync.Folders[0].RemotePath)
 }
 
 func TestInferDevFromDeployment_NotFound(t *testing.T) {
