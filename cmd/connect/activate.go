@@ -441,6 +441,7 @@ func inferDevFromDeployment(ctx context.Context, name, namespace string, opts *O
 	dev := model.NewDev()
 	dev.Name = name
 	dev.Image = image
+	dev.Workdir = workdir
 	dev.Sync.Folders = []model.SyncFolder{
 		{LocalPath: cwd, RemotePath: workdir},
 	}
