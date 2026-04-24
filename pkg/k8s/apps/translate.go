@@ -637,7 +637,7 @@ func TranslateClaudeCodeInitContainer(spec *apiv1.PodSpec) {
 	}
 	spec.InitContainers = append(spec.InitContainers, apiv1.Container{
 		Name:            OktetoClaudeInstallerName,
-		Image:           "node:lts-alpine",
+		Image:           "node:lts-slim",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		// Install Claude Code CLI globally then copy the binary to the shared volume so
 		// it is available in PATH inside the dev container.

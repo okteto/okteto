@@ -2585,7 +2585,7 @@ func TestTranslateClaudeCodeInitContainer(t *testing.T) {
 
 		require.Len(t, spec.InitContainers, 1)
 		assert.Equal(t, OktetoClaudeInstallerName, spec.InitContainers[0].Name)
-		assert.Equal(t, "node:lts-alpine", spec.InitContainers[0].Image)
+		assert.Equal(t, "node:lts-slim", spec.InitContainers[0].Image)
 		require.Len(t, spec.InitContainers[0].VolumeMounts, 1)
 		assert.Equal(t, oktetoClaudeBinVolume, spec.InitContainers[0].VolumeMounts[0].Name)
 
