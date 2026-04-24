@@ -168,25 +168,28 @@ cmd/connect/
 **Dependencies:** None — pure function on `*apiv1.PodSpec`.
 
 **Files:**
+
 - Modify: `pkg/k8s/apps/translate.go`
 - Test: `pkg/k8s/apps/translate_test.go`
 
 **Approach:**
-- Add `TranslateClaudeCodeInitContainer(spec *apiv1.PodSpec)` alongside `TranslateOktetoInitBinContainer`.
-- Init container spec: name `okteto-claude-installer`, image `curlimages/curl:latest` (chosen over `alpine/curl` from the requirements doc — `curlimages/curl` is the maintained official image), command downloads the Claude CLI binary (via direct binary URL) into an emptyDir volume mounted at `/okteto/claude-bin`.
-- Volume `okteto-claude-bin` (name chosen to avoid collision with the existing `okteto-bin` volume used by `TranslateOktetoInitBinContainer`) is an emptyDir added to `spec.Volumes`.
-- The function must be idempotent: check whether a container named `okteto-claude-installer` already exists in `spec.InitContainers` before appending.
-- The dev container's PATH mutation (prepending `/okteto/claude-bin`) is handled in Unit 2 when building the environment variables for the `connectContext`.
+
+- Add `TranslateClaudeCodeInitContainer(spec *apiv1.PodSpec)` alongside `TranslateOktetoInitBinContainer`. Init container spec: name `okteto-claude-installer`, image `node:lts-alpine`, command installs `@anthropic-ai/claude-code` via npm and copies the binary into an emptyDir volume at `/okteto/claude-bin`.
+- Volume `okteto-claude-bin` (name chosen to avoid collision with the existing `okteto-bin` volume) is an emptyDir added to `spec.Volumes`.
+- The function must be idempotent: check whether a container named `okteto-claude-installer` already exists before appending.
 
 **Patterns to follow:**
+
 - `pkg/k8s/apps/translate.go:TranslateOktetoInitBinContainer` — exact structural pattern for the new function.
 
 **Test scenarios:**
+
 - Happy path: calling on an empty `PodSpec` adds exactly one init container named `okteto-claude-installer` and one volume named `okteto-claude-bin`.
 - Idempotency: calling twice on the same spec does not add a duplicate init container or volume.
 - Existing containers: calling on a spec that already has other init containers appends without disturbing them.
 
 **Verification:**
+
 - `go test ./pkg/k8s/apps/...` passes.
 - `make lint` passes.
 
@@ -201,6 +204,7 @@ cmd/connect/
 **Dependencies:** Unit 1 (`TranslateClaudeCodeInitContainer` must exist).
 
 **Files:**
+
 - Create: `cmd/connect/connect.go`
 - Create: `cmd/connect/context.go`
 - Create: `cmd/connect/activate.go`
@@ -209,38 +213,26 @@ cmd/connect/
 
 **Approach:**
 
-*`connect.go`* — Cobra command constructor following the same pattern as `cmd/up/up.go`:
-- Function signature: `Connect(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command`
-- `Use: "connect [name]"`, `Args: cobra.ExactArgs(1)`
-- Flags: `--image` / `-i`, `--namespace` / `-n`, `--context` / `-c`, `--env` / `-e`
-- `RunE`: context resolution → `inferDevFromDeployment()` → syncthing upgrade check → `connectContext.start()`
+*`connect.go`* — Cobra command constructor following the same pattern as `cmd/up/up.go`. Signature: `Connect(at analyticsTrackerInterface, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Command`. Flags: `--image/-i`, `--namespace/-n`, `--context/-c`, `--env/-e`. `RunE`: context resolution → `inferDevFromDeployment()` → syncthing upgrade check → `connectContext.start()`.
 
-*`inferDevFromDeployment(ctx, name, namespace, opts, k8sClient)`* — builds the synthetic `*model.Dev`:
-1. `utils.GetApp(ctx, &model.Dev{Name: name}, namespace, k8sClient, false)` — fetches Deployment or StatefulSet.
-2. Read `spec.containers[0].workingDir`; error if empty.
-3. Call `model.NewDev()`, set `Name`, `Image` (from opts or deployment spec), `Workdir`, `Sync.Folders = [{LocalPath: os.Getwd(), RemotePath: workdir}]`, `PersistentVolumeInfo.Enabled = false`.
-4. Apply env overrides from `--env` flag.
-5. Call `dev.SetDefaults()`.
-6. Return `&model.Manifest{Dev: map[string]*model.Dev{name: dev}}`.
+*`inferDevFromDeployment(ctx, name, namespace, opts, k8sClient)`* — builds the synthetic `*model.Dev` by fetching Deployment or StatefulSet, reading `spec.containers[0].workingDir` (defaults to `/` if empty), calling `model.NewDev()`, setting `Name`, `Image`, `Sync.Folders`, applying `--env` overrides, calling `dev.SetDefaults()`, and returning `&model.Manifest{Dev: map[string]*model.Dev{name: dev}}`.
 
 *`context.go`* — `connectContext` struct (subset of `upContext`): `Namespace`, `Manifest`, `Dev`, `Exit chan error`, `Sy *syncthing.Syncthing`, `K8sClientProvider`, `isRetry`, `Cancel`, `Options`. `start()`: signal handler that calls `shutdown()` on Ctrl+C but does **not** call `downOp.Down`.
 
-*`activate.go`* — `activateLoop()` / `activate()` following `cmd/up/activate.go` but simplified:
-- No deploy step, no hybrid mode, no port forwards, no `pidController`, no `autoDown`.
-- After `apps.TranslateDevMode(trMap)`, call `apps.TranslateClaudeCodeInitContainer` on the main dev app's pod spec.
-- Prepend `/okteto/claude-bin` to `PATH` in dev container environment.
-- Then: `secrets.Create` → `deployMainDev` → `GetRunningPodInLoop` → `startSyncthing` → `forwards` (SSH only) → `sync`.
+*`activate.go`* — `activateLoop()` / `activate()` following `cmd/up/activate.go` but simplified (no deploy step, no hybrid mode, no port forwards, no `pidController`, no `autoDown`). After `apps.TranslateDevMode(trMap)`, call `apps.TranslateClaudeCodeInitContainer` on the main dev app's pod spec. Then: `secrets.Create` → `deployMainDev` → `GetRunningPodInLoop` → `startSyncthing` → `forwards` (SSH only) → `sync`.
 
 *`syncthing.go`* — adapted from `cmd/up/syncthing.go`; only the `initializeSyncthing`, `startSyncthing`, and `sync` functions are needed.
 
 **Execution note:** Implement `inferDevFromDeployment` and its unit tests first (it is the core new logic); then wire the activation loop.
 
 **Patterns to follow:**
+
 - `cmd/up/up.go` — command constructor, `RunE` structure, syncthing upgrade check.
 - `cmd/up/activate.go` — `activate()` call sequence.
 - `cmd/up/syncthing.go` — syncthing helpers.
 
 **Test scenarios:**
+
 - Happy path — `inferDevFromDeployment` with a deployment that has `workingDir=/app`: returns a `*model.Manifest` with `Dev["api"].Workdir == "/app"` and `Sync.Folders[0].RemotePath == "/app"`.
 - Image override — `--image myimage:latest` sets `dev.Image = "myimage:latest"` regardless of deployment spec.
 - Workdir empty — `inferDevFromDeployment` with a deployment whose `workingDir` is empty returns a `UserError` with a message directing the user to set `workingDir` in their container spec.
@@ -249,6 +241,7 @@ cmd/connect/
 - Error on unknown deployment — `utils.GetApp` returns `not found`; `RunE` propagates a clear error.
 
 **Verification:**
+
 - `go test ./cmd/connect/...` passes.
 - `okteto connect nonexistent` exits with a clear "not found" error.
 - `make lint` passes.
@@ -264,9 +257,11 @@ cmd/connect/
 **Dependencies:** Unit 2 (`cmd/connect` package must compile).
 
 **Files:**
+
 - Modify: `main.go`
 
 **Approach:**
+
 - Add import for `connectCMD "github.com/okteto/okteto/cmd/connect"`.
 - Add `root.AddCommand(connectCMD.Connect(at, ioController, k8sLogger, fs))` after the `up.Up(...)` line (line 164).
 - The constructor signature follows the same pattern as `up.Up` (no `insights` arg needed for v1).
@@ -274,6 +269,7 @@ cmd/connect/
 **Test expectation:** none — pure wiring; integration is covered by Unit 2 tests and manual verification.
 
 **Verification:**
+
 - `okteto --help` shows `connect` in the command list.
 - `go build ./...` succeeds.
 - `make lint` passes.
@@ -293,7 +289,7 @@ cmd/connect/
 ## Risks & Dependencies
 
 | Risk | Mitigation |
-|------|------------|
+| ---- | ---------- |
 | Claude CLI download URL changes or is unavailable at init-container time | Pin to a specific release URL; document in code. Pod will stay pending with a clear init-container failure message visible via `kubectl describe pod`. |
 | `syncthing.go` helpers in `cmd/up` are hard to adapt without duplicating | Copy the three needed functions (`initializeSyncthing`, `startSyncthing`, `sync`) into `cmd/connect/syncthing.go`; they are small and stable. |
 | `addSyncFieldHash` is unexported in `cmd/up` | Re-implement equivalent logic in `cmd/connect/activate.go`; it is a simple hash annotation. |
