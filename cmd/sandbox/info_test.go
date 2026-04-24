@@ -56,23 +56,23 @@ func TestPrintState_Running(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.state), func(t *testing.T) {
-			err := printState("nginx", tt.state)
+			err := printState(tt.state)
 			assert.NoError(t, err)
 		})
 	}
 }
 
 func TestPrintState_Failed(t *testing.T) {
-	err := printState("nginx", config.Failed)
+	err := printState(config.Failed)
 	require.Error(t, err)
 
 	var userErr oktetoErrors.UserError
 	require.ErrorAs(t, err, &userErr)
-	assert.Contains(t, userErr.E.Error(), "nginx")
+	assert.Contains(t, userErr.E.Error(), "failed")
 }
 
 func TestPrintState_Unknown(t *testing.T) {
-	err := printState("nginx", config.UpState("weird-value"))
+	err := printState(config.UpState("weird-value"))
 	assert.NoError(t, err)
 }
 
@@ -114,7 +114,7 @@ func TestInfo_StateFile_AllStates(t *testing.T) {
 			assert.Equal(t, tt.state, got)
 
 			// Verify printState returns the correct error/nil.
-			printErr := printState("nginx", got)
+			printErr := printState(got)
 			if tt.wantErr {
 				require.Error(t, printErr)
 			} else {

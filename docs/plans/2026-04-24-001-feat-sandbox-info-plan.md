@@ -34,7 +34,7 @@ Also: `okteto connect` currently never writes the `ready` state. It must be adde
 ## Key Decisions
 
 | Decision | Choice | Rationale |
-|---|---|---|
+| --- | --- | --- |
 | Command group name | `sandbox` | Deliberate product noun for manifest-free sessions (see origin doc) |
 | Exit code for absent/failed | 1 (via `oktetoErrors.UserError`) | Scripting / health-check friendliness; `UserError` propagates through `root.Execute()` → `main()` → `os.Exit(1)` |
 | Exit code for unknown state | 0 (return nil) | Unknown ≠ broken; safe to continue |
@@ -51,7 +51,7 @@ Also: `okteto connect` currently never writes the `ready` state. It must be adde
 (see origin doc for full table)
 
 | `config.UpState` value | Message printed | Exit code |
-|---|---|---|
+| --- | --- | --- |
 | file absent | `Sandbox "X" is not running` | 1 |
 | `activating` | `Sandbox "X" is starting (activating dev container…)` | 0 |
 | `starting` | `Sandbox "X" is starting (scheduling pod…)` | 0 |
@@ -72,6 +72,7 @@ Also: `okteto connect` currently never writes the `ready` state. It must be adde
 **Goal:** Make the `ready` state reachable by having `okteto connect` emit it once the SSH tunnel is up and the initial sync has completed.
 
 **Files:**
+
 - Modify: `cmd/connect/activate.go`
 
 **Approach:**
@@ -80,6 +81,7 @@ After the line `c.success = true` (the exact line where connect marks itself suc
 **Patterns to follow:** `config.UpdateStateFile` calls already present earlier in `activate.go` (e.g. `config.Activating`, `config.Synchronizing`).
 
 **Test scenarios:**
+
 - The existing activation flow compiles without errors (CI)
 - `config.Ready` constant exists in `pkg/config/config.go` — verify with a grep
 
@@ -92,6 +94,7 @@ After the line `c.success = true` (the exact line where connect marks itself suc
 **Goal:** Create the `sandbox` command group with the `info` subcommand.
 
 **Files:**
+
 - Create: `cmd/sandbox/sandbox.go`
 - Create: `cmd/sandbox/info.go`
 - Create: `cmd/sandbox/info_test.go`
@@ -109,6 +112,7 @@ func Info(ctx context.Context) *cobra.Command
 Options struct with `Namespace` and `K8sContext` string fields (for `--namespace` / `--context` flags, matching the `okteto connect` flag names).
 
 `RunE` flow:
+
 1. `cmd.SilenceUsage = true`
 2. `contextCMD.NewContextCommand().Run(ctx, &contextCMD.Options{Show: true, Namespace: opts.Namespace, Context: opts.K8sContext})`
 3. `ns := okteto.GetContext().Namespace`
@@ -121,11 +125,13 @@ Options struct with `Namespace` and `K8sContext` string fields (for `--namespace
 Use `oktetoLog.Printf` (not `fmt.Printf`) for output to respect quiet/json modes.
 
 **Patterns to follow:**
+
 - `cmd/connect/connect.go` — context init, Options struct, flag binding
 - `cmd/namespace/use.go` — `RunE` structure with `SilenceUsage = true`
 - `pkg/config/config.go` — `GetState`, `GetAppHome`, state constants
 
 **Test scenarios for `info_test.go`:**
+
 - File absent → returns a non-nil error (UserError), correct message substring
 - State `activating` → nil error, message contains "starting (activating"
 - State `starting` → nil error, message contains "starting (scheduling"
@@ -148,6 +154,7 @@ Tests must use a temporary directory (`t.TempDir()`) for the state file; inject 
 **Goal:** Wire the new `sandbox` command into the CLI's root command so it appears in `--help` and is executable.
 
 **Files:**
+
 - Modify: `main.go`
 
 **Approach:**
@@ -162,6 +169,7 @@ Position it alphabetically near `connect` in the registration block. The `Sandbo
 **Patterns to follow:** Existing `root.AddCommand(...)` calls in `main.go` (lines 153–183).
 
 **Test scenarios:**
+
 - `go build ./...` succeeds (compilation check)
 - `okteto sandbox --help` lists `info` as a subcommand (manual smoke test)
 
@@ -180,7 +188,7 @@ Recommended order: 1 → 2 → 3, each as a separate commit.
 ## Test File Paths
 
 | Implementation file | Test file |
-|---|---|
+| --- | --- |
 | `cmd/sandbox/info.go` | `cmd/sandbox/info_test.go` |
 | `cmd/connect/activate.go` | `cmd/connect/activate_test.go` (existing) |
 

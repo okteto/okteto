@@ -46,7 +46,7 @@ func Info(ctx context.Context) *cobra.Command {
 			name := args[0]
 
 			ctxOpts := &contextCMD.Options{
-				Show:      true,
+				Show:      false,
 				Context:   opts.K8sContext,
 				Namespace: opts.Namespace,
 			}
@@ -58,14 +58,14 @@ func Info(ctx context.Context) *cobra.Command {
 
 			statePath := filepath.Join(config.GetOktetoHome(), ns, name, "okteto.state")
 			if _, err := os.Stat(statePath); os.IsNotExist(err) {
-				oktetoLog.Println(fmt.Sprintf("Sandbox %q is not running", name))
+				oktetoLog.Println("not running")
 				return oktetoErrors.UserError{
 					E: fmt.Errorf("sandbox %q is not running", name),
 				}
 			}
 
 			state, _ := config.GetState(name, ns)
-			return printState(name, state)
+			return printState(state)
 		},
 	}
 
@@ -75,29 +75,29 @@ func Info(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func printState(name string, state config.UpState) error {
+func printState(state config.UpState) error {
 	switch state {
 	case config.Activating:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is starting (activating dev container...)", name))
+		oktetoLog.Println("activating")
 	case config.Starting:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is starting (scheduling pod...)", name))
+		oktetoLog.Println("starting")
 	case config.Attaching:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is starting (attaching persistent volume...)", name))
+		oktetoLog.Println("attaching")
 	case config.Pulling:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is starting (pulling image...)", name))
+		oktetoLog.Println("pulling")
 	case config.StartingSync:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is starting (initialising file sync...)", name))
+		oktetoLog.Println("starting sync")
 	case config.Synchronizing:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is running and syncing files", name))
+		oktetoLog.Println("syncing")
 	case config.Ready:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is running", name))
+		oktetoLog.Println("ready")
 	case config.Failed:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q has failed", name))
+		oktetoLog.Println("failed")
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("sandbox %q has failed", name),
+			E: fmt.Errorf("sandbox has failed"),
 		}
 	default:
-		oktetoLog.Println(fmt.Sprintf("Sandbox %q is in an unknown state (%s)", name, state))
+		oktetoLog.Println(fmt.Sprintf("unknown: %s", state))
 	}
 	return nil
 }
