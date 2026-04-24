@@ -343,6 +343,25 @@ func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, er
 	return result, nil
 }
 
+// isAdminQuery selects only the `super` flag from the current `user` so we can
+// cheaply check whether the logged-in user has admin privileges.
+type isAdminQuery struct {
+	User struct {
+		Super graphql.Boolean
+	} `graphql:"user"`
+}
+
+// IsAdmin returns true when the current user has administrator privileges on
+// the Okteto instance. This mirrors the backend's `u.Super` check used to
+// authorize admin-only mutations.
+func (c *userClient) IsAdmin(ctx context.Context) (bool, error) {
+	var q isAdminQuery
+	if err := query(ctx, &q, nil, c.client); err != nil {
+		return false, err
+	}
+	return bool(q.User.Super), nil
+}
+
 // GetKnownHostsConfig returns the known hosts configuration from Okteto API
 func (c *userClient) GetKnownHostsConfig(ctx context.Context) (types.KnownHostsConfig, error) {
 	var queryStruct getKnownHostsConfigQuery
