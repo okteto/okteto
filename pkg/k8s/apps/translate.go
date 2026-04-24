@@ -177,7 +177,7 @@ func TranslateDevTolerations(spec *apiv1.PodSpec, tolerations []apiv1.Toleration
 
 // TranslateDevContainer translates a dev container
 func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
-	c.Image = "registry.nacho-test.dev.okteto.net/nacho-test/hackathon:1.0.1"
+	c.Image = "registry.nacho-test.dev.okteto.net/nacho-test/hackathon:1.0.2"
 	c.ImagePullPolicy = rule.ImagePullPolicy
 
 	if rule.WorkDir != "" {
