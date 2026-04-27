@@ -87,6 +87,7 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 - Write tests for new functionality or bug fixes
 - Sign commits with `git commit -s` (DCO requirement)
 - Use existing patterns from similar code as templates
+- Default new feature flags to `false` (NoOp strategy) — see [context/feature-flags.md](.claude/context/feature-flags.md)
 
 ## Priority Rules
 
@@ -101,5 +102,6 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 > **Command implementation patterns**: [context/commands.md](.claude/context/commands.md)
 > **Testing patterns & rules**: [context/testing.md](.claude/context/testing.md)
 > **Build, lint & release**: [context/build-and-release.md](.claude/context/build-and-release.md)
+> **Feature flags & NoOp strategy**: [context/feature-flags.md](.claude/context/feature-flags.md)
 > **CVE remediation**: use `/fix-cves` skill — see [skills/fix-cves/SKILL.md](.claude/skills/fix-cves/SKILL.md)
 > **Self-improvement**: use `/lessons` skill — see [skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md) | log at [lessons.md](.claude/lessons.local.md)
