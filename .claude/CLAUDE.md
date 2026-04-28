@@ -87,7 +87,7 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 - Write tests for new functionality or bug fixes
 - Sign commits with `git commit -s` (DCO requirement)
 - Use existing patterns from similar code as templates
-- Default new feature flags to `false` (NoOp strategy) — see [context/feature-flags.md](.claude/context/feature-flags.md)
+- Use the strategy pattern for feature flags; choose the default that preserves current behavior — see [context/feature-flags.md](.claude/context/feature-flags.md)
 
 ## Priority Rules
 

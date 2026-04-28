@@ -2,21 +2,112 @@
 
 > **See also**: [conventions.md](conventions.md) for general Go conventions and [architecture.md](architecture.md) for package structure.
 
-## The NoOp Strategy (Required)
+Feature flags and the NoOp strategy are related but distinct concepts. A feature flag splits execution into different code paths. The NoOp strategy is a specific way to implement one of those paths. They often appear together but do not always.
 
-**Always default new feature flags to `false`.** The new code path must be a no-operation (NoOp) — preserving existing behavior — until the implementation is proven and ready.
+---
 
-### Why
+## Feature Flags — Splitting Code Paths
 
-New features are developed incrementally. Defaulting to `false` ensures the new code path never activates for users until it has been explicitly validated and promoted. This makes feature flags safe to merge at any stage of development.
+A feature flag introduces at least two code paths. Rather than scattering the same `if flag {…}` check everywhere, model each path as a strategy and create the right one once at the boundary.
 
-The rule: **when you add a feature flag, the flagged code path must not change observable behavior by default.** The flag is initially a safe on-ramp, not a switch that alters production behavior.
+```go
+// createStrategy reads the flag once and returns the appropriate implementation.
+func createStrategy() strategyInterface {
+    if env.LoadBoolean(MyFeatureEnvVar) {
+        return newBehavior{}
+    }
+    return legacyBehavior{}
+}
 
-### Rollout lifecycle
+// Callers never check the flag — they just use the strategy.
+strategy := createStrategy()
+strategy.DoWork()
+```
 
-1. **Add flag (default `false`)**: New code path exists but does nothing new — it either calls through to the existing logic or is a structural NoOp.
+### Why the strategy pattern
+
+- The flag is read in a single place — easier to remove later.
+- Callers stay oblivious to which implementation is active.
+- Each strategy is independently testable.
+
+### Flag values are not always boolean
+
+Flags can carry integer, string, or enum values when the behavior has more than two variants:
+
+```go
+const MyFeatureEnvVar string = "OKTETO_MY_FEATURE"
+
+func createStrategy() strategyInterface {
+    switch env.LoadOrDefault(MyFeatureEnvVar, "v1") {
+    case "v2":
+        return v2Behavior{}
+    case "v3":
+        return v3Behavior{}
+    default:
+        return v1Behavior{}
+    }
+}
+```
+
+Use `env.LoadBooleanOrDefault`, `env.LoadIntOrDefault`, or raw `os.Getenv` / `env.LoadOrDefault` as appropriate.
+
+### Defaults are context-dependent
+
+The default value should reflect what is safe **right now**, not a blanket rule:
+
+- A brand-new, unvalidated feature → default to the safe/existing path (often `false` or the old variant).
+- A feature that has been promoted and is now the stable path → default to the new path (often `true` or the new variant).
+- A flag being used to disable a broken path → default to `true` (enabled = stable).
+
+Document *why* the default was chosen next to the constant.
+
+---
+
+## The NoOp Strategy
+
+The NoOp strategy is a specific application of the strategy pattern for the case where the **existing behavior is to do nothing**: instead of a conditional around the call site, the inactive path is a struct whose methods do nothing, preserving current observable behavior.
+
+**Without NoOp (avoid):**
+
+```go
+if featureFlagEnabled {
+    callEnabledBehavior()
+}
+```
+
+**With NoOp (preferred):**
+
+```go
+func createStrategy() strategyInterface {
+    if flagIsActive() {
+        return newBehavior{}
+    }
+    return noOpBehavior{} // satisfies the interface, all methods are no-ops
+}
+
+// Call site is clean — no conditional needed.
+strategy := createStrategy()
+strategy.Behavior()
+```
+
+Use the NoOp strategy when:
+
+- The existing behavior is to do nothing — the feature adds something new that was previously absent.
+- The flag controls an optional side effect (notifications, metrics emission, etc.).
+- There are many call sites that would otherwise each need an `if` guard.
+
+Do **not** force a NoOp strategy when:
+
+- The feature replaces existing behavior rather than adding to it — use two real implementations instead.
+- There is only one call site — a simple `if` is clearer.
+
+---
+
+## Rollout Lifecycle
+
+1. **Add flag (inactive default)**: New code path exists but does nothing new — a structural NoOp or a pass-through to existing logic.
 2. **Implement behind the flag**: Develop and test the new behavior with the flag enabled.
-3. **Flip default to `true`**: Only after the implementation is proven stable in production.
+3. **Flip default**: Only after the implementation is proven stable in production.
 4. **Remove flag**: Once fully rolled out, delete the flag and the old code path.
 
 ---
@@ -28,48 +119,37 @@ The rule: **when you add a feature flag, the flagged code path must not change o
 Place it near the top of the package file that owns the behavior. Use the `OKTETO_` prefix.
 
 ```go
-const MyNewFeatureEnvVar string = "OKTETO_MY_NEW_FEATURE"
+// OktetoMyFeatureEnvVar enables the new scheduling algorithm.
+// Default preserves existing behavior: unset means the legacy path runs.
+const OktetoMyFeatureEnvVar string = "OKTETO_MY_FEATURE"
 ```
 
-### 2. Load the flag — always default to `false`
+### 2. Load the flag
 
 ```go
 import "github.com/okteto/okteto/pkg/env"
 
-// CORRECT: default false — opt-in, safe
-if env.LoadBooleanOrDefault(MyNewFeatureEnvVar, false) {
-    return newBehavior()
-}
-return existingBehavior()
-```
+// Boolean flag, inactive by default:
+env.LoadBoolean(OktetoMyFeatureEnvVar)           // false when unset
+env.LoadBooleanOrDefault(OktetoMyFeatureEnvVar, false) // explicit
 
-**Never** default a new flag to `true`:
+// Boolean flag, active by default (promoted feature):
+env.LoadBooleanOrDefault(OktetoMyFeatureEnvVar, true)
 
-```go
-// WRONG: default true activates new behavior for everyone immediately
-if env.LoadBooleanOrDefault(MyNewFeatureEnvVar, true) { ... }
-```
-
-### 3. Use `env.LoadBoolean` when `false` is the only sensible default
-
-`env.LoadBoolean(k)` returns `false` when the variable is unset, so it is equivalent to `LoadBooleanOrDefault(k, false)`.
-
-```go
-if env.LoadBoolean(MyNewFeatureEnvVar) {
-    // new behavior
-}
+// Integer flag:
+env.LoadIntOrDefault(OktetoMyFeatureEnvVar, 3)
 ```
 
 ---
 
 ## Helper Functions (`pkg/env`)
 
-| Function                             | Behavior when unset | Use for                                     |
-| ------------------------------------ | ------------------- | ------------------------------------------- |
-| `env.LoadBoolean(k)`                 | Returns `false`     | New flags (always safe default)             |
-| `env.LoadBooleanOrDefault(k, false)` | Returns `false`     | New flags with explicit default             |
-| `env.LoadBooleanOrDefault(k, true)`  | Returns `true`      | Existing flags being rolled back / disabled |
-| `env.LoadIntOrDefault(k, d)`         | Returns `d`         | Integer-valued flags                        |
+| Function                             | Behavior when unset | Use for                                    |
+| ------------------------------------ | ------------------- | ------------------------------------------ |
+| `env.LoadBoolean(k)`                 | Returns `false`     | Boolean flags defaulting to inactive       |
+| `env.LoadBooleanOrDefault(k, false)` | Returns `false`     | Boolean flags with explicit inactive default |
+| `env.LoadBooleanOrDefault(k, true)`  | Returns `true`      | Boolean flags defaulting to active         |
+| `env.LoadIntOrDefault(k, d)`         | Returns `d`         | Integer-valued flags                       |
 
 ---
 
@@ -93,9 +173,8 @@ func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) B
         return newInClusterConnectorWithFallback(okCtx, logger)
     }
 
-    // Feature flag: default is true because the port-forwarder implementation
-    // is now the stable production path. It was introduced with default false
-    // and promoted once validated.
+    // Default is true because the port-forwarder is now the stable production
+    // path. It was introduced with default false and promoted once validated.
     if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, true) {
         return newPortForwarderWithFallback(okCtx, logger)
     }
@@ -111,7 +190,7 @@ During initial rollout this read `LoadBooleanOrDefault(..., false)`. The default
 ## Checklist When Adding a Feature Flag
 
 - [ ] Constant defined with `OKTETO_` prefix at package level
-- [ ] Default is `false` — new behavior is opt-in
-- [ ] New code path preserves existing behavior when flag is disabled (NoOp)
-- [ ] Flag name and purpose documented in a comment next to the constant
-- [ ] Tests cover both `true` and `false` paths
+- [ ] Comment explains the flag's purpose and justifies the chosen default
+- [ ] Flag is read once; callers receive a strategy, not the raw flag value
+- [ ] New code path preserves existing behavior when the flag keeps its default (NoOp or pass-through)
+- [ ] Tests cover each code path independently
