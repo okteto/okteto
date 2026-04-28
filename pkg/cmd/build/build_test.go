@@ -337,8 +337,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 						Value: "value1",
 					},
 				},
-				Secrets: map[string]string{
-					"mysecret": "source",
+				Secrets: build.Secrets{
+					"mysecret": build.Secret{File: "source"},
 				},
 				ExportCache: []string{"export-image"},
 			},
@@ -368,8 +368,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 									Value: "value1",
 								},
 							},
-							Secrets: map[string]string{
-								"mysecret": "source",
+							Secrets: build.Secrets{
+								"mysecret": build.Secret{File: "source"},
 							},
 							ExportCache: []string{"export-image"},
 						},
@@ -493,6 +493,36 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 				Tag:        "okteto.dev/movies-service:okteto",
 				OutputMode: "tty",
+			},
+		},
+		{
+			name:        "env-secret-from-manifest",
+			serviceName: "service",
+			buildInfo: &build.Info{
+				Context: ".",
+				Secrets: build.Secrets{
+					"mytoken": build.Secret{Env: "MY_TOKEN"},
+				},
+			},
+			mr:          mockRegistry{},
+			initialOpts: &types.BuildOptions{OutputMode: "tty"},
+			isOkteto:    false,
+			expected: &types.BuildOptions{
+				Manifest: &model.Manifest{
+					Name: "movies",
+					Build: build.ManifestBuild{
+						"service": {
+							Context: ".",
+							Secrets: build.Secrets{
+								"mytoken": build.Secret{Env: "MY_TOKEN"},
+							},
+						},
+					},
+				},
+				OutputMode: oktetoLog.TTYFormat,
+				Path:       ".",
+				BuildArgs:  []string{},
+				Secrets:    []string{"id=mytoken,env=MY_TOKEN"},
 			},
 		},
 	}

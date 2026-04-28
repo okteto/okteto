@@ -413,3 +413,85 @@ func Test_defaultOktetoClientCfg(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateBuildSecretFlagValid(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret string
+	}{
+		{
+			name:   "valid id and src",
+			secret: "id=mysecret,src=/local/secret",
+		},
+		{
+			name:   "valid id only",
+			secret: "id=mysecret",
+		},
+		{
+			name:   "valid src then id",
+			secret: "src=/local/secret,id=mysecret",
+		},
+		{
+			name:   "file secret via --secret flag",
+			secret: "id=mysecret,src=/path/to/secret/file",
+		},
+		{
+			name:   "env var secret via --secret flag",
+			secret: "id=mysecret,env=MY_SECRET_VAR",
+		},
+		{
+			name:   "uppercase ID key",
+			secret: "ID=mysecret,src=/local/secret",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, validateBuildSecretFlag(tt.secret))
+		})
+	}
+}
+
+func TestValidateBuildSecretFlagInvalid(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret string
+	}{
+		{
+			name:   "no equals sign",
+			secret: "asdaa",
+		},
+		{
+			name:   "one valid field one bare word",
+			secret: "id=mysecret,badfield",
+		},
+		{
+			name:   "empty string",
+			secret: "",
+		},
+		{
+			name:   "src only without id",
+			secret: "src=/local/secret",
+		},
+		{
+			name:   "id with empty value",
+			secret: "id=,src=/local/secret",
+		},
+		{
+			name:   "id empty with env set",
+			secret: "id=,env=FOO",
+		},
+		{
+			name:   "env with empty value",
+			secret: "id=foo,env=",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			require.Error(t, validateBuildSecretFlag(tt.secret))
+		})
+	}
+}
