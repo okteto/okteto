@@ -1,14 +1,16 @@
-// Package namesgenerator generates random names.
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This package is officially "frozen" - no new additions will be accepted.
+// http://www.apache.org/licenses/LICENSE-2.0
 //
-// For a long time, this package provided a lot of joy within the project, but
-// at some point the conflicts of opinion became greater than the added joy.
-//
-// At some future time, this may be replaced with something that sparks less
-// controversy, but for now it will remain as-is.
-//
-// See also https://github.com/moby/moby/pull/43210#issuecomment-1029934277
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package preview
 
 import (
@@ -263,7 +265,7 @@ var (
 		// David Lee Chaum - American computer scientist and cryptographer. Known for his seminal contributions in the field of anonymous communication. https://en.wikipedia.org/wiki/David_Chaum
 		"chaum",
 
-		// Pafnuty Chebyshev - Russian mathematician. He is known fo his works on probability, statistics, mechanics, analytical geometry and number theory https://en.wikipedia.org/wiki/Pafnuty_Chebyshev
+		// Pafnuty Chebyshev - Russian mathematician. He is known for his works on probability, statistics, mechanics, analytical geometry and number theory https://en.wikipedia.org/wiki/Pafnuty_Chebyshev
 		"chebyshev",
 
 		// Joan Clarke - Bletchley Park code breaker during the Second World War who pioneered techniques that remained top secret for decades. Also an accomplished numismatist https://en.wikipedia.org/wiki/Joan_Clarke
