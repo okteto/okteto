@@ -64,12 +64,12 @@ if env.LoadBoolean(MyNewFeatureEnvVar) {
 
 ## Helper Functions (`pkg/env`)
 
-| Function | Behavior when unset | Use for |
-|---|---|---|
-| `env.LoadBoolean(k)` | Returns `false` | New flags (always safe default) |
-| `env.LoadBooleanOrDefault(k, false)` | Returns `false` | New flags with explicit default |
-| `env.LoadBooleanOrDefault(k, true)` | Returns `true` | Existing flags being rolled back / disabled |
-| `env.LoadIntOrDefault(k, d)` | Returns `d` | Integer-valued flags |
+| Function                             | Behavior when unset | Use for                                     |
+| ------------------------------------ | ------------------- | ------------------------------------------- |
+| `env.LoadBoolean(k)`                 | Returns `false`     | New flags (always safe default)             |
+| `env.LoadBooleanOrDefault(k, false)` | Returns `false`     | New flags with explicit default             |
+| `env.LoadBooleanOrDefault(k, true)`  | Returns `true`      | Existing flags being rolled back / disabled |
+| `env.LoadIntOrDefault(k, d)`         | Returns `d`         | Integer-valued flags                        |
 
 ---
 
