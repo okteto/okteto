@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2026 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,11 +15,7 @@ package build
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-
-	"github.com/okteto/okteto/pkg/env"
 )
 
 const secretFormatHint = `
@@ -44,6 +40,14 @@ Secrets in your Okteto manifest must be valid file paths or environment variable
 type Secret struct {
 	File string `yaml:"file,omitempty"`
 	Env  string `yaml:"env,omitempty"`
+}
+
+// String returns a canonical representation used for hashing (e.g. "file:/path" or "env:VAR").
+func (s Secret) String() string {
+	if s.Env != "" {
+		return fmt.Sprintf("env:%s", s.Env)
+	}
+	return fmt.Sprintf("file:%s", s.File)
 }
 
 // UnmarshalYAML handles both short (string) and long (map) forms:
@@ -73,41 +77,27 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	file, env := raw["file"], raw["env"]
-	if file != "" && env != "" {
+	file, envName := strings.TrimSpace(raw["file"]), strings.TrimSpace(raw["env"])
+	if file != "" && envName != "" {
 		return fmt.Errorf("secret cannot specify both 'file' and 'env'%s", secretFormatHint)
 	}
-	if file == "" && env == "" {
+	if file == "" && envName == "" {
 		return fmt.Errorf("secret must specify either 'file' or 'env'%s", secretFormatHint)
 	}
 	s.File = file
-	s.Env = env
+	s.Env = envName
 	return nil
 }
 
 // Secrets represents the secrets to be injected to the build of the image
 type Secrets map[string]Secret
 
-func (i *Info) expandSecrets() error {
-	for k, s := range i.Secrets {
-		if s.File == "" {
-			// env-based secrets don't need path expansion
-			continue
-		}
-		val := s.File
-		if strings.HasPrefix(val, "~/") {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return err
-			}
-			val = filepath.Join(home, val[2:])
-		}
-		expanded, err := env.ExpandEnv(val)
-		if err != nil {
-			return err
-		}
-		s.File = expanded
-		i.Secrets[k] = s
+// UnmarshalYAML deserializes the secrets map.
+func (s *Secrets) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	raw := map[string]Secret{}
+	if err := unmarshal(&raw); err != nil {
+		return err
 	}
+	*s = raw
 	return nil
 }

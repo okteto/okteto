@@ -15,6 +15,8 @@ package build
 
 import (
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -225,4 +227,28 @@ func (i *Info) AddArgs(previousImageArgs map[string]string) error {
 		return err
 	}
 	return i.addExpandedPreviousImageArgs(previousImageArgs)
+}
+
+func (i *Info) expandSecrets() error {
+	for k, s := range i.Secrets {
+		if s.File == "" {
+			// env-based secrets don't need path expansion
+			continue
+		}
+		val := s.File
+		if strings.HasPrefix(val, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return err
+			}
+			val = filepath.Join(home, val[2:])
+		}
+		expanded, err := env.ExpandEnv(val)
+		if err != nil {
+			return err
+		}
+		s.File = expanded
+		i.Secrets[k] = s
+	}
+	return nil
 }

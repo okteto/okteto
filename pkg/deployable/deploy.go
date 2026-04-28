@@ -298,6 +298,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 	defer unlinkEnv()
 
 	envStepper := NewEnvStepper(oktetoEnvFile.Name())
+	params.Variables = appendGatewayEnvVars(params.Variables)
 
 	if len(params.Deployable.Commands) != 0 {
 		startTime := time.Now()

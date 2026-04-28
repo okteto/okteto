@@ -217,6 +217,21 @@ func TestExtraHosts(t *testing.T) {
 }
 
 func TestCreateDockerfile(t *testing.T) {
+	originalStore := okteto.CurrentStore
+	defer func() { okteto.CurrentStore = originalStore }()
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Gateway: &okteto.GatewayMetadata{
+					Name:      "dev-gateway",
+					Namespace: "gateway-ns",
+				},
+			},
+		},
+	}
+
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
 	fs := afero.NewMemMapFs()
 	fakeManifest := &model.Manifest{
@@ -347,7 +362,9 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 					OktetoCommandSpecificEnvVars: map[string]string{
-						constants.CIEnvVar: "true",
+						constants.CIEnvVar:                    "true",
+						model.OktetoDevGatewayNameEnvVar:      "dev-gateway",
+						model.OktetoDevGatewayNamespaceEnvVar: "gateway-ns",
 					},
 					DockerfileName:   "Dockerfile.test",
 					Command:          "test",
@@ -402,6 +419,10 @@ ENV OKTETO_BUIL_SVC_IMAGE="ONE_VALUE"
 
 
 ENV CI=true
+
+ENV OKTETO_DEV_GATEWAY_NAME=dev-gateway
+
+ENV OKTETO_DEV_GATEWAY_NAMESPACE=gateway-ns
 
 
 ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD="dependency_pass"

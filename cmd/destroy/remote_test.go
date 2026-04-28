@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	fakefs "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -111,6 +112,21 @@ func TestGetCommandFlags(t *testing.T) {
 }
 
 func TestDestroyRemoteWithCtx(t *testing.T) {
+	originalStore := okteto.CurrentStore
+	defer func() { okteto.CurrentStore = originalStore }()
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Gateway: &okteto.GatewayMetadata{
+					Name:      "dev-gateway",
+					Namespace: "gateway-ns",
+				},
+			},
+		},
+	}
+
 	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{
 		Destroy: &model.DestroyInfo{
@@ -142,6 +158,8 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 		},
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+			"OKTETO_DEV_GATEWAY_NAME":       "dev-gateway",
+			"OKTETO_DEV_GATEWAY_NAMESPACE":  "gateway-ns",
 		},
 		BuildEnvVars:                make(map[string]string),
 		DependenciesEnvVars:         make(map[string]string),

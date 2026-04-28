@@ -150,6 +150,9 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		UseOktetoDeployIgnoreFile:   true,
 		ContextAbsolutePathOverride: ctxPath,
 	}
+	for k, v := range deployable.GetGatewayEnvironment() {
+		runParams.OktetoCommandSpecificEnvVars[k] = v
+	}
 
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
 		var cmdErr buildkit.CommandErr
