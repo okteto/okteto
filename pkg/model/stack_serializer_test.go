@@ -2419,6 +2419,73 @@ services:
 	}
 }
 
+func TestComposeBuildSecretsNotSupportedFields(t *testing.T) {
+	tests := []struct {
+		name           string
+		yaml           string
+		expectedFields []string
+	}{
+		{
+			name: "name field in secret triggers warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    name: docker_secret_npm_token
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].name"},
+		},
+		{
+			name: "external field in secret triggers warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    external: true
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].external"},
+		},
+		{
+			name: "both name and external fields trigger warnings",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    name: docker_secret_npm_token
+    external: true
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].name", "secrets[npm_token].external"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack([]byte(tt.yaml), true)
+			require.NoError(t, err)
+			for _, field := range tt.expectedFields {
+				assert.Contains(t, s.Warnings.NotSupportedFields, field)
+			}
+		})
+	}
+}
+
 func TestComposeBuildSecretsResolutionErrors(t *testing.T) {
 	tests := []struct {
 		name string
@@ -2442,6 +2509,20 @@ secrets:
   npm_token:
     file: ./server.cert
     environment: NPM_TOKEN
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+		},
+		{
+			name: "top-level secret with both file and environment returns error",
+			yaml: `
+secrets:
+  npm_token:
+    potato: potato
 services:
   api:
     build:

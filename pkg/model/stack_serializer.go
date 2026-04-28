@@ -60,8 +60,10 @@ type StackRaw struct {
 
 // secretTopLevel represents a top-level secret definition in a Docker Compose file.
 type secretTopLevel struct {
-	File        string `yaml:"file,omitempty"`
-	Environment string `yaml:"environment,omitempty"`
+	File        string       `yaml:"file,omitempty"`
+	Environment string       `yaml:"environment,omitempty"`
+	Name        *WarningType `yaml:"name,omitempty"`
+	External    *WarningType `yaml:"external,omitempty"`
 }
 
 // ServiceRaw represents an okteto stack service
@@ -1329,6 +1331,17 @@ func getTopLevelNotSupportedFields(s *StackRaw) []string {
 	}
 	if s.Configs != nil {
 		notSupported = append(notSupported, "configs")
+	}
+	for secretName, secretDef := range s.Secrets {
+		if secretDef == nil {
+			continue
+		}
+		if secretDef.Name != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].name", secretName))
+		}
+		if secretDef.External != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].external", secretName))
+		}
 	}
 	return notSupported
 }
