@@ -14,7 +14,6 @@
 package preview
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"strings"
@@ -85,9 +84,7 @@ func getBranch(cwd, branch string) (string, error) {
 }
 
 func getRandomName(scope string) string {
-	b := make([]byte, 4)
-	_, _ = rand.Read(b)
-	name := fmt.Sprintf("%x", b)
+	name := strings.ReplaceAll(GetRandomName(-1), "_", "-")
 	if scope == "personal" {
 		username := strings.ToLower(okteto.GetSanitizedUsername())
 		name = fmt.Sprintf("%s-%s", name, username)
