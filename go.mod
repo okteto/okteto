@@ -18,7 +18,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/docker-credential-helpers v0.9.5
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
-	github.com/fatih/color v1.18.0
+	github.com/fatih/color v1.19.0
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-git/go-git/v5 v5.18.0
 	github.com/google/go-containerregistry v0.14.0 // when updating need google.golang.org/grpc 1.29
