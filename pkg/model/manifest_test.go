@@ -14,6 +14,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1059,6 +1060,31 @@ sync:
 			}
 		})
 	}
+}
+
+// Test_getManifestFromFile_composeFilenameReturnsComposeError exercises the
+// branch added in pkg/model/manifest.go that returns the compose/stack error
+// (instead of the okteto manifest error) when both parsers fail and the file
+// has a recognised compose filename.
+func Test_getManifestFromFile_composeFilenameReturnsComposeError(t *testing.T) {
+	// "asdasa: asda" is invalid for both the okteto manifest parser and the
+	// compose/stack parser, but it is not an empty file, depends-on error, or
+	// empty-service error, so none of the early-return guards fire.
+	invalidContent := []byte("asdasa: asda")
+
+	dir := t.TempDir()
+	composeFile := filepath.Join(dir, "docker-compose.yml")
+	require.NoError(t, os.WriteFile(composeFile, invalidContent, 0600))
+
+	_, err := getManifestFromFile(dir, composeFile, afero.NewMemMapFs())
+
+	require.Error(t, err)
+	// The returned error must come from the compose/stack parser.
+	require.ErrorContains(t, err, "invalid compose manifest")
+	// It must NOT be the okteto manifest error, which is what would be returned
+	// for a non-compose-named file in the same situation.
+	require.False(t, errors.Is(err, oktetoErrors.ErrInvalidManifest),
+		"expected compose/stack error to be returned, not okteto manifest error")
 }
 
 func TestHasDev(t *testing.T) {
