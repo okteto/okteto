@@ -50,6 +50,7 @@ const (
 	namespaceDeleteEvent          = "DeleteNamespace"
 	previewDeployEvent            = "DeployPreview"
 	previewDestroyEvent           = "DestroyPreview"
+	catalogDeployEvent            = "DeployCatalog"
 	execEvent                     = "Exec"
 	signupEvent                   = "Signup"
 	contextEvent                  = "Context"
@@ -106,6 +107,16 @@ func TrackPreviewDeploy(success bool, scope string) {
 // TrackPreviewDestroy sends a tracking event to mixpanel when the deletes a preview environment
 func TrackPreviewDestroy(success bool) {
 	track(previewDestroyEvent, success, nil)
+}
+
+// TrackCatalogDeploy sends a tracking event to mixpanel when the user deploys a
+// Development Environment from the Catalog. Reports whether variables were
+// overridden so we can tell at a glance how often the catalog is used as-is.
+func TrackCatalogDeploy(success, withVariableOverrides bool) {
+	props := map[string]interface{}{
+		"withVariableOverrides": withVariableOverrides,
+	}
+	track(catalogDeployEvent, success, props)
 }
 
 // TrackExecMetadata is the metadata added to execEvent

@@ -24,10 +24,12 @@ import (
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
 	errGetPlatformVariables error
+	errIsAdmin              error
 	userCtx                 *types.UserContext
 	platformVariables       []env.Var
 	err                     []error
 	ClusterMetadata         types.ClusterMetadata
+	Admin                   bool
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -78,4 +80,17 @@ func (*FakeUserClient) GetExecutionEnv(_ context.Context) (map[string]string, er
 
 func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (types.KnownHostsConfig, error) {
 	return types.KnownHostsConfig{}, nil
+}
+
+// IsAdmin returns the configured admin flag or error.
+func (c *FakeUserClient) IsAdmin(_ context.Context) (bool, error) {
+	if c.errIsAdmin != nil {
+		return false, c.errIsAdmin
+	}
+	return c.Admin, nil
+}
+
+// SetIsAdminErr lets tests force IsAdmin to return a specific error.
+func (c *FakeUserClient) SetIsAdminErr(err error) {
+	c.errIsAdmin = err
 }

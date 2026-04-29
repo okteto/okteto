@@ -30,6 +30,7 @@ type OktetoInterface interface {
 	Stream() StreamInterface
 	Kubetoken() KubetokenInterface
 	Buildkit() BuildkitInterface
+	Catalog() CatalogInterface
 }
 
 // UserInterface represents the client that connects to the user functions
@@ -41,6 +42,7 @@ type UserInterface interface {
 	GetRegistryCredentials(ctx context.Context, host string) (dockertypes.AuthConfig, error)
 	GetExecutionEnv(ctx context.Context) (map[string]string, error)
 	GetKnownHostsConfig(ctx context.Context) (KnownHostsConfig, error)
+	IsAdmin(ctx context.Context) (bool, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions
@@ -100,4 +102,10 @@ type EndpointClientInterface interface {
 // BuildkitInterface represents the buildkit client
 type BuildkitInterface interface {
 	GetLeastLoadedBuildKitPod(ctx context.Context, buildRequestID string) (*BuildKitPodResponse, error)
+}
+
+// CatalogInterface represents the client that connects to the catalog functions
+type CatalogInterface interface {
+	List(ctx context.Context) ([]GitCatalogItem, error)
+	Deploy(ctx context.Context, opts CatalogDeployOptions) (*GitDeployResponse, error)
 }
