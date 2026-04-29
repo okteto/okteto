@@ -194,7 +194,7 @@ func Test_BuildInfoCopy(t *testing.T) {
 			},
 		},
 		Secrets: Secrets{
-			"sec": "test",
+			"sec": Secret{File: "test"},
 		},
 		VolumesToInclude: []VolumeMounts{
 			{
@@ -270,7 +270,7 @@ secrets:
 					"test_depends_on",
 				},
 				Secrets: Secrets{
-					"secretName": "secretValue",
+					"secretName": Secret{File: "secretValue"},
 				},
 			},
 		},
@@ -304,13 +304,47 @@ secrets:
 					"test_depends_on",
 				},
 				Secrets: Secrets{
-					"secretName": "secretValue",
+					"secretName": Secret{File: "secretValue"},
 				},
 			},
 		},
 		{
 			name:        "error unmarshal string nor struct",
 			input:       "- an string value as list",
+			expectedErr: true,
+		},
+		{
+			name: "unmarshal secret long form with file key",
+			input: `
+secrets:
+  cert:
+    file: /path/to/cert`,
+			expected: &Info{
+				Secrets: Secrets{
+					"cert": Secret{File: "/path/to/cert"},
+				},
+			},
+		},
+		{
+			name: "unmarshal secret long form with env key",
+			input: `
+secrets:
+  token:
+    env: MY_TOKEN`,
+			expected: &Info{
+				Secrets: Secrets{
+					"token": Secret{Env: "MY_TOKEN"},
+				},
+			},
+		},
+		{
+			name:        "unmarshal secret with both file and env is an error",
+			input:       "secrets:\n  token:\n    file: /path\n    env: MY_TOKEN",
+			expectedErr: true,
+		},
+		{
+			name:        "unmarshal secret with unknown keys and no file or env is an error",
+			input:       "secrets:\n  errored:\n    aa: asa",
 			expectedErr: true,
 		},
 	}
@@ -399,38 +433,38 @@ func Test_expandSecrets(t *testing.T) {
 		},
 		{
 			name: "successfully expand home directory",
-			input: &Info{Secrets: map[string]string{
-				"path": "~/secret",
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: "~/secret"},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": filepath.Clean("/home/testuser/secret"),
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: filepath.Clean("/home/testuser/secret")},
 			}},
 		},
 		{
 			name: "only replace initial tilde-slash",
-			input: &Info{Secrets: map[string]string{
-				"path": "~/test/~/secret",
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: "~/test/~/secret"},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": filepath.Clean("/home/testuser/test/~/secret"),
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: filepath.Clean("/home/testuser/test/~/secret")},
 			}},
 		},
 		{
 			name: "no expansion needed",
-			input: &Info{Secrets: map[string]string{
-				"path": "/var/log",
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: "/var/log"},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": "/var/log",
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: "/var/log"},
 			}},
 		},
 		{
 			name: "expand HOME env var",
-			input: &Info{Secrets: map[string]string{
-				"path": filepath.Join(fmt.Sprintf("$%s", homeEnvVar), "secrets"),
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: filepath.Join(fmt.Sprintf("$%s", homeEnvVar), "secrets")},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": filepath.Clean("/home/testuser/secrets"),
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: filepath.Clean("/home/testuser/secrets")},
 			}},
 			setEnvFunc: func(t *testing.T) {
 				t.Setenv("TEST_RANDOM_DIR", "/home/testuser")
@@ -438,31 +472,51 @@ func Test_expandSecrets(t *testing.T) {
 		},
 		{
 			name: "expand unset env var",
-			input: &Info{Secrets: map[string]string{
-				"path": "$TEST_RANDOM_DIR/secrets",
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: "$TEST_RANDOM_DIR/secrets"},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": "/secrets",
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: "/secrets"},
 			}},
 		},
 		{
 			name: "empty - unset env var",
-			input: &Info{Secrets: map[string]string{
-				"path": "$TEST_RANDOM_DIR",
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: "$TEST_RANDOM_DIR"},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": "",
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: ""},
 			}},
 		},
 		{
 			name: "broken env var",
-			input: &Info{Secrets: map[string]string{
-				"path": "${TEST_RANDOM_DIR/secrets",
+			input: &Info{Secrets: Secrets{
+				"path": Secret{File: "${TEST_RANDOM_DIR/secrets"},
 			}},
-			expected: &Info{Secrets: map[string]string{
-				"path": "",
+			expected: &Info{Secrets: Secrets{
+				"path": Secret{File: "${TEST_RANDOM_DIR/secrets"},
 			}},
 			expectedErr: true,
+		},
+		{
+			name: "env secret - no path expansion performed",
+			input: &Info{Secrets: Secrets{
+				"token": Secret{Env: "MY_TOKEN"},
+			}},
+			expected: &Info{Secrets: Secrets{
+				"token": Secret{Env: "MY_TOKEN"},
+			}},
+		},
+		{
+			name: "mixed file and env secrets",
+			input: &Info{Secrets: Secrets{
+				"cert":  Secret{File: "~/certs/cert.pem"},
+				"token": Secret{Env: "MY_TOKEN"},
+			}},
+			expected: &Info{Secrets: Secrets{
+				"cert":  Secret{File: filepath.Clean("/home/testuser/certs/cert.pem")},
+				"token": Secret{Env: "MY_TOKEN"},
+			}},
 		},
 	}
 
