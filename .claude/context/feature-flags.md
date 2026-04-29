@@ -59,7 +59,7 @@ The default value should reflect what is safe **right now**, not a blanket rule:
 - A feature that has been promoted and is now the stable path → default to the new path (often `true` or the new variant).
 - A flag being used to disable a broken path → default to `true` (enabled = stable).
 
-Document *why* the default was chosen next to the constant.
+Document _why_ the default was chosen next to the constant.
 
 ---
 
@@ -144,12 +144,12 @@ env.LoadIntOrDefault(OktetoMyFeatureEnvVar, 3)
 
 ## Helper Functions (`pkg/env`)
 
-| Function                             | Behavior when unset | Use for                                    |
-| ------------------------------------ | ------------------- | ------------------------------------------ |
-| `env.LoadBoolean(k)`                 | Returns `false`     | Boolean flags defaulting to inactive       |
+| Function                             | Behavior when unset | Use for                                      |
+| ------------------------------------ | ------------------- | -------------------------------------------- |
+| `env.LoadBoolean(k)`                 | Returns `false`     | Boolean flags defaulting to inactive         |
 | `env.LoadBooleanOrDefault(k, false)` | Returns `false`     | Boolean flags with explicit inactive default |
-| `env.LoadBooleanOrDefault(k, true)`  | Returns `true`      | Boolean flags defaulting to active         |
-| `env.LoadIntOrDefault(k, d)`         | Returns `d`         | Integer-valued flags                       |
+| `env.LoadBooleanOrDefault(k, true)`  | Returns `true`      | Boolean flags defaulting to active           |
+| `env.LoadIntOrDefault(k, d)`         | Returns `d`         | Integer-valued flags                         |
 
 ---
 
