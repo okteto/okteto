@@ -2474,6 +2474,22 @@ services:
 `,
 			expectedFields: []string{"secrets[npm_token].name", "secrets[npm_token].external"},
 		},
+		{
+			name: "x- extension field in secret is allowed without warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    x-custom: some-value
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2484,6 +2500,24 @@ services:
 			}
 		})
 	}
+}
+
+func TestSecretsExtensionValidation(t *testing.T) {
+	invalidYAML := `
+secrets:
+  npm_token:
+    file: ./server.cert
+    unknown_field: value
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`
+	_, err := ReadStack([]byte(invalidYAML), true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "secrets[npm_token].unknown_field")
 }
 
 func TestComposeBuildSecretsResolutionErrors(t *testing.T) {

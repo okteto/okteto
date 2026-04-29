@@ -60,10 +60,11 @@ type StackRaw struct {
 
 // secretTopLevel represents a top-level secret definition in a Docker Compose file.
 type secretTopLevel struct {
-	File        string       `yaml:"file,omitempty"`
-	Environment string       `yaml:"environment,omitempty"`
-	Name        *WarningType `yaml:"name,omitempty"`
-	External    *WarningType `yaml:"external,omitempty"`
+	File        string                 `yaml:"file,omitempty"`
+	Environment string                 `yaml:"environment,omitempty"`
+	Name        *WarningType           `yaml:"name,omitempty"`
+	External    *WarningType           `yaml:"external,omitempty"`
+	Extensions  map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 // ServiceRaw represents an okteto stack service
@@ -1640,6 +1641,17 @@ func validateExtensions(stack StackRaw) error {
 		if svc.Deploy != nil {
 			for extension := range svc.Deploy.Extensions {
 				nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].deploy.%s", svcName, extension))
+			}
+		}
+	}
+
+	for secretName, secret := range stack.Secrets {
+		if secret == nil {
+			continue
+		}
+		for extension := range secret.Extensions {
+			if !strings.HasPrefix(extension, "x-") {
+				nonValidFields = append(nonValidFields, fmt.Sprintf("secrets[%s].%s", secretName, extension))
 			}
 		}
 	}
