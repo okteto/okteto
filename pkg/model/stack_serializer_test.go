@@ -2475,6 +2475,72 @@ services:
 			expectedFields: []string{"secrets[npm_token].name", "secrets[npm_token].external"},
 		},
 		{
+			name: "labels field in secret triggers warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    labels:
+      app: myapp
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].labels"},
+		},
+		{
+			name: "driver field in secret triggers warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    driver: vault
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].driver"},
+		},
+		{
+			name: "driver_opts field in secret triggers warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    driver_opts:
+      key: value
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].driver_opts"},
+		},
+		{
+			name: "template_driver field in secret triggers warning",
+			yaml: `
+secrets:
+  npm_token:
+    file: ./server.cert
+    template_driver: vault
+services:
+  api:
+    build:
+      context: .
+      secrets:
+        - npm_token
+`,
+			expectedFields: []string{"secrets[npm_token].template_driver"},
+		},
+		{
 			name: "x- extension field in secret is allowed without warning",
 			yaml: `
 secrets:

@@ -60,11 +60,15 @@ type StackRaw struct {
 
 // secretTopLevel represents a top-level secret definition in a Docker Compose file.
 type secretTopLevel struct {
-	File        string                 `yaml:"file,omitempty"`
-	Environment string                 `yaml:"environment,omitempty"`
-	Name        *WarningType           `yaml:"name,omitempty"`
-	External    *WarningType           `yaml:"external,omitempty"`
-	Extensions  map[string]interface{} `yaml:",inline" json:"-"`
+	File           string                 `yaml:"file,omitempty"`
+	Environment    string                 `yaml:"environment,omitempty"`
+	Name           *WarningType           `yaml:"name,omitempty"`
+	External       *WarningType           `yaml:"external,omitempty"`
+	Labels         *WarningType           `yaml:"labels,omitempty"`
+	Driver         *WarningType           `yaml:"driver,omitempty"`
+	DriverOpts     *WarningType           `yaml:"driver_opts,omitempty"`
+	TemplateDriver *WarningType           `yaml:"template_driver,omitempty"`
+	Extensions     map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 // ServiceRaw represents an okteto stack service
@@ -1342,6 +1346,18 @@ func getTopLevelNotSupportedFields(s *StackRaw) []string {
 		}
 		if secretDef.External != nil {
 			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].external", secretName))
+		}
+		if secretDef.Labels != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].labels", secretName))
+		}
+		if secretDef.Driver != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].driver", secretName))
+		}
+		if secretDef.DriverOpts != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].driver_opts", secretName))
+		}
+		if secretDef.TemplateDriver != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].template_driver", secretName))
 		}
 	}
 	return notSupported
