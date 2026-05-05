@@ -76,7 +76,7 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
 		"duration_seconds":       int(m.BuildDuration.Seconds()),
 		"queue_duration_seconds": int(m.WaitForBuildkitAvailable.Seconds()),
 		"result":                 m.Success,
-		"build_context_ss":       m.BuildContextSize,
+		"build_context_size":      m.BuildContextSize,
 	}
 	if !m.Success {
 		props["errorCategory"] = m.ErrorCategory

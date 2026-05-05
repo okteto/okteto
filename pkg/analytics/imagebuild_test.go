@@ -105,7 +105,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, 30, props["duration_seconds"])
 	require.Equal(t, 5, props["queue_duration_seconds"])
 	require.Equal(t, true, props["result"])
-	require.Equal(t, int64(20_000_000), props["build_context_ss"])
+	require.Equal(t, int64(20_000_000), props["build_context_size"])
 	require.NotContains(t, props, "errorCategory", "errorCategory must be omitted on success")
 }
 

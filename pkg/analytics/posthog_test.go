@@ -134,7 +134,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, 30, event.Properties["duration_seconds"])
 	require.Equal(t, 5, event.Properties["queue_duration_seconds"])
 	require.Equal(t, true, event.Properties["result"])
-	require.Equal(t, int64(20_000_000), event.Properties["build_context_ss"])
+	require.Equal(t, int64(20_000_000), event.Properties["build_context_size"])
 	require.NotContains(t, event.Properties, "errorCategory")
 
 	// CLI common props
