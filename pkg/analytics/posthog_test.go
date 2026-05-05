@@ -197,7 +197,6 @@ func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
 	require.Equal(t, "cluster", clusterMsg.Type)
 	require.Equal(t, "cluster-uuid-1234", clusterMsg.Key)
 	require.Equal(t, "cluster-uuid-1234", clusterMsg.Properties["cluster_id"])
-	require.Equal(t, "1.2.3", clusterMsg.Properties["cluster_version"])
 
 	customerMsg := mock.capturedGroups[1]
 	require.Equal(t, "customer", customerMsg.Type)

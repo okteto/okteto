@@ -149,8 +149,7 @@ func (b *posthogBackend) IdentifyGroups() {
 			Type: "cluster",
 			Key:  ctx.ClusterID,
 			Properties: posthog.NewProperties().
-				Set("cluster_id", ctx.ClusterID).
-				Set("cluster_version", ctx.ClusterVersion),
+				Set("cluster_id", ctx.ClusterID),
 		}); err != nil {
 			oktetoLog.Infof("failed to send posthog group identify (cluster): %s", err)
 		}
