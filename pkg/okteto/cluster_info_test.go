@@ -46,15 +46,13 @@ func TestGetClusterInfo(t *testing.T) {
 				assert.Equal(t, "/clusterinfo", r.URL.Path)
 				w.WriteHeader(http.StatusOK)
 				_ = json.NewEncoder(w).Encode(types.ClusterInfo{
-					AnalyticsContext: "ACME",
-					ClusterVersion:   "1.2.3",
-					CustomerName:     "ACME Corp",
+					ClusterVersion: "1.2.3",
+					CustomerName:   "ACME Corp",
 				})
 			}),
 			expected: &types.ClusterInfo{
-				AnalyticsContext: "ACME",
-				ClusterVersion:   "1.2.3",
-				CustomerName:     "ACME Corp",
+				ClusterVersion: "1.2.3",
+				CustomerName:   "ACME Corp",
 			},
 		},
 		{
