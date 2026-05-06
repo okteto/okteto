@@ -18,7 +18,6 @@ import (
 	"maps"
 	"os"
 	"runtime"
-	"time"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
@@ -58,8 +57,7 @@ func newPostHogBackend() *posthogBackend {
 		return &posthogBackend{}
 	}
 	client, _ := posthog.NewWithConfig(posthogToken, posthog.Config{
-		Endpoint:        posthogEndpoint,
-		ShutdownTimeout: 500 * time.Millisecond,
+		Endpoint: posthogEndpoint,
 	})
 	return &posthogBackend{client: client}
 }
@@ -136,14 +134,18 @@ func commonPostHogGroups() posthog.Groups {
 	return g
 }
 
-// IdentifyGroups sends $groupidentify calls for the customer and cluster groups.
+// IdentifyGroups sends $groupidentify calls for the two canonical group types:
+//   - "cluster"  keyed on ClusterID (stable UUID from the K8s telemetry secret)
+//   - "customer" keyed on CompanyName (normalized at ingestion via Hog transformation)
+//
 // Safe to call immediately after context is populated — skips silently if
-// analytics is disabled or either key is empty.
+// analytics is disabled or both keys are empty.
 func (b *posthogBackend) IdentifyGroups() {
 	if b.client == nil || !analyticsEnabled() {
 		return
 	}
 	ctx := okteto.GetContext()
+
 	if ctx.ClusterID != "" {
 		if err := b.client.Enqueue(posthog.GroupIdentify{
 			Type: "cluster",
@@ -154,6 +156,7 @@ func (b *posthogBackend) IdentifyGroups() {
 			oktetoLog.Infof("failed to send posthog group identify (cluster): %s", err)
 		}
 	}
+
 	if ctx.CompanyName != "" {
 		if err := b.client.Enqueue(posthog.GroupIdentify{
 			Type: "customer",
@@ -185,5 +188,15 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 		Groups:     commonPostHogGroups(),
 	}); err != nil {
 		oktetoLog.Infof("failed to send posthog analytics: %s", err)
+	}
+}
+
+// Close flushes pending events and shuts down the PostHog client.
+func (b *posthogBackend) Close() {
+	if b.client == nil {
+		return
+	}
+	if err := b.client.Close(); err != nil {
+		oktetoLog.Infof("failed to close posthog client: %s", err)
 	}
 }

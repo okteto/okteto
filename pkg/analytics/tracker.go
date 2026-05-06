@@ -26,6 +26,11 @@ type groupsIdentifier interface {
 	IdentifyGroups()
 }
 
+// closer is implemented by backends that hold resources that need flushing on exit.
+type closer interface {
+	Close()
+}
+
 // Tracker dispatches analytics events to all registered backends.
 type Tracker struct {
 	trackFn  func(event string, success bool, props map[string]interface{})
@@ -49,6 +54,16 @@ func (t *Tracker) IdentifyGroups() {
 	for _, b := range t.backends {
 		if gi, ok := b.(groupsIdentifier); ok {
 			gi.IdentifyGroups()
+		}
+	}
+}
+
+// Close flushes and shuts down every backend that holds resources.
+// Call this once before the process exits (e.g. defer at.Close() in main).
+func (t *Tracker) Close() {
+	for _, b := range t.backends {
+		if c, ok := b.(closer); ok {
+			c.Close()
 		}
 	}
 }

@@ -181,6 +181,7 @@ func main() {
 	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err = root.Execute()
+	at.Close()
 
 	if err != nil {
 		message := err.Error()
