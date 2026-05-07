@@ -13,12 +13,18 @@
 
 package build
 
-import "github.com/moby/buildkit/client"
+import (
+	"time"
+
+	"github.com/moby/buildkit/client"
+)
 
 type contextSyncTracker struct {
-	vertexes map[string]bool
-	current  int64
-	total    int64
+	vertexes  map[string]bool
+	startTime *time.Time
+	endTime   *time.Time
+	current   int64
+	total     int64
 }
 
 func newContextSyncTracker() *contextSyncTracker {
@@ -31,6 +37,12 @@ func (t *contextSyncTracker) Update(ss *client.SolveStatus) {
 	for _, rawVertex := range ss.Vertexes {
 		if isTransferringContext(rawVertex.Name) {
 			t.vertexes[rawVertex.Digest.Encoded()] = true
+			if rawVertex.Started != nil && t.startTime == nil {
+				t.startTime = rawVertex.Started
+			}
+			if rawVertex.Completed != nil {
+				t.endTime = rawVertex.Completed
+			}
 		}
 	}
 
@@ -60,4 +72,11 @@ func (t *contextSyncTracker) SyncedSize() int64 {
 		return t.total
 	}
 	return t.current
+}
+
+func (t *contextSyncTracker) Duration() time.Duration {
+	if t.startTime == nil || t.endTime == nil {
+		return 0
+	}
+	return t.endTime.Sub(*t.startTime)
 }

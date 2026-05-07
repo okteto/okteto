@@ -293,6 +293,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		buildContextSize := int64(0)
 		connectionType := ""
 		buildkitDuration := time.Duration(0)
+		contextTransferDuration := time.Duration(0)
 		buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
 		if ok {
 			buildkitMetadata := buildkitRunner.GetMetadata()
@@ -301,12 +302,14 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				buildContextSize = buildkitMetadata.BuildContextSize
 				connectionType = buildkitMetadata.ConnectionType
 				buildkitDuration = buildkitMetadata.BuildkitDuration
+				contextTransferDuration = buildkitMetadata.ContextTransferDuration
 			}
 		}
 		svcToBuild.SetBuildDuration(buildDuration, waitForBuildkitAvailable, err == nil)
 		svcToBuild.Metadata().BuildContextSize = buildContextSize
 		svcToBuild.Metadata().ConnectionType = connectionType
 		svcToBuild.Metadata().BuildkitDuration = buildkitDuration
+		svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
 
 		if err != nil {
 			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)

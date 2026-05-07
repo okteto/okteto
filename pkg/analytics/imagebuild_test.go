@@ -96,6 +96,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 		BuildDuration:            30 * time.Second,
 		WaitForBuildkitAvailable: 5 * time.Second,
 		BuildkitDuration:         25 * time.Second,
+		ContextTransferDuration:  3 * time.Second,
 		BuildContextSize:         20_000_000,
 		CacheHit:                 true,
 		ConnectionType:           "proxy",
@@ -108,6 +109,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, 30, props["duration_seconds"])
 	require.Equal(t, 5, props["queue_duration_seconds"])
 	require.Equal(t, 25, props["buildkit_duration_seconds"])
+	require.Equal(t, 3, props["build_context_duration_seconds"])
 	require.Equal(t, true, props["result"])
 	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
 	require.Equal(t, true, props["is_cache"])
