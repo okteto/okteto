@@ -95,8 +95,10 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 		Success:                  true,
 		BuildDuration:            30 * time.Second,
 		WaitForBuildkitAvailable: 5 * time.Second,
-		ErrorCategory:            "",
 		BuildContextSize:         20_000_000,
+		CacheHit:                 true,
+		ConnectionType:           "proxy",
+		RepoURL:                  "https://github.com/org/repo",
 	}
 
 	props := m.toPostHogProps()
@@ -105,7 +107,10 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, 30, props["duration_seconds"])
 	require.Equal(t, 5, props["queue_duration_seconds"])
 	require.Equal(t, true, props["result"])
-	require.Equal(t, int64(20_000_000), props["build_context_size"])
+	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
+	require.Equal(t, true, props["is_cache"])
+	require.Equal(t, "proxy", props["connection_type"])
+	require.Equal(t, "https://github.com/org/repo", props["repo_url"])
 	require.NotContains(t, props, "errorCategory", "errorCategory must be omitted on success")
 }
 

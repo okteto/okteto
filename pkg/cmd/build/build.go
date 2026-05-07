@@ -224,8 +224,18 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		return err
 	}
 	ob.metadata = buildSolver.GetMetadata()
+	ob.metadata.ConnectionType = connTypeFromConnector(ob.connector.GetType())
 
 	return nil
+}
+
+func connTypeFromConnector(connType string) string {
+	switch connType {
+	case "port-forward", "in-cluster":
+		return "proxy"
+	default:
+		return "legacy"
+	}
 }
 
 func validateImages(okctx OktetoContextInterface, imageTags string) error {

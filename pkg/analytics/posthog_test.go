@@ -121,6 +121,9 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 		BuildDuration:            30 * time.Second,
 		WaitForBuildkitAvailable: 5 * time.Second,
 		BuildContextSize:         20_000_000,
+		CacheHit:                 false,
+		ConnectionType:           "proxy",
+		RepoURL:                  "https://github.com/org/repo",
 	}
 	b.TrackImageBuild(context.Background(), meta)
 
@@ -134,7 +137,10 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, 30, event.Properties["duration_seconds"])
 	require.Equal(t, 5, event.Properties["queue_duration_seconds"])
 	require.Equal(t, true, event.Properties["result"])
-	require.Equal(t, int64(20_000_000), event.Properties["build_context_size"])
+	require.Equal(t, int64(20_000_000), event.Properties["build_context_size_bytes"])
+	require.Equal(t, false, event.Properties["is_cache"])
+	require.Equal(t, "proxy", event.Properties["connection_type"])
+	require.Equal(t, "https://github.com/org/repo", event.Properties["repo_url"])
 	require.NotContains(t, event.Properties, "errorCategory")
 
 	// CLI common props
@@ -144,8 +150,9 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, "test-machine", event.Properties["machine_id"])
 
 	// Common props
-	require.Equal(t, "ACME Corp", event.Properties["customer_name"])
+	require.Equal(t, "ACME Corp", event.Properties["customer_id"])
 	require.Equal(t, "cluster-uuid-1234", event.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", event.Properties["cluster_version"])
 	require.Equal(t, "user-123", event.Properties["user_id"])
 
 	// Groups
@@ -201,5 +208,5 @@ func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
 	customerMsg := mock.capturedGroups[1]
 	require.Equal(t, "customer", customerMsg.Type)
 	require.Equal(t, "ACME Corp", customerMsg.Key)
-	require.Equal(t, "ACME Corp", customerMsg.Properties["customer_name"])
+	require.Equal(t, "ACME Corp", customerMsg.Properties["customer_id"])
 }

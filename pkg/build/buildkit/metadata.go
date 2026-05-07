@@ -18,4 +18,5 @@ import "time"
 type BuildMetadata struct {
 	WaitForBuildkitAvailableTime time.Duration
 	BuildContextSize             int64
+	ConnectionType               string
 }
