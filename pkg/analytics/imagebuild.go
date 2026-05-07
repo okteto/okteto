@@ -32,6 +32,7 @@ type ImageBuildMetadata struct {
 	ErrorCategory            string // PostHog: error category, empty on success
 	ConnectionType           string // PostHog: proxy or legacy
 	WaitForBuildkitAvailable time.Duration
+	BuildkitDuration         time.Duration
 	BuildContextHashDuration time.Duration
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
@@ -73,14 +74,15 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]interface{} {
 // errorCategory is omitted on success.
 func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
 	props := map[string]interface{}{
-		"service":                  m.Name,
-		"duration_seconds":         int(m.BuildDuration.Seconds()),
-		"queue_duration_seconds":   int(m.WaitForBuildkitAvailable.Seconds()),
-		"result":                   m.Success,
-		"build_context_size_bytes": m.BuildContextSize,
-		"is_cache":                 m.CacheHit,
-		"connection_type":          m.ConnectionType,
-		"repo_url":                 m.RepoURL,
+		"service":                    m.Name,
+		"duration_seconds":           int(m.BuildDuration.Seconds()),
+		"queue_duration_seconds":     int(m.WaitForBuildkitAvailable.Seconds()),
+		"buildkit_duration_seconds":  int(m.BuildkitDuration.Seconds()),
+		"result":                     m.Success,
+		"build_context_size_bytes":   m.BuildContextSize,
+		"is_cache":                   m.CacheHit,
+		"connection_type":            m.ConnectionType,
+		"repo_url":                   m.RepoURL,
 	}
 	if !m.Success {
 		props["errorCategory"] = m.ErrorCategory

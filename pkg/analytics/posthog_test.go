@@ -120,6 +120,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 		Success:                  true,
 		BuildDuration:            30 * time.Second,
 		WaitForBuildkitAvailable: 5 * time.Second,
+		BuildkitDuration:         25 * time.Second,
 		BuildContextSize:         20_000_000,
 		CacheHit:                 false,
 		ConnectionType:           "proxy",
@@ -136,6 +137,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, "api", event.Properties["service"])
 	require.Equal(t, 30, event.Properties["duration_seconds"])
 	require.Equal(t, 5, event.Properties["queue_duration_seconds"])
+	require.Equal(t, 25, event.Properties["buildkit_duration_seconds"])
 	require.Equal(t, true, event.Properties["result"])
 	require.Equal(t, int64(20_000_000), event.Properties["build_context_size_bytes"])
 	require.Equal(t, false, event.Properties["is_cache"])

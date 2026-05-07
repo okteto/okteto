@@ -200,6 +200,7 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		r.metadata.build = &BuildMetadata{}
 		err = r.solveBuild(ctx, client, opt, outputMode, r.logger, r.metadata.build)
 		solveTime = time.Since(startSolverTime)
+		r.metadata.build.BuildkitDuration = solveTime
 		if err != nil {
 			if IsRetryable(err) {
 				r.connector.Stop()
