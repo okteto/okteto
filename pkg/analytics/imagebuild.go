@@ -85,9 +85,6 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
 	if d := int(m.WaitForBuildkitAvailable.Seconds()); d > 0 {
 		props["queue_duration_seconds"] = d
 	}
-	if d := int(m.BuildkitDuration.Seconds()); d > 0 {
-		props["buildkit_duration_seconds"] = d
-	}
 	if d := int(m.ContextTransferDuration.Seconds()); d > 0 {
 		props["build_context_duration_seconds"] = d
 	}
