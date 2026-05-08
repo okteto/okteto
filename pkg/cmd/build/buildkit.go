@@ -68,6 +68,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 					contextTracker.Update(ss)
 					if metadata != nil {
 						metadata.BuildContextSize = contextTracker.SyncedSize()
+						metadata.ContextTransferDuration = contextTracker.Duration()
 					}
 					plainChannel <- ss
 					if progress == oktetoLog.TTYFormat {
