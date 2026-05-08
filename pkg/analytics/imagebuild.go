@@ -47,8 +47,8 @@ func NewImageBuildMetadata() *ImageBuildMetadata {
 	return &ImageBuildMetadata{}
 }
 
-func (m *ImageBuildMetadata) toMixpanelProps() map[string]interface{} {
-	props := map[string]interface{}{
+func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
+	props := map[string]any{
 		"name":                            m.Name,
 		"repoURL":                         m.RepoURL,
 		"waitForBuildkitAvailable":        m.WaitForBuildkitAvailable.Seconds(),
@@ -73,8 +73,8 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]interface{} {
 
 // toPostHogProps returns the PostHog-specific property map for an image_build event.
 // Fields with zero/empty values are omitted.
-func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
-	props := map[string]interface{}{
+func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
+	props := map[string]any{
 		"service":  m.Name,
 		"result":   m.Success,
 		"is_cache": m.CacheHit,

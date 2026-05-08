@@ -23,10 +23,10 @@ import (
 func TestMixpanelBackend_TrackImageBuild(t *testing.T) {
 	var capturedEvent string
 	var capturedSuccess bool
-	var capturedProps map[string]interface{}
+	var capturedProps map[string]any
 
 	b := &mixpanelBackend{
-		trackFn: func(event string, success bool, props map[string]interface{}) {
+		trackFn: func(event string, success bool, props map[string]any) {
 			capturedEvent = event
 			capturedSuccess = success
 			capturedProps = props

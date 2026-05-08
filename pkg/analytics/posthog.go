@@ -56,26 +56,31 @@ func newPostHogBackend() *posthogBackend {
 	if posthogToken == "" {
 		return &posthogBackend{}
 	}
-	client, _ := posthog.NewWithConfig(posthogToken, posthog.Config{
+	client, err := posthog.NewWithConfig(posthogToken, posthog.Config{
 		Endpoint: posthogEndpoint,
 	})
+	if err != nil {
+		oktetoLog.Infof("failed to create posthog client: %s", err)
+		return &posthogBackend{}
+	}
 	return &posthogBackend{client: client}
 }
 
 // commonPostHogProperties returns properties sent on every PostHog event from the CLI.
-// PRECONDITION: must only be called after analyticsEnabled() returns true.
-// Calling it with an uninitialized okteto context will call GetContext() which Fatalf's.
+// Must only be called after analyticsEnabled() returns true — GetContext() Fatalf's on
+// an uninitialized context.
 //
-// Note: user_id is included as an explicit property (per product spec) in addition to
-// being set as DistinctId on posthog.Capture.
+// user_id is included as an explicit property (per product spec) in addition to being
+// set as DistinctId on posthog.Capture. agent_type is omitted when is_agent is false.
 func commonPostHogProperties() posthog.Properties {
+	ctx := okteto.GetContext()
 	agent := getAgent()
-	return posthog.Properties{
+	props := posthog.Properties{
 		// Common (all PostHog sources)
-		"customer_id":     okteto.GetContext().CompanyName,
-		"cluster_id":      okteto.GetContext().ClusterID,
-		"cluster_version": okteto.GetContext().ClusterVersion,
-		"user_id":         okteto.GetContext().UserID,
+		"customer_id":     ctx.CompanyName,
+		"cluster_id":      ctx.ClusterID,
+		"cluster_version": ctx.ClusterVersion,
+		"user_id":         ctx.UserID,
 
 		// CLI common
 		"cli_version":        config.VersionString,
@@ -85,8 +90,11 @@ func commonPostHogProperties() posthog.Properties {
 		"measurement_source": "cli",
 		"trigger_source":     getTriggerSource(),
 		"is_agent":           agent != "",
-		"agent_type":         agent,
 	}
+	if agent != "" {
+		props["agent_type"] = agent
+	}
+	return props
 }
 
 func getTriggerSource() string {

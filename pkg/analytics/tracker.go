@@ -33,7 +33,7 @@ type closer interface {
 
 // Tracker dispatches analytics events to all registered backends.
 type Tracker struct {
-	trackFn  func(event string, success bool, props map[string]interface{})
+	trackFn  func(event string, success bool, props map[string]any)
 	backends []analyticsBackend
 }
 

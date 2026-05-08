@@ -236,7 +236,7 @@ func TrackContextDelete(ctxs int, success bool) {
 	track(deleteContexts, success, props)
 }
 
-func track(event string, success bool, props map[string]interface{}) {
+func track(event string, success bool, props map[string]any) {
 	if !analyticsEnabled() {
 		return
 	}

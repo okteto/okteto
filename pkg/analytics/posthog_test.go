@@ -194,6 +194,43 @@ func TestPostHogBackend_IdentifyGroups_AnalyticsDisabled(t *testing.T) {
 	require.Empty(t, mock.capturedGroups, "GroupIdentify must not be sent when analytics is disabled")
 }
 
+func TestPostHogBackend_AgentType_OmittedWhenNoAgent(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	// Unset all agent env vars so getAgent() returns ""
+	t.Setenv("CODEX_CI", "")
+	t.Setenv("GEMINI_CLI", "")
+	t.Setenv("CLAUDECODE", "")
+	t.Setenv("CURSOR_SANDBOX", "")
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: true})
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, false, mock.captured[0].Properties["is_agent"])
+	require.NotContains(t, mock.captured[0].Properties, "agent_type")
+}
+
+func TestPostHogBackend_AgentType_PresentWhenAgent(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CODEX_CI", "")
+	t.Setenv("GEMINI_CLI", "")
+	t.Setenv("CLAUDECODE", "true")
+	t.Setenv("CURSOR_SANDBOX", "")
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: true})
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, true, mock.captured[0].Properties["is_agent"])
+	require.Equal(t, "claude", mock.captured[0].Properties["agent_type"])
+}
+
 func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()

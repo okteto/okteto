@@ -91,16 +91,16 @@ func Test_NewImageBuildMetadata(t *testing.T) {
 
 func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	m := &ImageBuildMetadata{
-		Name:                    "api",
-		Success:                 true,
-		BuildDuration:           30 * time.Second,
+		Name:                     "api",
+		Success:                  true,
+		BuildDuration:            30 * time.Second,
 		WaitForBuildkitAvailable: 5 * time.Second,
-		BuildkitDuration:        25 * time.Second,
-		ContextTransferDuration: 3 * time.Second,
-		BuildContextSize:        20_000_000,
-		CacheHit:                true,
-		ConnectionType:          "proxy",
-		RepoURL:                 "https://github.com/org/repo",
+		BuildkitDuration:         25 * time.Second,
+		ContextTransferDuration:  3 * time.Second,
+		BuildContextSize:         20_000_000,
+		CacheHit:                 true,
+		ConnectionType:           "proxy",
+		RepoURL:                  "https://github.com/org/repo",
 	}
 
 	props := m.toPostHogProps()
