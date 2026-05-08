@@ -88,29 +88,12 @@ func commonPostHogProperties() posthog.Properties {
 		"arch":               runtime.GOARCH,
 		"machine_id":         get().MachineID,
 		"measurement_source": "cli",
-		"trigger_source":     getTriggerSource(),
 		"is_agent":           agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
 	}
 	return props
-}
-
-func getTriggerSource() string {
-	if env.LoadBoolean("GITHUB_ACTIONS") {
-		return "github_actions"
-	}
-	if env.LoadBoolean("GITLAB_CI") {
-		return "gitlab_ci"
-	}
-	if env.LoadBoolean("CIRCLECI") {
-		return "circleci"
-	}
-	if os.Getenv("JENKINS_URL") != "" {
-		return "jenkins"
-	}
-	return "cli"
 }
 
 func getAgent() string {
