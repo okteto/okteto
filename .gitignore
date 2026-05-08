@@ -26,3 +26,4 @@ node_modules
 
 # Claude local config (personal, not shared)
 .claude/*.local.*
+.claude/worktrees/
