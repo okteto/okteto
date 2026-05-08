@@ -17,7 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestResolveCustomerName(t *testing.T) {
@@ -25,19 +25,19 @@ func TestResolveCustomerName(t *testing.T) {
 		clusterInfo := &types.ClusterInfo{CustomerName: "from-clusterinfo"}
 		clusterMetadata := types.ClusterMetadata{CompanyName: "from-analytics-context"}
 
-		assert.Equal(t, "from-clusterinfo", resolveCustomerName(clusterInfo, clusterMetadata))
+		require.Equal(t, "from-clusterinfo", resolveCustomerName(clusterInfo, clusterMetadata))
 	})
 
 	t.Run("falls back to analytics context when clusterinfo is nil", func(t *testing.T) {
 		clusterMetadata := types.ClusterMetadata{CompanyName: "from-analytics-context"}
 
-		assert.Equal(t, "from-analytics-context", resolveCustomerName(nil, clusterMetadata))
+		require.Equal(t, "from-analytics-context", resolveCustomerName(nil, clusterMetadata))
 	})
 
 	t.Run("falls back to analytics context when clusterinfo customer name is empty", func(t *testing.T) {
 		clusterInfo := &types.ClusterInfo{CustomerName: ""}
 		clusterMetadata := types.ClusterMetadata{CompanyName: "from-analytics-context"}
 
-		assert.Equal(t, "from-analytics-context", resolveCustomerName(clusterInfo, clusterMetadata))
+		require.Equal(t, "from-analytics-context", resolveCustomerName(clusterInfo, clusterMetadata))
 	})
 }

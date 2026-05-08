@@ -25,7 +25,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
@@ -49,7 +48,6 @@ type kubeconfigTokenController interface {
 }
 
 // groupsIdentifier sends group_identify calls to analytics backends.
-// Satisfied by *analytics.Tracker.
 type groupsIdentifier interface {
 	IdentifyGroups()
 }
@@ -73,14 +71,19 @@ func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
 	}
 }
 
+func withAnalyticsTracker(at groupsIdentifier) ctxCmdOption {
+	return func(c *Command) {
+		c.analyticsIdentifier = at
+	}
+}
+
 // NewContextCommand creates a new Command
 func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 	cfg := &Command{
-		K8sClientProvider:    okteto.NewK8sClientProvider(),
-		LoginController:      login.NewLoginController(),
+		K8sClientProvider:   okteto.NewK8sClientProvider(),
+		LoginController:     login.NewLoginController(),
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
-		analyticsIdentifier:  analytics.NewAnalyticsTracker(),
 	}
 	if env.LoadBoolean(OktetoUseStaticKubetokenEnvVar) {
 		cfg.kubetokenController = newStaticKubetokenController()
