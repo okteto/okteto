@@ -312,7 +312,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
 
 		if err != nil {
-			svcToBuild.Metadata().ErrorCategory = err.Error()
+			svcToBuild.Metadata().ErrorReason = err.Error()
 			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 		}
 

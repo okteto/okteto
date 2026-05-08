@@ -29,7 +29,7 @@ type ImageBuildMetadata struct {
 	RepoURL                  string
 	BuildContextHash         string
 	Initiator                string
-	ErrorCategory            string // PostHog: error category, empty on success
+	ErrorReason              string // PostHog: raw error on failure, empty on success
 	ConnectionType           string // PostHog: proxy or legacy
 	WaitForBuildkitAvailable time.Duration
 	BuildkitDuration         time.Duration
@@ -72,22 +72,36 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]interface{} {
 }
 
 // toPostHogProps returns the PostHog-specific property map for an image_build event.
-// errorCategory is omitted on success.
+// Fields with zero/empty values are omitted.
 func (m *ImageBuildMetadata) toPostHogProps() map[string]interface{} {
 	props := map[string]interface{}{
-		"service":                        m.Name,
-		"duration_seconds":               int(m.BuildDuration.Seconds()),
-		"queue_duration_seconds":         int(m.WaitForBuildkitAvailable.Seconds()),
-		"buildkit_duration_seconds":      int(m.BuildkitDuration.Seconds()),
-		"build_context_duration_seconds": int(m.ContextTransferDuration.Seconds()),
-		"result":                         m.Success,
-		"build_context_size_bytes":       m.BuildContextSize,
-		"is_cache":                       m.CacheHit,
-		"connection_type":                m.ConnectionType,
-		"repo_url":                       m.RepoURL,
+		"service":  m.Name,
+		"result":   m.Success,
+		"is_cache": m.CacheHit,
 	}
-	if !m.Success {
-		props["errorCategory"] = m.ErrorCategory
+	if d := int(m.BuildDuration.Seconds()); d > 0 {
+		props["duration_seconds"] = d
+	}
+	if d := int(m.WaitForBuildkitAvailable.Seconds()); d > 0 {
+		props["queue_duration_seconds"] = d
+	}
+	if d := int(m.BuildkitDuration.Seconds()); d > 0 {
+		props["buildkit_duration_seconds"] = d
+	}
+	if d := int(m.ContextTransferDuration.Seconds()); d > 0 {
+		props["build_context_duration_seconds"] = d
+	}
+	if m.BuildContextSize > 0 {
+		props["build_context_size_bytes"] = m.BuildContextSize
+	}
+	if m.ConnectionType != "" {
+		props["connection_type"] = m.ConnectionType
+	}
+	if m.RepoURL != "" {
+		props["repo_url"] = m.RepoURL
+	}
+	if !m.Success && m.ErrorReason != "" {
+		props["error_reason"] = m.ErrorReason
 	}
 	return props
 }

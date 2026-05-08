@@ -145,7 +145,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, false, event.Properties["is_cache"])
 	require.Equal(t, "proxy", event.Properties["connection_type"])
 	require.Equal(t, "https://github.com/org/repo", event.Properties["repo_url"])
-	require.NotContains(t, event.Properties, "errorCategory")
+	require.NotContains(t, event.Properties, "error_reason")
 
 	// CLI common props
 	require.NotEmpty(t, event.Properties["cli_version"])

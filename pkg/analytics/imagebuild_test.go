@@ -91,16 +91,16 @@ func Test_NewImageBuildMetadata(t *testing.T) {
 
 func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	m := &ImageBuildMetadata{
-		Name:                     "api",
-		Success:                  true,
-		BuildDuration:            30 * time.Second,
+		Name:                    "api",
+		Success:                 true,
+		BuildDuration:           30 * time.Second,
 		WaitForBuildkitAvailable: 5 * time.Second,
-		BuildkitDuration:         25 * time.Second,
-		ContextTransferDuration:  3 * time.Second,
-		BuildContextSize:         20_000_000,
-		CacheHit:                 true,
-		ConnectionType:           "proxy",
-		RepoURL:                  "https://github.com/org/repo",
+		BuildkitDuration:        25 * time.Second,
+		ContextTransferDuration: 3 * time.Second,
+		BuildContextSize:        20_000_000,
+		CacheHit:                true,
+		ConnectionType:          "proxy",
+		RepoURL:                 "https://github.com/org/repo",
 	}
 
 	props := m.toPostHogProps()
@@ -115,17 +115,35 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, true, props["is_cache"])
 	require.Equal(t, "proxy", props["connection_type"])
 	require.Equal(t, "https://github.com/org/repo", props["repo_url"])
-	require.NotContains(t, props, "errorCategory", "errorCategory must be omitted on success")
+	require.NotContains(t, props, "error_reason", "error_reason must be omitted on success")
+}
+
+func Test_ImageBuildMetadata_toPostHogProps_omitsZeroFields(t *testing.T) {
+	m := &ImageBuildMetadata{
+		Name:    "api",
+		Success: true,
+	}
+
+	props := m.toPostHogProps()
+
+	require.NotContains(t, props, "duration_seconds")
+	require.NotContains(t, props, "queue_duration_seconds")
+	require.NotContains(t, props, "buildkit_duration_seconds")
+	require.NotContains(t, props, "build_context_duration_seconds")
+	require.NotContains(t, props, "build_context_size_bytes")
+	require.NotContains(t, props, "connection_type")
+	require.NotContains(t, props, "repo_url")
+	require.NotContains(t, props, "error_reason")
 }
 
 func Test_ImageBuildMetadata_toPostHogProps_withError(t *testing.T) {
 	m := &ImageBuildMetadata{
-		Success:       false,
-		ErrorCategory: "registry_pull_error",
+		Success:     false,
+		ErrorReason: "registry_pull_error",
 	}
 
 	props := m.toPostHogProps()
 
 	require.Equal(t, false, props["result"])
-	require.Equal(t, "registry_pull_error", props["errorCategory"])
+	require.Equal(t, "registry_pull_error", props["error_reason"])
 }
