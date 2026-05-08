@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetComposePathWhenExists(t *testing.T) {
@@ -81,6 +82,36 @@ func TestGetComposePathWhenExists(t *testing.T) {
 			result, err := GetComposePath(wd)
 			assert.NoError(t, err)
 			assert.Equal(t, filepath.Join(wd, tt.expected), result)
+		})
+	}
+}
+
+func TestIsComposeFilename(t *testing.T) {
+	var tests = []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		{name: "docker-compose.yml", path: "docker-compose.yml", expected: true},
+		{name: "docker-compose.yaml", path: "docker-compose.yaml", expected: true},
+		{name: "compose.yml", path: "compose.yml", expected: true},
+		{name: "compose.yaml", path: "compose.yaml", expected: true},
+		{name: "okteto-compose.yml", path: "okteto-compose.yml", expected: true},
+		{name: "okteto-compose.yaml", path: "okteto-compose.yaml", expected: true},
+		{name: "okteto-stack.yml", path: "okteto-stack.yml", expected: true},
+		{name: "okteto-stack.yaml", path: "okteto-stack.yaml", expected: true},
+		{name: "stack.yml", path: "stack.yml", expected: true},
+		{name: "stack.yaml", path: "stack.yaml", expected: true},
+		{name: "full path docker-compose.yml", path: "/some/dir/docker-compose.yml", expected: true},
+		{name: "full path in .okteto dir", path: "/some/.okteto/compose.yml", expected: true},
+		{name: "okteto manifest", path: "okteto.yml", expected: false},
+		{name: "random yaml", path: "my-service.yaml", expected: false},
+		{name: "empty", path: "", expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, IsComposeFilename(tt.path))
 		})
 	}
 }

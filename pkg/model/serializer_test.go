@@ -2425,8 +2425,8 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 					},
 					CacheFrom: []string{"cache-image"},
 					Secrets: build.Secrets{
-						"mysecret":    "source",
-						"othersecret": "othersource",
+						"mysecret":    build.Secret{File: "source"},
+						"othersecret": build.Secret{File: "othersource"},
 					},
 				},
 			},

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -85,7 +84,7 @@ func getBranch(cwd, branch string) (string, error) {
 }
 
 func getRandomName(scope string) string {
-	name := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
+	name := strings.ReplaceAll(GetRandomName(-1), "_", "-")
 	if scope == "personal" {
 		username := strings.ToLower(okteto.GetSanitizedUsername())
 		name = fmt.Sprintf("%s-%s", name, username)

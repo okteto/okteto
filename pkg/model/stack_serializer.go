@@ -52,10 +52,23 @@ type StackRaw struct {
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
 
-	Configs *WarningType `yaml:"configs,omitempty"`
-	Secrets *WarningType `yaml:"secrets,omitempty"`
+	Configs *WarningType               `yaml:"configs,omitempty"`
+	Secrets map[string]*secretTopLevel `yaml:"secrets,omitempty"`
 
 	Warnings StackWarnings
+}
+
+// secretTopLevel represents a top-level secret definition in a Docker Compose file.
+type secretTopLevel struct {
+	File           string                 `yaml:"file,omitempty"`
+	Environment    string                 `yaml:"environment,omitempty"`
+	Name           *WarningType           `yaml:"name,omitempty"`
+	External       *WarningType           `yaml:"external,omitempty"`
+	Labels         *WarningType           `yaml:"labels,omitempty"`
+	Driver         *WarningType           `yaml:"driver,omitempty"`
+	DriverOpts     *WarningType           `yaml:"driver_opts,omitempty"`
+	TemplateDriver *WarningType           `yaml:"template_driver,omitempty"`
+	Extensions     map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 // ServiceRaw represents an okteto stack service
@@ -231,11 +244,30 @@ type composeBuildInfo struct {
 	Image            string               `yaml:"image,omitempty"`
 	VolumesToInclude []build.VolumeMounts `yaml:"-"`
 	ExportCache      cache.ExportCache    `yaml:"export_cache,omitempty"`
+	Secrets          []string             `yaml:"secrets,omitempty"`
 }
 
-func (c *composeBuildInfo) toBuildInfo() *build.Info {
+func (c *composeBuildInfo) toBuildInfo(topLevelSecrets map[string]*secretTopLevel) (*build.Info, error) {
 	if c == nil {
-		return nil
+		return nil, nil
+	}
+	var secrets build.Secrets
+	for _, name := range c.Secrets {
+		def, ok := topLevelSecrets[name]
+		if !ok {
+			return nil, fmt.Errorf("secret %q is not defined in the top-level secrets section", name)
+		}
+		if def == nil || (def.File == "" && def.Environment == "") {
+			return nil, fmt.Errorf("secret %q has no 'file' or 'environment' defined", name)
+		}
+		if def.File != "" && def.Environment != "" {
+			return nil, fmt.Errorf("secret %q cannot define both 'file' and 'environment'", name)
+		}
+		if secrets == nil {
+			secrets = build.Secrets{}
+		}
+		// Docker Compose uses "environment"; build.Secret uses "Env"
+		secrets[name] = build.Secret{File: def.File, Env: def.Environment}
 	}
 	return &build.Info{
 		Context:          c.Context,
@@ -246,7 +278,8 @@ func (c *composeBuildInfo) toBuildInfo() *build.Info {
 		Image:            c.Image,
 		VolumesToInclude: c.VolumesToInclude,
 		ExportCache:      c.ExportCache,
-	}
+		Secrets:          secrets,
+	}, nil
 }
 
 func (c *composeBuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -298,7 +331,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			sanitizedServicesNames[svcName] = newName
 			svcName = newName
 		}
-		s.Services[svcName], err = svcRaw.ToService(svcName, s)
+		s.Services[svcName], err = svcRaw.toService(svcName, s, stackRaw.Secrets)
 		if err != nil {
 			return err
 		}
@@ -371,7 +404,7 @@ func getAccessiblePorts(ports []PortRaw) []PortRaw {
 	return accessiblePorts
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
+func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSecrets map[string]*secretTopLevel) (*Service, error) {
 	svc := &Service{}
 	var err error
 
@@ -380,7 +413,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Replicas = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
 
 	svc.Image = serviceRaw.Image
-	svc.Build = serviceRaw.Build.toBuildInfo()
+	svc.Build, err = serviceRaw.Build.toBuildInfo(topLevelSecrets)
+	if err != nil {
+		return nil, err
+	}
 
 	svc.CapAdd = serviceRaw.CapAdd
 	if len(serviceRaw.CapAddSneakCase) > 0 {
@@ -1301,8 +1337,28 @@ func getTopLevelNotSupportedFields(s *StackRaw) []string {
 	if s.Configs != nil {
 		notSupported = append(notSupported, "configs")
 	}
-	if s.Secrets != nil {
-		notSupported = append(notSupported, "secrets")
+	for secretName, secretDef := range s.Secrets {
+		if secretDef == nil {
+			continue
+		}
+		if secretDef.Name != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].name", secretName))
+		}
+		if secretDef.External != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].external", secretName))
+		}
+		if secretDef.Labels != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].labels", secretName))
+		}
+		if secretDef.Driver != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].driver", secretName))
+		}
+		if secretDef.DriverOpts != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].driver_opts", secretName))
+		}
+		if secretDef.TemplateDriver != nil {
+			notSupported = append(notSupported, fmt.Sprintf("secrets[%s].template_driver", secretName))
+		}
 	}
 	return notSupported
 }
@@ -1601,6 +1657,17 @@ func validateExtensions(stack StackRaw) error {
 		if svc.Deploy != nil {
 			for extension := range svc.Deploy.Extensions {
 				nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].deploy.%s", svcName, extension))
+			}
+		}
+	}
+
+	for secretName, secret := range stack.Secrets {
+		if secret == nil {
+			continue
+		}
+		for extension := range secret.Extensions {
+			if !strings.HasPrefix(extension, "x-") {
+				nonValidFields = append(nonValidFields, fmt.Sprintf("secrets[%s].%s", secretName, extension))
 			}
 		}
 	}

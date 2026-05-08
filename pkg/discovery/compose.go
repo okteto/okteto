@@ -47,6 +47,17 @@ var (
 	}
 )
 
+// IsComposeFilename reports whether the base name of path matches a known compose file name.
+func IsComposeFilename(path string) bool {
+	base := filepath.Base(path)
+	for _, parts := range possibleComposeManifests {
+		if parts[len(parts)-1] == base {
+			return true
+		}
+	}
+	return false
+}
+
 // GetComposePath returns a compose file if exists, error otherwise
 func GetComposePath(wd string) (string, error) {
 	for _, possibleStackManifest := range possibleComposeManifests {

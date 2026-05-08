@@ -370,6 +370,10 @@ func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, erro
 
 			// We just log the error in this case to not lose the stackErr. Before that, we are returning it
 			oktetoLog.Infof("there was an error loading compose file(s): %v", stackErr)
+			// if the file has a compose-like name, the compose error is more actionable
+			if discovery.IsComposeFilename(manifestPath) {
+				return nil, stackErr
+			}
 			// if not return original manifest err
 			return nil, err
 		}

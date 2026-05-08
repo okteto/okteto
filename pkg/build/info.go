@@ -42,9 +42,6 @@ type Info struct {
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
 }
 
-// Secrets represents the secrets to be injected to the build of the image
-type Secrets map[string]string
-
 // infoRaw represents the build info for serialization
 type infoRaw struct {
 	Secrets          Secrets           `yaml:"secrets,omitempty"`
@@ -120,24 +117,6 @@ func (i *Info) expandManifestBuildArgs(previousImageArgs map[string]string) (err
 			return err
 		}
 		i.Args[idx] = arg
-	}
-	return nil
-}
-
-func (i *Info) expandSecrets() (err error) {
-	for k, v := range i.Secrets {
-		val := v
-		if strings.HasPrefix(val, "~/") {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return err
-			}
-			val = filepath.Join(home, val[2:])
-		}
-		i.Secrets[k], err = env.ExpandEnv(val)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -248,4 +227,28 @@ func (i *Info) AddArgs(previousImageArgs map[string]string) error {
 		return err
 	}
 	return i.addExpandedPreviousImageArgs(previousImageArgs)
+}
+
+func (i *Info) expandSecrets() error {
+	for k, s := range i.Secrets {
+		if s.File == "" {
+			// env-based secrets don't need path expansion
+			continue
+		}
+		val := s.File
+		if strings.HasPrefix(val, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return err
+			}
+			val = filepath.Join(home, val[2:])
+		}
+		expanded, err := env.ExpandEnv(val)
+		if err != nil {
+			return err
+		}
+		s.File = expanded
+		i.Secrets[k] = s
+	}
+	return nil
 }

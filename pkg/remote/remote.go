@@ -29,7 +29,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/mitchellh/go-homedir"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
@@ -729,6 +728,7 @@ func generateCacheID(repositoryURL, manifestName, testName, path string) string 
 }
 
 func generateRandomSocketNameString() string {
-	random := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
-	return fmt.Sprintf("/tmp/okteto-%s.sock", random)
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("/tmp/okteto-%x.sock", b)
 }
