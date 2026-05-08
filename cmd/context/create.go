@@ -80,8 +80,8 @@ func withAnalyticsTracker(at groupsIdentifier) ctxCmdOption {
 // NewContextCommand creates a new Command
 func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 	cfg := &Command{
-		K8sClientProvider:   okteto.NewK8sClientProvider(),
-		LoginController:     login.NewLoginController(),
+		K8sClientProvider:    okteto.NewK8sClientProvider(),
+		LoginController:      login.NewLoginController(),
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
 	}
