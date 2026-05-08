@@ -98,13 +98,13 @@ type OktetoRegistryInterface interface {
 //  1. InClusterConnector - when running inside Okteto (remote commands, installer, or managed pods)
 //  2. PortForwarder - when build queue is enabled (OKTETO_BUILD_QUEUE_ENABLED=true)
 //  3. IngressConnector - default for local CLI execution
-func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
+func GetBuildkitConnector(okCtx OktetoContextInterface, logger *io.Controller, tracker connector.BuildkitConnectionTracker) BuildkitConnector {
 	if shouldUseInClusterConnector() {
-		return newInClusterConnectorWithFallback(okCtx, logger)
+		return newInClusterConnectorWithFallback(okCtx, logger, tracker)
 	}
 
 	if env.LoadBooleanOrDefault(OktetoBuildQueueEnabledEnvVar, true) {
-		return newPortForwarderWithFallback(okCtx, logger)
+		return newPortForwarderWithFallback(okCtx, logger, tracker)
 	}
 
 	return connector.NewIngressConnector(okCtx, logger)
@@ -121,8 +121,8 @@ func shouldUseInClusterConnector() bool {
 		env.LoadBoolean(constants.OktetoManagedPodEnvVar) // Pods in managed namespaces
 }
 
-func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
-	conn, err := connector.NewInClusterConnector(context.Background(), okCtx, logger)
+func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.Controller, tracker connector.BuildkitConnectionTracker) BuildkitConnector {
+	conn, err := connector.NewInClusterConnector(context.Background(), okCtx, logger, tracker)
 	if err != nil {
 		logger.Infof("could not create in-cluster connector: %s, falling back to ingress", err)
 		fallbackConn := connector.NewIngressConnector(okCtx, logger)
@@ -131,8 +131,8 @@ func newInClusterConnectorWithFallback(okCtx OktetoContextInterface, logger *io.
 	return conn
 }
 
-func newPortForwarderWithFallback(okCtx OktetoContextInterface, logger *io.Controller) BuildkitConnector {
-	conn, err := connector.NewPortForwarder(context.Background(), okCtx, logger)
+func newPortForwarderWithFallback(okCtx OktetoContextInterface, logger *io.Controller, tracker connector.BuildkitConnectionTracker) BuildkitConnector {
+	conn, err := connector.NewPortForwarder(context.Background(), okCtx, logger, tracker)
 	if err != nil {
 		logger.Infof("could not create port forwarder: %s, falling back to ingress", err)
 		logger.Out().Warning("Could not create buildkit connector for port forwarding, falling back to ingress connector")

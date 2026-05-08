@@ -52,7 +52,7 @@ func newBuildCtrl(name string, analyticsTracker, insights buildTrackerInterface,
 	okCtx := &okteto.ContextStateless{
 		Store: okteto.GetContextStore(),
 	}
-	conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
+	conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl, analyticsTracker)
 	return buildCtrl{
 		builder:   buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, conn),
 		connector: conn,

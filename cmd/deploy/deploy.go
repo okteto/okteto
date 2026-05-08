@@ -144,6 +144,7 @@ type AnalyticsTrackerInterface interface {
 
 type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
 }
 
 type deployTrackerInterface interface {
@@ -246,7 +247,7 @@ $ okteto deploy --no-build=true`,
 			}
 
 			okCtx := &okteto.ContextStateless{Store: okteto.GetContextStore()}
-			conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
+			conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl, at)
 
 			c := &Command{
 				GetManifest: model.GetManifestV2,

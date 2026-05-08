@@ -20,6 +20,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeConnectionTracker struct{}
+
+func (fakeConnectionTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata) {}
+
 func TestNewConnectorMetrics(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -40,7 +44,7 @@ func TestNewConnectorMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectorMetrics(tt.connectorType, tt.sessionID)
+			m := NewConnectorMetrics(tt.connectorType, tt.sessionID, fakeConnectionTracker{})
 			assert.NotNil(t, m)
 			assert.Equal(t, tt.connectorType, m.connectorType)
 			assert.Equal(t, tt.sessionID, m.sessionID)
@@ -49,8 +53,14 @@ func TestNewConnectorMetrics(t *testing.T) {
 	}
 }
 
+func TestNewConnectorMetrics_NilTrackerUsesNoop(t *testing.T) {
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", nil)
+	assert.NotNil(t, m.tracker)
+	assert.IsType(t, noopConnectionTracker{}, m.tracker)
+}
+
 func TestConnectorMetrics_StartTracking(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 
 	// Set some values first
 	m.maxQueuePosition = 5
@@ -89,7 +99,7 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+			m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 			m.RecordQueueStatus(tt.queuePosition, tt.reason)
 
 			assert.Equal(t, tt.expectedMaxQueuePosition, m.maxQueuePosition)
@@ -99,7 +109,7 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 }
 
 func TestConnectorMetrics_RecordQueueStatus_MaxValues(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 
 	// First call with position 3
 	m.RecordQueueStatus(3, "QUEUE_POSITION")
@@ -117,7 +127,7 @@ func TestConnectorMetrics_RecordQueueStatus_MaxValues(t *testing.T) {
 }
 
 func TestConnectorMetrics_SetErrReason(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 
 	assert.Equal(t, "", m.errReason)
 	m.SetErrReason("QueueTimeout")

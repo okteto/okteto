@@ -57,7 +57,7 @@ type InClusterConnector struct {
 }
 
 // NewInClusterConnector creates a new in-cluster connector that connects to buildkit via pod IP.
-func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInterface, ioCtrl *io.Controller) (*InClusterConnector, error) {
+func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInterface, ioCtrl *io.Controller, tracker BuildkitConnectionTracker) (*InClusterConnector, error) {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, fmt.Errorf("could not create okteto client: %w", err)
@@ -74,7 +74,7 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 		ioCtrl:       ioCtrl,
 		maxWaitTime:  maxWaitTime,
 		waiter:       waiter,
-		metrics:      NewConnectorMetrics(analytics.ConnectorTypeInCluster, sessionID),
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypeInCluster, sessionID, tracker),
 	}
 
 	// Verify that the buildkit pod endpoint is available (like PortForwarder)

@@ -64,6 +64,7 @@ type Command struct {
 
 type buildTrackerInterface interface {
 	TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata)
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
 }
 
 type registryInterface interface {
@@ -83,7 +84,7 @@ type registryInterface interface {
 func NewBuildCommand(ioCtrl *io.Controller, analyticsTracker, insights buildTrackerInterface, okCtx *okteto.ContextStateless, k8slogger *io.K8sLogger) *Command {
 	return &Command{
 		GetManifest:      model.GetManifestV2,
-		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs(), ioCtrl, buildCmd.GetBuildkitConnector(okCtx, ioCtrl)),
+		Builder:          buildCmd.NewOktetoBuilder(okCtx, afero.NewOsFs(), ioCtrl, buildCmd.GetBuildkitConnector(okCtx, ioCtrl, analyticsTracker)),
 		Registry:         registry.NewOktetoRegistry(buildCmd.GetRegistryConfigFromOktetoConfig(okCtx)),
 		ioCtrl:           ioCtrl,
 		k8slogger:        k8slogger,

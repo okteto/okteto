@@ -190,8 +190,9 @@ func TestBuildNecessaryImages(t *testing.T) {
 
 type fakeAnalyticsTracker struct{}
 
-func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
-func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)                         {}
+func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)   {}
+func (fakeAnalyticsTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata)     {}
+func (fakeAnalyticsTracker) TrackDestroy(analytics.DestroyMetadata)                           {}
 
 func Test_newBuildCtrl(t *testing.T) {
 	got := newBuildCtrl("test-control", &fakeAnalyticsTracker{}, &fakeAnalyticsTracker{}, io.NewIOController())

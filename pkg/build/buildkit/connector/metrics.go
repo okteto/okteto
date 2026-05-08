@@ -20,12 +20,21 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 )
 
+// BuildkitConnectionTracker is the analytics interface required by ConnectorMetrics.
+type BuildkitConnectionTracker interface {
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
+}
+
+type noopConnectionTracker struct{}
+
+func (noopConnectionTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata) {}
+
 // ConnectorMetrics collects metrics for BuildKit connector analytics.
 // It is designed to be embedded or composed into any connector type.
 type ConnectorMetrics struct {
 	sessionID         string
 	connectorType     analytics.ConnectorType
-	tracker           *analytics.Tracker
+	tracker           BuildkitConnectionTracker
 	mu                sync.Mutex
 	StartTime         time.Time // Exported for use by connectors
 	queueWaitDuration time.Duration
@@ -34,12 +43,16 @@ type ConnectorMetrics struct {
 	errReason         string
 }
 
-// NewConnectorMetrics creates a new ConnectorMetrics for the given connector type and session ID
-func NewConnectorMetrics(connectorType analytics.ConnectorType, sessionID string) *ConnectorMetrics {
+// NewConnectorMetrics creates a new ConnectorMetrics for the given connector type and session ID.
+// If tracker is nil, a no-op tracker is used.
+func NewConnectorMetrics(connectorType analytics.ConnectorType, sessionID string, tracker BuildkitConnectionTracker) *ConnectorMetrics {
+	if tracker == nil {
+		tracker = noopConnectionTracker{}
+	}
 	return &ConnectorMetrics{
 		sessionID:     sessionID,
 		connectorType: connectorType,
-		tracker:       analytics.NewAnalyticsTracker(),
+		tracker:       tracker,
 	}
 }
 
