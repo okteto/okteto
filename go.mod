@@ -119,7 +119,7 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
@@ -170,6 +170,7 @@ require (
 	github.com/heimdalr/dag v1.4.0
 	github.com/kubeark/jsonschema v0.1.2
 	github.com/moby/patternmatcher v0.6.1
+	github.com/posthog/posthog-go v1.11.1
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/vbauerster/mpb/v7 v7.5.3
@@ -227,7 +228,6 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nwaples/rardecode/v2 v2.2.0 // indirect
-	github.com/posthog/posthog-go v1.11.1 // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
 	github.com/therootcompany/xz v1.0.1 // indirect
