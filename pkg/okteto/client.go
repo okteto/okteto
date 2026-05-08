@@ -316,8 +316,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Cli
 	}
 	c.namespace = newNamespaceClient(c.client)
 	c.preview = newPreviewClient(c.client)
-	baseURL := strings.TrimSuffix(url, "/graphql")
-	c.user = newUserClient(c.client, httpClient, baseURL)
+	c.user = newUserClient(c.client, httpClient, graphqlURLToBase(url))
 	c.pipeline = newPipelineClient(c.client, url)
 	c.stream = newStreamClient(httpClient)
 	c.kubetoken = newKubeTokenClient(httpClient)
@@ -328,6 +327,19 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Cli
 
 func parseOktetoURL(u string) (string, error) {
 	return parseOktetoURLWithPath(u, "graphql")
+}
+
+// graphqlURLToBase strips the /graphql path suffix to derive the REST base URL.
+// Uses url.Parse so only the path component is trimmed, not an arbitrary suffix.
+func graphqlURLToBase(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return strings.TrimSuffix(rawURL, "/graphql")
+	}
+	u.Path = strings.TrimSuffix(u.Path, "/graphql")
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String()
 }
 
 func parseOktetoURLWithPath(u, path string) (string, error) {
