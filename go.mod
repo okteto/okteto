@@ -19,7 +19,7 @@ require (
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.19.0
 	github.com/gliderlabs/ssh v0.3.8
-	github.com/go-git/go-git/v5 v5.16.5
+	github.com/go-git/go-git/v5 v5.19.0
 	github.com/google/go-containerregistry v0.14.0 // when updating need google.golang.org/grpc 1.29
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.6.0
@@ -39,10 +39,10 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/stern/stern v1.22.0
-	golang.org/x/crypto v0.49.0
+	golang.org/x/crypto v0.50.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/term v0.41.0
+	golang.org/x/term v0.42.0
 	google.golang.org/grpc v1.79.3
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -79,7 +79,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.6.2 // indirect
+	github.com/go-git/go-billy/v5 v5.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.21.2 // indirect
@@ -145,9 +145,9 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
-	golang.org/x/net v0.52.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/api v0.271.0 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
@@ -224,6 +224,7 @@ require (
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.72 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nwaples/rardecode/v2 v2.2.0 // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
@@ -255,7 +256,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/containerd/ttrpc v1.2.7 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -268,7 +269,7 @@ require (
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/signal v0.7.1 // indirect
-	github.com/pjbgf/sha1cd v0.3.2 // indirect
+	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samber/lo v1.38.1 // indirect
@@ -282,7 +283,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.56.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
-	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
 )
