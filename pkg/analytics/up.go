@@ -35,6 +35,8 @@ type UpMetricsMetadata struct {
 	manifestType   model.Archetype
 	mode           string
 	reconnectCause string
+	service        string
+	repoURL        string
 
 	activateDuration             time.Duration
 	initialSyncDuration          time.Duration
@@ -110,6 +112,7 @@ func (u *UpMetricsMetadata) DevProps(d *model.Dev) {
 	u.hasReverse = len(d.Reverse) > 0
 	u.mode = d.Mode
 	u.isInteractive = d.IsInteractive()
+	u.service = d.Name
 }
 
 // RepositoryProps adds the tracking properties of the repository
@@ -171,6 +174,11 @@ func (u *UpMetricsMetadata) CommandSuccess() {
 
 func (u *UpMetricsMetadata) HasRunDeploy() {
 	u.hasRunDeploy = true
+}
+
+// SetRepoURL records the git remote origin URL for the session.
+func (u *UpMetricsMetadata) SetRepoURL(url string) {
+	u.repoURL = url
 }
 
 func (u *UpMetricsMetadata) OktetoContextConfig(duration time.Duration) {

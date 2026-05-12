@@ -147,6 +147,18 @@ func Test_UpMetricsMetadata_DevProps(t *testing.T) {
 				isInteractive: true,
 			},
 		},
+		{
+			name: "dev with service name",
+			dev: &model.Dev{
+				Name: "api",
+				Mode: "sync",
+			},
+			expected: &UpMetricsMetadata{
+				service:       "api",
+				mode:          "sync",
+				isInteractive: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
