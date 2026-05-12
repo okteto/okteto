@@ -45,6 +45,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	modelutils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/process"
@@ -491,6 +492,11 @@ func (up *upContext) start() error {
 	up.analyticsMeta.ManifestProps(up.Manifest)
 	up.analyticsMeta.DevProps(up.Dev)
 	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
+	if repoURL, err := modelutils.GetRepositoryURL(up.Manifest.ManifestPath); err == nil {
+		up.analyticsMeta.SetRepoURL(repoURL)
+	} else {
+		oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
+	}
 
 	go up.activateLoop()
 
