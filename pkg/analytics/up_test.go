@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
@@ -625,5 +626,42 @@ func Test_UpTracker(t *testing.T) {
 			assert.Equal(t, tt.expected.props, eventMeta.props)
 		})
 
+	}
+}
+
+func TestAnalyticsTracker_TrackUp(t *testing.T) {
+	tests := []struct {
+		input           *UpMetricsMetadata
+		expectedSuccess bool
+		name            string
+	}{
+		{
+			name:            "success event dispatched to backend",
+			input:           &UpMetricsMetadata{success: true},
+			expectedSuccess: true,
+		},
+		{
+			name:            "failure event dispatched to backend",
+			input:           &UpMetricsMetadata{success: false},
+			expectedSuccess: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var capturedMeta *UpMetricsMetadata
+			mock := &mockAnalyticsBackend{
+				trackUpFn: func(m *UpMetricsMetadata) {
+					capturedMeta = m
+				},
+			}
+			tracker := &Tracker{
+				trackFn:  func(_ string, _ bool, _ map[string]interface{}) {},
+				backends: []analyticsBackend{mock},
+			}
+			tracker.TrackUp(tt.input)
+
+			require.NotNil(t, capturedMeta)
+			require.Equal(t, tt.expectedSuccess, capturedMeta.success)
+		})
 	}
 }
