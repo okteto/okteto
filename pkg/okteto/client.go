@@ -47,6 +47,7 @@ type Client struct {
 	kubetoken types.KubetokenInterface
 	endpoint  types.EndpointClientInterface
 	buildkit  types.BuildkitInterface
+	catalog   types.CatalogInterface
 }
 
 type ClientProvider struct{}
@@ -322,6 +323,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Cli
 	c.kubetoken = newKubeTokenClient(httpClient)
 	c.endpoint = newEndpointClient(c.client)
 	c.buildkit = newBuildkitClient(c.client)
+	c.catalog = newCatalogClient(c.client)
 	return c, nil
 }
 
@@ -498,6 +500,11 @@ func (c *Client) Endpoint() types.EndpointClientInterface {
 // Buildkit retrieves the Buildkit client
 func (c *Client) Buildkit() types.BuildkitInterface {
 	return c.buildkit
+}
+
+// Catalog retrieves the Catalog client
+func (c *Client) Catalog() types.CatalogInterface {
+	return c.catalog
 }
 
 func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {

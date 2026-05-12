@@ -27,6 +27,7 @@ import (
 
 	"github.com/okteto/okteto/cmd"
 	"github.com/okteto/okteto/cmd/build"
+	"github.com/okteto/okteto/cmd/catalog"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
@@ -179,6 +180,7 @@ func main() {
 	root.AddCommand(cmd.Validate(fs))
 
 	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(catalog.Catalog(ctx))
 
 	err = root.Execute()
 
