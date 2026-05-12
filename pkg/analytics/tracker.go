@@ -19,6 +19,7 @@ import "context"
 // Add a new method here when an event gains PostHog coverage.
 type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
+	TrackUp(meta *UpMetricsMetadata)
 }
 
 // groupsIdentifier is implemented by backends that support PostHog group analytics.

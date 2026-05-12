@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/posthog/posthog-go"
 	"github.com/stretchr/testify/require"
@@ -249,4 +250,68 @@ func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
 	require.Equal(t, "customer", customerMsg.Type)
 	require.Equal(t, "ACME Corp", customerMsg.Key)
 	require.Equal(t, "ACME Corp", customerMsg.Properties["customer_id"])
+}
+
+func TestPostHogBackend_TrackUp_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	b.TrackUp(&UpMetricsMetadata{success: true}) // must not panic
+}
+
+func TestPostHogBackend_TrackUp_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackUp(&UpMetricsMetadata{success: true})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+
+	b.TrackUp(&UpMetricsMetadata{
+		success:       true,
+		manifestType:  model.OktetoManifestType,
+		isInteractive: true,
+		hasRunDeploy:  true,
+		service:       "api",
+		repoURL:       "https://github.com/org/repo",
+		execDuration:  90 * time.Second,
+	})
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogUpEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, true, ev.Properties["result"])
+	require.Equal(t, "manifest", ev.Properties["manifest_type"])
+	require.Equal(t, true, ev.Properties["is_interactive"])
+	require.Equal(t, true, ev.Properties["is_deploy_executed"])
+	require.Equal(t, "api", ev.Properties["service"])
+	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
+	require.Equal(t, 90, ev.Properties["duration_seconds"])
+	require.NotContains(t, ev.Properties, "error_reason")
+	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
+	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "ACME Corp", ev.Groups["customer"])
+	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
+}
+
+func TestPostHogBackend_TrackUp_FailureIncludesErrorReason(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackUp(&UpMetricsMetadata{success: false, failActivate: true})
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "fail_activate", mock.captured[0].Properties["error_reason"])
 }

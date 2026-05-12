@@ -257,7 +257,11 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 	return props
 }
 
-// TrackUp sends a tracking event to mixpanel when the user activates a development container
+// TrackUp sends a tracking event when the user activates a development container.
+// Mixpanel receives the event via trackFn; PostHog via the backends slice.
 func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 	a.trackFn(upEvent, m.success, m.toProps())
+	for _, b := range a.backends {
+		b.TrackUp(m)
+	}
 }

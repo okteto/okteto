@@ -34,6 +34,7 @@ const (
 	posthogEndpoint = "https://ph.okteto.com"
 
 	posthogImageBuildEvent = "image_build"
+	posthogUpEvent         = "up"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -176,6 +177,26 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 	if err := b.client.Enqueue(posthog.Capture{
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogImageBuildEvent,
+		Properties: props,
+		Groups:     commonPostHogGroups(),
+	}); err != nil {
+		oktetoLog.Infof("failed to send posthog analytics: %s", err)
+	}
+}
+
+// TrackUp sends an up event to PostHog.
+func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	if err := b.client.Enqueue(posthog.Capture{
+		DistinctId: okteto.GetContext().UserID,
+		Event:      posthogUpEvent,
 		Properties: props,
 		Groups:     commonPostHogGroups(),
 	}); err != nil {

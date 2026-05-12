@@ -30,3 +30,5 @@ func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageB
 		m.trackImageBuildFn(ctx, meta)
 	}
 }
+
+func (m *mockAnalyticsBackend) TrackUp(_ *UpMetricsMetadata) {}
