@@ -205,6 +205,58 @@ func (u *UpMetricsMetadata) IsAutoDownEnabled(enabled bool) {
 	u.isAutoDownEnabled = enabled
 }
 
+func (u *UpMetricsMetadata) errorReason() string {
+	switch {
+	case u.failActivate:
+		return "fail_activate"
+	case u.errSyncInsufficientSpace:
+		return "err_sync_insufficient_space"
+	case u.errSyncResetDatabase:
+		return "err_sync_reset_database"
+	case u.errSyncLostSyncthing:
+		return "err_sync_lost_syncthing"
+	case u.errSync:
+		return "err_sync"
+	default:
+		return ""
+	}
+}
+
+func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
+	props := map[string]any{
+		"result":             u.success,
+		"manifest_type":      string(u.manifestType),
+		"is_interactive":     u.isInteractive,
+		"is_deploy_executed": u.hasRunDeploy,
+		"is_reconnect":       u.isReconnect,
+		"is_auto_down":       u.isAutoDownEnabled,
+	}
+	if u.service != "" {
+		props["service"] = u.service
+	}
+	if u.repoURL != "" {
+		props["repo_url"] = u.repoURL
+	}
+	if d := int(u.execDuration.Seconds()); d > 0 {
+		props["duration_seconds"] = d
+	}
+	if d := int(u.initialSyncDuration.Seconds()); d > 0 {
+		props["initial_sync_duration_seconds"] = d
+	}
+	if d := int(u.devContainerCreationDuration.Seconds()); d > 0 {
+		props["dev_container_creation_seconds"] = d
+	}
+	if u.isReconnect && u.reconnectCause != "" {
+		props["reconnect_cause"] = u.reconnectCause
+	}
+	if !u.success {
+		if reason := u.errorReason(); reason != "" {
+			props["error_reason"] = reason
+		}
+	}
+	return props
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
 func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 	a.trackFn(upEvent, m.success, m.toProps())

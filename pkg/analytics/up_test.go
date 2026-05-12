@@ -240,6 +240,142 @@ func Test_UpMetricsMetadata_CommandSuccess(t *testing.T) {
 	}, m)
 }
 
+func Test_UpMetricsMetadata_ErrorReason(t *testing.T) {
+	tests := []struct {
+		name     string
+		meta     UpMetricsMetadata
+		expected string
+	}{
+		{name: "no error", meta: UpMetricsMetadata{}, expected: ""},
+		{
+			name:     "fail_activate takes precedence over errSync",
+			meta:     UpMetricsMetadata{failActivate: true, errSync: true},
+			expected: "fail_activate",
+		},
+		{
+			name:     "insufficient space",
+			meta:     UpMetricsMetadata{errSyncInsufficientSpace: true},
+			expected: "err_sync_insufficient_space",
+		},
+		{
+			name:     "reset database",
+			meta:     UpMetricsMetadata{errSyncResetDatabase: true},
+			expected: "err_sync_reset_database",
+		},
+		{
+			name:     "lost syncthing",
+			meta:     UpMetricsMetadata{errSyncLostSyncthing: true},
+			expected: "err_sync_lost_syncthing",
+		},
+		{
+			name:     "generic sync error",
+			meta:     UpMetricsMetadata{errSync: true},
+			expected: "err_sync",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.meta.errorReason())
+		})
+	}
+}
+
+func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
+	tests := []struct {
+		name     string
+		meta     UpMetricsMetadata
+		expected map[string]any
+	}{
+		{
+			name: "minimal — service and repo_url absent when empty",
+			meta: UpMetricsMetadata{success: true},
+			expected: map[string]any{
+				"result": true, "manifest_type": "", "is_interactive": false,
+				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
+			},
+		},
+		{
+			name: "service and repo_url present when set",
+			meta: UpMetricsMetadata{success: true, service: "api", repoURL: "https://github.com/org/repo"},
+			expected: map[string]any{
+				"result": true, "manifest_type": "", "is_interactive": false,
+				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
+				"service": "api", "repo_url": "https://github.com/org/repo",
+			},
+		},
+		{
+			name: "failure includes error_reason",
+			meta: UpMetricsMetadata{success: false, failActivate: true},
+			expected: map[string]any{
+				"result": false, "manifest_type": "", "is_interactive": false,
+				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
+				"error_reason": "fail_activate",
+			},
+		},
+		{
+			name: "error_reason absent on success even if flags set",
+			meta: UpMetricsMetadata{success: true, failActivate: true},
+			expected: map[string]any{
+				"result": true, "manifest_type": "", "is_interactive": false,
+				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
+			},
+		},
+		{
+			name: "reconnect_cause only when is_reconnect",
+			meta: UpMetricsMetadata{
+				success:        true,
+				isReconnect:    true,
+				reconnectCause: reconnectCauseDevPodRecreated,
+			},
+			expected: map[string]any{
+				"result": true, "manifest_type": "", "is_interactive": false,
+				"is_deploy_executed": false, "is_reconnect": true, "is_auto_down": false,
+				"reconnect_cause": "dev-pod-recreated",
+			},
+		},
+		{
+			name: "durations included only when non-zero",
+			meta: UpMetricsMetadata{
+				success:                      true,
+				execDuration:                 60 * time.Second,
+				initialSyncDuration:          10 * time.Second,
+				devContainerCreationDuration: 5 * time.Second,
+			},
+			expected: map[string]any{
+				"result": true, "manifest_type": "", "is_interactive": false,
+				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
+				"duration_seconds":               60,
+				"initial_sync_duration_seconds":  10,
+				"dev_container_creation_seconds": 5,
+			},
+		},
+		{
+			name: "all flags",
+			meta: UpMetricsMetadata{
+				success:           true,
+				manifestType:      model.OktetoManifestType,
+				isInteractive:     true,
+				hasRunDeploy:      true,
+				isReconnect:       true,
+				reconnectCause:    reconnectCauseDefault,
+				isAutoDownEnabled: true,
+				service:           "api",
+			},
+			expected: map[string]any{
+				"result": true, "manifest_type": "manifest", "is_interactive": true,
+				"is_deploy_executed": true, "is_reconnect": true, "is_auto_down": true,
+				"reconnect_cause": "unrecognised",
+				"service":         "api",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.meta.toPostHogProps())
+		})
+	}
+}
+
 func Test_UpTracker(t *testing.T) {
 	tests := []struct {
 		expected mockEvent
