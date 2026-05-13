@@ -332,7 +332,7 @@ func (c *userClient) GetClusterInfo(ctx context.Context) (*types.ClusterInfo, er
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			oktetoLog.Info("could not close the body: %s", err)
+			oktetoLog.Infof("could not close the body: %s", err)
 		}
 	}()
 
