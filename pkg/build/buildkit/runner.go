@@ -126,9 +126,11 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 
 	defer r.connector.Stop()
 
+	waitStart := time.Now()
 	if err := r.connector.WaitUntilIsReady(ctx); err != nil {
 		return err
 	}
+	waitForBuildkitAvailable := time.Since(waitStart)
 
 	secretMgr, err := newSecretManager(r.fs)
 	if err != nil {
@@ -182,10 +184,12 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		}
 
 		// if buildkit is not available for 10 minutes, we should fail
+		waitStart = time.Now()
 		if err := r.connector.WaitUntilIsReady(ctx); err != nil {
 			r.logger.Logger().Infof("failed to wait for BuildKit service to be available: %s", err)
 			return err
 		}
+		waitForBuildkitAvailable = time.Since(waitStart)
 
 		client, err := r.connector.GetBuildkitClient(ctx)
 		if err != nil {
@@ -197,7 +201,7 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		}
 
 		startSolverTime := time.Now()
-		r.metadata.build = &BuildMetadata{}
+		r.metadata.build = &BuildMetadata{WaitForBuildkitAvailableTime: waitForBuildkitAvailable}
 		err = r.solveBuild(ctx, client, opt, outputMode, r.logger, r.metadata.build)
 		solveTime = time.Since(startSolverTime)
 		r.metadata.build.BuildkitDuration = solveTime
