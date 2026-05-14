@@ -75,8 +75,9 @@ func setupPostHogContext(t *testing.T, analyticsEnabled bool) func() {
 
 func TestPostHogBackend_TrackImageBuild_NilClient(t *testing.T) {
 	b := &posthogBackend{client: nil}
-	// Must not panic — nil client is silently ignored
-	b.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: true})
+	require.NotPanics(t, func() {
+		b.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: true})
+	})
 }
 
 func TestPostHogBackend_TrackImageBuild_AnalyticsDisabled(t *testing.T) {
@@ -254,7 +255,9 @@ func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
 
 func TestPostHogBackend_TrackUp_NilClient(t *testing.T) {
 	b := &posthogBackend{client: nil}
-	b.TrackUp(&UpMetricsMetadata{success: true}) // must not panic
+	require.NotPanics(t, func() {
+		b.TrackUp(&UpMetricsMetadata{success: true})
+	})
 }
 
 func TestPostHogBackend_TrackUp_AnalyticsDisabled(t *testing.T) {
