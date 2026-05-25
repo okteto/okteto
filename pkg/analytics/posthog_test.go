@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/posthog/posthog-go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -386,4 +387,74 @@ func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 	require.NotContains(t, ev.Properties, "service")
 	require.NotContains(t, ev.Properties, "namespace")
 	require.NotContains(t, ev.Properties, "repo_url")
+}
+
+func TestPostHogBackend_TrackDeploy_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackDeploy(DeployMetadata{Success: true})
+	})
+}
+
+func TestPostHogBackend_TrackDeploy_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: true})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackDeploy_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+
+	b.TrackDeploy(DeployMetadata{
+		Success:                true,
+		PipelineType:           model.OktetoManifestType,
+		Namespace:              "dev-ns",
+		Duration:               45 * time.Second,
+		IsPreview:              false,
+		IsRedeploy:             true,
+		HasDependenciesSection: true,
+		HasBuildSection:        true,
+		IsRemote:               false,
+		WaitForDependencies:    true,
+	})
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogDeployCompletedEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, true, ev.Properties["result"])
+	require.Equal(t, "manifest", ev.Properties["deploy_type"])
+	require.Equal(t, "dev-ns", ev.Properties["namespace"])
+	require.Equal(t, 45, ev.Properties["duration_seconds"])
+	require.Equal(t, false, ev.Properties["is_preview"])
+	require.Equal(t, true, ev.Properties["is_redeploy"])
+	require.Equal(t, true, ev.Properties["has_dependencies_section"])
+	require.Equal(t, true, ev.Properties["has_build_section"])
+	require.Equal(t, false, ev.Properties["is_remote"])
+	require.Equal(t, true, ev.Properties["wait_for_dependencies"])
+	require.NotContains(t, ev.Properties, "error_reason")
+	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
+	require.Equal(t, "ACME Corp", ev.Groups["customer"])
+}
+
+func TestPostHogBackend_TrackDeploy_FailureIncludesErrorReason(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: false, Err: assert.AnError})
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, assert.AnError.Error(), mock.captured[0].Properties["error_reason"])
 }

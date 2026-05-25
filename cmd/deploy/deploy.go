@@ -281,9 +281,11 @@ $ okteto deploy --no-build=true`,
 				if options.Namespace == "" {
 					options.Namespace = okteto.GetContext().Namespace
 				}
+				k8sClient, _, provideErr := c.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, c.K8sLogger)
+				isRedeploy := provideErr == nil && pipeline.IsDeployed(ctx, options.Name, options.Namespace, k8sClient)
 				err := c.Run(ctx, options)
 				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
-				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
+				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace, isRedeploy, options.Wait)
 				exit <- err
 			}()
 
@@ -785,7 +787,7 @@ func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	return nil
 }
 
-func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
+func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string, isRedeploy bool, waitForDeps bool) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false
@@ -808,15 +810,19 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
 		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
+		Err:                    err,
 		Success:                err == nil,
 		IsOktetoRepo:           utils.IsOktetoRepo(),
 		Duration:               time.Since(startTime),
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
 		IsPreview:              isPreview,
+		IsRedeploy:             isRedeploy,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
+		Namespace:              namespace,
+		WaitForDependencies:    waitForDeps,
 	})
 }
 

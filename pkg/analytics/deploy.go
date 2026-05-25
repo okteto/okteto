@@ -19,20 +19,55 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const deployEvent = "Deploy"
+const (
+	deployEvent                = "Deploy"
+	posthogDeployCompletedEvent = "deploy_completed"
+)
 
 // DeployMetadata contains the metadata of a deploy event
 type DeployMetadata struct {
 	Err                    error
 	PipelineType           model.Archetype
 	DeployType             string
+	Namespace              string
 	Duration               time.Duration
 	Success                bool
 	IsOktetoRepo           bool
 	IsPreview              bool
+	IsRedeploy             bool
 	HasDependenciesSection bool
 	HasBuildSection        bool
 	IsRemote               bool
+	WaitForDependencies    bool
+}
+
+func (d *DeployMetadata) toPostHogProps() map[string]any {
+	deployType := string(d.PipelineType)
+	if deployType == "" {
+		deployType = "pipeline"
+	}
+	props := map[string]any{
+		"result":                   d.Success,
+		"deploy_type":              deployType,
+		"is_preview":               d.IsPreview,
+		"is_redeploy":              d.IsRedeploy,
+		"has_dependencies_section": d.HasDependenciesSection,
+		"has_build_section":        d.HasBuildSection,
+		"is_remote":                d.IsRemote,
+	}
+	if d.Namespace != "" {
+		props["namespace"] = d.Namespace
+	}
+	if d.WaitForDependencies {
+		props["wait_for_dependencies"] = true
+	}
+	if secs := int(d.Duration.Seconds()); secs > 0 {
+		props["duration_seconds"] = secs
+	}
+	if !d.Success && d.Err != nil {
+		props["error_reason"] = d.Err.Error()
+	}
+	return props
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys from command okteto deploy
@@ -54,4 +89,7 @@ func (a *Tracker) TrackDeploy(metadata DeployMetadata) {
 		props["error"] = metadata.Err.Error()
 	}
 	a.trackFn(deployEvent, metadata.Success, props)
+	for _, b := range a.backends {
+		b.TrackDeploy(metadata)
+	}
 }
