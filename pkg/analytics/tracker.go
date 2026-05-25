@@ -20,6 +20,7 @@ import "context"
 type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
 	TrackUp(meta *UpMetricsMetadata)
+	TrackUpStarted(service, namespace string)
 }
 
 // groupsIdentifier is implemented by backends that support PostHog group analytics.

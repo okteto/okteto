@@ -33,8 +33,9 @@ const (
 	// posthogEndpoint is the Okteto-owned reverse proxy for PostHog.
 	posthogEndpoint = "https://ph.okteto.com"
 
-	posthogImageBuildEvent = "image_build"
-	posthogUpEvent         = "up"
+	posthogImageBuildEvent  = "image_build"
+	posthogUpEvent          = "up"
+	posthogUpStartedEvent   = "okteto_up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -197,6 +198,31 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	if err := b.client.Enqueue(posthog.Capture{
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogUpEvent,
+		Properties: props,
+		Groups:     commonPostHogGroups(),
+	}); err != nil {
+		oktetoLog.Infof("failed to send posthog analytics: %s", err)
+	}
+}
+
+// TrackUpStarted sends an okteto_up_started event to PostHog at the beginning of the up command.
+func (b *posthogBackend) TrackUpStarted(service, namespace string) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	props := commonPostHogProperties()
+	if service != "" {
+		props["service"] = service
+	}
+	if namespace != "" {
+		props["namespace"] = namespace
+	}
+	if err := b.client.Enqueue(posthog.Capture{
+		DistinctId: okteto.GetContext().UserID,
+		Event:      posthogUpStartedEvent,
 		Properties: props,
 		Groups:     commonPostHogGroups(),
 	}); err != nil {

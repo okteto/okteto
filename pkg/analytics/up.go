@@ -36,6 +36,7 @@ type UpMetricsMetadata struct {
 	mode           string
 	reconnectCause string
 	service        string
+	namespace      string
 	repoURL        string
 
 	activateDuration             time.Duration
@@ -46,6 +47,8 @@ type UpMetricsMetadata struct {
 	localFoldersScanDuration     time.Duration
 	execDuration                 time.Duration
 
+	reconnectCount int
+
 	isInteractive            bool
 	isOktetoRepository       bool
 	hasDependenciesSection   bool
@@ -55,6 +58,7 @@ type UpMetricsMetadata struct {
 	isHybridDev              bool
 	failActivate             bool
 	isReconnect              bool
+	isBuildExecuted          bool
 	errSync                  bool
 	errSyncResetDatabase     bool
 	errSyncInsufficientSpace bool
@@ -139,12 +143,14 @@ func (u *UpMetricsMetadata) InitialSyncDuration(duration time.Duration) {
 func (u *UpMetricsMetadata) ReconnectDefault() {
 	u.isReconnect = true
 	u.reconnectCause = reconnectCauseDefault
+	u.reconnectCount++
 }
 
 // ReconnectDevPodRecreated sets to true the property isReconnect and adds the cause "dev-pod-recreated"
 func (u *UpMetricsMetadata) ReconnectDevPodRecreated() {
 	u.isReconnect = true
 	u.reconnectCause = reconnectCauseDevPodRecreated
+	u.reconnectCount++
 }
 
 // ErrSync sets to true the property errSync
@@ -176,9 +182,18 @@ func (u *UpMetricsMetadata) HasRunDeploy() {
 	u.hasRunDeploy = true
 }
 
+func (u *UpMetricsMetadata) HasRunBuild() {
+	u.isBuildExecuted = true
+}
+
 // SetRepoURL records the git remote origin URL for the session.
 func (u *UpMetricsMetadata) SetRepoURL(url string) {
 	u.repoURL = url
+}
+
+// SetNamespace records the namespace for the session.
+func (u *UpMetricsMetadata) SetNamespace(namespace string) {
+	u.namespace = namespace
 }
 
 func (u *UpMetricsMetadata) OktetoContextConfig(duration time.Duration) {
@@ -227,12 +242,19 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 		"result":             u.success,
 		"manifest_type":      string(u.manifestType),
 		"is_interactive":     u.isInteractive,
+		"is_build_executed":  u.isBuildExecuted,
 		"is_deploy_executed": u.hasRunDeploy,
+		"has_build_section":  u.hasBuildSection,
+		"has_deploy_section": u.hasDeploySection,
 		"is_reconnect":       u.isReconnect,
+		"reconnect_count":    u.reconnectCount,
 		"is_auto_down":       u.isAutoDownEnabled,
 	}
 	if u.service != "" {
 		props["service"] = u.service
+	}
+	if u.namespace != "" {
+		props["namespace"] = u.namespace
 	}
 	if u.repoURL != "" {
 		props["repo_url"] = u.repoURL
@@ -244,7 +266,7 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 		props["initial_sync_duration_seconds"] = d
 	}
 	if d := int(u.devContainerCreationDuration.Seconds()); d > 0 {
-		props["dev_container_creation_seconds"] = d
+		props["dev_container_creation_duration_seconds"] = d
 	}
 	if u.isReconnect && u.reconnectCause != "" {
 		props["reconnect_cause"] = u.reconnectCause
@@ -263,5 +285,12 @@ func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 	a.trackFn(upEvent, m.success, m.toProps())
 	for _, b := range a.backends {
 		b.TrackUp(m)
+	}
+}
+
+// TrackUpStarted fires the okteto_up_started event at the beginning of the up command.
+func (a *Tracker) TrackUpStarted(service, namespace string) {
+	for _, b := range a.backends {
+		b.TrackUpStarted(service, namespace)
 	}
 }

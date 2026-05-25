@@ -24,6 +24,7 @@ type mockEvent struct {
 type mockAnalyticsBackend struct {
 	trackImageBuildFn func(ctx context.Context, meta *ImageBuildMetadata)
 	trackUpFn         func(meta *UpMetricsMetadata)
+	trackUpStartedFn  func(service, namespace string)
 }
 
 func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata) {
@@ -35,5 +36,11 @@ func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageB
 func (m *mockAnalyticsBackend) TrackUp(meta *UpMetricsMetadata) {
 	if m.trackUpFn != nil {
 		m.trackUpFn(meta)
+	}
+}
+
+func (m *mockAnalyticsBackend) TrackUpStarted(service, namespace string) {
+	if m.trackUpStartedFn != nil {
+		m.trackUpStartedFn(service, namespace)
 	}
 }

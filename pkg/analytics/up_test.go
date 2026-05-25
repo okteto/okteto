@@ -209,6 +209,18 @@ func Test_UpMetricsMetadata_ReconnectDefault(t *testing.T) {
 	assert.Equal(t, &UpMetricsMetadata{
 		isReconnect:    true,
 		reconnectCause: "unrecognised",
+		reconnectCount: 1,
+	}, m)
+}
+
+func Test_UpMetricsMetadata_ReconnectDefault_MultipleReconnects(t *testing.T) {
+	m := &UpMetricsMetadata{}
+	m.ReconnectDefault()
+	m.ReconnectDevPodRecreated()
+	assert.Equal(t, &UpMetricsMetadata{
+		isReconnect:    true,
+		reconnectCause: "dev-pod-recreated",
+		reconnectCount: 2,
 	}, m)
 }
 
@@ -218,6 +230,7 @@ func Test_UpMetricsMetadata_ReconnectDevPodRecreated(t *testing.T) {
 	assert.Equal(t, &UpMetricsMetadata{
 		isReconnect:    true,
 		reconnectCause: "dev-pod-recreated",
+		reconnectCount: 1,
 	}, m)
 }
 
@@ -282,57 +295,69 @@ func Test_UpMetricsMetadata_ErrorReason(t *testing.T) {
 }
 
 func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
+	baseProps := func(overrides map[string]any) map[string]any {
+		base := map[string]any{
+			"result":             false,
+			"manifest_type":      "",
+			"is_interactive":     false,
+			"is_build_executed":  false,
+			"is_deploy_executed": false,
+			"has_build_section":  false,
+			"has_deploy_section": false,
+			"is_reconnect":       false,
+			"reconnect_count":    0,
+			"is_auto_down":       false,
+		}
+		for k, v := range overrides {
+			base[k] = v
+		}
+		return base
+	}
+
 	tests := []struct {
 		name     string
 		meta     UpMetricsMetadata
 		expected map[string]any
 	}{
 		{
-			name: "minimal — service and repo_url absent when empty",
-			meta: UpMetricsMetadata{success: true},
-			expected: map[string]any{
-				"result": true, "manifest_type": "", "is_interactive": false,
-				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
-			},
+			name:     "minimal — service, namespace and repo_url absent when empty",
+			meta:     UpMetricsMetadata{success: true},
+			expected: baseProps(map[string]any{"result": true}),
 		},
 		{
-			name: "service and repo_url present when set",
-			meta: UpMetricsMetadata{success: true, service: "api", repoURL: "https://github.com/org/repo"},
-			expected: map[string]any{
-				"result": true, "manifest_type": "", "is_interactive": false,
-				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
-				"service": "api", "repo_url": "https://github.com/org/repo",
-			},
+			name: "service, namespace and repo_url present when set",
+			meta: UpMetricsMetadata{success: true, service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
+			expected: baseProps(map[string]any{
+				"result":    true,
+				"service":   "api",
+				"namespace": "dev-ns",
+				"repo_url":  "https://github.com/org/repo",
+			}),
 		},
 		{
-			name: "failure includes error_reason",
-			meta: UpMetricsMetadata{success: false, failActivate: true},
-			expected: map[string]any{
-				"result": false, "manifest_type": "", "is_interactive": false,
-				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
-				"error_reason": "fail_activate",
-			},
+			name:     "failure includes error_reason",
+			meta:     UpMetricsMetadata{success: false, failActivate: true},
+			expected: baseProps(map[string]any{"error_reason": "fail_activate"}),
 		},
 		{
-			name: "error_reason absent on success even if flags set",
-			meta: UpMetricsMetadata{success: true, failActivate: true},
-			expected: map[string]any{
-				"result": true, "manifest_type": "", "is_interactive": false,
-				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
-			},
+			name:     "error_reason absent on success even if flags set",
+			meta:     UpMetricsMetadata{success: true, failActivate: true},
+			expected: baseProps(map[string]any{"result": true}),
 		},
 		{
 			name: "reconnect_cause only when is_reconnect",
 			meta: UpMetricsMetadata{
 				success:        true,
 				isReconnect:    true,
+				reconnectCount: 1,
 				reconnectCause: reconnectCauseDevPodRecreated,
 			},
-			expected: map[string]any{
-				"result": true, "manifest_type": "", "is_interactive": false,
-				"is_deploy_executed": false, "is_reconnect": true, "is_auto_down": false,
+			expected: baseProps(map[string]any{
+				"result":          true,
+				"is_reconnect":    true,
+				"reconnect_count": 1,
 				"reconnect_cause": "dev-pod-recreated",
-			},
+			}),
 		},
 		{
 			name: "durations included only when non-zero",
@@ -342,13 +367,27 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 				initialSyncDuration:          10 * time.Second,
 				devContainerCreationDuration: 5 * time.Second,
 			},
-			expected: map[string]any{
-				"result": true, "manifest_type": "", "is_interactive": false,
-				"is_deploy_executed": false, "is_reconnect": false, "is_auto_down": false,
-				"duration_seconds":               60,
-				"initial_sync_duration_seconds":  10,
-				"dev_container_creation_seconds": 5,
+			expected: baseProps(map[string]any{
+				"result":                                true,
+				"duration_seconds":                      60,
+				"initial_sync_duration_seconds":         10,
+				"dev_container_creation_duration_seconds": 5,
+			}),
+		},
+		{
+			name: "is_build_executed and has_build/deploy_section flags",
+			meta: UpMetricsMetadata{
+				success:         true,
+				isBuildExecuted: true,
+				hasBuildSection: true,
+				hasDeploySection: true,
 			},
+			expected: baseProps(map[string]any{
+				"result":             true,
+				"is_build_executed":  true,
+				"has_build_section":  true,
+				"has_deploy_section": true,
+			}),
 		},
 		{
 			name: "all flags",
@@ -356,18 +395,32 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 				success:           true,
 				manifestType:      model.OktetoManifestType,
 				isInteractive:     true,
+				isBuildExecuted:   true,
 				hasRunDeploy:      true,
+				hasBuildSection:   true,
+				hasDeploySection:  true,
 				isReconnect:       true,
+				reconnectCount:    2,
 				reconnectCause:    reconnectCauseDefault,
 				isAutoDownEnabled: true,
 				service:           "api",
+				namespace:         "my-ns",
 			},
-			expected: map[string]any{
-				"result": true, "manifest_type": "manifest", "is_interactive": true,
-				"is_deploy_executed": true, "is_reconnect": true, "is_auto_down": true,
-				"reconnect_cause": "unrecognised",
-				"service":         "api",
-			},
+			expected: baseProps(map[string]any{
+				"result":             true,
+				"manifest_type":      "manifest",
+				"is_interactive":     true,
+				"is_build_executed":  true,
+				"is_deploy_executed": true,
+				"has_build_section":  true,
+				"has_deploy_section": true,
+				"is_reconnect":       true,
+				"reconnect_count":    2,
+				"is_auto_down":       true,
+				"reconnect_cause":    "unrecognised",
+				"service":            "api",
+				"namespace":          "my-ns",
+			}),
 		},
 	}
 	for _, tt := range tests {
