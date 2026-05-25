@@ -493,12 +493,12 @@ func (up *upContext) start() error {
 	up.analyticsMeta.DevProps(up.Dev)
 	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
 	up.analyticsMeta.SetNamespace(up.Namespace)
-	if repoURL, err := modelutils.GetRepositoryURL(up.Manifest.ManifestPath); err == nil {
-		up.analyticsMeta.SetRepoURL(repoURL)
-	} else {
+	repoURL, err := modelutils.GetRepositoryURL(up.Manifest.ManifestPath)
+	if err != nil {
 		oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
 	}
-	up.analyticsTracker.TrackUpStarted(up.Dev.Name, up.Namespace)
+	up.analyticsMeta.SetRepoURL(repoURL)
+	up.analyticsTracker.TrackUpStarted(up.Dev.Name, up.Namespace, repoURL)
 
 	go up.activateLoop()
 

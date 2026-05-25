@@ -336,7 +336,7 @@ func TestPostHogBackend_TrackUp_FailureIncludesErrorReason(t *testing.T) {
 func TestPostHogBackend_TrackUpStarted_NilClient(t *testing.T) {
 	b := &posthogBackend{client: nil}
 	require.NotPanics(t, func() {
-		b.TrackUpStarted("api", "dev-ns")
+		b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo")
 	})
 }
 
@@ -346,7 +346,7 @@ func TestPostHogBackend_TrackUpStarted_AnalyticsDisabled(t *testing.T) {
 
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
-	b.TrackUpStarted("api", "dev-ns")
+	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo")
 
 	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
 }
@@ -357,7 +357,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
-	b.TrackUpStarted("api", "dev-ns")
+	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo")
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
@@ -365,6 +365,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "user-123", ev.DistinctId)
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "dev-ns", ev.Properties["namespace"])
+	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
 	require.Equal(t, "test-machine", ev.Properties["machine_id"])
 	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
@@ -372,16 +373,17 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }
 
-func TestPostHogBackend_TrackUpStarted_OmitsEmptyServiceAndNamespace(t *testing.T) {
+func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
-	b.TrackUpStarted("", "")
+	b.TrackUpStarted("", "", "")
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
 	require.NotContains(t, ev.Properties, "service")
 	require.NotContains(t, ev.Properties, "namespace")
+	require.NotContains(t, ev.Properties, "repo_url")
 }

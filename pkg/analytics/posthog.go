@@ -206,7 +206,7 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 }
 
 // TrackUpStarted sends an okteto_up_started event to PostHog at the beginning of the up command.
-func (b *posthogBackend) TrackUpStarted(service, namespace string) {
+func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL string) {
 	if b.client == nil {
 		return
 	}
@@ -219,6 +219,9 @@ func (b *posthogBackend) TrackUpStarted(service, namespace string) {
 	}
 	if namespace != "" {
 		props["namespace"] = namespace
+	}
+	if repoURL != "" {
+		props["repo_url"] = repoURL
 	}
 	if err := b.client.Enqueue(posthog.Capture{
 		DistinctId: okteto.GetContext().UserID,

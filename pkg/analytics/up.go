@@ -289,8 +289,8 @@ func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 }
 
 // TrackUpStarted fires the okteto_up_started event at the beginning of the up command.
-func (a *Tracker) TrackUpStarted(service, namespace string) {
+func (a *Tracker) TrackUpStarted(service, namespace, repoURL string) {
 	for _, b := range a.backends {
-		b.TrackUpStarted(service, namespace)
+		b.TrackUpStarted(service, namespace, repoURL)
 	}
 }
