@@ -58,6 +58,10 @@ func (m *mockAnalyticsTracker) TrackBuildkitConnection(meta *analytics.BuildkitC
 	m.Called(meta)
 }
 
+func (m *mockAnalyticsTracker) TrackUpStarted(service, namespace string) {
+	m.Called(service, namespace)
+}
+
 type mockDownCmdRunner struct {
 	mock.Mock
 }

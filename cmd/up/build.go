@@ -18,24 +18,27 @@ import (
 	"errors"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 )
 
 type upBuilder struct {
-	builder  builderInterface
-	registry registryInterface
-	manifest *model.Manifest
-	devName  string
+	builder       builderInterface
+	registry      registryInterface
+	manifest      *model.Manifest
+	analyticsMeta *analytics.UpMetricsMetadata
+	devName       string
 }
 
-func newUpBuilder(m *model.Manifest, devName string, builder builderInterface, reg registryInterface) *upBuilder {
+func newUpBuilder(m *model.Manifest, devName string, builder builderInterface, reg registryInterface, meta *analytics.UpMetricsMetadata) *upBuilder {
 	return &upBuilder{
-		builder:  builder,
-		manifest: m,
-		devName:  devName,
-		registry: reg,
+		builder:       builder,
+		manifest:      m,
+		devName:       devName,
+		registry:      reg,
+		analyticsMeta: meta,
 	}
 }
 
@@ -79,6 +82,9 @@ func (ub *upBuilder) build(ctx context.Context) error {
 	buildOptions := &types.BuildOptions{
 		CommandArgs: svcsToBuild,
 		Manifest:    ub.manifest,
+	}
+	if ub.analyticsMeta != nil {
+		ub.analyticsMeta.HasRunBuild()
 	}
 	return ub.builder.Build(ctx, buildOptions)
 }
