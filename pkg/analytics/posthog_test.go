@@ -314,9 +314,21 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 	require.Equal(t, 1, ev.Properties["reconnect_count"])
 	require.Equal(t, "unrecognised", ev.Properties["reconnect_cause"])
 	require.NotContains(t, ev.Properties, "error_reason")
+
+	// CLI common props
+	require.NotEmpty(t, ev.Properties["cli_version"])
+	require.NotEmpty(t, ev.Properties["os"])
+	require.NotEmpty(t, ev.Properties["arch"])
 	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+
+	// Common props
 	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+
+	// Groups
 	require.Equal(t, "ACME Corp", ev.Groups["customer"])
 	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }
