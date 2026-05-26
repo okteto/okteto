@@ -187,8 +187,8 @@ func (u *UpMetricsMetadata) HasRunBuild() {
 }
 
 // SetRepoURL records the git remote origin URL for the session.
-func (u *UpMetricsMetadata) SetRepoURL(url string) {
-	u.repoURL = url
+func (u *UpMetricsMetadata) SetRepoURL(rawURL string) {
+	u.repoURL = rawURL
 }
 
 // SetNamespace records the namespace for the session.

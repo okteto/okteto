@@ -229,7 +229,7 @@ func TestPostHogBackend_AgentType_PresentWhenAgent(t *testing.T) {
 
 	require.Len(t, mock.captured, 1)
 	require.Equal(t, true, mock.captured[0].Properties["is_agent"])
-	require.Equal(t, "claude", mock.captured[0].Properties["agent_type"])
+	require.Equal(t, "claude_code", mock.captured[0].Properties["agent_type"])
 }
 
 func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {

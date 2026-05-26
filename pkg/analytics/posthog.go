@@ -106,7 +106,7 @@ func getAgent() string {
 		return "gemini"
 	}
 	if env.LoadBoolean("CLAUDECODE") {
-		return "claude"
+		return "claude_code"
 	}
 	if os.Getenv("CURSOR_SANDBOX") != "" {
 		return "cursor"
