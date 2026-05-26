@@ -3,9 +3,9 @@ module github.com/okteto/okteto
 go 1.25.8
 
 require (
+	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/a8m/envsubst v1.4.3
-	github.com/alessio/shellescape v1.6.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/chainguard-dev/git-urls v1.0.2
 	github.com/cheggaaa/pb/v3 v3.1.7
