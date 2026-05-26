@@ -378,9 +378,21 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "dev-ns", ev.Properties["namespace"])
 	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
+
+	// CLI common props
+	require.NotEmpty(t, ev.Properties["cli_version"])
+	require.NotEmpty(t, ev.Properties["os"])
+	require.NotEmpty(t, ev.Properties["arch"])
 	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+
+	// Common props
 	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+
+	// Groups
 	require.Equal(t, "ACME Corp", ev.Groups["customer"])
 	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }
