@@ -83,10 +83,13 @@ func (ub *upBuilder) build(ctx context.Context) error {
 		CommandArgs: svcsToBuild,
 		Manifest:    ub.manifest,
 	}
+	if err := ub.builder.Build(ctx, buildOptions); err != nil {
+		return err
+	}
 	if ub.analyticsMeta != nil {
 		ub.analyticsMeta.HasRunBuild()
 	}
-	return ub.builder.Build(ctx, buildOptions)
+	return nil
 }
 
 func (ub *upBuilder) getBuildSvcFromDev(manifest *model.Manifest) string {
