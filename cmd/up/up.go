@@ -283,7 +283,11 @@ okteto up api -- echo this is a test
 				return err
 			}
 
-			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, "")
+			upStartedRepoURL, err := modelutils.GetRepositoryURL(oktetoManifest.ManifestPath)
+			if err != nil {
+				oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
+			}
+			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, upStartedRepoURL)
 
 			if len(argsparserResult.Command) > 0 {
 				dev.Command.Values = argsparserResult.Command
