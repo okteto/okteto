@@ -138,10 +138,6 @@ okteto up api -- echo this is a test
 			// metadata retrieved during the run of the cmd
 			defer at.TrackUp(upMeta)
 
-			// fire early so every invocation is captured, including those that
-			// abort during manifest load, deploy, or build before start() runs
-			at.TrackUpStarted("", okteto.GetContext().Namespace, "")
-
 			startOkContextConfig := time.Now()
 			if upOptions.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
@@ -286,6 +282,8 @@ okteto up api -- echo this is a test
 			if err != nil {
 				return err
 			}
+
+			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, "")
 
 			if len(argsparserResult.Command) > 0 {
 				dev.Command.Values = argsparserResult.Command
