@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,66 +32,49 @@ func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
-func TestGetClusterInfo(t *testing.T) {
-	tests := []struct {
-		name        string
-		handler     http.Handler
-		expected    *types.ClusterInfo
-		expectedErr string
-	}{
-		{
-			name: "success response",
-			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				assert.Equal(t, "/clusterinfo", r.URL.Path)
-				w.WriteHeader(http.StatusOK)
-				_ = json.NewEncoder(w).Encode(types.ClusterInfo{
-					ClusterVersion: "1.2.3",
-					CustomerName:   "ACME Corp",
-				})
+func newTestUserClient(handler http.Handler) *userClient {
+	return &userClient{
+		httpClient: &http.Client{
+			Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+				recorder := &responseRecorder{
+					header: http.Header{},
+					body:   &bytes.Buffer{},
+				}
+				handler.ServeHTTP(recorder, r)
+				return recorder.Response(), nil
 			}),
-			expected: &types.ClusterInfo{
-				ClusterVersion: "1.2.3",
-				CustomerName:   "ACME Corp",
-			},
 		},
-		{
-			name: "non success response",
-			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusNotFound)
-			}),
-			expectedErr: "clusterinfo request failed",
-		},
+		baseURL: "https://okteto.example.com",
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			httpClient := &http.Client{
-				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
-					recorder := &responseRecorder{
-						header: http.Header{},
-						body:   &bytes.Buffer{},
-					}
-					tt.handler.ServeHTTP(recorder, r)
-					return recorder.Response(), nil
-				}),
-			}
-
-			c := &userClient{
-				httpClient: httpClient,
-				baseURL:    "https://okteto.example.com",
-			}
-
-			got, err := c.GetClusterInfo(context.Background())
-			if tt.expectedErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedErr)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, got)
+func TestGetClusterInfo_Success(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/clusterinfo", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(types.ClusterInfo{
+			ClusterVersion: "1.2.3",
+			CustomerName:   "ACME Corp",
 		})
-	}
+	})
+
+	got, err := newTestUserClient(handler).GetClusterInfo(context.Background())
+
+	require.NoError(t, err)
+	require.Equal(t, &types.ClusterInfo{
+		ClusterVersion: "1.2.3",
+		CustomerName:   "ACME Corp",
+	}, got)
+}
+
+func TestGetClusterInfo_NonSuccessResponse(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	_, err := newTestUserClient(handler).GetClusterInfo(context.Background())
+
+	require.ErrorContains(t, err, "clusterinfo request failed")
 }
 
 type responseRecorder struct {

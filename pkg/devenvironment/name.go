@@ -60,7 +60,7 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 	oktetoLog.Infof("found repository url %s", repoURL)
 	cfList, err := configmaps.List(ctx, namespace, labelSelector, n.k8s)
 	if err != nil {
-		oktetoLog.Info("could not get deployed dev environments: %v. Inferring dev environment name from the repository URL", err)
+		oktetoLog.Infof("could not get deployed dev environments: %v. Inferring dev environment name from the repository URL", err)
 		return utils.TranslateURLToName(repoURL)
 	}
 

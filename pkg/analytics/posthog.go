@@ -33,9 +33,9 @@ const (
 	// posthogEndpoint is the Okteto-owned reverse proxy for PostHog.
 	posthogEndpoint = "https://ph.okteto.com"
 
-	posthogImageBuildEvent  = "image_build"
-	posthogUpEvent          = "up"
-	posthogUpStartedEvent   = "okteto_up_started"
+	posthogImageBuildEvent = "image_build"
+	posthogUpEvent         = "up"
+	posthogUpStartedEvent  = "okteto_up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -79,10 +79,10 @@ func commonPostHogProperties() posthog.Properties {
 	agent := getAgent()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
-		"customer_id":     ctx.CompanyName,
-		"customer_name":   ctx.CompanyName,
-		"cluster_id":      ctx.ClusterID,
-		"cluster_name":    ctx.ClusterID,
+		"customer_id":   ctx.CompanyName,
+		"customer_name": ctx.CompanyName,
+		"cluster_id":    ctx.ClusterID,
+		"cluster_name":  ctx.ClusterID,
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 

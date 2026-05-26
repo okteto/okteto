@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -481,7 +482,7 @@ func TestRunnerGetMetadata(t *testing.T) {
 		solveOptBuilderFactory: newFakeSolveOptBuilderFactory(&client.SolveOpt{}, nil),
 	}
 
-	assert.Equal(t, int64(1024), r.GetMetadata().BuildContextSize)
+	require.Equal(t, int64(1024), r.GetMetadata().BuildContextSize)
 }
 func TestCheckIfImageIsPushed(t *testing.T) {
 	tests := []struct {

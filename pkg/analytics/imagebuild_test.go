@@ -108,7 +108,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, "api", props["service"])
 	require.Equal(t, 30, props["duration_seconds"])
 	require.Equal(t, 5, props["queue_duration_seconds"])
-	require.Equal(t, 3000, props["build_context_duration_milliseconds"])
+	require.Equal(t, int64(3000), props["build_context_duration_ms"])
 	require.Equal(t, true, props["result"])
 	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
 	require.Equal(t, true, props["is_cache"])
@@ -127,7 +127,7 @@ func Test_ImageBuildMetadata_toPostHogProps_omitsZeroFields(t *testing.T) {
 
 	require.NotContains(t, props, "duration_seconds")
 	require.NotContains(t, props, "queue_duration_seconds")
-	require.NotContains(t, props, "build_context_duration_milliseconds")
+	require.NotContains(t, props, "build_context_duration_ms")
 	require.NotContains(t, props, "build_context_size_bytes")
 	require.NotContains(t, props, "connection_type")
 	require.NotContains(t, props, "repo_url")
