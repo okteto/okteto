@@ -218,6 +218,26 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	}
 }
 
+// TrackDeploy sends a deploy_completed event to PostHog.
+func (b *posthogBackend) TrackDeploy(m DeployMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	if err := b.client.Enqueue(posthog.Capture{
+		DistinctId: okteto.GetContext().UserID,
+		Event:      posthogDeployCompletedEvent,
+		Properties: props,
+		Groups:     commonPostHogGroups(),
+	}); err != nil {
+		oktetoLog.Infof("failed to send posthog analytics: %s", err)
+	}
+}
+
 // TrackUpStarted sends an okteto_up_started event to PostHog at the beginning of the up command.
 func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL string) {
 	if b.client == nil {
