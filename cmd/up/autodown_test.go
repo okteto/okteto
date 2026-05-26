@@ -54,6 +54,10 @@ func (m *mockAnalyticsTracker) TrackImageBuild(ctx context.Context, meta *analyt
 	m.Called(ctx, meta)
 }
 
+func (m *mockAnalyticsTracker) TrackBuildkitConnection(meta *analytics.BuildkitConnectorMetadata) {
+	m.Called(meta)
+}
+
 type mockDownCmdRunner struct {
 	mock.Mock
 }

@@ -65,6 +65,7 @@ type DeployOptions struct {
 
 type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
 }
 
 // Divert is the interface for the divert operations needed for stacks command

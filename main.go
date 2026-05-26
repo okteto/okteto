@@ -152,7 +152,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 
-	root.AddCommand(contextCMD.Context())
+	root.AddCommand(contextCMD.Context(at))
 	root.AddCommand(cmd.Kubeconfig(okClientProvider))
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
@@ -181,6 +181,7 @@ func main() {
 	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err = root.Execute()
+	at.Close()
 
 	if err != nil {
 		message := err.Error()

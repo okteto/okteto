@@ -93,7 +93,7 @@ type PortForwarder struct {
 }
 
 // NewPortForwarder creates a new port forwarder. It forwards the port to the buildkit server.
-func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInterface, ioCtrl *io.Controller) (*PortForwarder, error) {
+func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInterface, ioCtrl *io.Controller, tracker BuildkitConnectionTracker) (*PortForwarder, error) {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, fmt.Errorf("could not create okteto client: %w", err)
@@ -127,7 +127,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		stopChan:     make(chan struct{}, 1),
 		readyChan:    make(chan struct{}, 1),
 		localPort:    port,
-		metrics:      NewConnectorMetrics(analytics.ConnectorTypePortForward, sessionID),
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypePortForward, sessionID, tracker),
 	}
 
 	// We need to call it once in order to check if the buildkit pod endpoint is available

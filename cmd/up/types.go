@@ -55,6 +55,7 @@ type analyticsTrackerInterface interface {
 
 type buildTrackerInterface interface {
 	TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata)
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
 }
 
 type deployTrackerInterface interface {

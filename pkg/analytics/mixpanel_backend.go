@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2026 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,14 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package buildkit
+package analytics
 
-import "time"
+import "context"
 
-type BuildMetadata struct {
-	WaitForBuildkitAvailableTime time.Duration
-	BuildkitDuration             time.Duration
-	ContextTransferDuration      time.Duration
-	BuildContextSize             int64
-	ConnectionType               string
+// mixpanelBackend forwards image build events to the existing Mixpanel track() function.
+// It is a thin wrapper — no Mixpanel behaviour changes.
+type mixpanelBackend struct {
+	trackFn func(event string, success bool, props map[string]any)
+}
+
+func newMixpanelBackend() *mixpanelBackend {
+	return &mixpanelBackend{trackFn: track}
+}
+
+func (b *mixpanelBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
+	b.trackFn(imageBuildEvent, m.Success, m.toMixpanelProps())
 }

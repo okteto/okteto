@@ -17,14 +17,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 	tests := []struct {
 		name     string
 		metadata *BuildkitConnectorMetadata
-		expected map[string]interface{}
+		expected map[string]any
 	}{
 		{
 			name: "portforward with queue",
@@ -37,7 +37,7 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 				QueueReason:       "ALL_PODS_BUSY",
 				ErrReason:         "",
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"sessionId":                "session-123",
 				"connectorType":            "portforward",
 				"queueWaitDurationSeconds": float64(30),
@@ -57,7 +57,7 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 				QueueReason:       "",
 				ErrReason:         "",
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"sessionId":                "session-456",
 				"connectorType":            "incluster",
 				"queueWaitDurationSeconds": float64(0),
@@ -77,7 +77,7 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 				QueueReason:       "NO_PODS_AVAILABLE",
 				ErrReason:         "QueueTimeout",
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"sessionId":                "session-timeout",
 				"connectorType":            "portforward",
 				"queueWaitDurationSeconds": float64(600),
@@ -91,7 +91,7 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			props := tt.metadata.toProps()
-			assert.Equal(t, tt.expected, props)
+			require.Equal(t, tt.expected, props)
 		})
 	}
 }
@@ -99,10 +99,10 @@ func TestBuildkitConnectorMetadata_toProps(t *testing.T) {
 func TestTrackBuildkitConnection(t *testing.T) {
 	var capturedEvent string
 	var capturedSuccess bool
-	var capturedProps map[string]interface{}
+	var capturedProps map[string]any
 
 	tracker := &Tracker{
-		trackFn: func(event string, success bool, props map[string]interface{}) {
+		trackFn: func(event string, success bool, props map[string]any) {
 			capturedEvent = event
 			capturedSuccess = success
 			capturedProps = props
@@ -121,12 +121,12 @@ func TestTrackBuildkitConnection(t *testing.T) {
 
 	tracker.TrackBuildkitConnection(metadata)
 
-	assert.Equal(t, "BuildkitConnection", capturedEvent)
-	assert.True(t, capturedSuccess)
-	assert.Equal(t, "test-session-id", capturedProps["sessionId"])
-	assert.Equal(t, "portforward", capturedProps["connectorType"])
-	assert.Equal(t, float64(5), capturedProps["queueWaitDurationSeconds"])
-	assert.Equal(t, 2, capturedProps["maxQueuePosition"])
-	assert.Equal(t, "QUEUE_POSITION", capturedProps["queueReason"])
-	assert.Equal(t, "", capturedProps["errReason"])
+	require.Equal(t, "BuildkitConnection", capturedEvent)
+	require.True(t, capturedSuccess)
+	require.Equal(t, "test-session-id", capturedProps["sessionId"])
+	require.Equal(t, "portforward", capturedProps["connectorType"])
+	require.Equal(t, float64(5), capturedProps["queueWaitDurationSeconds"])
+	require.Equal(t, 2, capturedProps["maxQueuePosition"])
+	require.Equal(t, "QUEUE_POSITION", capturedProps["queueReason"])
+	require.Equal(t, "", capturedProps["errReason"])
 }

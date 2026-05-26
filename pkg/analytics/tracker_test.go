@@ -13,8 +13,20 @@
 
 package analytics
 
+import "context"
+
 type mockEvent struct {
 	props   map[string]any
 	event   string
 	success bool
+}
+
+type mockAnalyticsBackend struct {
+	trackImageBuildFn func(ctx context.Context, meta *ImageBuildMetadata)
+}
+
+func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata) {
+	if m.trackImageBuildFn != nil {
+		m.trackImageBuildFn(ctx, meta)
+	}
 }

@@ -41,6 +41,9 @@ type buildEventJSON struct {
 	Success       bool    `json:"success"`
 }
 
+// TrackBuildkitConnection is a no-op — insights does not track buildkit connection metrics.
+func (*Publisher) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata) {}
+
 // TrackImageBuild tracks an image build event
 func (ip *Publisher) TrackImageBuild(ctx context.Context, meta *analytics.ImageBuildMetadata) {
 	eventJSON, err := json.Marshal(ip.convertImageBuildMetadataToEvent(meta))

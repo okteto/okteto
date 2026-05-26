@@ -11,14 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package buildkit
+package types
 
-import "time"
-
-type BuildMetadata struct {
-	WaitForBuildkitAvailableTime time.Duration
-	BuildkitDuration             time.Duration
-	ContextTransferDuration      time.Duration
-	BuildContextSize             int64
-	ConnectionType               string
+type ClusterInfo struct {
+	ClusterVersion string `json:"clusterVersion"`
+	CustomerName   string `json:"customerName"`
+	ClusterID      string `json:"clusterId"`
 }

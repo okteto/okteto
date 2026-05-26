@@ -17,8 +17,12 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+type fakeConnectionTracker struct{}
+
+func (fakeConnectionTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata) {}
 
 func TestNewConnectorMetrics(t *testing.T) {
 	tests := []struct {
@@ -40,27 +44,30 @@ func TestNewConnectorMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectorMetrics(tt.connectorType, tt.sessionID)
-			assert.NotNil(t, m)
-			assert.Equal(t, tt.connectorType, m.connectorType)
-			assert.Equal(t, tt.sessionID, m.sessionID)
-			assert.NotNil(t, m.tracker)
+			m := NewConnectorMetrics(tt.connectorType, tt.sessionID, fakeConnectionTracker{})
+			require.NotNil(t, m)
+			require.Equal(t, tt.connectorType, m.connectorType)
+			require.Equal(t, tt.sessionID, m.sessionID)
+			require.NotNil(t, m.tracker)
 		})
 	}
 }
 
-func TestConnectorMetrics_StartTracking(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+func TestNewConnectorMetrics_NilTrackerUsesNoop(t *testing.T) {
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", nil)
+	require.NotNil(t, m.tracker)
+	require.IsType(t, noopConnectionTracker{}, m.tracker)
+}
 
-	// Set some values first
+func TestConnectorMetrics_StartTracking(t *testing.T) {
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 	m.maxQueuePosition = 5
 
-	// Start tracking should reset all values
 	m.StartTracking()
 
-	assert.Equal(t, 0, m.maxQueuePosition)
-	assert.Equal(t, "", m.lastQueueReason)
-	assert.False(t, m.StartTime.IsZero())
+	require.Equal(t, 0, m.maxQueuePosition)
+	require.Equal(t, "", m.lastQueueReason)
+	require.False(t, m.StartTime.IsZero())
 }
 
 func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
@@ -89,39 +96,36 @@ func TestConnectorMetrics_RecordQueueStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+			m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 			m.RecordQueueStatus(tt.queuePosition, tt.reason)
 
-			assert.Equal(t, tt.expectedMaxQueuePosition, m.maxQueuePosition)
-			assert.Equal(t, tt.expectedReason, m.lastQueueReason)
+			require.Equal(t, tt.expectedMaxQueuePosition, m.maxQueuePosition)
+			require.Equal(t, tt.expectedReason, m.lastQueueReason)
 		})
 	}
 }
 
 func TestConnectorMetrics_RecordQueueStatus_MaxValues(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 
-	// First call with position 3
 	m.RecordQueueStatus(3, "QUEUE_POSITION")
-	assert.Equal(t, 3, m.maxQueuePosition)
+	require.Equal(t, 3, m.maxQueuePosition)
 
-	// Second call with position 5 - should update max value
 	m.RecordQueueStatus(5, "ALL_PODS_BUSY")
-	assert.Equal(t, 5, m.maxQueuePosition)
-	assert.Equal(t, "ALL_PODS_BUSY", m.lastQueueReason)
+	require.Equal(t, 5, m.maxQueuePosition)
+	require.Equal(t, "ALL_PODS_BUSY", m.lastQueueReason)
 
-	// Third call with position 2 - should NOT update max value
 	m.RecordQueueStatus(2, "PODS_SCALING")
-	assert.Equal(t, 5, m.maxQueuePosition)
-	assert.Equal(t, "PODS_SCALING", m.lastQueueReason) // reason always updates
+	require.Equal(t, 5, m.maxQueuePosition)
+	require.Equal(t, "PODS_SCALING", m.lastQueueReason)
 }
 
 func TestConnectorMetrics_SetErrReason(t *testing.T) {
-	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session")
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 
-	assert.Equal(t, "", m.errReason)
+	require.Equal(t, "", m.errReason)
 	m.SetErrReason("QueueTimeout")
-	assert.Equal(t, "QueueTimeout", m.errReason)
+	require.Equal(t, "QueueTimeout", m.errReason)
 	m.SetErrReason("PortForwardCreation")
-	assert.Equal(t, "PortForwardCreation", m.errReason)
+	require.Equal(t, "PortForwardCreation", m.errReason)
 }

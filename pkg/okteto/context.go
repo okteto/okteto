@@ -76,6 +76,8 @@ type Context struct {
 	PersonalNamespace  string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
 	GlobalNamespace    string               `json:"-" yaml:"-"`
 	ClusterType        string               `json:"-" yaml:"-"`
+	ClusterVersion     string               `json:"-" yaml:"-"`
+	ClusterID          string               `json:"-" yaml:"-"`
 	CompanyName        string               `json:"-" yaml:"-"`
 	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
 	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`

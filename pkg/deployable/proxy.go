@@ -29,7 +29,6 @@ import (
 	"syscall"
 
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -61,9 +60,8 @@ type Proxy struct {
 type proxyHandler struct {
 	DivertDriver divert.Driver
 	// Name is sanitized version of the pipeline name
-	Name             string
-	translator       *Translator
-	analyticsTracker *analytics.Tracker
+	Name       string
+	translator *Translator
 }
 
 // NewProxy creates a new proxy
@@ -91,9 +89,7 @@ func NewProxy(kubeconfig KubeConfigHandler, portGetter PortGetterFunc) (*Proxy, 
 		return nil, err
 	}
 
-	ph := &proxyHandler{
-		analyticsTracker: analytics.NewAnalyticsTracker(),
-	}
+	ph := &proxyHandler{}
 	handler, err := ph.getProxyHandler(sessionToken, clusterConfig)
 	if err != nil {
 		oktetoLog.Errorf("could not configure local proxy: %s", err)

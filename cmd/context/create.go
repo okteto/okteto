@@ -47,6 +47,11 @@ type kubeconfigTokenController interface {
 	updateOktetoContextToken(*types.UserContext) error
 }
 
+// groupsIdentifier sends group_identify calls to analytics backends.
+type groupsIdentifier interface {
+	IdentifyGroups()
+}
+
 // Command has the dependencies to run a ctxCommand
 type Command struct {
 	K8sClientProvider    okteto.K8sClientProvider
@@ -55,6 +60,7 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
+	analyticsIdentifier groupsIdentifier
 }
 
 type ctxCmdOption func(*Command)
@@ -62,6 +68,12 @@ type ctxCmdOption func(*Command)
 func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
 	return func(c *Command) {
 		c.kubetokenController = k
+	}
+}
+
+func withAnalyticsTracker(at groupsIdentifier) ctxCmdOption {
+	return func(c *Command) {
+		c.analyticsIdentifier = at
 	}
 }
 
@@ -199,6 +211,21 @@ func getClusterMetadata(ctx context.Context, namespace string, okClientProvider 
 	return okClient.User().GetClusterMetadata(ctx, namespace)
 }
 
+func getClusterInfo(ctx context.Context, okClientProvider oktetoClientProvider) (*types.ClusterInfo, error) {
+	okClient, err := okClientProvider.Provide()
+	if err != nil {
+		return nil, err
+	}
+	return okClient.User().GetClusterInfo(ctx)
+}
+
+func resolveCustomerName(clusterInfo *types.ClusterInfo, clusterMetadata types.ClusterMetadata) string {
+	if clusterInfo != nil && clusterInfo.CustomerName != "" {
+		return clusterInfo.CustomerName
+	}
+	return clusterMetadata.CompanyName
+}
+
 func hasAccessToNamespace(ctx context.Context, c *Command, ctxOptions *Options) (bool, error) {
 	if ctxOptions.IsOkteto {
 		okClient, err := c.OktetoClientProvider.Provide()
@@ -263,6 +290,12 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 		return err
 	}
 
+	oktetoLog.Debug("downloading okteto cluster info")
+	clusterInfo, err := getClusterInfo(ctx, c.OktetoClientProvider)
+	if err != nil {
+		oktetoLog.Infof("error getting cluster info: %v", err)
+	}
+
 	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace
 	oktetoLog.Debug("updating okteto context token")
 	err = c.kubetokenController.updateOktetoContextToken(userContext)
@@ -286,7 +319,14 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	okteto.GetContext().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
 
 	okteto.GetContext().IsTrial = clusterMetadata.IsTrialLicense
-	okteto.GetContext().CompanyName = clusterMetadata.CompanyName
+	okteto.GetContext().CompanyName = resolveCustomerName(clusterInfo, clusterMetadata)
+	if clusterInfo != nil {
+		okteto.GetContext().ClusterVersion = clusterInfo.ClusterVersion
+		okteto.GetContext().ClusterID = clusterInfo.ClusterID
+	}
+	if c.analyticsIdentifier != nil {
+		c.analyticsIdentifier.IdentifyGroups()
+	}
 	okteto.GetContext().DivertCRDSEnabled = clusterMetadata.DivertCRDSEnabled
 
 	// Populate gateway metadata if available

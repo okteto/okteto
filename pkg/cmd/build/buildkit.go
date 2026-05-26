@@ -20,6 +20,7 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
@@ -29,7 +30,7 @@ import (
 
 type buildWriter struct{}
 
-func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error {
+func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller, metadata *buildkit.BuildMetadata) error {
 	logFilterRules := []LogRule{
 		{
 			condition:   BuildKitMissingCacheCondition,
@@ -42,6 +43,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		},
 	}
 	logFilter := NewBuildKitLogsFilter(logFilterRules, errorRules)
+	contextTracker := newContextSyncTracker()
 	ch := make(chan *client.SolveStatus)
 	ttyChannel := make(chan *client.SolveStatus)
 	plainChannel := make(chan *client.SolveStatus)
@@ -63,6 +65,11 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			case ss, ok := <-ch:
 				if ok {
 					logFilter.Run(ss, progress)
+					contextTracker.Update(ss)
+					if metadata != nil {
+						metadata.BuildContextSize = contextTracker.SyncedSize()
+						metadata.ContextTransferDuration = contextTracker.Duration()
+					}
 					plainChannel <- ss
 					if progress == oktetoLog.TTYFormat {
 						ttyChannel <- ss

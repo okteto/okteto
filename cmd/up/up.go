@@ -237,7 +237,7 @@ okteto up api -- echo this is a test
 				analyticsMeta:     upMeta,
 				K8sClientProvider: okteto.NewK8sClientProviderWithLogger(k8sLogger),
 				tokenUpdater:      newTokenUpdaterController(),
-				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, buildCmd.GetBuildkitConnector(&okteto.ContextStateless{Store: okteto.GetContextStore()}, ioCtrl)),
+				builder:           buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, buildCmd.GetBuildkitConnector(&okteto.ContextStateless{Store: okteto.GetContextStore()}, ioCtrl, at)),
 				autoDown:          newAutoDown(ioCtrl, k8sLogger, at, upMeta),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)

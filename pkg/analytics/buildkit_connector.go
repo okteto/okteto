@@ -55,8 +55,8 @@ type BuildkitConnectorMetadata struct {
 	ErrReason string
 }
 
-func (m *BuildkitConnectorMetadata) toProps() map[string]interface{} {
-	return map[string]interface{}{
+func (m *BuildkitConnectorMetadata) toProps() map[string]any {
+	return map[string]any{
 		"sessionId":                m.SessionID,
 		"connectorType":            string(m.ConnectorType),
 		"queueWaitDurationSeconds": m.QueueWaitDuration.Seconds(),

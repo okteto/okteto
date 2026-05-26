@@ -1,4 +1,4 @@
-// Copyright 2023 The Okteto Authors
+// Copyright 2026 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,12 +13,57 @@
 
 package analytics
 
-type Tracker struct {
-	trackFn func(event string, success bool, props map[string]interface{})
+import "context"
+
+// analyticsBackend is implemented by each analytics provider.
+// Add a new method here when an event gains PostHog coverage.
+type analyticsBackend interface {
+	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
 }
 
+// groupsIdentifier is implemented by backends that support PostHog group analytics.
+type groupsIdentifier interface {
+	IdentifyGroups()
+}
+
+// closer is implemented by backends that hold resources that need flushing on exit.
+type closer interface {
+	Close()
+}
+
+// Tracker dispatches analytics events to all registered backends.
+type Tracker struct {
+	trackFn  func(event string, success bool, props map[string]any)
+	backends []analyticsBackend
+}
+
+// NewAnalyticsTracker creates a Tracker wired to all active backends.
 func NewAnalyticsTracker() *Tracker {
 	return &Tracker{
 		trackFn: track,
+		backends: []analyticsBackend{
+			newMixpanelBackend(),
+			newPostHogBackend(),
+		},
+	}
+}
+
+// IdentifyGroups sends $groupidentify calls to every backend that supports it.
+// Call this once after the okteto context is fully populated (ClusterID + CompanyName set).
+func (t *Tracker) IdentifyGroups() {
+	for _, b := range t.backends {
+		if gi, ok := b.(groupsIdentifier); ok {
+			gi.IdentifyGroups()
+		}
+	}
+}
+
+// Close flushes and shuts down every backend that holds resources.
+// Call this once before the process exits (e.g. defer at.Close() in main).
+func (t *Tracker) Close() {
+	for _, b := range t.backends {
+		if c, ok := b.(closer); ok {
+			c.Close()
+		}
 	}
 }

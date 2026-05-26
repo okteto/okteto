@@ -115,6 +115,7 @@ type analyticsTrackerInterface interface {
 
 type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
 }
 
 type buildControlProviderInterface interface {

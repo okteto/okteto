@@ -172,7 +172,7 @@ func Test_newRemoteDeployer(t *testing.T) {
 	okCtx := &okteto.ContextStateless{
 		Store: okteto.GetContextStore(),
 	}
-	conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
+	conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl, &fakeTracker{})
 	got := newRemoteDeployer(getBuildEnvVars, ioCtrl, getDependencyEnvVars, conn)
 	require.IsType(t, &remoteDeployer{}, got)
 	require.NotNil(t, got.getBuildEnvVars)

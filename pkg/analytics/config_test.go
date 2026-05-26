@@ -17,6 +17,8 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Get(t *testing.T) {
@@ -84,4 +86,81 @@ func Test_Get(t *testing.T) {
 		})
 	}
 
+}
+
+func TestAnalyticsEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    func()
+		expected bool
+	}{
+		{
+			name: "disabled by user",
+			setup: func() {
+				currentAnalytics = &Analytics{Enabled: false}
+				okteto.CurrentStore = &okteto.ContextStore{
+					CurrentContext: "https://cloud.okteto.net",
+					Contexts: map[string]*okteto.Context{
+						"https://cloud.okteto.net": {
+							Name:      "https://cloud.okteto.net",
+							Analytics: true,
+						},
+					},
+				}
+			},
+			expected: false,
+		},
+		{
+			name: "context not initialized",
+			setup: func() {
+				currentAnalytics = &Analytics{Enabled: true}
+				okteto.CurrentStore = &okteto.ContextStore{CurrentContext: ""}
+			},
+			expected: false,
+		},
+		{
+			name: "disabled by admin",
+			setup: func() {
+				currentAnalytics = &Analytics{Enabled: true}
+				okteto.CurrentStore = &okteto.ContextStore{
+					CurrentContext: "https://cloud.okteto.net",
+					Contexts: map[string]*okteto.Context{
+						"https://cloud.okteto.net": {
+							Name:      "https://cloud.okteto.net",
+							Analytics: false, // admin disabled
+						},
+					},
+				}
+			},
+			expected: false,
+		},
+		{
+			name: "all enabled",
+			setup: func() {
+				currentAnalytics = &Analytics{Enabled: true}
+				okteto.CurrentStore = &okteto.ContextStore{
+					CurrentContext: "https://cloud.okteto.net",
+					Contexts: map[string]*okteto.Context{
+						"https://cloud.okteto.net": {
+							Name:      "https://cloud.okteto.net",
+							Analytics: true,
+						},
+					},
+				}
+			},
+			expected: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prevAnalytics := currentAnalytics
+			prevStore := okteto.CurrentStore
+			defer func() {
+				currentAnalytics = prevAnalytics
+				okteto.CurrentStore = prevStore
+			}()
+			tt.setup()
+			require.Equal(t, tt.expected, analyticsEnabled())
+		})
+	}
 }

@@ -104,7 +104,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 
 			go func() {
 				startTime := time.Now()
-				metadata, err := doRun(ctx, testContainers, options, ioCtrl, k8sLogger, &ProxyTracker{at}, insights)
+				metadata, err := doRun(ctx, testContainers, options, ioCtrl, k8sLogger, &ProxyTracker{at}, insights, at)
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				at.TrackTest(metadata)
@@ -136,7 +136,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	return cmd
 }
 
-func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker, at insightsTracker) (analytics.TestMetadata, error) {
+func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, tracker *ProxyTracker, at insightsTracker, connTracker *analytics.Tracker) (analytics.TestMetadata, error) {
 	fs := afero.NewOsFs()
 
 	ctxOpts := &contextCMD.Options{
@@ -231,7 +231,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	okCtxForBuilder := &okteto.ContextStateless{
 		Store: okteto.GetContextStore(),
 	}
-	conn := buildCMD.GetBuildkitConnector(okCtxForBuilder, ioCtrl)
+	conn := buildCMD.GetBuildkitConnector(okCtxForBuilder, ioCtrl, connTracker)
 	builder := buildv2.NewBuilderFromScratch(ioCtrl, []buildv2.OnBuildFinish{
 		tracker.TrackImageBuild,
 	}, conn)

@@ -312,7 +312,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			if err != nil {
 				elapsedTime := time.Since(startTime)
 				if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, deployCommandsPhaseName, elapsedTime); err != nil {
-					oktetoLog.Info("error adding phase to configmap: %s", err)
+					oktetoLog.Infof("error adding phase to configmap: %s", err)
 				}
 				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 				return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
@@ -334,7 +334,7 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 		}
 		elapsedTime := time.Since(startTime)
 		if err := r.ConfigMapHandler.AddPhaseDuration(ctx, params.Name, params.Namespace, deployCommandsPhaseName, elapsedTime); err != nil {
-			oktetoLog.Info("error adding phase to configmap: %s", err)
+			oktetoLog.Infof("error adding phase to configmap: %s", err)
 		}
 	}
 	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, params.Variables)

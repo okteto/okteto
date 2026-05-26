@@ -29,11 +29,16 @@ type ImageBuildMetadata struct {
 	RepoURL                  string
 	BuildContextHash         string
 	Initiator                string
+	ErrorReason              string // PostHog: raw error on failure, empty on success
+	ConnectionType           string // PostHog: proxy or legacy
 	WaitForBuildkitAvailable time.Duration
+	BuildkitDuration         time.Duration
+	ContextTransferDuration  time.Duration
 	BuildContextHashDuration time.Duration
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
 	CloneDuration            time.Duration
+	BuildContextSize         int64 // PostHog: build context size in bytes
 	CacheHit                 bool
 	Success                  bool
 }
@@ -42,8 +47,8 @@ func NewImageBuildMetadata() *ImageBuildMetadata {
 	return &ImageBuildMetadata{}
 }
 
-func (m *ImageBuildMetadata) toProps() map[string]interface{} {
-	props := map[string]interface{}{
+func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
+	props := map[string]any{
 		"name":                            m.Name,
 		"repoURL":                         m.RepoURL,
 		"waitForBuildkitAvailable":        m.WaitForBuildkitAvailable.Seconds(),
@@ -66,6 +71,44 @@ func (m *ImageBuildMetadata) toProps() map[string]interface{} {
 	return props
 }
 
-func (a *Tracker) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
-	a.trackFn(imageBuildEvent, m.Success, m.toProps())
+// toPostHogProps returns the PostHog-specific property map for an image_build event.
+// Fields with zero/empty values are omitted.
+func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
+	props := map[string]any{
+		"service":  m.Name,
+		"result":   m.Success,
+		"is_cache": m.CacheHit,
+	}
+	if d := int(m.BuildDuration.Seconds()); d > 0 {
+		props["duration_seconds"] = d
+	}
+	if d := int(m.WaitForBuildkitAvailable.Seconds()); d > 0 {
+		props["queue_duration_seconds"] = d
+	}
+	if d := int(m.BuildkitDuration.Seconds()); d > 0 {
+		props["buildkit_duration_seconds"] = d
+	}
+	if d := m.ContextTransferDuration.Milliseconds(); d > 0 {
+		props["build_context_duration_ms"] = d
+	}
+	if m.BuildContextSize > 0 {
+		props["build_context_size_bytes"] = m.BuildContextSize
+	}
+	if m.ConnectionType != "" {
+		props["connection_type"] = m.ConnectionType
+	}
+	if m.RepoURL != "" {
+		props["repo_url"] = m.RepoURL
+	}
+	if !m.Success && m.ErrorReason != "" {
+		props["error_reason"] = m.ErrorReason
+	}
+	return props
+}
+
+// TrackImageBuild sends an image build event to all registered backends.
+func (a *Tracker) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
+	for _, b := range a.backends {
+		b.TrackImageBuild(ctx, m)
+	}
 }

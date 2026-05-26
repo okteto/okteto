@@ -856,7 +856,7 @@ func TestGetDestroyer(t *testing.T) {
 					},
 					CurrentContext: "example",
 				},
-			}, io.NewIOController()))
+			}, io.NewIOController(), &fakeAnalyticsTracker{}))
 			require.IsType(t, tt.expectedType, deployer)
 		})
 	}

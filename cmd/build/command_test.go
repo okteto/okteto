@@ -326,6 +326,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 type fakeAnalyticsTracker struct{}
 
 func (fakeAnalyticsTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
+func (fakeAnalyticsTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata)   {}
 
 func Test_NewBuildCommand(t *testing.T) {
 	okCtx := &okteto.ContextStateless{

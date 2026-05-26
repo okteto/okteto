@@ -95,7 +95,7 @@ func buildStackImages(ctx context.Context, s *model.Stack, options *DeployOption
 	okCtx := &okteto.ContextStateless{
 		Store: okteto.GetContextStore(),
 	}
-	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, buildCmd.GetBuildkitConnector(okCtx, ioCtrl))
+	builder := buildv2.NewBuilderFromScratch(ioCtrl, onBuildFinish, buildCmd.GetBuildkitConnector(okCtx, ioCtrl, analyticsTracker))
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
 			Manifest:    manifest,

@@ -17,6 +17,10 @@ import (
 	"testing"
 )
 
+type fakeGroupsIdentifier struct{}
+
+func (fakeGroupsIdentifier) IdentifyGroups() {}
+
 func Test_NoArgsAcceptedCtx(t *testing.T) {
 	cmd := Show()
 	cmd.SetArgs([]string{"args"})
@@ -27,7 +31,7 @@ func Test_NoArgsAcceptedCtx(t *testing.T) {
 }
 
 func Test_NoArgsAcceptedShow(t *testing.T) {
-	cmd := Context()
+	cmd := Context(fakeGroupsIdentifier{})
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
@@ -54,7 +58,7 @@ func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 }
 
 func Test_MaxArgsUse(t *testing.T) {
-	cmd := Use()
+	cmd := Use(fakeGroupsIdentifier{})
 	cmd.SetArgs([]string{"args", "args"})
 	err := cmd.Execute()
 	if err == nil {

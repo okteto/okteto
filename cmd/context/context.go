@@ -21,7 +21,7 @@ import (
 )
 
 // Context points okteto to a cluster.
-func Context() *cobra.Command {
+func Context(at groupsIdentifier) *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:     "context",
@@ -43,10 +43,10 @@ This will prompt you to select one of your existing Okteto Contexts or to create
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
 		},
-		RunE: Use().RunE,
+		RunE: Use(at).RunE,
 	}
 	cmd.AddCommand(Show())
-	cmd.AddCommand(Use())
+	cmd.AddCommand(Use(at))
 	cmd.AddCommand(List())
 	cmd.AddCommand(DeleteCMD())
 

@@ -144,6 +144,7 @@ type AnalyticsTrackerInterface interface {
 
 type buildTrackerInterface interface {
 	TrackImageBuild(context.Context, *analytics.ImageBuildMetadata)
+	TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata)
 }
 
 type deployTrackerInterface interface {
@@ -246,7 +247,7 @@ $ okteto deploy --no-build=true`,
 			}
 
 			okCtx := &okteto.ContextStateless{Store: okteto.GetContextStore()}
-			conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl)
+			conn := buildCmd.GetBuildkitConnector(okCtx, ioCtrl, at)
 
 			c := &Command{
 				GetManifest: model.GetManifestV2,
@@ -562,7 +563,7 @@ func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd strin
 		err := dc.deployStack(ctx, deployOptions)
 		elapsedTime := time.Since(startTime)
 		if addPhaseErr := dc.CfgMapHandler.AddPhaseDuration(ctx, deployOptions.Name, okteto.GetContext().Namespace, deployComposePhaseName, elapsedTime); addPhaseErr != nil {
-			oktetoLog.Info("error adding phase to configmap: %s", err)
+			oktetoLog.Infof("error adding phase to configmap: %s", addPhaseErr)
 		}
 		if err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())

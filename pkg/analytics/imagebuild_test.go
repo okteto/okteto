@@ -23,75 +23,39 @@ import (
 
 func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
 	tests := []struct {
-		input         *ImageBuildMetadata
-		expectedEvent *mockEvent
-		name          string
+		input           *ImageBuildMetadata
+		expectedSuccess bool
+		name            string
 	}{
 		{
-			name: "success event",
-			input: &ImageBuildMetadata{
-				Success: true,
-			},
-			expectedEvent: &mockEvent{
-				event:   "imageBuild",
-				success: true,
-				props: map[string]interface{}{
-					"name":                            "",
-					"repoURL":                         "",
-					"waitForBuildkitAvailable":        float64(0),
-					"cacheHit":                        false,
-					"cacheHitDurationSeconds":         float64(0),
-					"buildDurationSeconds":            float64(0),
-					"cloneDurationSeconds":            float64(0),
-					"buildContextHash":                "",
-					"initiator":                       "",
-					"buildContextHashDurationSeconds": float64(0),
-				},
-			},
+			name:            "success event",
+			input:           &ImageBuildMetadata{Success: true},
+			expectedSuccess: true,
 		},
 		{
-			name:  "not success event",
-			input: &ImageBuildMetadata{},
-			expectedEvent: &mockEvent{
-				event:   "imageBuild",
-				success: false,
-				props: map[string]interface{}{
-					"name":                            "",
-					"repoURL":                         "",
-					"cacheHit":                        false,
-					"cacheHitDurationSeconds":         float64(0),
-					"buildDurationSeconds":            float64(0),
-					"waitForBuildkitAvailable":        float64(0),
-					"cloneDurationSeconds":            float64(0),
-					"buildContextHash":                "",
-					"initiator":                       "",
-					"buildContextHashDurationSeconds": float64(0),
-				},
-			},
+			name:            "not success event",
+			input:           &ImageBuildMetadata{Success: false},
+			expectedSuccess: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			eventMeta := &mockEvent{}
-			tracker := &Tracker{
-				trackFn: func(event string, success bool, props map[string]interface{}) {
-					eventMeta = &mockEvent{
-						event:   event,
-						success: success,
-						props:   props,
-					}
+			var capturedMeta *ImageBuildMetadata
+			mock := &mockAnalyticsBackend{
+				trackImageBuildFn: func(_ context.Context, m *ImageBuildMetadata) {
+					capturedMeta = m
 				},
 			}
+			tracker := &Tracker{backends: []analyticsBackend{mock}}
 			tracker.TrackImageBuild(context.Background(), tt.input)
 
-			require.Equal(t, tt.expectedEvent.event, eventMeta.event)
-			require.Equal(t, tt.expectedEvent.success, eventMeta.success)
-			require.Equal(t, tt.expectedEvent.props, eventMeta.props)
+			require.NotNil(t, capturedMeta)
+			require.Equal(t, tt.expectedSuccess, capturedMeta.Success)
 		})
 	}
 }
 
-func Test_ImageBuildMetadata_toProps(t *testing.T) {
+func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 	m := &ImageBuildMetadata{
 		Name:                     "test-service",
 		RepoURL:                  "http://myrepo.url",
@@ -117,10 +81,67 @@ func Test_ImageBuildMetadata_toProps(t *testing.T) {
 		"initiator":                       "me",
 	}
 
-	require.Equal(t, expectedProps, m.toProps())
+	require.Equal(t, expectedProps, m.toMixpanelProps())
 }
 
 func Test_NewImageBuildMetadata(t *testing.T) {
 	require.Empty(t, NewImageBuildMetadata())
 	require.IsType(t, &ImageBuildMetadata{}, NewImageBuildMetadata())
+}
+
+func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
+	m := &ImageBuildMetadata{
+		Name:                     "api",
+		Success:                  true,
+		BuildDuration:            30 * time.Second,
+		WaitForBuildkitAvailable: 5 * time.Second,
+		BuildkitDuration:         25 * time.Second,
+		ContextTransferDuration:  3 * time.Second,
+		BuildContextSize:         20_000_000,
+		CacheHit:                 true,
+		ConnectionType:           "proxy",
+		RepoURL:                  "https://github.com/org/repo",
+	}
+
+	props := m.toPostHogProps()
+
+	require.Equal(t, "api", props["service"])
+	require.Equal(t, 30, props["duration_seconds"])
+	require.Equal(t, 5, props["queue_duration_seconds"])
+	require.Equal(t, int64(3000), props["build_context_duration_ms"])
+	require.Equal(t, true, props["result"])
+	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
+	require.Equal(t, true, props["is_cache"])
+	require.Equal(t, "proxy", props["connection_type"])
+	require.Equal(t, "https://github.com/org/repo", props["repo_url"])
+	require.NotContains(t, props, "error_reason", "error_reason must be omitted on success")
+}
+
+func Test_ImageBuildMetadata_toPostHogProps_omitsZeroFields(t *testing.T) {
+	m := &ImageBuildMetadata{
+		Name:    "api",
+		Success: true,
+	}
+
+	props := m.toPostHogProps()
+
+	require.NotContains(t, props, "duration_seconds")
+	require.NotContains(t, props, "queue_duration_seconds")
+	require.NotContains(t, props, "build_context_duration_ms")
+	require.NotContains(t, props, "build_context_size_bytes")
+	require.NotContains(t, props, "connection_type")
+	require.NotContains(t, props, "repo_url")
+	require.NotContains(t, props, "error_reason")
+}
+
+func Test_ImageBuildMetadata_toPostHogProps_withError(t *testing.T) {
+	m := &ImageBuildMetadata{
+		Success:     false,
+		ErrorReason: "registry_pull_error",
+	}
+
+	props := m.toPostHogProps()
+
+	require.Equal(t, false, props["result"])
+	require.Equal(t, "registry_pull_error", props["error_reason"])
 }

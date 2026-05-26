@@ -53,6 +53,7 @@ type runnerMetadata struct {
 	attempts int
 	// TODO: use this to track the time it takes to solve a build instead of the full build time
 	solveTime time.Duration
+	build     *BuildMetadata
 }
 
 // SolveOptBuilderFactory is a function that creates a SolveOptBuilderInterface
@@ -88,7 +89,7 @@ type SolveOptBuilderInterface interface {
 }
 
 // SolveBuildFn is a function that solves a build
-type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller) error
+type SolveBuildFn func(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller, metadata *BuildMetadata) error
 
 // defaultSolveOptBuilderFactory is the default factory that creates a SolveOptBuilder
 func defaultSolveOptBuilderFactory(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx OktetoContextInterface, fs afero.Fs, logger *io.Controller, secretMgr secretBuildManager) (SolveOptBuilderInterface, error) {
@@ -110,6 +111,13 @@ func NewBuildkitRunner(connector buildkitConnector, registry registryImageChecke
 	}
 }
 
+func (r *Runner) GetMetadata() *BuildMetadata {
+	if r.metadata == nil || r.metadata.build == nil {
+		return &BuildMetadata{}
+	}
+	return r.metadata.build
+}
+
 // Run executes a build using buildkit
 func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outputMode string) error {
 	if err := r.connector.Start(ctx); err != nil {
@@ -118,9 +126,11 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 
 	defer r.connector.Stop()
 
+	waitStart := time.Now()
 	if err := r.connector.WaitUntilIsReady(ctx); err != nil {
 		return err
 	}
+	waitForBuildkitAvailable := time.Since(waitStart)
 
 	secretMgr, err := newSecretManager(r.fs)
 	if err != nil {
@@ -178,6 +188,7 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 			r.logger.Logger().Infof("failed to wait for BuildKit service to be available: %s", err)
 			return err
 		}
+		waitForBuildkitAvailable += time.Since(waitStart)
 
 		client, err := r.connector.GetBuildkitClient(ctx)
 		if err != nil {
@@ -189,8 +200,10 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		}
 
 		startSolverTime := time.Now()
-		err = r.solveBuild(ctx, client, opt, outputMode, r.logger)
+		r.metadata.build = &BuildMetadata{WaitForBuildkitAvailableTime: waitForBuildkitAvailable}
+		err = r.solveBuild(ctx, client, opt, outputMode, r.logger, r.metadata.build)
 		solveTime = time.Since(startSolverTime)
+		r.metadata.build.BuildkitDuration = solveTime
 		if err != nil {
 			if IsRetryable(err) {
 				r.connector.Stop()
