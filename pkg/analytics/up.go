@@ -182,8 +182,14 @@ func (u *UpMetricsMetadata) HasRunDeploy() {
 	u.hasRunDeploy = true
 }
 
+// HasRunBuild marks that a build was executed during this up session.
 func (u *UpMetricsMetadata) HasRunBuild() {
 	u.isBuildExecuted = true
+}
+
+// IsBuildExecuted reports whether a build ran during this up session.
+func (u *UpMetricsMetadata) IsBuildExecuted() bool {
+	return u.isBuildExecuted
 }
 
 // SetRepoURL records the git remote origin URL for the session.
