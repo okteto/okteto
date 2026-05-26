@@ -1,29 +1,33 @@
 # Base image versions - Centralized version control for easier updates
 # Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
-ARG KUBECTL_VERSION=1.34.7
-ARG HELM3_VERSION=3.20.2
-ARG HELM4_VERSION=4.1.4
+ARG KUBECTL_VERSION=1.35.5
+ARG HELM3_VERSION=3.21.0
+ARG HELM4_VERSION=4.2.0
 ARG KUSTOMIZE_VERSION=5.8.1
 # Okteto components
-
-ARG SYNCTHING_VERSION=2.0.16
+ARG SYNCTHING_VERSION=2.1.0
+ARG SYNCTHING_SHA=sha256:7c60eb0ec887696c8684de88aea2dfe39a7391184b29d33c0aad778c99c7683e
 # Base images
-ARG GOLANG_VERSION=1.25.9
+ARG GOLANG_VERSION=1.25.10
+ARG GOLANG_SHA=sha256:154bd7001b6eb339e88c964442c0ad6ed5e53f09844cc818a41ce4ecb3ce3b43
 ARG ALPINE_VERSION=3.20
+ARG ALPINE_SHA=sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
 ARG BUSYBOX_VERSION=1.36.1
+ARG BUSYBOX_SHA=sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+ARG DEBIAN_BOOKWORM_SLIM_SHA=sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
 ARG GIT_VERSION=2.42.0
 
 # Stage 1: Prepare base components
 # SSL certificates for secure connections
-FROM alpine:${ALPINE_VERSION} AS certs
+FROM alpine:${ALPINE_VERSION}@${ALPINE_SHA} AS certs
 RUN apk add --no-cache ca-certificates
 
 # Stage 2: Prepare Okteto components to be copied to the final image
 # File synchronization tool
-FROM syncthing/syncthing:${SYNCTHING_VERSION} AS syncthing
+FROM syncthing/syncthing:${SYNCTHING_VERSION}@${SYNCTHING_SHA} AS syncthing
 
 # Stage 2.1: Build Okteto tools (remote, supervisor, clean) from source
-FROM golang:${GOLANG_VERSION}-bookworm AS tools-builder
+FROM golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA} AS tools-builder
 WORKDIR /app
 ARG VERSION_STRING=docker
 
@@ -60,7 +64,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     ./clean/
 
 # Stage 3: Set up Go build environment for Kubernetes tools and Okteto CLI
-FROM golang:${GOLANG_VERSION}-bookworm AS golang-builder
+FROM golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA} AS golang-builder
 
 # Stage 3.1: Download kustomize (Kubernetes resource customization tool)
 FROM golang-builder AS kustomize-builder
@@ -111,7 +115,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
     && /usr/local/bin/helm4 version
 
 # Stage 3.4: Download git (Version control system)
-FROM debian:bookworm-slim AS git-builder
+FROM debian:bookworm-slim@${DEBIAN_BOOKWORM_SLIM_SHA} AS git-builder
 
 ARG GIT_VERSION="2.42.0"
 ENV CC=gcc
@@ -167,7 +171,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 # Stage 5: Create the final minimal image
 # Using BusyBox as the base for a tiny footprint
-FROM busybox:${BUSYBOX_VERSION}
+FROM busybox:${BUSYBOX_VERSION}@${BUSYBOX_SHA}
 
 # Step 1: Copy SSL certificates for secure connections
 COPY --link --chmod=755 --from=certs /etc/ssl/certs /etc/ssl/certs
