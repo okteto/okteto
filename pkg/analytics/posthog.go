@@ -154,7 +154,7 @@ func (b *posthogBackend) IdentifyGroups() {
 			Type: "customer",
 			Key:  ctx.CompanyName,
 			Properties: posthog.NewProperties().
-				Set("customer_id", ctx.CompanyName),
+				Set("customer_name", ctx.CompanyName),
 		}); err != nil {
 			oktetoLog.Infof("failed to send posthog group identify (customer): %s", err)
 		}

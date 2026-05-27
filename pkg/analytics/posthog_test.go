@@ -154,7 +154,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, "test-machine", event.Properties["machine_id"])
 
 	// Common props
-	require.Equal(t, "ACME Corp", event.Properties["customer_id"])
+	require.Equal(t, "ACME Corp", event.Properties["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", event.Properties["cluster_id"])
 	require.Equal(t, "1.2.3", event.Properties["cluster_version"])
 	require.Equal(t, "user-123", event.Properties["user_id"])
@@ -249,5 +249,5 @@ func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
 	customerMsg := mock.capturedGroups[1]
 	require.Equal(t, "customer", customerMsg.Type)
 	require.Equal(t, "ACME Corp", customerMsg.Key)
-	require.Equal(t, "ACME Corp", customerMsg.Properties["customer_id"])
+	require.Equal(t, "ACME Corp", customerMsg.Properties["customer_name"])
 }
