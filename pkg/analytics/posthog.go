@@ -77,7 +77,7 @@ func commonPostHogProperties() posthog.Properties {
 	agent := getAgent()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
-		"customer_id":     ctx.CompanyName,
+		"customer_name":   ctx.CompanyName,
 		"cluster_id":      ctx.ClusterID,
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
@@ -154,7 +154,7 @@ func (b *posthogBackend) IdentifyGroups() {
 			Type: "customer",
 			Key:  ctx.CompanyName,
 			Properties: posthog.NewProperties().
-				Set("customer_id", ctx.CompanyName),
+				Set("customer_name", ctx.CompanyName),
 		}); err != nil {
 			oktetoLog.Infof("failed to send posthog group identify (customer): %s", err)
 		}
