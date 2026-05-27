@@ -1,6 +1,6 @@
 module github.com/okteto/tools
 
-go 1.25.7
+go 1.25.10
 
 require (
 	github.com/creack/pty v1.1.24
