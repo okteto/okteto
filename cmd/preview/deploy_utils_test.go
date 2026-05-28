@@ -16,7 +16,7 @@ package preview
 import (
 	"testing"
 
-	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v6"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/stretchr/testify/assert"
