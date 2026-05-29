@@ -6,7 +6,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-cmd/cmd v1.4.3
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.6.0
 	github.com/pkg/sftp v1.12.0
 	github.com/ramr/go-reaper v0.3.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
