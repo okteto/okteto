@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -145,7 +144,7 @@ func TestUpBuilder_Build(t *testing.T) {
 				builder:  tt.builder,
 				registry: &fakeRegistry{},
 			}
-			err := ub.build(ctx)
+			_, err := ub.build(ctx)
 			require.ErrorIs(t, err, tt.expectError)
 		})
 	}
@@ -290,20 +289,18 @@ func TestUpBuilder_Build_SetsIsBuildExecuted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta := analytics.NewUpMetricsMetadata()
 			ub := &upBuilder{
-				manifest:      manifest,
-				devName:       "my-dev",
-				analyticsMeta: meta,
-				registry:      &fakeRegistry{},
+				manifest: manifest,
+				devName:  "my-dev",
+				registry: &fakeRegistry{},
 				builder: &fakeBuilder{
 					getSvcFromRegexErr: buildv2.ErrImageIsNotAOktetoBuildSyntax,
 					services:           []string{"my-dev"},
 					buildErr:           tt.buildErr,
 				},
 			}
-			_ = ub.build(context.Background())
-			require.Equal(t, tt.expectExecuted, meta.IsBuildExecuted())
+			ran, _ := ub.build(context.Background())
+			require.Equal(t, tt.expectExecuted, ran)
 		})
 	}
 }
