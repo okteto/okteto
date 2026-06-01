@@ -35,7 +35,7 @@ const (
 
 	posthogImageBuildEvent = "image_build"
 	posthogUpEvent         = "up"
-	posthogUpStartedEvent  = "okteto_up_started"
+	posthogUpStartedEvent  = "up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -218,7 +218,7 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	}
 }
 
-// TrackUpStarted sends an okteto_up_started event to PostHog at the beginning of the up command.
+// TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
 func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL string) {
 	if b.client == nil {
 		return
