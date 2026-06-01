@@ -68,7 +68,7 @@ func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 		Initiator:                "me",
 	}
 
-	expectedProps := map[string]interface{}{
+	expectedProps := map[string]any{
 		"name":                            "665653223b1e8bfa2d462b3adb06d49f8984052e5df03d7fd2365293a102fce8",
 		"repoURL":                         "82eec095b1cc767833c5e4b5d7b02a6df10c0f284127c7e840e1f460b1896067",
 		"cacheHit":                        true,

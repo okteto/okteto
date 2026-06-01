@@ -74,8 +74,8 @@ func NewUpMetricsMetadata() *UpMetricsMetadata {
 }
 
 // toProps transforms UpMetricsMetadata into a map to be able to send it to mixpanel
-func (u *UpMetricsMetadata) toProps() map[string]interface{} {
-	return map[string]interface{}{
+func (u *UpMetricsMetadata) toProps() map[string]any {
+	return map[string]any{
 		"isInteractive":                       u.isInteractive,
 		"manifestType":                        u.manifestType,
 		"isOktetoRepository":                  u.isOktetoRepository,
