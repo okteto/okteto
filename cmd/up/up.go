@@ -288,6 +288,7 @@ okteto up api -- echo this is a test
 				oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
 			}
 			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, upStartedRepoURL)
+			upMeta.SetRepoURL(upStartedRepoURL)
 
 			if len(argsparserResult.Command) > 0 {
 				dev.Command.Values = argsparserResult.Command
@@ -499,11 +500,7 @@ func (up *upContext) start() error {
 	up.analyticsMeta.DevProps(up.Dev)
 	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
 	up.analyticsMeta.SetNamespace(up.Namespace)
-	repoURL, err := modelutils.GetRepositoryURL(up.Manifest.ManifestPath)
-	if err != nil {
-		oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
-	}
-	up.analyticsMeta.SetRepoURL(repoURL)
+
 
 	go up.activateLoop()
 
