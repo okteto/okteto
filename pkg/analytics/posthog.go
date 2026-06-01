@@ -34,6 +34,8 @@ const (
 	posthogEndpoint = "https://ph.okteto.com"
 
 	posthogImageBuildEvent = "image_build"
+	posthogUpEvent         = "up"
+	posthogUpStartedEvent  = "up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -104,7 +106,7 @@ func getAgent() string {
 		return "gemini"
 	}
 	if env.LoadBoolean("CLAUDECODE") {
-		return "claude"
+		return "claude_code"
 	}
 	if os.Getenv("CURSOR_SANDBOX") != "" {
 		return "cursor"
@@ -176,6 +178,54 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 	if err := b.client.Enqueue(posthog.Capture{
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogImageBuildEvent,
+		Properties: props,
+		Groups:     commonPostHogGroups(),
+	}); err != nil {
+		oktetoLog.Infof("failed to send posthog analytics: %s", err)
+	}
+}
+
+// TrackUp sends an up event to PostHog.
+func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	if err := b.client.Enqueue(posthog.Capture{
+		DistinctId: okteto.GetContext().UserID,
+		Event:      posthogUpEvent,
+		Properties: props,
+		Groups:     commonPostHogGroups(),
+	}); err != nil {
+		oktetoLog.Infof("failed to send posthog analytics: %s", err)
+	}
+}
+
+// TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
+func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL string) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	props := commonPostHogProperties()
+	if service != "" {
+		props["service"] = service
+	}
+	if namespace != "" {
+		props["namespace"] = namespace
+	}
+	if repoURL != "" {
+		props["repo_url"] = repoURL
+	}
+	if err := b.client.Enqueue(posthog.Capture{
+		DistinctId: okteto.GetContext().UserID,
+		Event:      posthogUpStartedEvent,
 		Properties: props,
 		Groups:     commonPostHogGroups(),
 	}); err != nil {

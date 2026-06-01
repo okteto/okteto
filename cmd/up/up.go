@@ -45,6 +45,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	modelutils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/process"
@@ -282,6 +283,13 @@ okteto up api -- echo this is a test
 				return err
 			}
 
+			upStartedRepoURL, err := modelutils.GetRepositoryURL(oktetoManifest.ManifestPath)
+			if err != nil {
+				oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
+			}
+			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, upStartedRepoURL)
+			upMeta.SetRepoURL(upStartedRepoURL)
+
 			if len(argsparserResult.Command) > 0 {
 				dev.Command.Values = argsparserResult.Command
 			}
@@ -309,7 +317,7 @@ okteto up api -- echo this is a test
 			}
 
 			// build images and set env vars for the services at the manifest
-			if err := newUpBuilder(oktetoManifest, argsparserResult.DevName, up.builder, up.Registry).build(ctx); err != nil {
+			if err := newUpBuilder(oktetoManifest, argsparserResult.DevName, up.builder, up.Registry, upMeta).build(ctx); err != nil {
 				return err
 			}
 
@@ -491,6 +499,8 @@ func (up *upContext) start() error {
 	up.analyticsMeta.ManifestProps(up.Manifest)
 	up.analyticsMeta.DevProps(up.Dev)
 	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
+	up.analyticsMeta.SetNamespace(up.Namespace)
+
 
 	go up.activateLoop()
 

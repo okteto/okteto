@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
@@ -147,6 +148,18 @@ func Test_UpMetricsMetadata_DevProps(t *testing.T) {
 				isInteractive: true,
 			},
 		},
+		{
+			name: "dev with service name",
+			dev: &model.Dev{
+				Name: "api",
+				Mode: "sync",
+			},
+			expected: &UpMetricsMetadata{
+				service:       "api",
+				mode:          "sync",
+				isInteractive: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -196,6 +209,18 @@ func Test_UpMetricsMetadata_ReconnectDefault(t *testing.T) {
 	assert.Equal(t, &UpMetricsMetadata{
 		isReconnect:    true,
 		reconnectCause: "unrecognised",
+		reconnectCount: 1,
+	}, m)
+}
+
+func Test_UpMetricsMetadata_ReconnectDefault_MultipleReconnects(t *testing.T) {
+	m := &UpMetricsMetadata{}
+	m.ReconnectDefault()
+	m.ReconnectDevPodRecreated()
+	assert.Equal(t, &UpMetricsMetadata{
+		isReconnect:    true,
+		reconnectCause: "dev-pod-recreated",
+		reconnectCount: 2,
 	}, m)
 }
 
@@ -205,6 +230,7 @@ func Test_UpMetricsMetadata_ReconnectDevPodRecreated(t *testing.T) {
 	assert.Equal(t, &UpMetricsMetadata{
 		isReconnect:    true,
 		reconnectCause: "dev-pod-recreated",
+		reconnectCount: 1,
 	}, m)
 }
 
@@ -228,6 +254,182 @@ func Test_UpMetricsMetadata_CommandSuccess(t *testing.T) {
 	}, m)
 }
 
+func Test_UpMetricsMetadata_ErrorReason(t *testing.T) {
+	tests := []struct {
+		name     string
+		meta     UpMetricsMetadata
+		expected string
+	}{
+		{name: "no error", meta: UpMetricsMetadata{}, expected: ""},
+		{
+			name:     "fail_activate takes precedence over errSync",
+			meta:     UpMetricsMetadata{failActivate: true, errSync: true},
+			expected: "fail_activate",
+		},
+		{
+			name:     "insufficient space",
+			meta:     UpMetricsMetadata{errSyncInsufficientSpace: true},
+			expected: "err_sync_insufficient_space",
+		},
+		{
+			name:     "reset database",
+			meta:     UpMetricsMetadata{errSyncResetDatabase: true},
+			expected: "err_sync_reset_database",
+		},
+		{
+			name:     "lost syncthing",
+			meta:     UpMetricsMetadata{errSyncLostSyncthing: true},
+			expected: "err_sync_lost_syncthing",
+		},
+		{
+			name:     "generic sync error",
+			meta:     UpMetricsMetadata{errSync: true},
+			expected: "err_sync",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.meta.errorReason())
+		})
+	}
+}
+
+func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
+	baseProps := func(overrides map[string]any) map[string]any {
+		base := map[string]any{
+			"result":             false,
+			"manifest_type":      "",
+			"is_interactive":     false,
+			"is_build_executed":  false,
+			"is_deploy_executed": false,
+			"has_build_section":  false,
+			"has_deploy_section": false,
+			"is_reconnect":       false,
+			"reconnect_count":    0,
+			"is_auto_down":       false,
+		}
+		for k, v := range overrides {
+			base[k] = v
+		}
+		return base
+	}
+
+	tests := []struct {
+		name     string
+		meta     UpMetricsMetadata
+		expected map[string]any
+	}{
+		{
+			name:     "minimal — service, namespace and repo_url absent when empty",
+			meta:     UpMetricsMetadata{success: true},
+			expected: baseProps(map[string]any{"result": true}),
+		},
+		{
+			name: "service, namespace and repo_url present when set",
+			meta: UpMetricsMetadata{success: true, service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
+			expected: baseProps(map[string]any{
+				"result":    true,
+				"service":   "api",
+				"namespace": "dev-ns",
+				"repo_url":  "https://github.com/org/repo",
+			}),
+		},
+		{
+			name:     "failure includes error_reason",
+			meta:     UpMetricsMetadata{success: false, failActivate: true},
+			expected: baseProps(map[string]any{"error_reason": "fail_activate"}),
+		},
+		{
+			name:     "error_reason absent on success even if flags set",
+			meta:     UpMetricsMetadata{success: true, failActivate: true},
+			expected: baseProps(map[string]any{"result": true}),
+		},
+		{
+			name: "reconnect_cause only when is_reconnect",
+			meta: UpMetricsMetadata{
+				success:        true,
+				isReconnect:    true,
+				reconnectCount: 1,
+				reconnectCause: reconnectCauseDevPodRecreated,
+			},
+			expected: baseProps(map[string]any{
+				"result":          true,
+				"is_reconnect":    true,
+				"reconnect_count": 1,
+				"reconnect_cause": "dev-pod-recreated",
+			}),
+		},
+		{
+			name: "durations included only when non-zero",
+			meta: UpMetricsMetadata{
+				success:                      true,
+				execDuration:                 60 * time.Second,
+				initialSyncDuration:          10 * time.Second,
+				devContainerCreationDuration: 5 * time.Second,
+			},
+			expected: baseProps(map[string]any{
+				"result":                                true,
+				"duration_seconds":                      60,
+				"initial_sync_duration_seconds":         10,
+				"dev_container_creation_duration_seconds": 5,
+			}),
+		},
+		{
+			name: "is_build_executed and has_build/deploy_section flags",
+			meta: UpMetricsMetadata{
+				success:         true,
+				isBuildExecuted: true,
+				hasBuildSection: true,
+				hasDeploySection: true,
+			},
+			expected: baseProps(map[string]any{
+				"result":             true,
+				"is_build_executed":  true,
+				"has_build_section":  true,
+				"has_deploy_section": true,
+			}),
+		},
+		{
+			name: "all flags",
+			meta: UpMetricsMetadata{
+				success:           true,
+				manifestType:      model.OktetoManifestType,
+				isInteractive:     true,
+				isBuildExecuted:   true,
+				hasRunDeploy:      true,
+				hasBuildSection:   true,
+				hasDeploySection:  true,
+				isReconnect:       true,
+				reconnectCount:    2,
+				reconnectCause:    reconnectCauseDefault,
+				isAutoDownEnabled: true,
+				service:           "api",
+				namespace:         "my-ns",
+			},
+			expected: baseProps(map[string]any{
+				"result":             true,
+				"manifest_type":      "manifest",
+				"is_interactive":     true,
+				"is_build_executed":  true,
+				"is_deploy_executed": true,
+				"has_build_section":  true,
+				"has_deploy_section": true,
+				"is_reconnect":       true,
+				"reconnect_count":    2,
+				"is_auto_down":       true,
+				"reconnect_cause":    "unrecognised",
+				"service":            "api",
+				"namespace":          "my-ns",
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.meta.toPostHogProps())
+		})
+	}
+}
+
 func Test_UpTracker(t *testing.T) {
 	tests := []struct {
 		expected mockEvent
@@ -240,7 +442,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: false,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(0),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -276,7 +478,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: true,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(0),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -329,7 +531,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: true,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(60),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -379,7 +581,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: false,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(60),
 					"errSyncResetDatabase":                true,
 					"errSync":                             true,
@@ -428,7 +630,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: true,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(60),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -462,7 +664,7 @@ func Test_UpTracker(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			eventMeta := &mockEvent{}
 			tracker := Tracker{
-				trackFn: func(event string, success bool, props map[string]interface{}) {
+				trackFn: func(event string, success bool, props map[string]any) {
 					eventMeta = &mockEvent{
 						event:   event,
 						success: success,
@@ -477,5 +679,85 @@ func Test_UpTracker(t *testing.T) {
 			assert.Equal(t, tt.expected.props, eventMeta.props)
 		})
 
+	}
+}
+
+func TestAnalyticsTracker_TrackUpStarted(t *testing.T) {
+	tests := []struct {
+		name      string
+		service   string
+		namespace string
+		repoURL   string
+	}{
+		{
+			name:      "all fields dispatched to backend",
+			service:   "api",
+			namespace: "dev-ns",
+			repoURL:   "https://github.com/org/repo",
+		},
+		{
+			name:      "empty fields dispatched to backend",
+			service:   "",
+			namespace: "",
+			repoURL:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var capturedService, capturedNamespace, capturedRepoURL string
+			mock := &mockAnalyticsBackend{
+				trackUpStartedFn: func(service, namespace, repoURL string) {
+					capturedService = service
+					capturedNamespace = namespace
+					capturedRepoURL = repoURL
+				},
+			}
+			tracker := &Tracker{
+				trackFn:  func(_ string, _ bool, _ map[string]any) {},
+				backends: []analyticsBackend{mock},
+			}
+			tracker.TrackUpStarted(tt.service, tt.namespace, tt.repoURL)
+
+			require.Equal(t, tt.service, capturedService)
+			require.Equal(t, tt.namespace, capturedNamespace)
+			require.Equal(t, tt.repoURL, capturedRepoURL)
+		})
+	}
+}
+
+func TestAnalyticsTracker_TrackUp(t *testing.T) {
+	tests := []struct {
+		input           *UpMetricsMetadata
+		expectedSuccess bool
+		name            string
+	}{
+		{
+			name:            "success event dispatched to backend",
+			input:           &UpMetricsMetadata{success: true},
+			expectedSuccess: true,
+		},
+		{
+			name:            "failure event dispatched to backend",
+			input:           &UpMetricsMetadata{success: false},
+			expectedSuccess: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var capturedMeta *UpMetricsMetadata
+			mock := &mockAnalyticsBackend{
+				trackUpFn: func(m *UpMetricsMetadata) {
+					capturedMeta = m
+				},
+			}
+			tracker := &Tracker{
+				trackFn:  func(_ string, _ bool, _ map[string]any) {},
+				backends: []analyticsBackend{mock},
+			}
+			tracker.TrackUp(tt.input)
+
+			require.NotNil(t, capturedMeta)
+			require.Equal(t, tt.expectedSuccess, capturedMeta.success)
+		})
 	}
 }

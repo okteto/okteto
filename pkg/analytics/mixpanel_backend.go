@@ -28,3 +28,7 @@ func newMixpanelBackend() *mixpanelBackend {
 func (b *mixpanelBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
 	b.trackFn(imageBuildEvent, m.Success, m.toMixpanelProps())
 }
+
+func (b *mixpanelBackend) TrackUp(_ *UpMetricsMetadata) {}
+
+func (b *mixpanelBackend) TrackUpStarted(_, _, _ string) {}
