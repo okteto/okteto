@@ -854,7 +854,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 					if err != nil {
 						localPath, err = filepath.Rel(cwd, volume.LocalPath)
 						if err != nil {
-							oktetoLog.Info("can not find svc[%s].build.volumes to include relative to svc[%s].build.context", svcName, svcName)
+							oktetoLog.Infof("can not find svc[%s].build.volumes to include relative to svc[%s].build.context", svcName, svcName)
 						}
 					}
 				}

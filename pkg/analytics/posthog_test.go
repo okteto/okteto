@@ -141,7 +141,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, "api", event.Properties["service"])
 	require.Equal(t, 30, event.Properties["duration_seconds"])
 	require.Equal(t, 5, event.Properties["queue_duration_seconds"])
-	require.Equal(t, 3000, event.Properties["build_context_duration_milliseconds"])
+	require.Equal(t, int64(3000), event.Properties["build_context_duration_ms"])
 	require.Equal(t, true, event.Properties["result"])
 	require.Equal(t, int64(20_000_000), event.Properties["build_context_size_bytes"])
 	require.Equal(t, false, event.Properties["is_cache"])
@@ -156,7 +156,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, "test-machine", event.Properties["machine_id"])
 
 	// Common props
-	require.Equal(t, "ACME Corp", event.Properties["customer_id"])
+	require.Equal(t, "ACME Corp", event.Properties["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", event.Properties["cluster_id"])
 	require.Equal(t, "1.2.3", event.Properties["cluster_version"])
 	require.Equal(t, "user-123", event.Properties["user_id"])
@@ -230,7 +230,7 @@ func TestPostHogBackend_AgentType_PresentWhenAgent(t *testing.T) {
 
 	require.Len(t, mock.captured, 1)
 	require.Equal(t, true, mock.captured[0].Properties["is_agent"])
-	require.Equal(t, "claude", mock.captured[0].Properties["agent_type"])
+	require.Equal(t, "claude_code", mock.captured[0].Properties["agent_type"])
 }
 
 func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
@@ -315,9 +315,21 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 	require.Equal(t, 1, ev.Properties["reconnect_count"])
 	require.Equal(t, "unrecognised", ev.Properties["reconnect_cause"])
 	require.NotContains(t, ev.Properties, "error_reason")
+
+	// CLI common props
+	require.NotEmpty(t, ev.Properties["cli_version"])
+	require.NotEmpty(t, ev.Properties["os"])
+	require.NotEmpty(t, ev.Properties["arch"])
 	require.Equal(t, "test-machine", ev.Properties["machine_id"])
-	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+
+	// Common props
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+
+	// Groups
 	require.Equal(t, "ACME Corp", ev.Groups["customer"])
 	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }
@@ -367,9 +379,21 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "dev-ns", ev.Properties["namespace"])
 	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
+
+	// CLI common props
+	require.NotEmpty(t, ev.Properties["cli_version"])
+	require.NotEmpty(t, ev.Properties["os"])
+	require.NotEmpty(t, ev.Properties["arch"])
 	require.Equal(t, "test-machine", ev.Properties["machine_id"])
-	require.Equal(t, "ACME Corp", ev.Properties["customer_id"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+
+	// Common props
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+
+	// Groups
 	require.Equal(t, "ACME Corp", ev.Groups["customer"])
 	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }

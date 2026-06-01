@@ -68,7 +68,7 @@ func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 		Initiator:                "me",
 	}
 
-	expectedProps := map[string]interface{}{
+	expectedProps := map[string]any{
 		"name":                            "665653223b1e8bfa2d462b3adb06d49f8984052e5df03d7fd2365293a102fce8",
 		"repoURL":                         "82eec095b1cc767833c5e4b5d7b02a6df10c0f284127c7e840e1f460b1896067",
 		"cacheHit":                        true,
@@ -108,7 +108,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, "api", props["service"])
 	require.Equal(t, 30, props["duration_seconds"])
 	require.Equal(t, 5, props["queue_duration_seconds"])
-	require.Equal(t, 3000, props["build_context_duration_milliseconds"])
+	require.Equal(t, int64(3000), props["build_context_duration_ms"])
 	require.Equal(t, true, props["result"])
 	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
 	require.Equal(t, true, props["is_cache"])
@@ -127,7 +127,7 @@ func Test_ImageBuildMetadata_toPostHogProps_omitsZeroFields(t *testing.T) {
 
 	require.NotContains(t, props, "duration_seconds")
 	require.NotContains(t, props, "queue_duration_seconds")
-	require.NotContains(t, props, "build_context_duration_milliseconds")
+	require.NotContains(t, props, "build_context_duration_ms")
 	require.NotContains(t, props, "build_context_size_bytes")
 	require.NotContains(t, props, "connection_type")
 	require.NotContains(t, props, "repo_url")

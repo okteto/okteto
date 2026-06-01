@@ -71,7 +71,7 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace, target string) (types
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			oktetoLog.Info("could not close the body: %s", err)
+			oktetoLog.Infof("could not close the body: %s", err)
 		}
 	}()
 
@@ -110,7 +110,7 @@ func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			oktetoLog.Info("could not close the body: %s", err)
+			oktetoLog.Infof("could not close the body: %s", err)
 		}
 	}()
 

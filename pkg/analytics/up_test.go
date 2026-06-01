@@ -442,7 +442,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: false,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(0),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -478,7 +478,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: true,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(0),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -531,7 +531,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: true,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(60),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -581,7 +581,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: false,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(60),
 					"errSyncResetDatabase":                true,
 					"errSync":                             true,
@@ -630,7 +630,7 @@ func Test_UpTracker(t *testing.T) {
 			expected: mockEvent{
 				event:   "Up",
 				success: true,
-				props: map[string]interface{}{
+				props: map[string]any{
 					"activateDurationSeconds":             float64(60),
 					"errSyncResetDatabase":                false,
 					"errSync":                             false,
@@ -664,7 +664,7 @@ func Test_UpTracker(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			eventMeta := &mockEvent{}
 			tracker := Tracker{
-				trackFn: func(event string, success bool, props map[string]interface{}) {
+				trackFn: func(event string, success bool, props map[string]any) {
 					eventMeta = &mockEvent{
 						event:   event,
 						success: success,
@@ -679,6 +679,49 @@ func Test_UpTracker(t *testing.T) {
 			assert.Equal(t, tt.expected.props, eventMeta.props)
 		})
 
+	}
+}
+
+func TestAnalyticsTracker_TrackUpStarted(t *testing.T) {
+	tests := []struct {
+		name      string
+		service   string
+		namespace string
+		repoURL   string
+	}{
+		{
+			name:      "all fields dispatched to backend",
+			service:   "api",
+			namespace: "dev-ns",
+			repoURL:   "https://github.com/org/repo",
+		},
+		{
+			name:      "empty fields dispatched to backend",
+			service:   "",
+			namespace: "",
+			repoURL:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var capturedService, capturedNamespace, capturedRepoURL string
+			mock := &mockAnalyticsBackend{
+				trackUpStartedFn: func(service, namespace, repoURL string) {
+					capturedService = service
+					capturedNamespace = namespace
+					capturedRepoURL = repoURL
+				},
+			}
+			tracker := &Tracker{
+				trackFn:  func(_ string, _ bool, _ map[string]any) {},
+				backends: []analyticsBackend{mock},
+			}
+			tracker.TrackUpStarted(tt.service, tt.namespace, tt.repoURL)
+
+			require.Equal(t, tt.service, capturedService)
+			require.Equal(t, tt.namespace, capturedNamespace)
+			require.Equal(t, tt.repoURL, capturedRepoURL)
+		})
 	}
 }
 
@@ -708,7 +751,7 @@ func TestAnalyticsTracker_TrackUp(t *testing.T) {
 				},
 			}
 			tracker := &Tracker{
-				trackFn:  func(_ string, _ bool, _ map[string]interface{}) {},
+				trackFn:  func(_ string, _ bool, _ map[string]any) {},
 				backends: []analyticsBackend{mock},
 			}
 			tracker.TrackUp(tt.input)

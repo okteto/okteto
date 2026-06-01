@@ -33,9 +33,9 @@ const (
 	// posthogEndpoint is the Okteto-owned reverse proxy for PostHog.
 	posthogEndpoint = "https://ph.okteto.com"
 
-	posthogImageBuildEvent  = "image_build"
-	posthogUpEvent          = "up"
-	posthogUpStartedEvent   = "okteto_up_started"
+	posthogImageBuildEvent = "image_build"
+	posthogUpEvent         = "up"
+	posthogUpStartedEvent  = "up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -79,7 +79,7 @@ func commonPostHogProperties() posthog.Properties {
 	agent := getAgent()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
-		"customer_id":     ctx.CompanyName,
+		"customer_name":   ctx.CompanyName,
 		"cluster_id":      ctx.ClusterID,
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
@@ -106,7 +106,7 @@ func getAgent() string {
 		return "gemini"
 	}
 	if env.LoadBoolean("CLAUDECODE") {
-		return "claude"
+		return "claude_code"
 	}
 	if os.Getenv("CURSOR_SANDBOX") != "" {
 		return "cursor"
@@ -225,7 +225,7 @@ func (b *posthogBackend) TrackDeploy(m DeployMetadata) {
 	}
 }
 
-// TrackUpStarted sends an okteto_up_started event to PostHog at the beginning of the up command.
+// TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
 func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL string) {
 	if b.client == nil {
 		return

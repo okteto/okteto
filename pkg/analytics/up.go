@@ -74,8 +74,8 @@ func NewUpMetricsMetadata() *UpMetricsMetadata {
 }
 
 // toProps transforms UpMetricsMetadata into a map to be able to send it to mixpanel
-func (u *UpMetricsMetadata) toProps() map[string]interface{} {
-	return map[string]interface{}{
+func (u *UpMetricsMetadata) toProps() map[string]any {
+	return map[string]any{
 		"isInteractive":                       u.isInteractive,
 		"manifestType":                        u.manifestType,
 		"isOktetoRepository":                  u.isOktetoRepository,
@@ -182,13 +182,19 @@ func (u *UpMetricsMetadata) HasRunDeploy() {
 	u.hasRunDeploy = true
 }
 
+// HasRunBuild marks that a build was executed during this up session.
 func (u *UpMetricsMetadata) HasRunBuild() {
 	u.isBuildExecuted = true
 }
 
+// IsBuildExecuted reports whether a build ran during this up session.
+func (u *UpMetricsMetadata) IsBuildExecuted() bool {
+	return u.isBuildExecuted
+}
+
 // SetRepoURL records the git remote origin URL for the session.
-func (u *UpMetricsMetadata) SetRepoURL(url string) {
-	u.repoURL = url
+func (u *UpMetricsMetadata) SetRepoURL(rawURL string) {
+	u.repoURL = rawURL
 }
 
 // SetNamespace records the namespace for the session.
