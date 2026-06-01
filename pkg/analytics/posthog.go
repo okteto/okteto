@@ -79,10 +79,8 @@ func commonPostHogProperties() posthog.Properties {
 	agent := getAgent()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
-		"customer_id":   ctx.CompanyName,
-		"customer_name": ctx.CompanyName,
-		"cluster_id":    ctx.ClusterID,
-		"cluster_name":  ctx.ClusterID,
+		"customer_name":   ctx.CompanyName,
+		"cluster_id":      ctx.ClusterID,
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 
@@ -92,23 +90,12 @@ func commonPostHogProperties() posthog.Properties {
 		"arch":               runtime.GOARCH,
 		"machine_id":         get().MachineID,
 		"measurement_source": "cli",
-		"trigger_source":     getTriggerSource(),
 		"is_agent":           agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
 	}
 	return props
-}
-
-func getTriggerSource() string {
-	if env.LoadBoolean("GITHUB_ACTIONS") {
-		return "github_action"
-	}
-	if env.LoadBoolean("GITLAB_CI") {
-		return "gitlab_ci"
-	}
-	return "cli"
 }
 
 func getAgent() string {
