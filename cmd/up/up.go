@@ -316,12 +316,8 @@ okteto up api -- echo this is a test
 			}
 
 			// build images and set env vars for the services at the manifest
-			buildRan, err := newUpBuilder(oktetoManifest, argsparserResult.DevName, up.builder, up.Registry).build(ctx)
-			if err != nil {
+			if err := newUpBuilder(oktetoManifest, argsparserResult.DevName, up.builder, up.Registry, upMeta).build(ctx); err != nil {
 				return err
-			}
-			if buildRan {
-				upMeta.HasRunBuild()
 			}
 
 			if err := loadManifestOverrides(dev, upOptions); err != nil {

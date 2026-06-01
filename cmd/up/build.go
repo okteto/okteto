@@ -18,38 +18,40 @@ import (
 	"errors"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 )
 
 type upBuilder struct {
-	builder  builderInterface
-	registry registryInterface
-	manifest *model.Manifest
-	devName  string
+	builder       builderInterface
+	registry      registryInterface
+	manifest      *model.Manifest
+	analyticsMeta *analytics.UpMetricsMetadata
+	devName       string
 }
 
-func newUpBuilder(m *model.Manifest, devName string, builder builderInterface, reg registryInterface) *upBuilder {
+func newUpBuilder(m *model.Manifest, devName string, builder builderInterface, reg registryInterface, meta *analytics.UpMetricsMetadata) *upBuilder {
 	return &upBuilder{
-		builder:  builder,
-		manifest: m,
-		devName:  devName,
-		registry: reg,
+		builder:       builder,
+		manifest:      m,
+		devName:       devName,
+		registry:      reg,
+		analyticsMeta: meta,
 	}
 }
 
-// build returns true if a build actually ran, false if it was skipped.
-func (ub *upBuilder) build(ctx context.Context) (bool, error) {
+func (ub *upBuilder) build(ctx context.Context) error {
 	// check if the dev image uses the same image as the original service
 	if ub.manifest.Dev[ub.devName].Image == "" {
-		return false, nil
+		return nil
 	}
 
 	// check if the dev image has a OKTETO_BUILD syntax
 	buildSvc, err := ub.builder.GetSvcToBuildFromRegex(ub.manifest, ub.getBuildSvcFromDev)
 	if err != nil && !errors.Is(err, buildv2.ErrImageIsNotAOktetoBuildSyntax) {
-		return false, err
+		return err
 	}
 
 	// check if the dev image is present on the build section
@@ -58,7 +60,7 @@ func (ub *upBuilder) build(ctx context.Context) (bool, error) {
 		buildSvc = ub.getBuildServiceFromImage(devImage)
 		// it's not present on the build section, we don't need to build anything
 		if buildSvc == "" {
-			return false, nil
+			return nil
 		}
 	}
 
@@ -72,19 +74,22 @@ func (ub *upBuilder) build(ctx context.Context) (bool, error) {
 	// check if the services are already built
 	svcsToBuild, err := ub.builder.GetServicesToBuildDuringExecution(ctx, ub.manifest, toBuildCheck)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if len(svcsToBuild) == 0 {
-		return false, nil
+		return nil
 	}
 	buildOptions := &types.BuildOptions{
 		CommandArgs: svcsToBuild,
 		Manifest:    ub.manifest,
 	}
 	if err := ub.builder.Build(ctx, buildOptions); err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	if ub.analyticsMeta != nil {
+		ub.analyticsMeta.HasRunBuild()
+	}
+	return nil
 }
 
 func (ub *upBuilder) getBuildSvcFromDev(manifest *model.Manifest) string {
