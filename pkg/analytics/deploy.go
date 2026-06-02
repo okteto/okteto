@@ -14,13 +14,15 @@
 package analytics
 
 import (
+	"errors"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
-	deployEvent                = "Deploy"
+	deployEvent                 = "Deploy"
 	posthogDeployCompletedEvent = "deploy_completed"
 )
 
@@ -39,6 +41,23 @@ type DeployMetadata struct {
 	HasBuildSection        bool
 	IsRemote               bool
 	WaitForDependencies    bool
+}
+
+func (d *DeployMetadata) errorReason() string {
+	switch {
+	case errors.Is(d.Err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands):
+		return "no_deploy_commands"
+	case errors.Is(d.Err, oktetoErrors.ErrTimeout):
+		return "timeout"
+	case errors.Is(d.Err, oktetoErrors.ErrCommandFailed):
+		return "command_failed"
+	case errors.Is(d.Err, oktetoErrors.ErrInternalServerError):
+		return "internal_server_error"
+	case errors.As(d.Err, &oktetoErrors.UserError{}):
+		return "user_error"
+	default:
+		return ""
+	}
 }
 
 func (d *DeployMetadata) toPostHogProps() map[string]any {
@@ -64,8 +83,10 @@ func (d *DeployMetadata) toPostHogProps() map[string]any {
 	if secs := int(d.Duration.Seconds()); secs > 0 {
 		props["duration_seconds"] = secs
 	}
-	if !d.Success && d.Err != nil {
-		props["error_reason"] = d.Err.Error()
+	if !d.Success {
+		if reason := d.errorReason(); reason != "" {
+			props["error_reason"] = reason
+		}
 	}
 	return props
 }
