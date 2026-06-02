@@ -285,7 +285,7 @@ $ okteto deploy --no-build=true`,
 				isRedeploy := provideErr == nil && pipeline.IsDeployed(ctx, options.Name, options.Namespace, k8sClient)
 				err := c.Run(ctx, options)
 				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
-				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace, isRedeploy, options.Wait)
+				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace, isRedeploy)
 				exit <- err
 			}()
 
@@ -787,11 +787,12 @@ func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	return nil
 }
 
-func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string, isRedeploy bool, waitForDeps bool) {
+func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string, isRedeploy bool) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
+	waitForDependencies := false
 	if manifest != nil {
 		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote != nil && *manifest.Deploy.Remote)
@@ -803,6 +804,12 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 
 		hasDependencySection = manifest.HasDependencies()
 		hasBuildSection = manifest.HasBuildSection()
+		for _, dep := range manifest.Dependencies {
+			if dep.Wait {
+				waitForDependencies = true
+				break
+			}
+		}
 	}
 
 	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
@@ -822,7 +829,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
 		Namespace:              namespace,
-		WaitForDependencies:    waitForDeps,
+		WaitForDependencies:    waitForDependencies,
 	})
 }
 

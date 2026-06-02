@@ -472,6 +472,18 @@ func TestPostHogBackend_TrackDeploy_HappyPath(t *testing.T) {
 	require.Equal(t, "ACME Corp", ev.Groups["customer"])
 }
 
+func TestPostHogBackend_TrackDeploy_WaitForDependenciesOmittedWhenFalse(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: true, WaitForDependencies: false})
+
+	require.Len(t, mock.captured, 1)
+	require.NotContains(t, mock.captured[0].Properties, "wait_for_dependencies")
+}
+
 func TestPostHogBackend_TrackDeploy_FailureUnknownErrorOmitsErrorReason(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()

@@ -305,7 +305,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		// in order to track the information correctly, using the same logic as the deploy command
 		runInRemote := deployCMD.ShouldRunInRemote(opts)
 		err = c.Run(ctx, opts)
-		c.TrackDeploy(manifest, runInRemote, deployStartTime, err, opts.Namespace, false, opts.Wait)
+		c.TrackDeploy(manifest, runInRemote, deployStartTime, err, opts.Namespace, false)
 
 		if err != nil {
 			oktetoLog.Errorf("deploy failed: %s", err.Error())
