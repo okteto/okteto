@@ -41,7 +41,7 @@ func (f *fakeDeployer) Run(context.Context, *deploy.Options) error {
 	return f.err
 }
 
-func (f *fakeDeployer) TrackDeploy(*model.Manifest, bool, time.Time, error, string, bool) {
+func (f *fakeDeployer) TrackDeploy(*model.Manifest, bool, time.Time, error, string) {
 	f.tracked = true
 }
 

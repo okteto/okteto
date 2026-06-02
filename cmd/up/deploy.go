@@ -50,7 +50,7 @@ type devEnvDeployerManager struct {
 
 type deployer interface {
 	Run(ctx context.Context, opts *deploy.Options) error
-	TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string, isRedeploy bool)
+	TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string)
 }
 
 type deployParams struct {
@@ -133,7 +133,7 @@ func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params depl
 		startTime := time.Now()
 		err = deployer.Run(ctx, deployOpts)
 		go analyticsMeta.HasRunDeploy()
-		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err, params.ns, isAlreadyDeployed)
+		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err, params.ns)
 		// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 			return err

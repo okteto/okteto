@@ -998,7 +998,7 @@ func TestTrackDeploy(t *testing.T) {
 				AnalyticsTracker: &fakeTracker{},
 			}
 
-			dc.TrackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr, "test-ns", false)
+			dc.TrackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr, "test-ns")
 		})
 	}
 }

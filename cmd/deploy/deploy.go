@@ -128,6 +128,7 @@ type Command struct {
 	DivertDeployerGetter getDivertDeployer
 
 	PipelineType model.Archetype
+	isRedeploy   bool
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
 	// to be able to call to deployer's cleanUp function as the deployer is gotten at runtime.
 	// This can probably be improved using context cancellation
@@ -281,11 +282,9 @@ $ okteto deploy --no-build=true`,
 				if options.Namespace == "" {
 					options.Namespace = okteto.GetContext().Namespace
 				}
-				k8sClient, _, provideErr := c.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, c.K8sLogger)
-				isRedeploy := provideErr == nil && pipeline.IsDeployed(ctx, options.Name, options.Namespace, k8sClient)
 				err := c.Run(ctx, options)
 				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
-				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace, isRedeploy)
+				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace)
 				exit <- err
 			}()
 
@@ -385,6 +384,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c, dc.K8sLogger); err != nil {
 		return err
 	}
+
+	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
 
 	if dc.RunningInInstaller {
 		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
@@ -787,7 +788,7 @@ func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	return nil
 }
 
-func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string, isRedeploy bool) {
+func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false
@@ -824,7 +825,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
 		IsPreview:              isPreview,
-		IsRedeploy:             isRedeploy,
+		IsRedeploy:             dc.isRedeploy,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
