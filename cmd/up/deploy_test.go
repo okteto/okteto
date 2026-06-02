@@ -130,3 +130,26 @@ func TestDeployIfNeeded(t *testing.T) {
 	}
 
 }
+
+func TestDeployIfNeeded_SkipsK8sCallWhenMustDeploy(t *testing.T) {
+	k8sCalled := false
+	fakeDeployer := &fakeDeployer{}
+	deployer := &devEnvDeployerManager{
+		ioCtrl:            io.NewIOController(),
+		k8sClientProvider: &test.FakeK8sProvider{},
+		isDevEnvDeployed: func(ctx context.Context, name, namespace string, c kubernetes.Interface) bool {
+			k8sCalled = true
+			return true
+		},
+		getDeployer: func(params deployParams) (deployer, error) {
+			return fakeDeployer, nil
+		},
+	}
+	params := deployParams{
+		deployFlag: true,
+		okCtx:      &okteto.Context{IsOkteto: true},
+	}
+	err := deployer.DeployIfNeeded(context.Background(), params, &analytics.UpMetricsMetadata{})
+	assert.NoError(t, err)
+	assert.False(t, k8sCalled, "isDevEnvDeployed should not be called when mustDeploy is true")
+}

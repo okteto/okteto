@@ -114,7 +114,7 @@ func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params depl
 		mustDeploy = true
 	}
 
-	isAlreadyDeployed := dd.isDevEnvDeployed(ctx, params.devenvName, params.ns, k8sClient)
+	isAlreadyDeployed := !mustDeploy && dd.isDevEnvDeployed(ctx, params.devenvName, params.ns, k8sClient)
 	if mustDeploy || !isAlreadyDeployed {
 		deployer, err := dd.getDeployer(params)
 		if err != nil {
