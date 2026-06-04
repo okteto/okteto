@@ -112,55 +112,6 @@ func getAgent() string {
 	return ""
 }
 
-// commonPostHogGroups returns the PostHog group memberships for an event.
-// PRECONDITION: must only be called after analyticsEnabled() returns true.
-func commonPostHogGroups() posthog.Groups {
-	ctx := okteto.GetContext()
-	g := posthog.NewGroups()
-	if ctx.CompanyName != "" {
-		g = g.Set("customer", ctx.CompanyName)
-	}
-	if ctx.ClusterID != "" {
-		g = g.Set("cluster", ctx.ClusterID)
-	}
-	return g
-}
-
-// IdentifyGroups sends $groupidentify calls for the two canonical group types:
-//   - "cluster"  keyed on ClusterID (stable UUID from the K8s telemetry secret)
-//   - "customer" keyed on CompanyName (normalized at ingestion via Hog transformation)
-//
-// Safe to call immediately after context is populated — skips silently if
-// analytics is disabled or both keys are empty.
-func (b *posthogBackend) IdentifyGroups() {
-	if b.client == nil || !analyticsEnabled() {
-		return
-	}
-	ctx := okteto.GetContext()
-
-	if ctx.ClusterID != "" {
-		if err := b.client.Enqueue(posthog.GroupIdentify{
-			Type: "cluster",
-			Key:  ctx.ClusterID,
-			Properties: posthog.NewProperties().
-				Set("cluster_id", ctx.ClusterID),
-		}); err != nil {
-			oktetoLog.Infof("failed to send posthog group identify (cluster): %s", err)
-		}
-	}
-
-	if ctx.CompanyName != "" {
-		if err := b.client.Enqueue(posthog.GroupIdentify{
-			Type: "customer",
-			Key:  ctx.CompanyName,
-			Properties: posthog.NewProperties().
-				Set("customer_name", ctx.CompanyName),
-		}); err != nil {
-			oktetoLog.Infof("failed to send posthog group identify (customer): %s", err)
-		}
-	}
-}
-
 // TrackImageBuild sends an image_build event to PostHog.
 func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
 	if b.client == nil {
@@ -177,7 +128,6 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogImageBuildEvent,
 		Properties: props,
-		Groups:     commonPostHogGroups(),
 	}); err != nil {
 		oktetoLog.Infof("failed to send posthog analytics: %s", err)
 	}

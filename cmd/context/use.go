@@ -38,7 +38,7 @@ const (
 )
 
 // Use context points okteto to a cluster.
-func Use(at groupsIdentifier) *cobra.Command {
+func Use() *cobra.Command {
 	ctxOptions := &Options{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
@@ -66,7 +66,7 @@ This will prompt you to select one of your existing Okteto Contexts or to create
 			ctxOptions.Save = true
 			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
-			err := NewContextCommand(withAnalyticsTracker(at)).Run(ctx, ctxOptions)
+			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				cmd.SilenceUsage = true

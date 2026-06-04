@@ -27,17 +27,13 @@ import (
 
 // mockPostHogClient captures Enqueue calls for assertion.
 type mockPostHogClient struct {
-	captured       []posthog.Capture
-	capturedGroups []posthog.GroupIdentify
-	err            error
+	captured []posthog.Capture
+	err      error
 }
 
 func (m *mockPostHogClient) Enqueue(msg posthog.Message) error {
 	if c, ok := msg.(posthog.Capture); ok {
 		m.captured = append(m.captured, c)
-	}
-	if gi, ok := msg.(posthog.GroupIdentify); ok {
-		m.capturedGroups = append(m.capturedGroups, gi)
 	}
 	return m.err
 }
@@ -159,9 +155,6 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.Equal(t, "1.2.3", event.Properties["cluster_version"])
 	require.Equal(t, "user-123", event.Properties["user_id"])
 
-	// Groups
-	require.Equal(t, "ACME Corp", event.Groups["customer"])
-	require.Equal(t, "cluster-uuid-1234", event.Groups["cluster"])
 }
 
 func TestPostHogBackend_TrackImageBuild_EnqueueError(t *testing.T) {
@@ -175,23 +168,6 @@ func TestPostHogBackend_TrackImageBuild_EnqueueError(t *testing.T) {
 	require.NotPanics(t, func() {
 		b.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: true})
 	})
-}
-
-func TestPostHogBackend_IdentifyGroups_NilClient(t *testing.T) {
-	b := &posthogBackend{client: nil}
-	// Must not panic
-	require.NotPanics(t, func() { b.IdentifyGroups() })
-}
-
-func TestPostHogBackend_IdentifyGroups_AnalyticsDisabled(t *testing.T) {
-	teardown := setupPostHogContext(t, false)
-	defer teardown()
-
-	mock := &mockPostHogClient{}
-	b := &posthogBackend{client: mock}
-	b.IdentifyGroups()
-
-	require.Empty(t, mock.capturedGroups, "GroupIdentify must not be sent when analytics is disabled")
 }
 
 func TestPostHogBackend_AgentType_OmittedWhenNoAgent(t *testing.T) {
@@ -231,23 +207,3 @@ func TestPostHogBackend_AgentType_PresentWhenAgent(t *testing.T) {
 	require.Equal(t, "claude", mock.captured[0].Properties["agent_type"])
 }
 
-func TestPostHogBackend_IdentifyGroups_HappyPath(t *testing.T) {
-	teardown := setupPostHogContext(t, true)
-	defer teardown()
-
-	mock := &mockPostHogClient{}
-	b := &posthogBackend{client: mock}
-	b.IdentifyGroups()
-
-	require.Len(t, mock.capturedGroups, 2)
-
-	clusterMsg := mock.capturedGroups[0]
-	require.Equal(t, "cluster", clusterMsg.Type)
-	require.Equal(t, "cluster-uuid-1234", clusterMsg.Key)
-	require.Equal(t, "cluster-uuid-1234", clusterMsg.Properties["cluster_id"])
-
-	customerMsg := mock.capturedGroups[1]
-	require.Equal(t, "customer", customerMsg.Type)
-	require.Equal(t, "ACME Corp", customerMsg.Key)
-	require.Equal(t, "ACME Corp", customerMsg.Properties["customer_name"])
-}

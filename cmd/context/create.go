@@ -47,11 +47,6 @@ type kubeconfigTokenController interface {
 	updateOktetoContextToken(*types.UserContext) error
 }
 
-// groupsIdentifier sends group_identify calls to analytics backends.
-type groupsIdentifier interface {
-	IdentifyGroups()
-}
-
 // Command has the dependencies to run a ctxCommand
 type Command struct {
 	K8sClientProvider    okteto.K8sClientProvider
@@ -60,7 +55,6 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
-	analyticsIdentifier groupsIdentifier
 }
 
 type ctxCmdOption func(*Command)
@@ -71,11 +65,6 @@ func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
 	}
 }
 
-func withAnalyticsTracker(at groupsIdentifier) ctxCmdOption {
-	return func(c *Command) {
-		c.analyticsIdentifier = at
-	}
-}
 
 // NewContextCommand creates a new Command
 func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
@@ -323,9 +312,6 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	if clusterInfo != nil {
 		okteto.GetContext().ClusterVersion = clusterInfo.ClusterVersion
 		okteto.GetContext().ClusterID = clusterInfo.ClusterID
-	}
-	if c.analyticsIdentifier != nil {
-		c.analyticsIdentifier.IdentifyGroups()
 	}
 	okteto.GetContext().DivertCRDSEnabled = clusterMetadata.DivertCRDSEnabled
 
