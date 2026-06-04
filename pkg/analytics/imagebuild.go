@@ -98,7 +98,7 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
 		props["connection_type"] = m.ConnectionType
 	}
 	if m.RepoURL != "" {
-		props["repo_url"] = m.RepoURL
+		props["repo_url"] = hashString(m.RepoURL)
 	}
 	if !m.Success && m.ErrorReason != "" {
 		props["error_reason"] = m.ErrorReason

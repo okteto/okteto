@@ -113,7 +113,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
 	require.Equal(t, true, props["is_cache"])
 	require.Equal(t, "proxy", props["connection_type"])
-	require.Equal(t, "https://github.com/org/repo", props["repo_url"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", props["repo_url"])
 	require.NotContains(t, props, "error_reason", "error_reason must be omitted on success")
 }
 
