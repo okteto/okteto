@@ -18,6 +18,7 @@ import (
 	"maps"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -57,6 +58,7 @@ type NamespaceUIDResolver interface {
 type posthogBackend struct {
 	client     posthogEnqueuer
 	nsResolver NamespaceUIDResolver
+	wg         sync.WaitGroup
 }
 
 // newPostHogBackend creates the PostHog backend.
@@ -144,7 +146,9 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 	maps.Copy(props, m.toPostHogProps())
 	namespace := m.Namespace
 
+	b.wg.Add(1)
 	go func() {
+		defer b.wg.Done()
 		if b.nsResolver != nil && namespace != "" {
 			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
@@ -164,11 +168,13 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 	}()
 }
 
-// Close flushes pending events and shuts down the PostHog client.
+// Close waits for any in-flight goroutines to finish enqueuing, then flushes
+// and shuts down the PostHog client.
 func (b *posthogBackend) Close() {
 	if b.client == nil {
 		return
 	}
+	b.wg.Wait()
 	if err := b.client.Close(); err != nil {
 		oktetoLog.Infof("failed to close posthog client: %s", err)
 	}
