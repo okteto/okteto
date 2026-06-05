@@ -18,9 +18,11 @@ import (
 	"maps"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	posthog "github.com/posthog/posthog-go"
@@ -43,27 +45,38 @@ type posthogEnqueuer interface {
 	Close() error
 }
 
+// NamespaceUIDResolver fetches the UID of a Kubernetes namespace.
+// Implementations are expected to cache results to avoid repeated API calls.
+type NamespaceUIDResolver interface {
+	GetNamespaceUID(ctx context.Context, namespace string) (string, error)
+}
+
 // posthogBackend sends analytics events to PostHog.
 // posthog.New() initializes an HTTP client and background flush goroutine at
 // construction time, consistent with how mixpanelClient is initialized via init().
 type posthogBackend struct {
-	client posthogEnqueuer
+	client     posthogEnqueuer
+	nsResolver NamespaceUIDResolver
 }
 
 // newPostHogBackend creates the PostHog backend.
 // Returns a no-op backend (nil client) when the token is empty — safe for tests.
 func newPostHogBackend() *posthogBackend {
+	b := &posthogBackend{
+		nsResolver: namespaces.NewUIDResolver(okteto.NewK8sClientProvider()),
+	}
 	if posthogToken == "" {
-		return &posthogBackend{}
+		return b
 	}
 	client, err := posthog.NewWithConfig(posthogToken, posthog.Config{
 		Endpoint: posthogEndpoint,
 	})
 	if err != nil {
 		oktetoLog.Infof("failed to create posthog client: %s", err)
-		return &posthogBackend{}
+		return b
 	}
-	return &posthogBackend{client: client}
+	b.client = client
+	return b
 }
 
 // commonPostHogProperties returns properties sent on every PostHog event from the CLI.
@@ -115,7 +128,9 @@ func getAgent() string {
 }
 
 // TrackImageBuild sends an image_build event to PostHog.
-func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadata) {
+// The event is enqueued in a background goroutine so the caller is not blocked
+// by the namespace UID lookup.
+func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
 	if b.client == nil {
 		return
 	}
@@ -123,16 +138,29 @@ func (b *posthogBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetadat
 		return
 	}
 
+	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
+	namespace := m.Namespace
 
-	if err := b.client.Enqueue(posthog.Capture{
-		DistinctId: okteto.GetContext().UserID,
-		Event:      posthogImageBuildEvent,
-		Properties: props,
-	}); err != nil {
-		oktetoLog.Infof("failed to send posthog analytics: %s", err)
-	}
+	go func() {
+		if b.nsResolver != nil && namespace != "" {
+			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
+				oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
+			} else if uid != "" {
+				props["namespace"] = uid
+			}
+		}
+		if err := b.client.Enqueue(posthog.Capture{
+			DistinctId: userID,
+			Event:      posthogImageBuildEvent,
+			Properties: props,
+		}); err != nil {
+			oktetoLog.Infof("failed to send posthog analytics: %s", err)
+		}
+	}()
 }
 
 // Close flushes pending events and shuts down the PostHog client.
