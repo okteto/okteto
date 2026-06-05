@@ -77,8 +77,10 @@ func commonPostHogProperties() posthog.Properties {
 	agent := getAgent()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
-		"customer_name":   ctx.CompanyName,
+		"customer_name": ctx.CompanyName,
+		// customer_id to be generated in posthog
 		"cluster_id":      ctx.ClusterID,
+		"cluster_name":    ctx.Name,
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 
