@@ -31,4 +31,4 @@ func (b *mixpanelBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetada
 
 func (b *mixpanelBackend) TrackUp(_ *UpMetricsMetadata) {}
 
-func (b *mixpanelBackend) TrackUpStarted(_, _, _ string) {}
+func (b *mixpanelBackend) TrackUpStarted(_, _, _, _ string) {}

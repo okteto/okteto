@@ -684,43 +684,48 @@ func Test_UpTracker(t *testing.T) {
 
 func TestAnalyticsTracker_TrackUpStarted(t *testing.T) {
 	tests := []struct {
-		name      string
-		service   string
-		namespace string
-		repoURL   string
+		name       string
+		service    string
+		namespace  string
+		repoURL    string
+		workflowID string
 	}{
 		{
-			name:      "all fields dispatched to backend",
-			service:   "api",
-			namespace: "dev-ns",
-			repoURL:   "https://github.com/org/repo",
+			name:       "all fields dispatched to backend",
+			service:    "api",
+			namespace:  "dev-ns",
+			repoURL:    "https://github.com/org/repo",
+			workflowID: "abc-123",
 		},
 		{
-			name:      "empty fields dispatched to backend",
-			service:   "",
-			namespace: "",
-			repoURL:   "",
+			name:       "empty fields dispatched to backend",
+			service:    "",
+			namespace:  "",
+			repoURL:    "",
+			workflowID: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var capturedService, capturedNamespace, capturedRepoURL string
+			var capturedService, capturedNamespace, capturedRepoURL, capturedWorkflowID string
 			mock := &mockAnalyticsBackend{
-				trackUpStartedFn: func(service, namespace, repoURL string) {
+				trackUpStartedFn: func(service, namespace, repoURL, workflowID string) {
 					capturedService = service
 					capturedNamespace = namespace
 					capturedRepoURL = repoURL
+					capturedWorkflowID = workflowID
 				},
 			}
 			tracker := &Tracker{
 				trackFn:  func(_ string, _ bool, _ map[string]any) {},
 				backends: []analyticsBackend{mock},
 			}
-			tracker.TrackUpStarted(tt.service, tt.namespace, tt.repoURL)
+			tracker.TrackUpStarted(tt.service, tt.namespace, tt.repoURL, tt.workflowID)
 
 			require.Equal(t, tt.service, capturedService)
 			require.Equal(t, tt.namespace, capturedNamespace)
 			require.Equal(t, tt.repoURL, capturedRepoURL)
+			require.Equal(t, tt.workflowID, capturedWorkflowID)
 		})
 	}
 }

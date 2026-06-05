@@ -363,10 +363,6 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
 	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
 	require.Equal(t, "user-123", ev.Properties["user_id"])
-
-	// Groups
-	require.Equal(t, "ACME Corp", ev.Groups["customer"])
-	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }
 
 func TestPostHogBackend_TrackUp_FailureIncludesErrorReason(t *testing.T) {
@@ -384,7 +380,7 @@ func TestPostHogBackend_TrackUp_FailureIncludesErrorReason(t *testing.T) {
 func TestPostHogBackend_TrackUpStarted_NilClient(t *testing.T) {
 	b := &posthogBackend{client: nil}
 	require.NotPanics(t, func() {
-		b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo")
+		b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-123")
 	})
 }
 
@@ -394,7 +390,7 @@ func TestPostHogBackend_TrackUpStarted_AnalyticsDisabled(t *testing.T) {
 
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
-	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo")
+	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-123")
 
 	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
 }
@@ -405,7 +401,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
-	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo")
+	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-abc-123")
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
@@ -414,6 +410,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "dev-ns", ev.Properties["namespace"])
 	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
+	require.Equal(t, "wf-abc-123", ev.Properties["up_workflow_id"])
 
 	// CLI common props
 	require.NotEmpty(t, ev.Properties["cli_version"])
@@ -427,10 +424,6 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
 	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
 	require.Equal(t, "user-123", ev.Properties["user_id"])
-
-	// Groups
-	require.Equal(t, "ACME Corp", ev.Groups["customer"])
-	require.Equal(t, "cluster-uuid-1234", ev.Groups["cluster"])
 }
 
 func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
@@ -439,11 +432,12 @@ func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
-	b.TrackUpStarted("", "", "")
+	b.TrackUpStarted("", "", "", "")
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
 	require.NotContains(t, ev.Properties, "service")
 	require.NotContains(t, ev.Properties, "namespace")
 	require.NotContains(t, ev.Properties, "repo_url")
+	require.NotContains(t, ev.Properties, "up_workflow_id")
 }
