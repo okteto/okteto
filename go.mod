@@ -173,6 +173,7 @@ require (
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/vbauerster/mpb/v7 v7.5.3
+	github.com/vbauerster/mpb/v8 v8.12.0
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
