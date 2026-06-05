@@ -272,9 +272,9 @@ func TestUpBuilder_Build_SetsIsBuildExecuted(t *testing.T) {
 	}
 
 	tests := []struct {
-		name             string
-		buildErr         error
-		expectExecuted   bool
+		name           string
+		buildErr       error
+		expectExecuted bool
 	}{
 		{
 			name:           "Build succeeds — isBuildExecuted true",

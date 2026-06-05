@@ -128,6 +128,7 @@ type Command struct {
 	DivertDeployerGetter getDivertDeployer
 
 	PipelineType model.Archetype
+	isRedeploy   bool
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
 	// to be able to call to deployer's cleanUp function as the deployer is gotten at runtime.
 	// This can probably be improved using context cancellation
@@ -283,7 +284,7 @@ $ okteto deploy --no-build=true`,
 				}
 				err := c.Run(ctx, options)
 				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
-				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
+				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace)
 				exit <- err
 			}()
 
@@ -383,6 +384,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c, dc.K8sLogger); err != nil {
 		return err
 	}
+
+	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
 
 	if dc.RunningInInstaller {
 		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
@@ -785,11 +788,12 @@ func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	return nil
 }
 
-func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
+func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
+	waitForDependencies := false
 	if manifest != nil {
 		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote != nil && *manifest.Deploy.Remote)
@@ -801,6 +805,12 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 
 		hasDependencySection = manifest.HasDependencies()
 		hasBuildSection = manifest.HasBuildSection()
+		for _, dep := range manifest.Dependencies {
+			if dep.Wait {
+				waitForDependencies = true
+				break
+			}
+		}
 	}
 
 	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
@@ -808,15 +818,19 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
 		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
+		Err:                    err,
 		Success:                err == nil,
 		IsOktetoRepo:           utils.IsOktetoRepo(),
 		Duration:               time.Since(startTime),
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
 		IsPreview:              isPreview,
+		IsRedeploy:             dc.isRedeploy,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
+		Namespace:              namespace,
+		WaitForDependencies:    waitForDependencies,
 	})
 }
 

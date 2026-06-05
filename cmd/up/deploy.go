@@ -50,7 +50,7 @@ type devEnvDeployerManager struct {
 
 type deployer interface {
 	Run(ctx context.Context, opts *deploy.Options) error
-	TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error)
+	TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string)
 }
 
 type deployParams struct {
@@ -114,7 +114,8 @@ func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params depl
 		mustDeploy = true
 	}
 
-	if mustDeploy || !dd.isDevEnvDeployed(ctx, params.devenvName, params.ns, k8sClient) {
+	isAlreadyDeployed := !mustDeploy && dd.isDevEnvDeployed(ctx, params.devenvName, params.ns, k8sClient)
+	if mustDeploy || !isAlreadyDeployed {
 		deployer, err := dd.getDeployer(params)
 		if err != nil {
 			dd.ioCtrl.Logger().Infof("failed to create deployer: %s", err)
@@ -132,7 +133,7 @@ func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params depl
 		startTime := time.Now()
 		err = deployer.Run(ctx, deployOpts)
 		go analyticsMeta.HasRunDeploy()
-		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err)
+		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err, params.ns)
 		// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 			return err

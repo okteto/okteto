@@ -21,9 +21,11 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/posthog/posthog-go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -446,4 +448,133 @@ func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 	require.NotContains(t, ev.Properties, "service")
 	require.NotContains(t, ev.Properties, "namespace")
 	require.NotContains(t, ev.Properties, "repo_url")
+}
+
+func TestPostHogBackend_TrackDeploy_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackDeploy(DeployMetadata{Success: true})
+	})
+}
+
+func TestPostHogBackend_TrackDeploy_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: true})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackDeploy_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+
+	b.TrackDeploy(DeployMetadata{
+		Success:                true,
+		PipelineType:           model.OktetoManifestType,
+		Namespace:              "dev-ns",
+		Duration:               45 * time.Second,
+		IsPreview:              false,
+		IsRedeploy:             true,
+		HasDependenciesSection: true,
+		HasBuildSection:        true,
+		IsRemote:               false,
+		WaitForDependencies:    true,
+	})
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogDeployCompletedEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, true, ev.Properties["result"])
+	require.Equal(t, "manifest", ev.Properties["deploy_type"])
+	require.Equal(t, "dev-ns", ev.Properties["namespace"])
+	require.Equal(t, 45, ev.Properties["duration_seconds"])
+	require.Equal(t, false, ev.Properties["is_preview"])
+	require.Equal(t, true, ev.Properties["is_redeploy"])
+	require.Equal(t, true, ev.Properties["has_dependencies_section"])
+	require.Equal(t, true, ev.Properties["has_build_section"])
+	require.Equal(t, false, ev.Properties["is_remote"])
+	require.Equal(t, true, ev.Properties["wait_for_dependencies"])
+	require.NotContains(t, ev.Properties, "error_reason")
+	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
+	require.Equal(t, "ACME Corp", ev.Groups["customer"])
+}
+
+func TestPostHogBackend_TrackDeploy_WaitForDependenciesOmittedWhenFalse(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: true, WaitForDependencies: false})
+
+	require.Len(t, mock.captured, 1)
+	require.NotContains(t, mock.captured[0].Properties, "wait_for_dependencies")
+}
+
+func TestPostHogBackend_TrackDeploy_FailureUnknownErrorOmitsErrorReason(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: false, Err: assert.AnError})
+
+	require.Len(t, mock.captured, 1)
+	require.NotContains(t, mock.captured[0].Properties, "error_reason")
+}
+
+func TestPostHogBackend_TrackDeploy_KnownErrorsSetNormalizedErrorReason(t *testing.T) {
+	tests := []struct {
+		name           string
+		err            error
+		expectedReason string
+	}{
+		{
+			name:           "no deploy commands",
+			err:            oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands,
+			expectedReason: "no_deploy_commands",
+		},
+		{
+			name:           "timeout",
+			err:            oktetoErrors.ErrTimeout,
+			expectedReason: "timeout",
+		},
+		{
+			name:           "command failed",
+			err:            oktetoErrors.ErrCommandFailed,
+			expectedReason: "command_failed",
+		},
+		{
+			name:           "internal server error",
+			err:            oktetoErrors.ErrInternalServerError,
+			expectedReason: "internal_server_error",
+		},
+		{
+			name:           "user error",
+			err:            oktetoErrors.UserError{E: errors.New("something went wrong")},
+			expectedReason: "user_error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			teardown := setupPostHogContext(t, true)
+			defer teardown()
+
+			mock := &mockPostHogClient{}
+			b := &posthogBackend{client: mock}
+			b.TrackDeploy(DeployMetadata{Success: false, Err: tt.err})
+
+			require.Len(t, mock.captured, 1)
+			require.Equal(t, tt.expectedReason, mock.captured[0].Properties["error_reason"])
+		})
+	}
 }
