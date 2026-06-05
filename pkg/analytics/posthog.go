@@ -93,7 +93,7 @@ func commonPostHogProperties() posthog.Properties {
 	props := posthog.Properties{
 		// Common (all PostHog sources)
 		"customer_name": ctx.CompanyName,
-		// customer_id to be generated in posthog
+		// customer_id is derived server-side in PostHog, not sent from the CLI.
 		"cluster_id":      ctx.ClusterID,
 		"cluster_url":     ctx.Name,
 		"cluster_version": ctx.ClusterVersion,
