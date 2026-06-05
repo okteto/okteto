@@ -331,7 +331,7 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 				"result":    true,
 				"service":   "api",
 				"namespace": "dev-ns",
-				"repo_url":  "https://github.com/org/repo",
+				"repo_url":  "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3",
 			}),
 		},
 		{
@@ -368,18 +368,18 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 				devContainerCreationDuration: 5 * time.Second,
 			},
 			expected: baseProps(map[string]any{
-				"result":                                true,
-				"duration_seconds":                      60,
-				"initial_sync_duration_seconds":         10,
+				"result":                                  true,
+				"duration_seconds":                        60,
+				"initial_sync_duration_seconds":           10,
 				"dev_container_creation_duration_seconds": 5,
 			}),
 		},
 		{
 			name: "is_build_executed and has_build/deploy_section flags",
 			meta: UpMetricsMetadata{
-				success:         true,
-				isBuildExecuted: true,
-				hasBuildSection: true,
+				success:          true,
+				isBuildExecuted:  true,
+				hasBuildSection:  true,
 				hasDeploySection: true,
 			},
 			expected: baseProps(map[string]any{

@@ -501,7 +501,6 @@ func (up *upContext) start() error {
 	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
 	up.analyticsMeta.SetNamespace(up.Namespace)
 
-
 	go up.activateLoop()
 
 	go up.pidController.notifyIfPIDFileChange(pidFileCh)

@@ -275,7 +275,7 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 		props["namespace"] = u.namespace
 	}
 	if u.repoURL != "" {
-		props["repo_url"] = u.repoURL
+		props["repo_url"] = hashString(u.repoURL)
 	}
 	if d := int(u.execDuration.Seconds()); d > 0 {
 		props["duration_seconds"] = d

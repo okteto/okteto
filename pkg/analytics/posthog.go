@@ -171,6 +171,8 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 }
 
 // TrackUp sends an up event to PostHog.
+// The event is enqueued in a background goroutine so the caller is not blocked
+// by the namespace UID lookup.
 func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	if b.client == nil {
 		return
@@ -178,18 +180,36 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	if !analyticsEnabled() {
 		return
 	}
+	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
-	if err := b.client.Enqueue(posthog.Capture{
-		DistinctId: okteto.GetContext().UserID,
-		Event:      posthogUpEvent,
-		Properties: props,
-	}); err != nil {
-		oktetoLog.Infof("failed to send posthog analytics: %s", err)
-	}
+	namespace := m.namespace
+
+	b.wg.Add(1)
+	go func() {
+		defer b.wg.Done()
+		if b.nsResolver != nil && namespace != "" {
+			fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
+				oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
+			} else if uid != "" {
+				props["namespace"] = uid
+			}
+		}
+		if err := b.client.Enqueue(posthog.Capture{
+			DistinctId: userID,
+			Event:      posthogUpEvent,
+			Properties: props,
+		}); err != nil {
+			oktetoLog.Infof("failed to send posthog analytics: %s", err)
+		}
+	}()
 }
 
 // TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
+// The event is enqueued in a background goroutine so the caller is not blocked
+// by the namespace UID lookup.
 func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID string) {
 	if b.client == nil {
 		return
@@ -197,26 +217,40 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	if !analyticsEnabled() {
 		return
 	}
+	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	if service != "" {
 		props["service"] = service
 	}
-	if namespace != "" {
-		props["namespace"] = namespace
-	}
 	if repoURL != "" {
-		props["repo_url"] = repoURL
+		props["repo_url"] = hashString(repoURL)
 	}
 	if workflowID != "" {
 		props["up_workflow_id"] = workflowID
 	}
-	if err := b.client.Enqueue(posthog.Capture{
-		DistinctId: okteto.GetContext().UserID,
-		Event:      posthogUpStartedEvent,
-		Properties: props,
-	}); err != nil {
-		oktetoLog.Infof("failed to send posthog analytics: %s", err)
-	}
+
+	b.wg.Add(1)
+	go func() {
+		defer b.wg.Done()
+		if b.nsResolver != nil && namespace != "" {
+			fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
+				oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
+			} else if uid != "" {
+				props["namespace"] = uid
+			}
+		} else if namespace != "" {
+			props["namespace"] = namespace
+		}
+		if err := b.client.Enqueue(posthog.Capture{
+			DistinctId: userID,
+			Event:      posthogUpStartedEvent,
+			Properties: props,
+		}); err != nil {
+			oktetoLog.Infof("failed to send posthog analytics: %s", err)
+		}
+	}()
 }
 
 // Close waits for any in-flight goroutines to finish enqueuing, then flushes

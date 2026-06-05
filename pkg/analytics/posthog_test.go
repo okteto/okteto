@@ -330,6 +330,7 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 		reconnectCount:   1,
 		reconnectCause:   reconnectCauseDefault,
 	})
+	b.wg.Wait()
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
@@ -344,7 +345,7 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 	require.Equal(t, true, ev.Properties["has_deploy_section"])
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "dev-ns", ev.Properties["namespace"])
-	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
 	require.Equal(t, 90, ev.Properties["duration_seconds"])
 	require.Equal(t, true, ev.Properties["is_reconnect"])
 	require.Equal(t, 1, ev.Properties["reconnect_count"])
@@ -372,6 +373,7 @@ func TestPostHogBackend_TrackUp_FailureIncludesErrorReason(t *testing.T) {
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
 	b.TrackUp(&UpMetricsMetadata{success: false, failActivate: true})
+	b.wg.Wait()
 
 	require.Len(t, mock.captured, 1)
 	require.Equal(t, "fail_activate", mock.captured[0].Properties["error_reason"])
@@ -402,6 +404,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
 	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-abc-123")
+	b.wg.Wait()
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
@@ -409,7 +412,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "user-123", ev.DistinctId)
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "dev-ns", ev.Properties["namespace"])
-	require.Equal(t, "https://github.com/org/repo", ev.Properties["repo_url"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
 	require.Equal(t, "wf-abc-123", ev.Properties["up_workflow_id"])
 
 	// CLI common props
@@ -433,6 +436,7 @@ func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 	mock := &mockPostHogClient{}
 	b := &posthogBackend{client: mock}
 	b.TrackUpStarted("", "", "", "")
+	b.wg.Wait()
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
