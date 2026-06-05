@@ -65,7 +65,6 @@ func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
 	}
 }
 
-
 // NewContextCommand creates a new Command
 func NewContextCommand(ctxCmdOption ...ctxCmdOption) *Command {
 	cfg := &Command{
