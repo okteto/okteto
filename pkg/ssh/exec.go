@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alessio/shellescape"
+	"al.essio.dev/pkg/shellescape"
 	dockerterm "github.com/moby/term"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"

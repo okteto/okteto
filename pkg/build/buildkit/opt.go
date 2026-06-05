@@ -195,8 +195,8 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 	} else {
 		dockerCfg := dockerConfig.LoadDefaultConfigFile(os.Stderr)
 		authProviderConfig := authprovider.DockerAuthProviderConfig{
-			ConfigFile: dockerCfg,
-			TLSConfigs: map[string]*authprovider.AuthTLSConfig{},
+			AuthConfigProvider: authprovider.LoadAuthConfig(dockerCfg),
+			TLSConfigs:         map[string]*authprovider.AuthTLSConfig{},
 		}
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(authProviderConfig))
 	}
