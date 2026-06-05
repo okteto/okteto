@@ -184,7 +184,6 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogUpEvent,
 		Properties: props,
-		Groups:     commonPostHogGroups(),
 	}); err != nil {
 		oktetoLog.Infof("failed to send posthog analytics: %s", err)
 	}
@@ -212,7 +211,6 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL string) {
 		DistinctId: okteto.GetContext().UserID,
 		Event:      posthogUpStartedEvent,
 		Properties: props,
-		Groups:     commonPostHogGroups(),
 	}); err != nil {
 		oktetoLog.Infof("failed to send posthog analytics: %s", err)
 	}
