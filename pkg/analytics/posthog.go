@@ -93,7 +93,7 @@ func commonPostHogProperties() posthog.Properties {
 		"customer_name": ctx.CompanyName,
 		// customer_id to be generated in posthog
 		"cluster_id":      ctx.ClusterID,
-		"cluster_name":    ctx.Name,
+		"cluster_url":     ctx.Name,
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 
@@ -103,6 +103,7 @@ func commonPostHogProperties() posthog.Properties {
 		"arch":               runtime.GOARCH,
 		"machine_id":         get().MachineID,
 		"measurement_source": "cli",
+		"trigger_source":     "cli",
 		"is_agent":           agent != "",
 	}
 	if agent != "" {
