@@ -284,9 +284,82 @@ func TestTrackImageBuild_ResolverError(t *testing.T) {
 	})
 	mock.waitCapture(t)
 
-	// Event must be sent even when the resolver fails
+	// Event must be sent with empty namespace when the resolver fails
 	require.Len(t, mock.captured, 1)
-	require.NotContains(t, mock.captured[0].Properties, "namespace")
+	require.Equal(t, "", mock.captured[0].Properties["namespace"])
+}
+
+func TestPostHogBackend_enqueue_appliesEnrichersBeforeSending(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+
+	enricher := func(_ context.Context, props posthog.Properties) {
+		props["enriched_key"] = "enriched_value"
+	}
+
+	props := posthog.Properties{}
+	b.enqueue(context.Background(), "user-123", "test_event", props, enricher)
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "test_event", mock.captured[0].Event)
+	require.Equal(t, "user-123", mock.captured[0].DistinctId)
+	require.Equal(t, "enriched_value", mock.captured[0].Properties["enriched_key"])
+}
+
+func TestPostHogBackend_enqueue_sendsEventWithNoEnrichers(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+
+	props := posthog.Properties{"key": "val"}
+	b.enqueue(context.Background(), "user-abc", "bare_event", props)
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "bare_event", mock.captured[0].Event)
+	require.Equal(t, "val", mock.captured[0].Properties["key"])
+}
+
+func TestPostHogBackend_withNamespace_addsUID(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-abc"}}
+
+	props := posthog.Properties{}
+	b.withNamespace("my-ns")(context.Background(), props)
+
+	require.Equal(t, "ns-uid-abc", props["namespace"])
+}
+
+func TestPostHogBackend_withNamespace_skipsWhenNamespaceEmpty(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-abc"}}
+
+	props := posthog.Properties{}
+	b.withNamespace("")(context.Background(), props)
+
+	require.NotContains(t, props, "namespace")
+}
+
+func TestPostHogBackend_withNamespace_skipsWhenResolverNil(t *testing.T) {
+	b := &posthogBackend{nsResolver: nil}
+
+	props := posthog.Properties{}
+	b.withNamespace("my-ns")(context.Background(), props)
+
+	require.NotContains(t, props, "namespace")
+}
+
+func TestPostHogBackend_withNamespace_setsEmptyOnResolverError(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{err: errors.New("k8s down")}}
+
+	props := posthog.Properties{}
+	b.withNamespace("my-ns")(context.Background(), props)
+
+	require.Equal(t, "", props["namespace"])
 }
 
 func TestPostHogBackend_TrackUp_NilClient(t *testing.T) {
@@ -402,7 +475,10 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	defer teardown()
 
 	mock := &mockPostHogClient{}
-	b := &posthogBackend{client: mock}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-456"},
+	}
 	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-abc-123")
 	b.wg.Wait()
 
@@ -411,7 +487,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, posthogUpStartedEvent, ev.Event)
 	require.Equal(t, "user-123", ev.DistinctId)
 	require.Equal(t, "api", ev.Properties["service"])
-	require.Equal(t, "dev-ns", ev.Properties["namespace"])
+	require.Equal(t, "ns-uid-456", ev.Properties["namespace"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
 	require.Equal(t, "wf-abc-123", ev.Properties["up_workflow_id"])
 
