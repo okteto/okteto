@@ -285,3 +285,76 @@ func TestTrackImageBuild_ResolverError(t *testing.T) {
 	require.Len(t, mock.captured, 1)
 	require.NotContains(t, mock.captured[0].Properties, "namespace")
 }
+
+func TestPostHogBackend_enqueue_appliesEnrichersBeforeSending(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+
+	enricher := func(_ context.Context, props posthog.Properties) {
+		props["enriched_key"] = "enriched_value"
+	}
+
+	props := posthog.Properties{}
+	b.enqueue(context.Background(), "user-123", "test_event", props, enricher)
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "test_event", mock.captured[0].Event)
+	require.Equal(t, "user-123", mock.captured[0].DistinctId)
+	require.Equal(t, "enriched_value", mock.captured[0].Properties["enriched_key"])
+}
+
+func TestPostHogBackend_enqueue_sendsEventWithNoEnrichers(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+
+	props := posthog.Properties{"key": "val"}
+	b.enqueue(context.Background(), "user-abc", "bare_event", props)
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "bare_event", mock.captured[0].Event)
+	require.Equal(t, "val", mock.captured[0].Properties["key"])
+}
+
+func TestPostHogBackend_withNamespace_addsUID(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-abc"}}
+
+	props := posthog.Properties{}
+	b.withNamespace("my-ns")(context.Background(), props)
+
+	require.Equal(t, "ns-uid-abc", props["namespace"])
+}
+
+func TestPostHogBackend_withNamespace_skipsWhenNamespaceEmpty(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-abc"}}
+
+	props := posthog.Properties{}
+	b.withNamespace("")(context.Background(), props)
+
+	require.NotContains(t, props, "namespace")
+}
+
+func TestPostHogBackend_withNamespace_skipsWhenResolverNil(t *testing.T) {
+	b := &posthogBackend{nsResolver: nil}
+
+	props := posthog.Properties{}
+	b.withNamespace("my-ns")(context.Background(), props)
+
+	require.NotContains(t, props, "namespace")
+}
+
+func TestPostHogBackend_withNamespace_skipsOnResolverError(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{err: errors.New("k8s down")}}
+
+	props := posthog.Properties{}
+	b.withNamespace("my-ns")(context.Background(), props)
+
+	require.NotContains(t, props, "namespace")
+}
