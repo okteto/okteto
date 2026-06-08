@@ -281,9 +281,9 @@ func TestTrackImageBuild_ResolverError(t *testing.T) {
 	})
 	mock.waitCapture(t)
 
-	// Event must be sent even when the resolver fails
+	// Event must be sent with empty namespace when the resolver fails
 	require.Len(t, mock.captured, 1)
-	require.NotContains(t, mock.captured[0].Properties, "namespace")
+	require.Equal(t, "", mock.captured[0].Properties["namespace"])
 }
 
 func TestPostHogBackend_enqueue_appliesEnrichersBeforeSending(t *testing.T) {
@@ -350,11 +350,11 @@ func TestPostHogBackend_withNamespace_skipsWhenResolverNil(t *testing.T) {
 	require.NotContains(t, props, "namespace")
 }
 
-func TestPostHogBackend_withNamespace_skipsOnResolverError(t *testing.T) {
+func TestPostHogBackend_withNamespace_setsEmptyOnResolverError(t *testing.T) {
 	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{err: errors.New("k8s down")}}
 
 	props := posthog.Properties{}
 	b.withNamespace("my-ns")(context.Background(), props)
 
-	require.NotContains(t, props, "namespace")
+	require.Equal(t, "", props["namespace"])
 }

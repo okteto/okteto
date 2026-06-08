@@ -166,7 +166,8 @@ func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 		defer cancel()
 		if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
 			oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
-		} else if uid != "" {
+			props["namespace"] = ""
+		} else {
 			props["namespace"] = uid
 		}
 	}
