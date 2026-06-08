@@ -86,9 +86,7 @@ func (ub *upBuilder) build(ctx context.Context) error {
 	if err := ub.builder.Build(ctx, buildOptions); err != nil {
 		return err
 	}
-	if ub.analyticsMeta != nil {
-		ub.analyticsMeta.HasRunBuild()
-	}
+	ub.analyticsMeta.HasRunBuild()
 	return nil
 }
 

@@ -132,6 +132,27 @@ func getAgent() string {
 	return ""
 }
 
+// resolveNamespaceUID fetches the UID for namespace and sets props["namespace"] if
+// successful. Returns true when the UID was resolved; false when the resolver is
+// unavailable, namespace is empty, or the lookup fails. Callers are responsible
+// for any fallback behavior when false is returned.
+func (b *posthogBackend) resolveNamespaceUID(ctx context.Context, namespace string, props posthog.Properties) bool {
+	if b.nsResolver == nil || namespace == "" {
+		return false
+	}
+	fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace)
+	if err != nil {
+		oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
+		return false
+	}
+	if uid != "" {
+		props["namespace"] = uid
+	}
+	return true
+}
+
 // TrackImageBuild sends an image_build event to PostHog.
 // The event is enqueued in a background goroutine so the caller is not blocked
 // by the namespace UID lookup.
@@ -151,15 +172,7 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
-		if b.nsResolver != nil && namespace != "" {
-			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
-				oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
-			} else if uid != "" {
-				props["namespace"] = uid
-			}
-		}
+		b.resolveNamespaceUID(ctx, namespace, props)
 		if err := b.client.Enqueue(posthog.Capture{
 			DistinctId: userID,
 			Event:      posthogImageBuildEvent,
@@ -188,15 +201,7 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
-		if b.nsResolver != nil && namespace != "" {
-			fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
-				oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
-			} else if uid != "" {
-				props["namespace"] = uid
-			}
-		}
+		b.resolveNamespaceUID(context.Background(), namespace, props)
 		if err := b.client.Enqueue(posthog.Capture{
 			DistinctId: userID,
 			Event:      posthogUpEvent,
@@ -232,15 +237,7 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
-		if b.nsResolver != nil && namespace != "" {
-			fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
-				oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
-			} else if uid != "" {
-				props["namespace"] = uid
-			}
-		} else if namespace != "" {
+		if !b.resolveNamespaceUID(context.Background(), namespace, props) && namespace != "" {
 			props["namespace"] = namespace
 		}
 		if err := b.client.Enqueue(posthog.Capture{
