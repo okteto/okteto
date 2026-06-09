@@ -161,7 +161,7 @@ func (b *posthogBackend) enqueue(ctx context.Context, userID, event string, prop
 func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 	return func(ctx context.Context, props posthog.Properties) {
 		if namespace == "" {
-			return
+			return // no namespace context — omit the property entirely
 		}
 		if b.nsResolver == nil {
 			props["namespace"] = ""
