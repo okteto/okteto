@@ -15,7 +15,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v29.4.3+incompatible
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.9.6
+	github.com/docker/docker-credential-helpers v0.9.7
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.19.0
 	github.com/gliderlabs/ssh v0.3.8
@@ -173,7 +173,6 @@ require (
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/vbauerster/mpb/v7 v7.5.3
-	github.com/vbauerster/mpb/v8 v8.12.0
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
