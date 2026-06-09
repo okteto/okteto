@@ -262,7 +262,7 @@ func TestTrackImageBuild_NilResolver(t *testing.T) {
 	mock.waitCapture(t)
 
 	require.Len(t, mock.captured, 1)
-	require.NotContains(t, mock.captured[0].Properties, "namespace")
+	require.Equal(t, "", mock.captured[0].Properties["namespace"])
 }
 
 func TestTrackImageBuild_ResolverError(t *testing.T) {
@@ -341,13 +341,13 @@ func TestPostHogBackend_withNamespace_skipsWhenNamespaceEmpty(t *testing.T) {
 	require.NotContains(t, props, "namespace")
 }
 
-func TestPostHogBackend_withNamespace_skipsWhenResolverNil(t *testing.T) {
+func TestPostHogBackend_withNamespace_setsEmptyWhenResolverNil(t *testing.T) {
 	b := &posthogBackend{nsResolver: nil}
 
 	props := posthog.Properties{}
 	b.withNamespace("my-ns")(context.Background(), props)
 
-	require.NotContains(t, props, "namespace")
+	require.Equal(t, "", props["namespace"])
 }
 
 func TestPostHogBackend_withNamespace_setsEmptyOnResolverError(t *testing.T) {
