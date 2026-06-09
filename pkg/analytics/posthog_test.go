@@ -332,13 +332,13 @@ func TestPostHogBackend_withNamespace_addsUID(t *testing.T) {
 	require.Equal(t, "ns-uid-abc", props["namespace"])
 }
 
-func TestPostHogBackend_withNamespace_skipsWhenNamespaceEmpty(t *testing.T) {
+func TestPostHogBackend_withNamespace_setsEmptyWhenNamespaceEmpty(t *testing.T) {
 	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-abc"}}
 
 	props := posthog.Properties{}
 	b.withNamespace("")(context.Background(), props)
 
-	require.NotContains(t, props, "namespace")
+	require.Equal(t, "", props["namespace"])
 }
 
 func TestPostHogBackend_withNamespace_setsEmptyWhenResolverNil(t *testing.T) {
