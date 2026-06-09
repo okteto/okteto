@@ -164,7 +164,7 @@ func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 			return // no namespace context — omit the property entirely
 		}
 		if b.nsResolver == nil {
-			props["namespace"] = ""
+			props["namespace"] = "" // resolver unavailable — signal unresolved
 			return
 		}
 		fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
