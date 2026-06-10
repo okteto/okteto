@@ -104,7 +104,7 @@ okteto preview deploy --wait=false`,
 }
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
-	_, isRedeploy := pw.okClient.Previews().Get(ctx, opts.name)
+	_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 
 	workflowID := uuid.New().String()
 	if pw.analyticsTracker != nil {
@@ -113,11 +113,11 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 			RepoURL:         opts.repository,
 			Preview:         opts.name,
 			IsWithinPreview: analytics.IsWithinPreview(),
-			IsRedeploy:      isRedeploy == nil,
+			IsRedeploy:      getErr == nil,
 		})
 	}
 
-	resp, err := pw.deployPreview(ctx, opts)
+	resp, err := pw.deployPreview(ctx, opts, workflowID)
 	analytics.TrackPreviewDeploy(err == nil, opts.scope)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 	return nil
 }
 
-func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*types.PreviewResponse, error) {
+func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions, workflowID string) (*types.PreviewResponse, error) {
 	oktetoLog.Spinner("Deploying your preview environment...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -154,7 +154,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 		})
 	}
 
-	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList, opts.labels, opts.redeployDependencies)
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, workflowID, varList, opts.labels, opts.redeployDependencies)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string, a *types.Action, timeout time.Duration) error {
