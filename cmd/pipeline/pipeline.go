@@ -42,7 +42,7 @@ type Command struct {
 }
 
 // NewCommand creates a namespace command to
-func NewCommand() (*Command, error) {
+func NewCommand(at pipelineAnalyticsTracker) (*Command, error) {
 	var okClient = &okteto.Client{}
 	if okteto.IsOkteto() {
 		c, err := okteto.NewOktetoClient()
@@ -54,6 +54,7 @@ func NewCommand() (*Command, error) {
 	return &Command{
 		okClient:          okClient,
 		k8sClientProvider: okteto.NewK8sClientProvider(),
+		analyticsTracker:  at,
 	}, nil
 }
 

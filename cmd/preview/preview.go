@@ -32,13 +32,14 @@ type Command struct {
 }
 
 // NewCommand creates a namespace command for previews
-func NewCommand() (*Command, error) {
+func NewCommand(at previewAnalyticsTracker) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 	return &Command{
-		okClient: c,
+		okClient:         c,
+		analyticsTracker: at,
 	}, nil
 }
 

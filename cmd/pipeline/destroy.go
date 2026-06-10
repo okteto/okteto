@@ -82,7 +82,7 @@ okteto pipeline destroy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand()
+			pipelineCmd, err := NewCommand(nil)
 			if err != nil {
 				return err
 			}

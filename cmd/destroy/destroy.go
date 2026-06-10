@@ -254,7 +254,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				ioCtrl:           ioCtrl,
 				getDivertDriver:  divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
-					return pipelineCMD.NewCommand()
+					return pipelineCMD.NewCommand(nil)
 				},
 			}
 

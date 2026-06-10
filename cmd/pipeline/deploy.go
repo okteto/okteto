@@ -116,11 +116,10 @@ okteto pipeline deploy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand()
+			pipelineCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}
-			pipelineCmd.analyticsTracker = at
 			opts := flags.toOptions(dependenciesIsSet)
 			err = pipelineCmd.ExecuteDeployPipeline(ctx, opts)
 			if err != nil {
