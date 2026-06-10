@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -215,13 +214,13 @@ type getPreviewQuery struct {
 }
 
 // DeployPreview creates a preview environment
-func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string, redeployDependencies bool) (*types.PreviewResponse, error) {
+func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename, workflowID string, variables []types.Variable, labels []string, redeployDependencies bool) (*types.PreviewResponse, error) {
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 
 	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels, redeployDependencies)
-	mutationVariables["workflowID"] = graphql.String(uuid.New().String())
+	mutationVariables["workflowID"] = graphql.String(workflowID)
 
 	var response deployPreviewResponse
 	if len(labels) == 0 {

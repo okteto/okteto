@@ -236,7 +236,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		})
 	}
 
-	resp, err := pc.deployPipeline(ctx, opts)
+	resp, err := pc.deployPipeline(ctx, opts, workflowID)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline '%s': %w", opts.Name, err)
 	}
@@ -320,7 +320,7 @@ func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
 	return nil
 }
 
-func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, workflowID string) (*types.GitDeployResponse, error) {
 	oktetoLog.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -338,6 +338,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 			exit <- err
 			return
 		}
+		pipelineOpts.WorkflowID = workflowID
 		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", opts.Name, opts.File, opts.Repository, opts.Branch, opts.Namespace)
 
 		resp, err = pc.okClient.Pipeline().Deploy(ctx, pipelineOpts)

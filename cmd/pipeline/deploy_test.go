@@ -415,6 +415,8 @@ func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 	err := pc.ExecuteDeployPipeline(ctx, opts)
 	assert.NoError(t, err)
 
+	assert.NotEmpty(t, fakePipelineDeployResponses.DeployOpts.WorkflowID)
+	fakePipelineDeployResponses.DeployOpts.WorkflowID = ""
 	assert.Equal(t, types.PipelineDeployOptions{
 		Branch:    "testing",
 		Filename:  "file",

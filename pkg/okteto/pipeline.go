@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -133,7 +132,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 	oktetoLog.Infof("deploying pipeline '%s' mutation on %s", opts.Name, opts.Namespace)
 
 	mutationVariables := c.getDeployVariables(opts)
-	mutationVariables["workflowID"] = graphql.String(uuid.New().String())
+	mutationVariables["workflowID"] = graphql.String(opts.WorkflowID)
 	oktetoLog.Infof("deploying pipeline with variables: %v", mutationVariables)
 
 	var response deployPipelineResponse
