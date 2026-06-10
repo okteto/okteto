@@ -157,11 +157,13 @@ func (b *posthogBackend) enqueue(ctx context.Context, userID, event string, prop
 }
 
 // withNamespace returns an enricherFn that resolves the namespace UID and sets
-// it as the "namespace" property. It is a no-op when namespace is empty or the
-// resolver is unavailable.
+// it as the "namespace" property. Sets an empty string when namespace is empty,
+// the resolver is unavailable, or the lookup fails, so downstream can distinguish
+// "no namespace" from "namespace not resolved".
 func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 	return func(ctx context.Context, props posthog.Properties) {
 		if namespace == "" || b.nsResolver == nil {
+			props["namespace"] = ""
 			return
 		}
 		fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -191,6 +193,7 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 }
 
 // TrackUp sends an up event to PostHog.
+// Namespace is set directly by UpMetricsMetadata.toPostHogProps() as the raw name.
 func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	if b.client == nil {
 		return
@@ -201,7 +204,7 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
-	b.enqueue(context.Background(), userID, posthogUpEvent, props, b.withNamespace(m.namespace))
+	b.enqueue(context.Background(), userID, posthogUpEvent, props)
 }
 
 // TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
@@ -225,6 +228,7 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	}
 	b.enqueue(context.Background(), userID, posthogUpStartedEvent, props, b.withNamespace(namespace))
 }
+
 
 // Close waits for any in-flight goroutines to finish enqueuing, then flushes
 // and shuts down the PostHog client.

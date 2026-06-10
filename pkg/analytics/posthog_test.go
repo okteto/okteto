@@ -162,8 +162,6 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	require.NotEmpty(t, event.Properties["os"])
 	require.NotEmpty(t, event.Properties["arch"])
 	require.Equal(t, "test-machine", event.Properties["machine_id"])
-
-	// Common props
 	require.Equal(t, "ACME Corp", event.Properties["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", event.Properties["cluster_id"])
 	require.Equal(t, "https://cloud.okteto.net", event.Properties["cluster_url"])
@@ -265,7 +263,7 @@ func TestTrackImageBuild_NilResolver(t *testing.T) {
 	mock.waitCapture(t)
 
 	require.Len(t, mock.captured, 1)
-	require.NotContains(t, mock.captured[0].Properties, "namespace")
+	require.Equal(t, "", mock.captured[0].Properties["namespace"])
 }
 
 func TestTrackImageBuild_ResolverError(t *testing.T) {
@@ -335,22 +333,22 @@ func TestPostHogBackend_withNamespace_addsUID(t *testing.T) {
 	require.Equal(t, "ns-uid-abc", props["namespace"])
 }
 
-func TestPostHogBackend_withNamespace_skipsWhenNamespaceEmpty(t *testing.T) {
+func TestPostHogBackend_withNamespace_setsEmptyWhenNamespaceEmpty(t *testing.T) {
 	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-abc"}}
 
 	props := posthog.Properties{}
 	b.withNamespace("")(context.Background(), props)
 
-	require.NotContains(t, props, "namespace")
+	require.Equal(t, "", props["namespace"])
 }
 
-func TestPostHogBackend_withNamespace_skipsWhenResolverNil(t *testing.T) {
+func TestPostHogBackend_withNamespace_setsEmptyWhenResolverNil(t *testing.T) {
 	b := &posthogBackend{nsResolver: nil}
 
 	props := posthog.Properties{}
 	b.withNamespace("my-ns")(context.Background(), props)
 
-	require.NotContains(t, props, "namespace")
+	require.Equal(t, "", props["namespace"])
 }
 
 func TestPostHogBackend_withNamespace_setsEmptyOnResolverError(t *testing.T) {
@@ -517,7 +515,7 @@ func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
 	require.NotContains(t, ev.Properties, "service")
-	require.NotContains(t, ev.Properties, "namespace")
+	require.Equal(t, "", ev.Properties["namespace"])
 	require.NotContains(t, ev.Properties, "repo_url")
 	require.NotContains(t, ev.Properties, "up_workflow_id")
 }
