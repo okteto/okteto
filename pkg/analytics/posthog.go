@@ -225,7 +225,6 @@ func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m Dep
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	props["workflow_id"] = m.WorkflowID
-	props["is_automation"] = isAutomation()
 	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
 	props["deploy_type"] = m.DeployType
@@ -248,7 +247,6 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	props["workflow_id"] = m.WorkflowID
-	props["is_automation"] = isAutomation()
 	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
 	props["ui_element"] = m.UIElement
@@ -256,12 +254,6 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 		props["repo_url"] = hashString(m.RepoURL)
 	}
 	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
-}
-
-// isAutomation reports whether the deploy was triggered by a non-human actor
-// that cannot be confirmed as a known AI agent (e.g. a CI system or script).
-func isAutomation() bool {
-	return config.GetDeployOrigin() != "cli" && getAgent() == ""
 }
 
 // IsWithinPreview reports whether the current execution context is inside a
