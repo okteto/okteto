@@ -480,6 +480,37 @@ func Test_NodeSelectorUnmarshalling(t *testing.T) {
 	}
 }
 
+func TestEnableServiceLinksUnmarshalling(t *testing.T) {
+	tests := []struct {
+		expected *bool
+		name     string
+		manifest []byte
+	}{
+		{
+			name:     "not set",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1"),
+			expected: nil,
+		},
+		{
+			name:     "disabled",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    x-enable-service-links: false"),
+			expected: ptr.To(false),
+		},
+		{
+			name:     "enabled",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    x-enable-service-links: true"),
+			expected: ptr.To(true),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, true)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, s.Services["app"].EnableServiceLinks)
+		})
+	}
+}
+
 func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 	tests := []struct {
 		expected *composeBuildInfo

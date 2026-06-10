@@ -90,11 +90,12 @@ func Test_translateDeployment(t *testing.T) {
 					"node1": "value1",
 					"node2": "value2",
 				},
-				Image:           "image",
-				Replicas:        3,
-				StopGracePeriod: 20,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
+				Image:              "image",
+				Replicas:           3,
+				StopGracePeriod:    20,
+				EnableServiceLinks: ptr.To(false),
+				Entrypoint:         model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:            model.Command{Values: []string{"args1", "args2"}},
 				Environment: []env.Var{
 					{
 						Name:  "env1",
@@ -132,6 +133,8 @@ func Test_translateDeployment(t *testing.T) {
 		"node2": "value2",
 	}
 	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
+	require.NotNil(t, result.Spec.Template.Spec.EnableServiceLinks)
+	assert.False(t, *result.Spec.Template.Spec.EnableServiceLinks)
 
 	if *result.Spec.Replicas != 3 {
 		t.Errorf("Wrong deployment spec.replicas: '%d'", *result.Spec.Replicas)
@@ -203,11 +206,12 @@ func Test_translateStatefulSet(t *testing.T) {
 					"node1": "value1",
 					"node2": "value2",
 				},
-				Image:           "image",
-				Replicas:        3,
-				StopGracePeriod: 20,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
+				Image:              "image",
+				Replicas:           3,
+				StopGracePeriod:    20,
+				EnableServiceLinks: ptr.To(false),
+				Entrypoint:         model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:            model.Command{Values: []string{"args1", "args2"}},
 				Environment: []env.Var{
 					{
 						Name:  "env1",
@@ -261,6 +265,8 @@ func Test_translateStatefulSet(t *testing.T) {
 		"node2": "value2",
 	}
 	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
+	require.NotNil(t, result.Spec.Template.Spec.EnableServiceLinks)
+	assert.False(t, *result.Spec.Template.Spec.EnableServiceLinks)
 	if *result.Spec.Replicas != 3 {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
@@ -410,11 +416,12 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 					"node1": "value1",
 					"node2": "value2",
 				},
-				Image:           "image",
-				StopGracePeriod: 20,
-				Replicas:        3,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
+				Image:              "image",
+				StopGracePeriod:    20,
+				Replicas:           3,
+				EnableServiceLinks: ptr.To(false),
+				Entrypoint:         model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:            model.Command{Values: []string{"args1", "args2"}},
 				Environment: []env.Var{
 					{
 						Name:  "env1",
@@ -468,6 +475,8 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		"node2": "value2",
 	}
 	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
+	require.NotNil(t, result.Spec.Template.Spec.EnableServiceLinks)
+	assert.False(t, *result.Spec.Template.Spec.EnableServiceLinks)
 	if *result.Spec.Completions != 3 {
 		t.Errorf("Wrong job spec.completions: '%d'", *result.Spec.Completions)
 	}
