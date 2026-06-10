@@ -221,7 +221,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
-	pc, err := pipelineCMD.NewCommand(nil)
+	pc, err := pipelineCMD.NewCommand(connTracker)
 	if err != nil {
 		return analytics.TestMetadata{}, fmt.Errorf("could not create pipeline command: %w", err)
 	}

@@ -955,6 +955,8 @@ type fakeTracker struct{}
 func (*fakeTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
 func (*fakeTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata)   {}
 func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)                           {}
+func (*fakeTracker) TrackDeployPipelineTriggered(context.Context, analytics.DeployPipelineTriggeredMetadata) {
+}
 
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {

@@ -26,7 +26,7 @@ import (
 )
 
 // Wake wakes a preview environment
-func Wake(ctx context.Context) *cobra.Command {
+func Wake(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
@@ -42,7 +42,7 @@ func Wake(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			prCmd, err := NewCommand(nil)
+			prCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}

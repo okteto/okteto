@@ -48,6 +48,7 @@ type builderInterface interface {
 type analyticsTrackerInterface interface {
 	buildTrackerInterface
 	TrackDeploy(analytics.DeployMetadata)
+	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
 	TrackUp(*analytics.UpMetricsMetadata)
 	TrackDown(bool)
 	TrackDownVolumes(bool)

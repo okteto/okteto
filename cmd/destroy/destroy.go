@@ -111,6 +111,7 @@ type destroyInterface interface {
 type analyticsTrackerInterface interface {
 	buildTrackerInterface
 	TrackDestroy(metadata analytics.DestroyMetadata)
+	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
 }
 
 type buildTrackerInterface interface {
@@ -254,7 +255,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				ioCtrl:           ioCtrl,
 				getDivertDriver:  divert.New,
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
-					return pipelineCMD.NewCommand(nil)
+					return pipelineCMD.NewCommand(at)
 				},
 			}
 

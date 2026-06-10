@@ -58,7 +58,7 @@ type DestroyOptions struct {
 	DependenciesIsSet   bool
 }
 
-func destroy(ctx context.Context) *cobra.Command {
+func destroy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 	flags := &destroyFlags{}
 
 	cmd := &cobra.Command{
@@ -82,7 +82,7 @@ okteto pipeline destroy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand(nil)
+			pipelineCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}

@@ -66,7 +66,7 @@ func Pipeline(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#pipeline"),
 	}
 	cmd.AddCommand(deploy(ctx, at))
-	cmd.AddCommand(destroy(ctx))
-	cmd.AddCommand(list(ctx))
+	cmd.AddCommand(destroy(ctx, at))
+	cmd.AddCommand(list(ctx, at))
 	return cmd
 }

@@ -58,6 +58,9 @@ func (m *mockAnalyticsTracker) TrackBuildkitConnection(meta *analytics.BuildkitC
 	m.Called(meta)
 }
 
+func (m *mockAnalyticsTracker) TrackDeployPipelineTriggered(_ context.Context, _ analytics.DeployPipelineTriggeredMetadata) {
+}
+
 type mockDownCmdRunner struct {
 	mock.Mock
 }

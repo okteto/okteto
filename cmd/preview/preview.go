@@ -54,7 +54,7 @@ func Preview(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	cmd.AddCommand(Destroy(ctx))
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Endpoints(ctx))
-	cmd.AddCommand(Sleep(ctx))
-	cmd.AddCommand(Wake(ctx))
+	cmd.AddCommand(Sleep(ctx, at))
+	cmd.AddCommand(Wake(ctx, at))
 	return cmd
 }

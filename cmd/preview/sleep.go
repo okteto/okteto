@@ -26,7 +26,7 @@ import (
 )
 
 // Sleep sleeps a preview environment
-func Sleep(ctx context.Context) *cobra.Command {
+func Sleep(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
@@ -42,7 +42,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			prCmd, err := NewCommand(nil)
+			prCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}
