@@ -215,16 +215,13 @@ type getPreviewQuery struct {
 }
 
 // DeployPreview creates a preview environment
-func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string, redeployDependencies bool, workflowID string) (*types.PreviewResponse, error) {
+func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string, redeployDependencies bool) (*types.PreviewResponse, error) {
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 
-	if workflowID == "" {
-		workflowID = uuid.New().String()
-	}
 	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels, redeployDependencies)
-	mutationVariables["workflowID"] = graphql.String(workflowID)
+	mutationVariables["workflowID"] = graphql.String(uuid.New().String())
 
 	var response deployPreviewResponse
 	if len(labels) == 0 {

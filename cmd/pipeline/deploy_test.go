@@ -415,15 +415,12 @@ func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 	err := pc.ExecuteDeployPipeline(ctx, opts)
 	assert.NoError(t, err)
 
-	got := fakePipelineDeployResponses.DeployOpts
-	assert.NotEmpty(t, got.WorkflowID)
-	got.WorkflowID = ""
 	assert.Equal(t, types.PipelineDeployOptions{
 		Branch:    "testing",
 		Filename:  "file",
 		Labels:    []string{"labeltest"},
 		Namespace: "test",
-	}, got)
+	}, fakePipelineDeployResponses.DeployOpts)
 }
 
 func Test_DeployPipelineWithSkipIfExist(t *testing.T) {

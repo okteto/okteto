@@ -133,11 +133,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 	oktetoLog.Infof("deploying pipeline '%s' mutation on %s", opts.Name, opts.Namespace)
 
 	mutationVariables := c.getDeployVariables(opts)
-	workflowID := opts.WorkflowID
-	if workflowID == "" {
-		workflowID = uuid.New().String()
-	}
-	mutationVariables["workflowID"] = graphql.String(workflowID)
+	mutationVariables["workflowID"] = graphql.String(uuid.New().String())
 	oktetoLog.Infof("deploying pipeline with variables: %v", mutationVariables)
 
 	var response deployPipelineResponse

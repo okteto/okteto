@@ -225,7 +225,7 @@ func TestDeployPreview(t *testing.T) {
 				client:             tc.input.client,
 				namespaceValidator: newNamespaceValidator(),
 			}
-			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels, tc.input.dependencies, "")
+			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels, tc.input.dependencies)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
@@ -260,7 +260,7 @@ func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
 			mutationResult: []interface{}{nil, successResult},
 		}
 		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
-		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", nil, nil, false, "")
+		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", nil, nil, false)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResponse, response)
 	})
@@ -271,7 +271,7 @@ func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
 			mutationResult: []interface{}{nil, successResult},
 		}
 		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
-		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", nil, []string{"key=val"}, false, "")
+		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", nil, []string{"key=val"}, false)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResponse, response)
 	})

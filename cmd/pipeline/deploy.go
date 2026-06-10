@@ -80,7 +80,6 @@ type DeployOptions struct {
 	File                 string
 	Variables            []string
 	Labels               []string
-	WorkflowID           string
 	Timeout              time.Duration
 	Wait                 bool
 	SkipIfExists         bool
@@ -226,7 +225,6 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	}
 
 	workflowID := uuid.New().String()
-	opts.WorkflowID = workflowID
 	if pc.analyticsTracker != nil {
 		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
 			WorkflowID:      workflowID,
@@ -560,7 +558,6 @@ func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOpt
 		Variables:            varList,
 		Namespace:            o.Namespace,
 		Labels:               o.Labels,
-		WorkflowID:           o.WorkflowID,
 		RedeployDependencies: o.RedeployDependencies,
 		IsDependency:         o.IsDependency,
 	}, nil
