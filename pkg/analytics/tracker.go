@@ -19,6 +19,8 @@ import "context"
 // Add a new method here when an event gains PostHog coverage.
 type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
+	TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata)
+	TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata)
 }
 
 // closer is implemented by backends that hold resources that need flushing on exit.

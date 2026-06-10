@@ -15,24 +15,20 @@ package analytics
 
 import "context"
 
-type mockEvent struct {
-	props   map[string]any
-	event   string
-	success bool
+// DeployPipelineTriggeredMetadata contains the metadata of a deploy_pipeline_triggered event
+type DeployPipelineTriggeredMetadata struct {
+	WorkflowID      string
+	RepoURL         string
+	Namespace       string
+	DeployType      string
+	UIElement       string
+	IsWithinPreview bool
+	IsRedeploy      bool
 }
 
-type mockAnalyticsBackend struct {
-	trackImageBuildFn func(ctx context.Context, meta *ImageBuildMetadata)
-}
-
-func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata) {
-	if m.trackImageBuildFn != nil {
-		m.trackImageBuildFn(ctx, meta)
+// TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event to all registered backends.
+func (a *Tracker) TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata) {
+	for _, b := range a.backends {
+		b.TrackDeployPipelineTriggered(ctx, m)
 	}
-}
-
-func (m *mockAnalyticsBackend) TrackDeployPipelineTriggered(_ context.Context, _ DeployPipelineTriggeredMetadata) {
-}
-
-func (m *mockAnalyticsBackend) TrackDeployPreviewTriggered(_ context.Context, _ DeployPreviewTriggeredMetadata) {
 }
