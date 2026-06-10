@@ -82,10 +82,11 @@ okteto preview deploy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			previewCmd, err := NewCommand(at)
+			previewCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}
+			previewCmd.analyticsTracker = at
 			return previewCmd.ExecuteDeployPreview(ctx, opts)
 		},
 	}

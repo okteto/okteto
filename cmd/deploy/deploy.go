@@ -236,7 +236,7 @@ $ okteto deploy --no-build=true`,
 			options.ShowCTA = oktetoLog.IsInteractive()
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
-			pc, err := pipelineCMD.NewCommand(nil)
+			pc, err := pipelineCMD.NewCommand()
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}

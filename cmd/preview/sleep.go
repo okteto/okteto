@@ -42,7 +42,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			prCmd, err := NewCommand(nil)
+			prCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}

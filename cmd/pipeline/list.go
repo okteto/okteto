@@ -91,7 +91,7 @@ func pipelineListCommandHandler(ctx context.Context, flags *listFlags, initOkCtx
 		return oktetoErrors.ErrContextIsNotOktetoCluster
 	}
 
-	pc, err := NewCommand(nil)
+	pc, err := NewCommand()
 	if err != nil {
 		return err
 	}
