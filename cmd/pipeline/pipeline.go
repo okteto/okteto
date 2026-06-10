@@ -17,6 +17,7 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -29,14 +30,19 @@ type Interface interface {
 	DeployerInterface
 }
 
+type pipelineAnalyticsTracker interface {
+	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
+}
+
 // Command has all the pipeline subcommands
 type Command struct {
 	okClient          types.OktetoInterface
 	k8sClientProvider okteto.K8sClientProvider
+	analyticsTracker  pipelineAnalyticsTracker
 }
 
 // NewCommand creates a namespace command to
-func NewCommand() (*Command, error) {
+func NewCommand(at pipelineAnalyticsTracker) (*Command, error) {
 	var okClient = &okteto.Client{}
 	if okteto.IsOkteto() {
 		c, err := okteto.NewOktetoClient()
@@ -48,17 +54,18 @@ func NewCommand() (*Command, error) {
 	return &Command{
 		okClient:          okClient,
 		k8sClientProvider: okteto.NewK8sClientProvider(),
+		analyticsTracker:  at,
 	}, nil
 }
 
 // Pipeline pipeline management commands
-func Pipeline(ctx context.Context) *cobra.Command {
+func Pipeline(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
 		Short: "Development Environments management commands",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#pipeline"),
 	}
-	cmd.AddCommand(deploy(ctx))
+	cmd.AddCommand(deploy(ctx, at))
 	cmd.AddCommand(destroy(ctx))
 	cmd.AddCommand(list(ctx))
 	return cmd

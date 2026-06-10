@@ -69,7 +69,7 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 		isDevEnvDeployed:  pipeline.IsDeployed,
 		getDeployer: func(params deployParams) (deployer, error) {
 			k8sProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
-			pc, err := pipelineCMD.NewCommand()
+			pc, err := pipelineCMD.NewCommand(nil)
 			if err != nil {
 				return nil, err
 			}

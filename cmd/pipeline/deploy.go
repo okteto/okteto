@@ -25,8 +25,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -78,6 +80,7 @@ type DeployOptions struct {
 	File                 string
 	Variables            []string
 	Labels               []string
+	WorkflowID           string
 	Timeout              time.Duration
 	Wait                 bool
 	SkipIfExists         bool
@@ -87,7 +90,7 @@ type DeployOptions struct {
 	DependenciesIsSet    bool
 }
 
-func deploy(ctx context.Context) *cobra.Command {
+func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 	flags := &deployFlags{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -114,7 +117,7 @@ okteto pipeline deploy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand()
+			pipelineCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}
@@ -220,6 +223,19 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
 			return nil
 		}
+	}
+
+	workflowID := uuid.New().String()
+	opts.WorkflowID = workflowID
+	if pc.analyticsTracker != nil {
+		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
+			WorkflowID:      workflowID,
+			RepoURL:         opts.Repository,
+			Namespace:       opts.Namespace,
+			DeployType:      "git_url",
+			IsWithinPreview: analytics.IsWithinPreview(),
+			IsRedeploy:      exists,
+		})
 	}
 
 	resp, err := pc.deployPipeline(ctx, opts)
@@ -544,6 +560,7 @@ func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOpt
 		Variables:            varList,
 		Namespace:            o.Namespace,
 		Labels:               o.Labels,
+		WorkflowID:           o.WorkflowID,
 		RedeployDependencies: o.RedeployDependencies,
 		IsDependency:         o.IsDependency,
 	}, nil
