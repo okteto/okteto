@@ -155,16 +155,12 @@ func (b *posthogBackend) enqueue(ctx context.Context, userID, event string, prop
 }
 
 // withNamespace returns an enricherFn that resolves the namespace UID and sets
-// it as the "namespace" property. Sets an empty string when the resolver is
-// unavailable or the lookup fails, so downstream can distinguish
-// "no namespace" from "namespace not resolved". No-op when namespace is empty.
+// it as the "namespace" property. Sets an empty string when namespace is empty,
+// the resolver is unavailable, or the lookup fails, so downstream can distinguish
+// "no namespace" from "namespace not resolved".
 func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 	return func(ctx context.Context, props posthog.Properties) {
-		if namespace == "" {
-			props["namespace"] = ""
-			return
-		}
-		if b.nsResolver == nil {
+		if namespace == "" || b.nsResolver == nil {
 			props["namespace"] = ""
 			return
 		}
