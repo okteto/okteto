@@ -225,11 +225,56 @@ func TestDeployPreview(t *testing.T) {
 				client:             tc.input.client,
 				namespaceValidator: newNamespaceValidator(),
 			}
-			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels, tc.input.dependencies)
+			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels, tc.input.dependencies, "")
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
 	}
+}
+
+func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
+	successResult := &deployPreviewMutation{
+		Response: deployPreviewResponse{
+			Id: "test",
+			Action: actionStruct{
+				Id:     "test",
+				Name:   "test",
+				Status: ProgressingStatus,
+			},
+		},
+	}
+	expectedResponse := &types.PreviewResponse{
+		Action: &types.Action{
+			ID:     "test",
+			Name:   "test",
+			Status: progressingStatus,
+		},
+		Preview: &types.Preview{
+			ID: "test",
+		},
+	}
+
+	t.Run("workflowID not supported - falls back to legacy mutation", func(t *testing.T) {
+		client := &fakeGraphQLMultipleCallsClient{
+			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployPreview" of type "Mutation"`), nil},
+			mutationResult: []interface{}{nil, successResult},
+		}
+		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
+		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", nil, nil, false, "")
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, response)
+	})
+
+	t.Run("workflowID not supported with labels - falls back to legacy mutation", func(t *testing.T) {
+		client := &fakeGraphQLMultipleCallsClient{
+			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployPreview" of type "Mutation"`), nil},
+			mutationResult: []interface{}{nil, successResult},
+		}
+		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
+		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", nil, []string{"key=val"}, false, "")
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, response)
+	})
 }
 
 func TestDestroyPreview(t *testing.T) {
