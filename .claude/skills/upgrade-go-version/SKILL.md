@@ -26,7 +26,7 @@ toolchain version:
 - **`Dockerfile`** — `ARG GOLANG_VERSION` + `ARG GOLANG_SHA`, used by both the `tools-builder` and
   `golang-builder` stages (`golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA}`).
 - **`.circleci/config.yml`** + **`okteto.yml`** — the `okteto/golang-ci:<ver>@sha256:...` image,
-  **only** if the user provides a new golang-ci image (Step 7).
+  **only** if the user provides a new golang-ci image (Step 8).
 
 **Do NOT touch** these — they are not the build toolchain:
 
@@ -71,7 +71,7 @@ risky items that could matter to a Go codebase.
   build tags, or `//go:` directives.
 - Report anything affected or potentially affected, with `file:line` references. Decide what
   (if anything) needs changing — but make code edits only after the version bump, when the
-  compiler can confirm (Step 6).
+  compiler can confirm (Step 7).
 
 ### 4. Bump the `go` directive in both modules
 
@@ -99,7 +99,20 @@ exists today.
 
 - Set `ARG GOLANG_SHA=sha256:<digest>` to the value returned above.
 
-### 6. Build to surface compilation errors, then fix
+### 6. Tidy both modules
+
+The version bump (and any module-graph changes it pulls in) can leave `go.mod` / `go.sum` out of
+sync. Run `go mod tidy` in **both** modules so each is consistent before building:
+
+```bash
+go mod tidy                    # root module
+cd tools && go mod tidy && cd ..
+```
+
+Review the resulting diff — bumping only the `go` directive should produce minimal churn, so
+investigate anything unexpected before moving on.
+
+### 7. Build to surface compilation errors, then fix
 
 - **Preferred:** `okteto build` (builds the `cli` image from the Dockerfile remotely; any
   compilation error shows in the build output). Build a single service if needed: `okteto build cli`.
@@ -108,7 +121,7 @@ exists today.
   before editing, keep changes minimal, preserve the existing Apache 2.0 license headers, and follow
   existing patterns. Re-build until green.
 
-### 7. Ask about the golang-ci image (CI dependency)
+### 8. Ask about the golang-ci image (CI dependency)
 
 Do this **before** running the tests: `okteto test unit` and the CI lint / unit-test jobs all run
 **inside** the `okteto/golang-ci` image (pinned in the `.circleci/config.yml` executor and in
@@ -125,26 +138,26 @@ If so, paste the full `version@sha256:...` reference."_
   grep -rn 'okteto/golang-ci:' .circleci/config.yml okteto.yml
   ```
 
-  Update both to `okteto/golang-ci:<ver>@sha256:<digest>`. Step 8 then runs the tests on the new
+  Update both to `okteto/golang-ci:<ver>@sha256:<digest>`. Step 9 then runs the tests on the new
   toolchain (since `okteto test unit` reads the image from `okteto.yml`).
 
 - **If not provided:** warn the user clearly — _"CI (golangci-lint + unit tests) will fail until a
   golang-ci image supporting Go `<target>` is published and these references are updated."_
   You may still open the PR, but record this as an explicit **blocker** in the description, and note
-  that the Step 8 results do not reflect the target toolchain.
+  that the Step 9 results do not reflect the target toolchain.
 
-### 8. Run the tests
+### 9. Run the tests
 
 - **Preferred:** `okteto test unit` (runs the `test.unit` suite → `make test`).
-- ⚠️ This runs inside the `okteto/golang-ci` image from Step 7. If Step 7 produced an updated image,
+- ⚠️ This runs inside the `okteto/golang-ci` image from Step 8. If Step 8 produced an updated image,
   the suite exercises the new toolchain. If not, the image still ships the old toolchain (Go may
   auto-download the target via `GOTOOLCHAIN`, or silently run on the old one) — call this out in the
   results and re-run once the updated golang-ci image lands.
 - **Local fallback:** `make test` (root) and `cd tools && make test`.
 
-### 9. Open the PR
+### 10. Open the PR
 
-Only after build + tests pass (note any golang-ci caveat from Step 7).
+Only after build + tests pass (note any golang-ci caveat from Step 8).
 
 - Use `AskUserQuestion`: _"Is there a Jira ticket associated with this upgrade? If so, paste the
   ticket key (e.g. `OKT-1234`) or its URL."_
