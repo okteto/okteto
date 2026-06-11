@@ -31,8 +31,9 @@ toolchain version:
 **Do NOT touch** these — they are not the build toolchain:
 
 - `okteto/golang:1` floating tags (`okteto.yml` `dev`, `samples/`, `pkg/linguist/dev.go`)
-- `okteto/golang:1.22` / `golang:1.20` strings inside `pkg/schema` and `pkg/model` test
-  fixtures (they assert manifest parsing)
+- `okteto/golang:1.22` / `golang:1.20` strings inside `pkg/schema` tests (`schema_test.go`,
+  `test_test.go`) and `integration/validate/manifests/` (e.g. `valid-movies.yml`) — they assert
+  manifest parsing
 - `samples/golang/go.mod`
 
 ## WORKFLOW
@@ -104,7 +105,7 @@ exists today.
   compilation error shows in the build output). Build a single service if needed: `okteto build cli`.
 - **Local fallback** (no okteto context): `docker build -t okteto-cli:test .`.
 - If the build fails, fix the code for the new Go version (apply the Step 3 findings). Read code
-  before editing, keep changes minimal, preserve Apache 2.0 headers (years 2023-2025), and follow
+  before editing, keep changes minimal, preserve the existing Apache 2.0 license headers, and follow
   existing patterns. Re-build until green.
 
 ### 7. Ask about the golang-ci image (CI dependency)
@@ -151,10 +152,12 @@ Only after build + tests pass (note any golang-ci caveat from Step 7).
     `Jira: <key or URL>` line near the top of the PR **description**.
   - **If not provided:** skip it — no placeholder.
 - Make sure you are on a feature branch, not `master`: `git checkout -b chore/upgrade-go-<target>`.
-- Commit signed (DCO) and add the `Co-Authored-By` trailer for the running Claude model:
+- Commit signed (DCO), ending the message with a `Co-Authored-By` trailer for the running Claude model:
 
   ```bash
-  git commit -s -m "chore: upgrade Go to <target>"
+  git commit -s \
+    -m "chore: upgrade Go to <target>" \
+    -m "Co-Authored-By: <running Claude model> <noreply@anthropic.com>"
   ```
 
 - Create the PR with the required labels (drop the `(<ticket>)` suffix if there is no ticket):
@@ -189,7 +192,9 @@ Only after build + tests pass (note any golang-ci caveat from Step 7).
 - Keep `go.mod`, `tools/go.mod`, and the Dockerfile `GOLANG_VERSION` on the **same** version.
 - Always pin the Dockerfile base image by `sha256` (the multi-arch manifest-list digest).
 - Never modify sample or test-fixture Go versions (see CONTEXT).
-- Read before edit; keep changes minimal; Apache 2.0 headers on any new `.go` files (years 2023-2025).
+- Read before edit; keep changes minimal. Any new `.go` file needs the Apache 2.0 header from
+  `.copyright-header.tmpl` with a year accepted by the `goheader` linter — match the format of
+  existing files rather than assuming a fixed year range.
 - Sign every commit (`git commit -s`).
 - If the upgrade goes sideways (build won't pass, unexpected breakage), STOP and re-plan rather
   than pushing through.
