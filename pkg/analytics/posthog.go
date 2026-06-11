@@ -229,7 +229,6 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	b.enqueue(context.Background(), userID, posthogUpStartedEvent, props, b.withNamespace(namespace))
 }
 
-
 // Close waits for any in-flight goroutines to finish enqueuing, then flushes
 // and shuts down the PostHog client.
 func (b *posthogBackend) Close() {
