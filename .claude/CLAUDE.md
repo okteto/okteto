@@ -104,4 +104,5 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 > **Build, lint & release**: [context/build-and-release.md](.claude/context/build-and-release.md)
 > **Feature flags & NoOp strategy**: [context/feature-flags.md](.claude/context/feature-flags.md)
 > **CVE remediation**: use `/fix-cves` skill — see [skills/fix-cves/SKILL.md](.claude/skills/fix-cves/SKILL.md)
+> **Go version upgrade**: use `/upgrade-go-version` skill — see [skills/upgrade-go-version/SKILL.md](.claude/skills/upgrade-go-version/SKILL.md)
 > **Self-improvement**: use `/lessons` skill — see [skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md) | log at [lessons.md](.claude/lessons.local.md)
