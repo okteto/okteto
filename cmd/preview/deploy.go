@@ -53,6 +53,7 @@ type DeployOptions struct {
 	timeout              time.Duration
 	wait                 bool
 	redeployDependencies bool
+	workflowID           string
 }
 
 // Deploy Deploy a preview environment
@@ -106,10 +107,10 @@ okteto preview deploy --wait=false`,
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
 	_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 
-	workflowID := uuid.New().String()
+	opts.workflowID = uuid.New().String()
 	if pw.analyticsTracker != nil {
 		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
-			WorkflowID:      workflowID,
+			WorkflowID:      opts.workflowID,
 			RepoURL:         opts.repository,
 			Preview:         opts.name,
 			IsWithinPreview: analytics.IsWithinPreview(),
@@ -117,7 +118,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 		})
 	}
 
-	resp, err := pw.deployPreview(ctx, opts, workflowID)
+	resp, err := pw.deployPreview(ctx, opts)
 	analytics.TrackPreviewDeploy(err == nil, opts.scope)
 	if err != nil {
 		return err
@@ -136,7 +137,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 	return nil
 }
 
-func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions, workflowID string) (*types.PreviewResponse, error) {
+func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*types.PreviewResponse, error) {
 	oktetoLog.Spinner("Deploying your preview environment...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -154,7 +155,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions, workf
 		})
 	}
 
-	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, workflowID, varList, opts.labels, opts.redeployDependencies)
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, opts.workflowID, varList, opts.labels, opts.redeployDependencies)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string, a *types.Action, timeout time.Duration) error {

@@ -87,6 +87,7 @@ type DeployOptions struct {
 	RedeployDependencies bool
 	IsDependency         bool
 	DependenciesIsSet    bool
+	WorkflowID           string
 }
 
 func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
@@ -224,10 +225,10 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		}
 	}
 
-	workflowID := uuid.New().String()
+	opts.WorkflowID = uuid.New().String()
 	if pc.analyticsTracker != nil {
 		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
-			WorkflowID:      workflowID,
+			WorkflowID:      opts.WorkflowID,
 			RepoURL:         opts.Repository,
 			Namespace:       opts.Namespace,
 			DeployType:      "git_url",
@@ -236,7 +237,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		})
 	}
 
-	resp, err := pc.deployPipeline(ctx, opts, workflowID)
+	resp, err := pc.deployPipeline(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline '%s': %w", opts.Name, err)
 	}
@@ -320,7 +321,7 @@ func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
 	return nil
 }
 
-func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, workflowID string) (*types.GitDeployResponse, error) {
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
 	oktetoLog.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -338,7 +339,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, work
 			exit <- err
 			return
 		}
-		pipelineOpts.WorkflowID = workflowID
+		pipelineOpts.WorkflowID = opts.WorkflowID
 		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", opts.Name, opts.File, opts.Repository, opts.Branch, opts.Namespace)
 
 		resp, err = pc.okClient.Pipeline().Deploy(ctx, pipelineOpts)
