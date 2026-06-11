@@ -73,7 +73,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	if up.Dev.IsHybridModeEnabled() {
 		msg = "Reverse tunnel configured"
 	}
-	oktetoLog.Success(msg)
+	oktetoLog.Success("%s", msg)
 
 	elapsed := time.Since(start)
 	up.analyticsMeta.InitialSyncDuration(elapsed)

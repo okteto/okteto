@@ -275,7 +275,7 @@ func Hint(format string, args ...interface{}) {
 func Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	msg = redactMessage(msg)
-	log.writer.Fail(msg)
+	log.writer.Fail("%s", msg)
 }
 
 // Println writes a line with colors

@@ -41,7 +41,7 @@ type staticKubetokenWarner struct {
 // warn prints a warning message when the static kubetoken is enabled and the cluster has dynamic kubetoken capabilities.
 func (wp *staticKubetokenWarner) warn() {
 	wp.once.Do(func() {
-		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
+		oktetoLog.Warning("%s", usingStaticKubetokenWarningMessage)
 	})
 }
 

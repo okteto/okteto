@@ -410,7 +410,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 									return errMessage
 								} else if errors.Is(err, oktetoErrors.ErrReadinessProbeFailed) {
 									if _, ok := serviceWarnings[service]; !ok {
-										oktetoLog.Information(errMessage.Error())
+										oktetoLog.Information("%s", errMessage.Error())
 										serviceWarnings[service] = errMessage.Error()
 									}
 								}
@@ -448,7 +448,7 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 
 	if err != nil {
 		if strings.Contains(err.Error(), "skipping ") {
-			oktetoLog.Warning(err.Error())
+			oktetoLog.Warning("%s", err.Error())
 			return nil
 		}
 		return err
@@ -888,7 +888,7 @@ func DisplayNotSupportedFieldsWarnings(warnings []string) {
 
 func DisplayVolumeMountWarnings(warnings []string) {
 	for _, warning := range warnings {
-		oktetoLog.Warning(warning)
+		oktetoLog.Warning("%s", warning)
 	}
 }
 

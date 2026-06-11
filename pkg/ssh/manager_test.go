@@ -66,7 +66,7 @@ func (*testSSHHandler) listenAndServe(address string) {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		oktetoLog.Fatalf(err.Error())
+		oktetoLog.Fatalf("%s", err.Error())
 	}
 }
 

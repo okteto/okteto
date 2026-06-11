@@ -58,7 +58,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	defer func() {
 		if err := connection.Close(); err != nil {
-			oktetoLog.Debugf("Error closing connection: %s", connection.SessionID(), err)
+			oktetoLog.Debugf("Error closing connection %s: %s", connection.SessionID(), err)
 		}
 	}()
 	go func() {

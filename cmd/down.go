@@ -141,7 +141,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(okteto.GetContext().Namespace, dev.Name))
 					}
 				} else {
-					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
+					oktetoLog.Success("Development container '%s' deactivated", dev.Name)
 				}
 			}
 
