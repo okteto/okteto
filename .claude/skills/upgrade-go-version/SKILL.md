@@ -21,12 +21,12 @@ a PR.
 This repo has **two** Go modules plus several pinned images. Only these hold the build
 toolchain version:
 
-| File                                       | What to change                                                                                                              |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `go.mod` (module `github.com/okteto/okteto`) | the `go` directive                                                                                                        |
-| `tools/go.mod` (module `github.com/okteto/tools`) | the `go` directive                                                                                                   |
-| `Dockerfile`                               | `ARG GOLANG_VERSION` + `ARG GOLANG_SHA` (used by both `tools-builder` and `golang-builder` stages: `golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA}`) |
-| `.circleci/config.yml` + `okteto.yml`      | the `okteto/golang-ci:<ver>@sha256:...` image — **only** if the user provides a new golang-ci image (Step 7)                |
+- **`go.mod`** (module `github.com/okteto/okteto`) — the `go` directive.
+- **`tools/go.mod`** (module `github.com/okteto/tools`) — the `go` directive.
+- **`Dockerfile`** — `ARG GOLANG_VERSION` + `ARG GOLANG_SHA`, used by both the `tools-builder` and
+  `golang-builder` stages (`golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA}`).
+- **`.circleci/config.yml`** + **`okteto.yml`** — the `okteto/golang-ci:<ver>@sha256:...` image,
+  **only** if the user provides a new golang-ci image (Step 7).
 
 **Do NOT touch** these — they are not the build toolchain:
 
@@ -40,14 +40,16 @@ toolchain version:
 ### 1. Determine current and target versions
 
 - Read the current versions:
+
   ```bash
   grep -E '^go ' go.mod tools/go.mod
   grep GOLANG_VERSION Dockerfile
   ```
+
 - Confirm both modules match. Classify the jump:
   - **Patch** (`1.25.11` → `1.25.12`): security / bug fixes only; breaking changes very unlikely.
   - **Minor** (`1.25.x` → `1.26.x`): new language, tooling, and stdlib behavior; breaking changes possible.
-  - **Multiple minors** (`1.24.x` → `1.26.x`): review *every* intervening minor.
+  - **Multiple minors** (`1.24.x` → `1.26.x`): review _every_ intervening minor.
 
 ### 2. Review release notes for breaking changes
 
@@ -88,10 +90,12 @@ exists today.
 - Set `ARG GOLANG_VERSION=<target>` (must match the `go` directive patch version).
 - Resolve the **multi-arch manifest-list (index) digest** for `golang:<target>-bookworm` —
   the CLI is built for multiple arches, so a single-platform digest is wrong:
+
   ```bash
   docker buildx imagetools inspect golang:<target>-bookworm --format '{{.Manifest.Digest}}'
   # alternative: crane digest golang:<target>-bookworm
   ```
+
 - Set `ARG GOLANG_SHA=sha256:<digest>` to the value returned above.
 
 ### 6. Build to surface compilation errors, then fix
@@ -111,17 +115,20 @@ Do this **before** running the tests: `okteto test unit` and the CI lint / unit-
 directive, CI will fail and the local run won't truly exercise the new toolchain — so settle the
 image first.
 
-Use `AskUserQuestion`: *"Is there an `okteto/golang-ci` image that already supports Go `<target>`?
-If so, paste the full `version@sha256:...` reference."*
+Use `AskUserQuestion`: _"Is there an `okteto/golang-ci` image that already supports Go `<target>`?
+If so, paste the full `version@sha256:...` reference."_
 
 - **If provided:** replace **every** pinned occurrence (grep first so none are missed):
+
   ```bash
   grep -rn 'okteto/golang-ci:' .circleci/config.yml okteto.yml
   ```
+
   Update both to `okteto/golang-ci:<ver>@sha256:<digest>`. Step 8 then runs the tests on the new
   toolchain (since `okteto test unit` reads the image from `okteto.yml`).
-- **If not provided:** warn the user clearly — *"CI (golangci-lint + unit tests) will fail until a
-  golang-ci image supporting Go `<target>` is published and these references are updated."*
+
+- **If not provided:** warn the user clearly — _"CI (golangci-lint + unit tests) will fail until a
+  golang-ci image supporting Go `<target>` is published and these references are updated."_
   You may still open the PR, but record this as an explicit **blocker** in the description, and note
   that the Step 8 results do not reflect the target toolchain.
 
@@ -138,17 +145,20 @@ If so, paste the full `version@sha256:...` reference."*
 
 Only after build + tests pass (note any golang-ci caveat from Step 7).
 
-- Use `AskUserQuestion`: *"Is there a Jira ticket associated with this upgrade? If so, paste the
-  ticket key (e.g. `OKT-1234`) or its URL."*
+- Use `AskUserQuestion`: _"Is there a Jira ticket associated with this upgrade? If so, paste the
+  ticket key (e.g. `OKT-1234`) or its URL."_
   - **If provided:** include the ticket key in the PR **title** (suffix: `… (OKT-1234)`) and add a
     `Jira: <key or URL>` line near the top of the PR **description**.
   - **If not provided:** skip it — no placeholder.
 - Make sure you are on a feature branch, not `master`: `git checkout -b chore/upgrade-go-<target>`.
 - Commit signed (DCO) and add the `Co-Authored-By` trailer for the running Claude model:
+
   ```bash
   git commit -s -m "chore: upgrade Go to <target>"
   ```
+
 - Create the PR with the required labels (drop the `(<ticket>)` suffix if there is no ticket):
+
   ```bash
   gh pr create \
     --label "release/internal" \
