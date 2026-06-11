@@ -113,7 +113,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 			RepoURL:         opts.repository,
 			Preview:         opts.name,
 			IsWithinPreview: analytics.IsWithinPreview(),
-			IsRedeploy:      getErr == nil,
+			IsRedeploy:      !oktetoErrors.IsNotFound(getErr),
 		})
 	}
 
