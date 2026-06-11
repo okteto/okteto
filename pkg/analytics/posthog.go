@@ -215,10 +215,7 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 
 // TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event to PostHog.
 func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata) {
-	if b.client == nil {
-		return
-	}
-	if !analyticsEnabled() {
+	if b.client == nil || !analyticsEnabled() {
 		return
 	}
 
@@ -237,10 +234,7 @@ func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m Dep
 
 // TrackDeployPreviewTriggered sends a deploy_preview_triggered event to PostHog.
 func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata) {
-	if b.client == nil {
-		return
-	}
-	if !analyticsEnabled() {
+	if b.client == nil || !analyticsEnabled() {
 		return
 	}
 
