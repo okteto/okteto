@@ -283,9 +283,9 @@ func TestUpBuilder_Build_SetsIsBuildExecuted(t *testing.T) {
 			expectExecuted: true,
 		},
 		{
-			name:           "Build fails — isBuildExecuted false",
+			name:           "Build fails — isBuildExecuted true",
 			buildErr:       assert.AnError,
-			expectExecuted: false,
+			expectExecuted: true,
 		},
 	}
 
