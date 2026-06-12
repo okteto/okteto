@@ -54,7 +54,7 @@ func (r repositoryURL) String() string {
 		repo.Scheme = "https"
 	case "https":
 	default:
-		oktetoLog.Infof("retrieved schema for %s - %s", repo, r.Scheme)
+		oktetoLog.Infof("retrieved schema for %s - %s", repo.String(), r.Scheme)
 	}
 	repo.Path = strings.TrimSuffix(repo.Path, ".git")
 	return repo.String()

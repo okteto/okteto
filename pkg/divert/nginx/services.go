@@ -29,7 +29,7 @@ import (
 func (d *Driver) divertService(ctx context.Context, name string) error {
 	from, ok := d.cache.divertServices[name]
 	if !ok {
-		oktetoLog.Infof("service %s not found: %s", name)
+		oktetoLog.Infof("service %s not found", name)
 		return nil
 	}
 

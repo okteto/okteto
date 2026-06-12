@@ -21,6 +21,8 @@ type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
 	TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata)
 	TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata)
+	TrackUp(meta *UpMetricsMetadata)
+	TrackUpStarted(service, namespace, repoURL, workflowID string)
 }
 
 // closer is implemented by backends that hold resources that need flushing on exit.

@@ -40,6 +40,8 @@ const (
 	posthogImageBuildEvent              = "image_build"
 	posthogDeployPipelineTriggeredEvent = "deploy_pipeline_triggered"
 	posthogDeployPreviewTriggeredEvent  = "deploy_preview_triggered"
+	posthogUpEvent                      = "up"
+	posthogUpStartedEvent               = "up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -130,7 +132,7 @@ func getAgent() string {
 		return "gemini"
 	}
 	if env.LoadBoolean("CLAUDECODE") {
-		return "claude"
+		return "claude_code"
 	}
 	if os.Getenv("CURSOR_SANDBOX") != "" {
 		return "cursor"
@@ -254,6 +256,40 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 // preview environment (set by the Okteto platform via env var).
 func IsWithinPreview() bool {
 	return os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
+}
+
+// TrackUp sends an up event to PostHog.
+func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	b.enqueue(context.Background(), userID, posthogUpEvent, props, b.withNamespace(m.namespace))
+}
+
+// TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
+func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID string) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	hashedRepoURL := ""
+	if repoURL != "" {
+		hashedRepoURL = hashString(repoURL)
+	}
+	props["service"] = service
+	props["repo_url"] = hashedRepoURL
+	props["workflow_id"] = workflowID
+	b.enqueue(context.Background(), userID, posthogUpStartedEvent, props, b.withNamespace(namespace))
 }
 
 // Close waits for any in-flight goroutines to finish enqueuing, then flushes

@@ -23,6 +23,8 @@ type mockEvent struct {
 
 type mockAnalyticsBackend struct {
 	trackImageBuildFn func(ctx context.Context, meta *ImageBuildMetadata)
+	trackUpFn         func(meta *UpMetricsMetadata)
+	trackUpStartedFn  func(service, namespace, repoURL, workflowID string)
 }
 
 func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata) {
@@ -35,4 +37,16 @@ func (m *mockAnalyticsBackend) TrackDeployPipelineTriggered(_ context.Context, _
 }
 
 func (m *mockAnalyticsBackend) TrackDeployPreviewTriggered(_ context.Context, _ DeployPreviewTriggeredMetadata) {
+}
+
+func (m *mockAnalyticsBackend) TrackUp(meta *UpMetricsMetadata) {
+	if m.trackUpFn != nil {
+		m.trackUpFn(meta)
+	}
+}
+
+func (m *mockAnalyticsBackend) TrackUpStarted(service, namespace, repoURL, workflowID string) {
+	if m.trackUpStartedFn != nil {
+		m.trackUpStartedFn(service, namespace, repoURL, workflowID)
+	}
 }

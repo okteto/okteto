@@ -50,6 +50,7 @@ type analyticsTrackerInterface interface {
 	TrackDeploy(analytics.DeployMetadata)
 	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
 	TrackUp(*analytics.UpMetricsMetadata)
+	TrackUpStarted(service, namespace, repoURL, workflowID string)
 	TrackDown(bool)
 	TrackDownVolumes(bool)
 }

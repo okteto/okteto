@@ -735,7 +735,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 				warningMsg := hybridModeDev.warnHybridUnsupportedFields()
 				if warningMsg != "" {
-					oktetoLog.Warning(warningMsg)
+					oktetoLog.Warning("%s", warningMsg)
 				}
 			}
 		default:

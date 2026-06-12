@@ -228,7 +228,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		// for the search.
 		reason := fmt.Sprintf("Could not to retrieve environment variables from the image '%s'", svcImage)
 		oktetoLog.Debugf("%s: %s", reason, err.Error())
-		oktetoLog.Warning(reason)
+		oktetoLog.Warning("%s", reason)
 	}
 	envs = append(envs, imageEnvs...)
 

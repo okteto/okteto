@@ -86,7 +86,7 @@ func (d *plainDisplayer) Display(_ string) {
 				case <-d.commandContext.Done():
 				default:
 					line := d.stderrScanner.Text()
-					oktetoLog.FWarning(os.Stdout, line)
+					oktetoLog.FWarning(os.Stdout, "%s", line)
 					continue
 				}
 				break

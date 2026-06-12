@@ -65,7 +65,7 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
 		props["name"] = hashString(m.Name)
 	}
 	if m.RepoURL != "" {
-		props["repoURL"] = hashString(m.RepoURL)
+		props["repoURL"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 
 	return props
@@ -98,7 +98,7 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
 		props["connection_type"] = m.ConnectionType
 	}
 	if m.RepoURL != "" {
-		props["repo_url"] = hashString(m.RepoURL)
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	if !m.Success && m.ErrorReason != "" {
 		props["error_reason"] = m.ErrorReason

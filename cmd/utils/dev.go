@@ -122,7 +122,7 @@ const (
 func AskYesNo(q string, d YesNoDefault) (bool, error) {
 	var answer string
 	for {
-		if err := oktetoLog.Question(fmt.Sprintf("%s %s: ", q, d)); err != nil {
+		if err := oktetoLog.Question("%s %s: ", q, d); err != nil {
 			return false, err
 		}
 		if _, err := fmt.Scanln(&answer); err != nil && err.Error() != "unexpected newline" {

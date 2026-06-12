@@ -146,7 +146,7 @@ func (d *TTYCollapseDisplayer) displayStdout(wg *sync.WaitGroup) {
 				d.linesToDisplay = append(d.linesToDisplay, line)
 			}
 			if os.Stdout == oktetoLog.GetOutput() {
-				oktetoLog.AddToBuffer(oktetoLog.InfoLevel, line)
+				oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "%s", line)
 			}
 			continue
 		}
@@ -177,7 +177,7 @@ func (d *TTYCollapseDisplayer) displayStderr(wg *sync.WaitGroup) {
 			}
 			d.linesToDisplay = append(d.linesToDisplay, line)
 			if os.Stdout == oktetoLog.GetOutput() {
-				oktetoLog.AddToBuffer(oktetoLog.WarningLevel, line)
+				oktetoLog.AddToBuffer(oktetoLog.WarningLevel, "%s", line)
 			}
 			continue
 		}

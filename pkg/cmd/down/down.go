@@ -90,7 +90,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace, manifes
 			return
 		}
 
-		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
+		oktetoLog.Success("Development container '%s' deactivated", dev.Name)
 
 		if !rm {
 			exit <- nil
@@ -103,7 +103,7 @@ func (d *Operation) Down(ctx context.Context, dev *model.Dev, namespace, manifes
 			exit <- err
 			return
 		}
-		oktetoLog.Success(fmt.Sprintf("Persistent volume '%s' removed", dev.Name))
+		oktetoLog.Success("Persistent volume '%s' removed", dev.Name)
 
 		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev, namespace, d.Fs); err != nil {

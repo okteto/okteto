@@ -1,6 +1,6 @@
 module github.com/okteto/okteto
 
-go 1.25.11
+go 1.26.4
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
@@ -39,10 +39,10 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/stern/stern v1.22.0
-	golang.org/x/crypto v0.50.0
+	golang.org/x/crypto v0.51.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/term v0.42.0
+	golang.org/x/term v0.43.0
 	google.golang.org/grpc v1.81.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -144,9 +144,9 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
-	golang.org/x/net v0.52.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/api v0.271.0 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
@@ -166,7 +166,7 @@ require (
 require (
 	github.com/bluekeyes/go-gitdiff v0.8.1
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/heimdalr/dag v1.4.0
+	github.com/heimdalr/dag v1.5.1
 	github.com/kubeark/jsonschema v0.1.2
 	github.com/moby/patternmatcher v0.6.1
 	github.com/posthog/posthog-go v1.11.1

@@ -60,7 +60,7 @@ func (fc fakeGraphQLClient) Mutate(ctx context.Context, m interface{}, _ map[str
 }
 
 func isAnInterface(m interface{}) bool {
-	return reflect.TypeOf(m).Kind() == reflect.Ptr && reflect.TypeOf(m).Elem().Kind() == reflect.Interface
+	return reflect.TypeOf(m).Kind() == reflect.Pointer && reflect.TypeOf(m).Elem().Kind() == reflect.Interface
 }
 
 type fakeGraphQLMultipleCallsClient struct {

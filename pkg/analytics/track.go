@@ -79,7 +79,7 @@ func init() {
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
 func TrackNamespace(success, withArg bool) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"withArg": withArg,
 	}
 	track(namespaceEvent, success, props)
@@ -97,7 +97,7 @@ func TrackDeleteNamespace(success bool) {
 
 // TrackPreviewDeploy sends a tracking event to mixpanel when the creates a preview environment
 func TrackPreviewDeploy(success bool, scope string) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"scope": scope,
 	}
 	track(previewDeployEvent, success, props)
@@ -122,7 +122,7 @@ type TrackExecMetadata struct {
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
 func TrackExec(m *TrackExecMetadata) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"isFirstArgDev": m.FirstArgIsDev,
 		// defined dict for Exec event
 		"mode":                   m.Mode,
@@ -142,7 +142,7 @@ func TrackRestart(success bool) {
 
 // TrackLogs sends a tracking event to mixpanel when the command okteto logs is executed
 func TrackLogs(success, all bool) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"all": all,
 	}
 	track(logsEvent, success, props)
@@ -150,7 +150,7 @@ func TrackLogs(success, all bool) {
 
 // TrackStatus sends a tracking event to mixpanel when the user uses the status command
 func TrackStatus(success, showInfo bool) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"showInfo": showInfo,
 	}
 	track(statusEvent, success, props)
@@ -166,7 +166,7 @@ func trackDisable(success bool) {
 }
 
 func TrackBuildWithManifestVsDockerfile(isDockerfile bool) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"isDockerfile": isDockerfile,
 	}
 	track(buildWithManifestVsDockerfile, true, props)
@@ -185,7 +185,7 @@ func TrackBuildTransientError(success bool) {
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
 func TrackDeployStack(success, isCompose bool) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"isCompose":  isCompose,
 		"deployType": "stack",
 	}
@@ -216,7 +216,7 @@ func TrackStackWarnings(warnings []string) {
 		if found != "" {
 			warning = strings.Replace(warning, found, "", 1)
 		}
-		props := map[string]interface{}{
+		props := map[string]any{
 			"field": warning,
 		}
 		track(stackNotSupportedField, true, props)
@@ -230,7 +230,7 @@ func TrackBuildPullError(success bool) {
 
 // TrackContextDelete sends a tracking event to mixpanel indicating one or more context have been deleted
 func TrackContextDelete(ctxs int, success bool) {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"totalContextsDeleted": ctxs,
 	}
 	track(deleteContexts, success, props)
@@ -255,7 +255,7 @@ func track(event string, success bool, props map[string]any) {
 	}
 
 	if props == nil {
-		props = map[string]interface{}{}
+		props = map[string]any{}
 	}
 	props["$os"] = mpOS
 	props["version"] = config.VersionString

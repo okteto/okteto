@@ -44,7 +44,7 @@ func GetStructKeys(t interface{}) map[string][]string {
 	result := make(map[string][]string)
 	typ := reflect.TypeOf(t)
 
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 
@@ -52,7 +52,7 @@ func GetStructKeys(t interface{}) map[string][]string {
 	if typ.Kind() == reflect.Map {
 		// For each key in the map type, check if the value type is a struct and process accordingly
 		mapValueType := typ.Elem()
-		if mapValueType.Kind() == reflect.Ptr {
+		if mapValueType.Kind() == reflect.Pointer {
 			mapValueType = mapValueType.Elem()
 		}
 
@@ -96,12 +96,12 @@ func GetStructKeys(t interface{}) map[string][]string {
 			}
 			// Recurse if the value type of the map is a pointer-to-struct
 			mapValueType := fieldType.Elem()
-			if mapValueType.Kind() == reflect.Ptr && mapValueType.Elem().Kind() == reflect.Struct {
+			if mapValueType.Kind() == reflect.Pointer && mapValueType.Elem().Kind() == reflect.Struct {
 				for k, v := range GetStructKeys(reflect.New(mapValueType.Elem()).Interface()) {
 					result[k] = mergeAndSortUnique(result[k], v)
 				}
 			}
-		} else if fieldType.Kind() == reflect.Ptr && fieldType.Elem().Kind() == reflect.Struct {
+		} else if fieldType.Kind() == reflect.Pointer && fieldType.Elem().Kind() == reflect.Struct {
 			for k, v := range GetStructKeys(reflect.New(fieldType.Elem()).Interface()) {
 				result[k] = mergeAndSortUnique(result[k], v)
 			}
