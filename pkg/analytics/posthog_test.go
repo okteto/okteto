@@ -383,7 +383,10 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 	defer teardown()
 
 	mock := &mockPostHogClient{}
-	b := &posthogBackend{client: mock}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-789"},
+	}
 
 	b.TrackUp(&UpMetricsMetadata{
 		success:          true,
@@ -415,7 +418,7 @@ func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
 	require.Equal(t, true, ev.Properties["has_build_section"])
 	require.Equal(t, true, ev.Properties["has_deploy_section"])
 	require.Equal(t, "api", ev.Properties["service"])
-	require.Equal(t, "dev-ns", ev.Properties["namespace"])
+	require.Equal(t, "ns-uid-789", ev.Properties["namespace"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
 	require.Equal(t, 90, ev.Properties["duration_seconds"])
 	require.Equal(t, true, ev.Properties["is_reconnect"])

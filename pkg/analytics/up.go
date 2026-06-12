@@ -265,14 +265,9 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 		"reconnect_count":    u.reconnectCount,
 		"is_auto_down":       u.isAutoDownEnabled,
 	}
-	if u.workflowID != "" {
-		props["up_workflow_id"] = u.workflowID
-	}
+	props["up_workflow_id"] = u.workflowID
 	if u.service != "" {
 		props["service"] = u.service
-	}
-	if u.namespace != "" {
-		props["namespace"] = u.namespace
 	}
 	if u.repoURL != "" {
 		props["repo_url"] = hashString(u.repoURL)

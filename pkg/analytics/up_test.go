@@ -307,6 +307,7 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 			"is_reconnect":       false,
 			"reconnect_count":    0,
 			"is_auto_down":       false,
+			"up_workflow_id":     "",
 		}
 		for k, v := range overrides {
 			base[k] = v
@@ -325,13 +326,12 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 			expected: baseProps(map[string]any{"result": true}),
 		},
 		{
-			name: "service, namespace and repo_url present when set",
+			name: "service and repo_url present when set; namespace excluded (resolved via withNamespace enricher)",
 			meta: UpMetricsMetadata{success: true, service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
 			expected: baseProps(map[string]any{
-				"result":    true,
-				"service":   "api",
-				"namespace": "dev-ns",
-				"repo_url":  "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3",
+				"result":   true,
+				"service":  "api",
+				"repo_url": "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3",
 			}),
 		},
 		{
@@ -419,7 +419,6 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 				"is_auto_down":       true,
 				"reconnect_cause":    "unrecognised",
 				"service":            "api",
-				"namespace":          "my-ns",
 			}),
 		},
 	}

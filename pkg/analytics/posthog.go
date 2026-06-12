@@ -193,7 +193,6 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 }
 
 // TrackUp sends an up event to PostHog.
-// Namespace is set directly by UpMetricsMetadata.toPostHogProps() as the raw name.
 func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	if b.client == nil {
 		return
@@ -204,7 +203,7 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
-	b.enqueue(context.Background(), userID, posthogUpEvent, props)
+	b.enqueue(context.Background(), userID, posthogUpEvent, props, b.withNamespace(m.namespace))
 }
 
 // TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.
