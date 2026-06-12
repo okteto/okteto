@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -139,10 +140,11 @@ func TestUpBuilder_Build(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ub := &upBuilder{
-				manifest: tt.manifest,
-				devName:  tt.devName,
-				builder:  tt.builder,
-				registry: &fakeRegistry{},
+				manifest:      tt.manifest,
+				devName:       tt.devName,
+				builder:       tt.builder,
+				registry:      &fakeRegistry{},
+				analyticsMeta: analytics.NewUpMetricsMetadata(),
 			}
 			err := ub.build(ctx)
 			require.ErrorIs(t, err, tt.expectError)
@@ -256,6 +258,53 @@ func TestGetBuildSvcFromDev(t *testing.T) {
 
 			gotImage := ub.getBuildSvcFromDev(tt.manifest)
 			assert.Equal(t, tt.wantImage, gotImage)
+		})
+	}
+}
+
+func TestUpBuilder_Build_SetsIsBuildExecuted(t *testing.T) {
+	manifest := &model.Manifest{
+		Build: build.ManifestBuild{
+			"my-dev": {Image: "my-image"},
+		},
+		Dev: map[string]*model.Dev{
+			"my-dev": {Image: "my-image"},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		buildErr       error
+		expectExecuted bool
+	}{
+		{
+			name:           "Build succeeds — isBuildExecuted true",
+			buildErr:       nil,
+			expectExecuted: true,
+		},
+		{
+			name:           "Build fails — isBuildExecuted true",
+			buildErr:       assert.AnError,
+			expectExecuted: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := analytics.NewUpMetricsMetadata()
+			ub := &upBuilder{
+				manifest:      manifest,
+				devName:       "my-dev",
+				analyticsMeta: meta,
+				registry:      &fakeRegistry{},
+				builder: &fakeBuilder{
+					getSvcFromRegexErr: buildv2.ErrImageIsNotAOktetoBuildSyntax,
+					services:           []string{"my-dev"},
+					buildErr:           tt.buildErr,
+				},
+			}
+			_ = ub.build(context.Background())
+			require.Equal(t, tt.expectExecuted, meta.IsBuildExecuted())
 		})
 	}
 }

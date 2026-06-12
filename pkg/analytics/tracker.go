@@ -19,6 +19,8 @@ import "context"
 // Add a new method here when an event gains PostHog coverage.
 type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
+	TrackUp(meta *UpMetricsMetadata)
+	TrackUpStarted(service, namespace, repoURL, workflowID string)
 }
 
 // closer is implemented by backends that hold resources that need flushing on exit.

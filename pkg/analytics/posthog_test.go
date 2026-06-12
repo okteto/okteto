@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/posthog/posthog-go"
 	"github.com/stretchr/testify/require"
@@ -215,7 +216,7 @@ func TestPostHogBackend_AgentType_PresentWhenAgent(t *testing.T) {
 
 	require.Len(t, mock.captured, 1)
 	require.Equal(t, true, mock.captured[0].Properties["is_agent"])
-	require.Equal(t, "claude", mock.captured[0].Properties["agent_type"])
+	require.Equal(t, "claude_code", mock.captured[0].Properties["agent_type"])
 }
 
 // mockNamespaceUIDResolver is a test double for NamespaceUIDResolver.
@@ -357,4 +358,167 @@ func TestPostHogBackend_withNamespace_setsEmptyOnResolverError(t *testing.T) {
 	b.withNamespace("my-ns")(context.Background(), props)
 
 	require.Equal(t, "", props["namespace"])
+}
+
+func TestPostHogBackend_TrackUp_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackUp(&UpMetricsMetadata{success: true})
+	})
+}
+
+func TestPostHogBackend_TrackUp_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackUp(&UpMetricsMetadata{success: true})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackUp_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-789"},
+	}
+
+	b.TrackUp(&UpMetricsMetadata{
+		success:          true,
+		manifestType:     model.OktetoManifestType,
+		isInteractive:    true,
+		isBuildExecuted:  true,
+		hasRunDeploy:     true,
+		hasBuildSection:  true,
+		hasDeploySection: true,
+		service:          "api",
+		namespace:        "dev-ns",
+		repoURL:          "https://github.com/org/repo",
+		execDuration:     90 * time.Second,
+		isReconnect:      true,
+		reconnectCount:   1,
+		reconnectCause:   reconnectCauseDefault,
+	})
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogUpEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, true, ev.Properties["result"])
+	require.Equal(t, "manifest", ev.Properties["manifest_type"])
+	require.Equal(t, true, ev.Properties["is_interactive"])
+	require.Equal(t, true, ev.Properties["is_build_executed"])
+	require.Equal(t, true, ev.Properties["is_deploy_executed"])
+	require.Equal(t, true, ev.Properties["has_build_section"])
+	require.Equal(t, true, ev.Properties["has_deploy_section"])
+	require.Equal(t, "api", ev.Properties["service"])
+	require.Equal(t, "ns-uid-789", ev.Properties["namespace"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
+	require.Equal(t, 90, ev.Properties["duration_seconds"])
+	require.Equal(t, true, ev.Properties["is_reconnect"])
+	require.Equal(t, 1, ev.Properties["reconnect_count"])
+	require.Equal(t, "unrecognised", ev.Properties["reconnect_cause"])
+	require.NotContains(t, ev.Properties, "error_reason")
+
+	// CLI common props
+	require.NotEmpty(t, ev.Properties["cli_version"])
+	require.NotEmpty(t, ev.Properties["os"])
+	require.NotEmpty(t, ev.Properties["arch"])
+	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+
+	// Common props
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
+	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+}
+
+func TestPostHogBackend_TrackUp_FailureIncludesErrorReason(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackUp(&UpMetricsMetadata{success: false, failActivate: true})
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "fail_activate", mock.captured[0].Properties["error_reason"])
+}
+
+func TestPostHogBackend_TrackUpStarted_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-123")
+	})
+}
+
+func TestPostHogBackend_TrackUpStarted_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-123")
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-456"},
+	}
+	b.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-abc-123")
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogUpStartedEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, "api", ev.Properties["service"])
+	require.Equal(t, "ns-uid-456", ev.Properties["namespace"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
+	require.Equal(t, "wf-abc-123", ev.Properties["workflow_id"])
+
+	// CLI common props
+	require.NotEmpty(t, ev.Properties["cli_version"])
+	require.NotEmpty(t, ev.Properties["os"])
+	require.NotEmpty(t, ev.Properties["arch"])
+	require.Equal(t, "test-machine", ev.Properties["machine_id"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+
+	// Common props
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
+	require.Equal(t, "cluster-uuid-1234", ev.Properties["cluster_id"])
+	require.Equal(t, "1.2.3", ev.Properties["cluster_version"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+}
+
+func TestPostHogBackend_TrackUpStarted_EmptyFieldsSentAsEmpty(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackUpStarted("", "", "", "")
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, "", ev.Properties["service"])
+	require.Equal(t, "", ev.Properties["namespace"])
+	require.Equal(t, "", ev.Properties["repo_url"])
+	require.Equal(t, "", ev.Properties["workflow_id"])
 }
