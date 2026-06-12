@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDeployPreview(t *testing.T) {
@@ -261,8 +262,8 @@ func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
 		}
 		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
 		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", "", nil, nil, false)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, response)
+		require.NoError(t, err)
+		require.Equal(t, expectedResponse, response)
 	})
 
 	t.Run("workflowID not supported with labels - falls back to legacy mutation", func(t *testing.T) {
@@ -272,8 +273,8 @@ func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
 		}
 		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
 		response, err := pc.DeployPreview(context.Background(), "test", "", "", "", "", "", "", nil, []string{"key=val"}, false)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, response)
+		require.NoError(t, err)
+		require.Equal(t, expectedResponse, response)
 	})
 }
 
