@@ -228,15 +228,15 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	opts.WorkflowID = uuid.New().String()
 	if pc.analyticsTracker != nil {
 		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
-			WorkflowID:      opts.WorkflowID,
-			RepoURL:         opts.Repository,
-			Namespace:       opts.Namespace,
-			DeployType:      "git_url",
+			WorkflowID: opts.WorkflowID,
+			RepoURL:    opts.Repository,
+			Namespace:  opts.Namespace,
+			DeployType: "git_url",
 			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
 				_, err := pc.okClient.Previews().Get(ctx, ns)
 				return err
 			}),
-			IsRedeploy:      exists,
+			IsRedeploy: exists,
 		})
 	}
 
