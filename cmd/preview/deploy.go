@@ -105,16 +105,15 @@ okteto preview deploy --wait=false`,
 }
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
-	_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
-
 	opts.workflowID = uuid.New().String()
 	if pw.analyticsTracker != nil {
+		_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
 			WorkflowID:      opts.workflowID,
 			RepoURL:         opts.repository,
 			Preview:         opts.name,
 			IsWithinPreview: analytics.IsWithinPreview(),
-			IsRedeploy:      !oktetoErrors.IsNotFound(getErr),
+			IsRedeploy:      getErr == nil,
 		})
 	}
 
