@@ -80,7 +80,7 @@ func (ch *defaultConfigMapHandler) UpdateConfigMap(ctx context.Context, cfg *api
 		return err
 	}
 	if errMain != nil {
-		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, errMain.Error())
+		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", errMain.Error())
 		data.Status = pipeline.ErrorStatus
 	}
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {

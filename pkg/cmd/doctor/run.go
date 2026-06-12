@@ -69,7 +69,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, namespace string, 
 	podPath, err := generatePodFile(ctx, dev, namespace, c)
 	if err != nil {
 		oktetoLog.Infof("failed to get information about the remote dev container: %s", err)
-		oktetoLog.Warning(oktetoErrors.ErrNotInDevMode.Error())
+		oktetoLog.Warning("%s", oktetoErrors.ErrNotInDevMode.Error())
 	} else {
 		defer os.RemoveAll(podPath)
 	}
