@@ -16,8 +16,9 @@ package analytics
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"net/url"
 	"strings"
+
+	giturls "github.com/chainguard-dev/git-urls"
 )
 
 func hashString(s string) string {
@@ -26,19 +27,18 @@ func hashString(s string) string {
 }
 
 // normalizeRepoURL normalizes a git repo URL before hashing:
-// converts SSH git@ format to HTTPS, forces https scheme,
-// strips a trailing .git suffix and trailing slashes, and lowercases the result.
+// parses all git URL formats (https, ssh://, git@), forces https scheme,
+// strips credentials, query params, fragments, trailing .git suffix, and lowercases the result.
 func normalizeRepoURL(rawURL string) string {
-	if strings.HasPrefix(rawURL, "git@") {
-		rawURL = "https://" + strings.Replace(strings.TrimPrefix(rawURL, "git@"), ":", "/", 1)
-	}
-
-	u, err := url.Parse(rawURL)
+	u, err := giturls.Parse(rawURL)
 	if err != nil || u.Host == "" {
 		return strings.ToLower(rawURL)
 	}
 
 	u.Scheme = "https"
+	u.User = nil
+	u.RawQuery = ""
+	u.Fragment = ""
 	u.Path = strings.TrimRight(strings.TrimSuffix(strings.TrimRight(u.Path, "/"), ".git"), "/")
 
 	return strings.ToLower(u.String())

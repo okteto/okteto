@@ -80,6 +80,71 @@ func Test_normalizeRepoURL(t *testing.T) {
 			input:    "https://github.com/org/repo.git/",
 			expected: "https://github.com/org/repo",
 		},
+		{
+			name:     "credentials stripped from https url",
+			input:    "https://user:password@github.com/org/repo",
+			expected: "https://github.com/org/repo",
+		},
+		{
+			name:     "query params stripped",
+			input:    "https://github.com/org/repo?token=secret&ref=main",
+			expected: "https://github.com/org/repo",
+		},
+		{
+			name:     "fragment stripped",
+			input:    "https://github.com/org/repo#readme",
+			expected: "https://github.com/org/repo",
+		},
+		{
+			name:     "ssh:// scheme converted to https",
+			input:    "ssh://git@github.com/org/repo.git",
+			expected: "https://github.com/org/repo",
+		},
+		{
+			name:     "credentials and query params stripped together",
+			input:    "https://user:token@github.com/org/repo.git?ref=main#section",
+			expected: "https://github.com/org/repo",
+		},
+		{
+			name:     "gitlab subgroup ssh",
+			input:    "git@gitlab.com:group/subgroup/repo.git",
+			expected: "https://gitlab.com/group/subgroup/repo",
+		},
+		{
+			name:     "gitlab subgroup https",
+			input:    "https://gitlab.com/group/subgroup/repo.git",
+			expected: "https://gitlab.com/group/subgroup/repo",
+		},
+		{
+			name:     "gitlab deep nesting",
+			input:    "git@gitlab.com:a/b/c/d/repo.git",
+			expected: "https://gitlab.com/a/b/c/d/repo",
+		},
+		{
+			name:     "bitbucket ssh",
+			input:    "git@bitbucket.org:workspace/repo.git",
+			expected: "https://bitbucket.org/workspace/repo",
+		},
+		{
+			name:     "bitbucket https",
+			input:    "https://bitbucket.org/workspace/repo.git",
+			expected: "https://bitbucket.org/workspace/repo",
+		},
+		{
+			name:     "git:// protocol converted to https",
+			input:    "git://github.com/org/repo.git",
+			expected: "https://github.com/org/repo",
+		},
+		{
+			name:     "git:// protocol gitlab subgroup",
+			input:    "git://gitlab.com/group/subgroup/repo.git",
+			expected: "https://gitlab.com/group/subgroup/repo",
+		},
+		{
+			name:     "file:// local path returned as-is lowercased",
+			input:    "file:///path/to/repo",
+			expected: "file:///path/to/repo",
+		},
 	}
 
 	for _, tt := range tests {
