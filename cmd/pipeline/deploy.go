@@ -232,7 +232,10 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 			RepoURL:         opts.Repository,
 			Namespace:       opts.Namespace,
 			DeployType:      "git_url",
-			IsWithinPreview: analytics.IsWithinPreview(),
+			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+				_, err := pc.okClient.Previews().Get(ctx, ns)
+				return err
+			}),
 			IsRedeploy:      exists,
 		})
 	}

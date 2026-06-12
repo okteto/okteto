@@ -398,17 +398,64 @@ func TestPostHogBackend_withPreview_setsEmptyOnResolverError(t *testing.T) {
 
 func TestIsWithinPreview_TrueWhenEnvSet(t *testing.T) {
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "true")
-	require.True(t, IsWithinPreview())
+	require.True(t, IsWithinPreview(context.Background(), nil))
 }
 
 func TestIsWithinPreview_FalseWhenEnvEmpty(t *testing.T) {
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
-	require.False(t, IsWithinPreview())
+	require.False(t, IsWithinPreview(context.Background(), nil))
 }
 
 func TestIsWithinPreview_FalseWhenEnvOtherValue(t *testing.T) {
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "false")
-	require.False(t, IsWithinPreview())
+	require.False(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://cloud.okteto.net",
+		Contexts: map[string]*okteto.Context{
+			"https://cloud.okteto.net": {Namespace: "my-preview-ns"},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	checker := func(_ context.Context, _ string) error { return nil }
+	require.True(t, IsWithinPreview(context.Background(), checker))
+}
+
+func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://cloud.okteto.net",
+		Contexts: map[string]*okteto.Context{
+			"https://cloud.okteto.net": {Namespace: "regular-ns"},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	checker := func(_ context.Context, _ string) error { return errors.New("not found") }
+	require.False(t, IsWithinPreview(context.Background(), checker))
+}
+
+func TestIsWithinPreview_FalseWhenNamespaceEmpty(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://cloud.okteto.net",
+		Contexts: map[string]*okteto.Context{
+			"https://cloud.okteto.net": {Namespace: ""},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	called := false
+	checker := func(_ context.Context, _ string) error { called = true; return nil }
+	require.False(t, IsWithinPreview(context.Background(), checker))
+	require.False(t, called, "checker must not be called when namespace is empty")
 }
 
 func TestPostHogBackend_TrackDeployPipelineTriggered_NilClient(t *testing.T) {

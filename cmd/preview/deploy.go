@@ -112,7 +112,10 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 			WorkflowID:      opts.workflowID,
 			RepoURL:         opts.repository,
 			Preview:         opts.name,
-			IsWithinPreview: analytics.IsWithinPreview(),
+			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+				_, err := pw.okClient.Previews().Get(ctx, ns)
+				return err
+			}),
 			IsRedeploy:      getErr == nil,
 		})
 	}
