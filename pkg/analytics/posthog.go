@@ -216,15 +216,13 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	}
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
-	if service != "" {
-		props["service"] = service
-	}
+	hashedRepoURL := ""
 	if repoURL != "" {
-		props["repo_url"] = hashString(repoURL)
+		hashedRepoURL = hashString(repoURL)
 	}
-	if workflowID != "" {
-		props["up_workflow_id"] = workflowID
-	}
+	props["service"] = service
+	props["repo_url"] = hashedRepoURL
+	props["workflow_id"] = workflowID
 	b.enqueue(context.Background(), userID, posthogUpStartedEvent, props, b.withNamespace(namespace))
 }
 

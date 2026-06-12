@@ -490,7 +490,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "api", ev.Properties["service"])
 	require.Equal(t, "ns-uid-456", ev.Properties["namespace"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
-	require.Equal(t, "wf-abc-123", ev.Properties["up_workflow_id"])
+	require.Equal(t, "wf-abc-123", ev.Properties["workflow_id"])
 
 	// CLI common props
 	require.NotEmpty(t, ev.Properties["cli_version"])
@@ -506,7 +506,7 @@ func TestPostHogBackend_TrackUpStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "user-123", ev.Properties["user_id"])
 }
 
-func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
+func TestPostHogBackend_TrackUpStarted_EmptyFieldsSentAsEmpty(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -517,8 +517,8 @@ func TestPostHogBackend_TrackUpStarted_OmitsEmptyFields(t *testing.T) {
 
 	require.Len(t, mock.captured, 1)
 	ev := mock.captured[0]
-	require.NotContains(t, ev.Properties, "service")
+	require.Equal(t, "", ev.Properties["service"])
 	require.Equal(t, "", ev.Properties["namespace"])
-	require.NotContains(t, ev.Properties, "repo_url")
-	require.NotContains(t, ev.Properties, "up_workflow_id")
+	require.Equal(t, "", ev.Properties["repo_url"])
+	require.Equal(t, "", ev.Properties["workflow_id"])
 }

@@ -265,22 +265,16 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 		"reconnect_count":    u.reconnectCount,
 		"is_auto_down":       u.isAutoDownEnabled,
 	}
-	props["up_workflow_id"] = u.workflowID
-	if u.service != "" {
-		props["service"] = u.service
-	}
+	repoURL := ""
 	if u.repoURL != "" {
-		props["repo_url"] = hashString(u.repoURL)
+		repoURL = hashString(u.repoURL)
 	}
-	if d := int(u.execDuration.Seconds()); d > 0 {
-		props["duration_seconds"] = d
-	}
-	if d := int(u.initialSyncDuration.Seconds()); d > 0 {
-		props["initial_sync_duration_seconds"] = d
-	}
-	if d := int(u.devContainerCreationDuration.Seconds()); d > 0 {
-		props["dev_container_creation_duration_seconds"] = d
-	}
+	props["workflow_id"] = u.workflowID
+	props["service"] = u.service
+	props["repo_url"] = repoURL
+	props["duration_seconds"] = int(u.execDuration.Seconds())
+	props["initial_sync_duration_seconds"] = int(u.initialSyncDuration.Seconds())
+	props["dev_container_creation_duration_seconds"] = int(u.devContainerCreationDuration.Seconds())
 	if u.isReconnect && u.reconnectCause != "" {
 		props["reconnect_cause"] = u.reconnectCause
 	}

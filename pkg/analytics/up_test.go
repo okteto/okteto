@@ -297,17 +297,22 @@ func Test_UpMetricsMetadata_ErrorReason(t *testing.T) {
 func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 	baseProps := func(overrides map[string]any) map[string]any {
 		base := map[string]any{
-			"result":             false,
-			"manifest_type":      "",
-			"is_interactive":     false,
-			"is_build_executed":  false,
-			"is_deploy_executed": false,
-			"has_build_section":  false,
-			"has_deploy_section": false,
-			"is_reconnect":       false,
-			"reconnect_count":    0,
-			"is_auto_down":       false,
-			"up_workflow_id":     "",
+			"result":                        false,
+			"manifest_type":                 "",
+			"is_interactive":                false,
+			"is_build_executed":             false,
+			"is_deploy_executed":            false,
+			"has_build_section":             false,
+			"has_deploy_section":            false,
+			"is_reconnect":                  false,
+			"reconnect_count":               0,
+			"is_auto_down":                  false,
+			"workflow_id":                   "",
+			"service":                       "",
+			"repo_url":                      "",
+			"duration_seconds":              0,
+			"initial_sync_duration_seconds": 0,
+			"dev_container_creation_duration_seconds": 0,
 		}
 		for k, v := range overrides {
 			base[k] = v
@@ -321,12 +326,12 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 		expected map[string]any
 	}{
 		{
-			name:     "minimal — service, namespace and repo_url absent when empty",
+			name:     "minimal — all fields present with zero values",
 			meta:     UpMetricsMetadata{success: true},
 			expected: baseProps(map[string]any{"result": true}),
 		},
 		{
-			name: "service and repo_url present when set; namespace excluded (resolved via withNamespace enricher)",
+			name: "service and repo_url set; namespace excluded (resolved via withNamespace enricher)",
 			meta: UpMetricsMetadata{success: true, service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
 			expected: baseProps(map[string]any{
 				"result":   true,
@@ -335,17 +340,17 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 			}),
 		},
 		{
-			name:     "failure includes error_reason",
+			name:     "failure sets error_reason",
 			meta:     UpMetricsMetadata{success: false, failActivate: true},
 			expected: baseProps(map[string]any{"error_reason": "fail_activate"}),
 		},
 		{
-			name:     "error_reason absent on success even if flags set",
+			name:     "error_reason empty on success",
 			meta:     UpMetricsMetadata{success: true, failActivate: true},
 			expected: baseProps(map[string]any{"result": true}),
 		},
 		{
-			name: "reconnect_cause only when is_reconnect",
+			name: "reconnect_cause populated when is_reconnect",
 			meta: UpMetricsMetadata{
 				success:        true,
 				isReconnect:    true,
@@ -360,7 +365,7 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 			}),
 		},
 		{
-			name: "durations included only when non-zero",
+			name: "durations always included",
 			meta: UpMetricsMetadata{
 				success:                      true,
 				execDuration:                 60 * time.Second,
