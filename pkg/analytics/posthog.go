@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -36,9 +37,11 @@ const (
 	// posthogEndpoint is the Okteto-owned reverse proxy for PostHog.
 	posthogEndpoint = "https://ph.okteto.com"
 
-	posthogImageBuildEvent = "image_build"
-	posthogUpEvent         = "up"
-	posthogUpStartedEvent  = "up_started"
+	posthogImageBuildEvent              = "image_build"
+	posthogDeployPipelineTriggeredEvent = "deploy_pipeline_triggered"
+	posthogDeployPreviewTriggeredEvent  = "deploy_preview_triggered"
+	posthogUpEvent                      = "up"
+	posthogUpStartedEvent               = "up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -177,6 +180,26 @@ func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 	}
 }
 
+// withPreview returns an enricherFn that resolves the preview namespace UID and sets
+// it as the "preview" property. Sets an empty string when preview is empty,
+// the resolver is unavailable, or the lookup fails.
+func (b *posthogBackend) withPreview(previewName string) enricherFn {
+	return func(ctx context.Context, props posthog.Properties) {
+		if previewName == "" || b.nsResolver == nil {
+			props["preview"] = ""
+			return
+		}
+		fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, previewName); err != nil {
+			oktetoLog.Infof("analytics: failed to get preview namespace UID: %s", err)
+			props["preview"] = ""
+		} else {
+			props["preview"] = uid
+		}
+	}
+}
+
 // TrackImageBuild sends an image_build event to PostHog.
 func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
 	if b.client == nil {
@@ -190,6 +213,61 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
 	b.enqueue(ctx, userID, posthogImageBuildEvent, props, b.withNamespace(m.Namespace))
+}
+
+// TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event to PostHog.
+func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata) {
+	if b.client == nil || !analyticsEnabled() {
+		return
+	}
+
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	props["workflow_id"] = m.WorkflowID
+	props["is_within_preview"] = m.IsWithinPreview
+	props["is_redeploy"] = m.IsRedeploy
+	props["deploy_type"] = m.DeployType
+	props["ui_element"] = m.UIElement
+	if m.RepoURL != "" {
+		props["repo_url"] = hashString(m.RepoURL)
+	}
+	b.enqueue(ctx, userID, posthogDeployPipelineTriggeredEvent, props, b.withNamespace(m.Namespace))
+}
+
+// TrackDeployPreviewTriggered sends a deploy_preview_triggered event to PostHog.
+func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata) {
+	if b.client == nil || !analyticsEnabled() {
+		return
+	}
+
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	props["workflow_id"] = m.WorkflowID
+	props["is_within_preview"] = m.IsWithinPreview
+	props["is_redeploy"] = m.IsRedeploy
+	props["ui_element"] = m.UIElement
+	if m.RepoURL != "" {
+		props["repo_url"] = hashString(m.RepoURL)
+	}
+	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
+}
+
+// IsWithinPreview reports whether the current CLI context is inside a preview
+// environment. It first checks the platform env var (set when running inside a
+// preview); if not set, it calls checkPreview with the active namespace so that
+// `okteto ns use <preview-name>` is also detected. Pass nil to skip the API check.
+func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, string) error) bool {
+	if os.Getenv(constants.OktetoIsPreviewEnvVar) == "true" {
+		return true
+	}
+	if checkPreview == nil {
+		return false
+	}
+	ns := okteto.GetContext().Namespace
+	if ns == "" {
+		return false
+	}
+	return checkPreview(ctx, ns) == nil
 }
 
 // TrackUp sends an up event to PostHog.

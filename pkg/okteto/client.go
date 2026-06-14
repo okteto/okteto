@@ -416,6 +416,13 @@ func isAPILicenseError(err error) bool {
 	return strings.HasPrefix(err.Error(), "non-200 OK status code: 423")
 }
 
+func isUnknownArgErr(err error, arg string) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Unknown argument \""+arg+"\"")
+}
+
 func isAPITransientErr(err error) bool {
 	if err == nil {
 		return false

@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -248,6 +249,59 @@ func TestDeployPipeline(t *testing.T) {
 			assert.Equal(t, tc.expected.response, response)
 		})
 	}
+}
+
+func TestDeployPipelineWorkflowIDFallback(t *testing.T) {
+	successResult := &deployPipelineMutation{
+		Response: deployPipelineResponse{
+			Action: actionStruct{
+				Id:     "test",
+				Name:   "test",
+				Status: ProgressingStatus,
+			},
+			GitDeploy: gitDeployInfoWithRepoInfo{
+				Id:         "test",
+				Name:       "test",
+				Status:     ProgressingStatus,
+				Repository: "my-repo",
+			},
+		},
+	}
+	expectedResponse := &types.GitDeployResponse{
+		Action: &types.Action{
+			ID:     "test",
+			Name:   "test",
+			Status: progressingStatus,
+		},
+		GitDeploy: &types.GitDeploy{
+			ID:         "test",
+			Name:       "test",
+			Repository: "my-repo",
+			Status:     progressingStatus,
+		},
+	}
+
+	t.Run("workflowID not supported - falls back to legacy mutation", func(t *testing.T) {
+		client := &fakeGraphQLMultipleCallsClient{
+			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployGitRepository" of type "Mutation"`), nil},
+			mutationResult: []interface{}{nil, successResult},
+		}
+		pc := pipelineClient{client: client}
+		response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{Name: "test"})
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, response)
+	})
+
+	t.Run("workflowID not supported with labels - falls back to legacy mutation", func(t *testing.T) {
+		client := &fakeGraphQLMultipleCallsClient{
+			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployGitRepository" of type "Mutation"`), nil},
+			mutationResult: []interface{}{nil, successResult},
+		}
+		pc := pipelineClient{client: client}
+		response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{Name: "test", Labels: []string{"key"}})
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, response)
+	})
 }
 
 func TestGetPipelineByName(t *testing.T) {

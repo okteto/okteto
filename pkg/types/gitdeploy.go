@@ -22,6 +22,7 @@ type PipelineDeployOptions struct {
 	Variables            []Variable
 	Namespace            string
 	Labels               []string
+	WorkflowID           string
 	RedeployDependencies bool
 	IsDependency         bool
 }

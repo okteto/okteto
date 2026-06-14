@@ -139,6 +139,7 @@ type Command struct {
 
 type AnalyticsTrackerInterface interface {
 	TrackDeploy(dm analytics.DeployMetadata)
+	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
 	buildTrackerInterface
 }
 
@@ -236,7 +237,7 @@ $ okteto deploy --no-build=true`,
 			options.ShowCTA = oktetoLog.IsInteractive()
 
 			k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
-			pc, err := pipelineCMD.NewCommand()
+			pc, err := pipelineCMD.NewCommand(at)
 			if err != nil {
 				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
