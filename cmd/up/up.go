@@ -287,7 +287,7 @@ okteto up api -- echo this is a test
 			if err != nil {
 				oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
 			}
-			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, upStartedRepoURL)
+			at.TrackUpStarted(dev.Name, okteto.GetContext().Namespace, upStartedRepoURL, upMeta.WorkflowID())
 			upMeta.SetRepoURL(upStartedRepoURL)
 
 			if len(argsparserResult.Command) > 0 {

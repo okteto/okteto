@@ -20,13 +20,8 @@ import "context"
 type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
 	TrackUp(meta *UpMetricsMetadata)
-	TrackUpStarted(service, namespace, repoURL string)
+	TrackUpStarted(service, namespace, repoURL, workflowID string)
 	TrackDeploy(meta DeployMetadata)
-}
-
-// groupsIdentifier is implemented by backends that support PostHog group analytics.
-type groupsIdentifier interface {
-	IdentifyGroups()
 }
 
 // closer is implemented by backends that hold resources that need flushing on exit.
@@ -48,16 +43,6 @@ func NewAnalyticsTracker() *Tracker {
 			newMixpanelBackend(),
 			newPostHogBackend(),
 		},
-	}
-}
-
-// IdentifyGroups sends $groupidentify calls to every backend that supports it.
-// Call this once after the okteto context is fully populated (ClusterID + CompanyName set).
-func (t *Tracker) IdentifyGroups() {
-	for _, b := range t.backends {
-		if gi, ok := b.(groupsIdentifier); ok {
-			gi.IdentifyGroups()
-		}
 	}
 }
 

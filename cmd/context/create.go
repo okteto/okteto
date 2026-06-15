@@ -47,11 +47,6 @@ type kubeconfigTokenController interface {
 	updateOktetoContextToken(*types.UserContext) error
 }
 
-// groupsIdentifier sends group_identify calls to analytics backends.
-type groupsIdentifier interface {
-	IdentifyGroups()
-}
-
 // Command has the dependencies to run a ctxCommand
 type Command struct {
 	K8sClientProvider    okteto.K8sClientProvider
@@ -60,7 +55,6 @@ type Command struct {
 
 	kubetokenController kubeconfigTokenController
 	OktetoContextWriter okteto.ContextConfigWriterInterface
-	analyticsIdentifier groupsIdentifier
 }
 
 type ctxCmdOption func(*Command)
@@ -68,12 +62,6 @@ type ctxCmdOption func(*Command)
 func withKubeTokenController(k kubeconfigTokenController) ctxCmdOption {
 	return func(c *Command) {
 		c.kubetokenController = k
-	}
-}
-
-func withAnalyticsTracker(at groupsIdentifier) ctxCmdOption {
-	return func(c *Command) {
-		c.analyticsIdentifier = at
 	}
 }
 
@@ -304,7 +292,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 		oktetoLog.Infof("error updating okteto context token: %v", err)
 	}
 
-	oktetoLog.Debug("adding okteto context to %s", config.GetKubeconfigPath())
+	oktetoLog.Debugf("adding okteto context to %s", config.GetKubeconfigPath())
 	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
@@ -323,9 +311,6 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 	if clusterInfo != nil {
 		okteto.GetContext().ClusterVersion = clusterInfo.ClusterVersion
 		okteto.GetContext().ClusterID = clusterInfo.ClusterID
-	}
-	if c.analyticsIdentifier != nil {
-		c.analyticsIdentifier.IdentifyGroups()
 	}
 	okteto.GetContext().DivertCRDSEnabled = clusterMetadata.DivertCRDSEnabled
 
@@ -392,11 +377,11 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 	}
 
 	if version.LessThan(recMajorMinorVersion) {
-		oktetoLog.Debugf(fmt.Sprintf("Your Okteto CLI version %s is older than the recommended version of your Okteto instance: %s", currentMajorMinor, recMajorMinorVersion))
+		oktetoLog.Debugf("Your Okteto CLI version %s is older than the recommended version of your Okteto instance: %s", currentMajorMinor, recMajorMinorVersion)
 	}
 
 	if version.GreaterThan(recMajorMinorVersion) {
-		oktetoLog.Debugf(fmt.Sprintf("Your Okteto CLI version %s is newer than the recommended version of your Okteto instance: %s", currentMajorMinor, recMajorMinorVersion))
+		oktetoLog.Debugf("Your Okteto CLI version %s is newer than the recommended version of your Okteto instance: %s", currentMajorMinor, recMajorMinorVersion)
 		return nil
 	}
 

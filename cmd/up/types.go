@@ -49,7 +49,7 @@ type analyticsTrackerInterface interface {
 	buildTrackerInterface
 	TrackDeploy(analytics.DeployMetadata)
 	TrackUp(*analytics.UpMetricsMetadata)
-	TrackUpStarted(service, namespace, repoURL string)
+	TrackUpStarted(service, namespace, repoURL, workflowID string)
 	TrackDown(bool)
 	TrackDownVolumes(bool)
 }

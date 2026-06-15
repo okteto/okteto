@@ -1,18 +1,18 @@
 module github.com/okteto/tools
 
-go 1.25.7
+go 1.26.4
 
 require (
 	github.com/creack/pty v1.1.24
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-cmd/cmd v1.4.3
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.6.0
 	github.com/pkg/sftp v1.12.0
 	github.com/ramr/go-reaper v0.3.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sirupsen/logrus v1.9.4
-	golang.org/x/crypto v0.50.0
+	golang.org/x/crypto v0.51.0
 )
 
 require (
@@ -26,5 +26,5 @@ require (
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 )

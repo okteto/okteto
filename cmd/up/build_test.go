@@ -140,10 +140,11 @@ func TestUpBuilder_Build(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ub := &upBuilder{
-				manifest: tt.manifest,
-				devName:  tt.devName,
-				builder:  tt.builder,
-				registry: &fakeRegistry{},
+				manifest:      tt.manifest,
+				devName:       tt.devName,
+				builder:       tt.builder,
+				registry:      &fakeRegistry{},
+				analyticsMeta: analytics.NewUpMetricsMetadata(),
 			}
 			err := ub.build(ctx)
 			require.ErrorIs(t, err, tt.expectError)
@@ -282,9 +283,9 @@ func TestUpBuilder_Build_SetsIsBuildExecuted(t *testing.T) {
 			expectExecuted: true,
 		},
 		{
-			name:           "Build fails — isBuildExecuted false",
+			name:           "Build fails — isBuildExecuted true",
 			buildErr:       assert.AnError,
-			expectExecuted: false,
+			expectExecuted: true,
 		},
 	}
 

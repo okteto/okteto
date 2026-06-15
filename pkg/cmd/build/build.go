@@ -419,7 +419,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 
 	joinPath := filepath.Join(context, dockerfile)
 	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
-		oktetoLog.Warning(fmt.Sprintf(warningDockerfilePath, svcName, dockerfile, context))
+		oktetoLog.Warning(warningDockerfilePath, svcName, dockerfile, context)
 		return dockerfile
 	}
 
@@ -433,7 +433,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	if joinPath != filepath.Join(wd, filepath.Clean(dockerfile)) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
-		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
+		oktetoLog.Warning(doubleDockerfileWarning, svcName, context, dockerfile)
 	}
 
 	return joinPath

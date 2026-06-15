@@ -16,6 +16,7 @@ package analytics
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -32,6 +33,7 @@ const (
 
 // UpMetricsMetadata defines the properties of the Up event we want to track
 type UpMetricsMetadata struct {
+	workflowID     string
 	manifestType   model.Archetype
 	mode           string
 	reconnectCause string
@@ -68,9 +70,16 @@ type UpMetricsMetadata struct {
 	isAutoDownEnabled        bool
 }
 
-// NewUpMetricsMetadata returns an empty instance of UpMetricsMetadata
+// NewUpMetricsMetadata returns a new UpMetricsMetadata with a unique workflow ID.
 func NewUpMetricsMetadata() *UpMetricsMetadata {
-	return &UpMetricsMetadata{}
+	return &UpMetricsMetadata{
+		workflowID: uuid.New().String(),
+	}
+}
+
+// WorkflowID returns the unique ID that correlates up_started and up events for this session.
+func (u *UpMetricsMetadata) WorkflowID() string {
+	return u.workflowID
 }
 
 // toProps transforms UpMetricsMetadata into a map to be able to send it to mixpanel
@@ -256,24 +265,16 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 		"reconnect_count":    u.reconnectCount,
 		"is_auto_down":       u.isAutoDownEnabled,
 	}
-	if u.service != "" {
-		props["service"] = u.service
-	}
-	if u.namespace != "" {
-		props["namespace"] = u.namespace
-	}
+	repoURL := ""
 	if u.repoURL != "" {
-		props["repo_url"] = u.repoURL
+		repoURL = hashString(u.repoURL)
 	}
-	if d := int(u.execDuration.Seconds()); d > 0 {
-		props["duration_seconds"] = d
-	}
-	if d := int(u.initialSyncDuration.Seconds()); d > 0 {
-		props["initial_sync_duration_seconds"] = d
-	}
-	if d := int(u.devContainerCreationDuration.Seconds()); d > 0 {
-		props["dev_container_creation_duration_seconds"] = d
-	}
+	props["workflow_id"] = u.workflowID
+	props["service"] = u.service
+	props["repo_url"] = repoURL
+	props["duration_seconds"] = int(u.execDuration.Seconds())
+	props["initial_sync_duration_seconds"] = int(u.initialSyncDuration.Seconds())
+	props["dev_container_creation_duration_seconds"] = int(u.devContainerCreationDuration.Seconds())
 	if u.isReconnect && u.reconnectCause != "" {
 		props["reconnect_cause"] = u.reconnectCause
 	}
@@ -295,8 +296,8 @@ func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 }
 
 // TrackUpStarted fires the okteto_up_started event at the beginning of the up command.
-func (a *Tracker) TrackUpStarted(service, namespace, repoURL string) {
+func (a *Tracker) TrackUpStarted(service, namespace, repoURL, workflowID string) {
 	for _, b := range a.backends {
-		b.TrackUpStarted(service, namespace, repoURL)
+		b.TrackUpStarted(service, namespace, repoURL, workflowID)
 	}
 }

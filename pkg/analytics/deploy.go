@@ -74,9 +74,6 @@ func (d *DeployMetadata) toPostHogProps() map[string]any {
 		"has_build_section":        d.HasBuildSection,
 		"is_remote":                d.IsRemote,
 	}
-	if d.Namespace != "" {
-		props["namespace"] = d.Namespace
-	}
 	if d.WaitForDependencies {
 		props["wait_for_dependencies"] = true
 	}

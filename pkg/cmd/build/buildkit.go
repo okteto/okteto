@@ -174,6 +174,6 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 
 func (*buildWriter) Write(p []byte) (int, error) {
 	msg := strings.TrimSpace(string(p))
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, msg)
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "%s", msg)
 	return 0, nil
 }

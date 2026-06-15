@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alessio/shellescape"
+	"al.essio.dev/pkg/shellescape"
 	dockerterm "github.com/moby/term"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -58,7 +58,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	defer func() {
 		if err := connection.Close(); err != nil {
-			oktetoLog.Debugf("Error closing connection: %s", connection.SessionID(), err)
+			oktetoLog.Debugf("Error closing connection %s: %v", connection.SessionID(), err)
 		}
 	}()
 	go func() {

@@ -73,7 +73,7 @@ func isCreateNewContextOption(option string) bool {
 }
 
 func askForOktetoURL(message string) (string, error) {
-	err := oktetoLog.Question(message)
+	err := oktetoLog.Question("%s", message)
 	if err != nil {
 		return "", err
 	}
