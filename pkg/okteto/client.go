@@ -423,6 +423,15 @@ func isUnknownArgErr(err error, arg string) bool {
 	return strings.Contains(err.Error(), "Unknown argument \""+arg+"\"")
 }
 
+// isAnyUnknownArgErr reports whether the error is caused by the backend not
+// supporting one of the arguments sent in the mutation, regardless of which one.
+func isAnyUnknownArgErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Unknown argument")
+}
+
 func isAPITransientErr(err error) bool {
 	if err == nil {
 		return false

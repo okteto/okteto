@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -716,6 +717,10 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 		return errDepenNotAvailableInVanilla
 	}
 
+	// parentWorkflowID correlates all the dependencies deployed by this deploy operation
+	// with their parent. It is sent to the backend on each dependency deploy.
+	parentWorkflowID := uuid.New().String()
+
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency  '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
@@ -733,16 +738,17 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 			return fmt.Errorf("could not expand variables in dependencies: %w", err)
 		}
 		pipOpts := &pipelineCMD.DeployOptions{
-			Name:         depName,
-			Repository:   dep.Repository,
-			Branch:       dep.Branch,
-			File:         dep.ManifestPath,
-			Variables:    model.SerializeEnvironmentVars(dep.Variables),
-			Wait:         dep.Wait,
-			Timeout:      dep.GetTimeout(deployOptions.Timeout),
-			SkipIfExists: !deployOptions.Dependencies,
-			Namespace:    okteto.GetContext().Namespace,
-			IsDependency: true,
+			Name:             depName,
+			Repository:       dep.Repository,
+			Branch:           dep.Branch,
+			File:             dep.ManifestPath,
+			Variables:        model.SerializeEnvironmentVars(dep.Variables),
+			Wait:             dep.Wait,
+			Timeout:          dep.GetTimeout(deployOptions.Timeout),
+			SkipIfExists:     !deployOptions.Dependencies,
+			Namespace:        okteto.GetContext().Namespace,
+			IsDependency:     true,
+			ParentWorkflowID: parentWorkflowID,
 		}
 
 		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {

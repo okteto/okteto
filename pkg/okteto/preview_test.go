@@ -255,9 +255,9 @@ func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
 		},
 	}
 
-	t.Run("workflowID not supported - falls back to legacy mutation", func(t *testing.T) {
+	t.Run("workflowId not supported - falls back to legacy mutation", func(t *testing.T) {
 		client := &fakeGraphQLMultipleCallsClient{
-			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployPreview" of type "Mutation"`), nil},
+			errs:           []error{errors.New(`Unknown argument "workflowId" on field "deployPreview" of type "Mutation"`), nil},
 			mutationResult: []interface{}{nil, successResult},
 		}
 		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}
@@ -266,9 +266,9 @@ func TestDeployPreviewWorkflowIDFallback(t *testing.T) {
 		require.Equal(t, expectedResponse, response)
 	})
 
-	t.Run("workflowID not supported with labels - falls back to legacy mutation", func(t *testing.T) {
+	t.Run("workflowId not supported with labels - falls back to legacy mutation", func(t *testing.T) {
 		client := &fakeGraphQLMultipleCallsClient{
-			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployPreview" of type "Mutation"`), nil},
+			errs:           []error{errors.New(`Unknown argument "workflowId" on field "deployPreview" of type "Mutation"`), nil},
 			mutationResult: []interface{}{nil, successResult},
 		}
 		pc := previewClient{client: client, namespaceValidator: newNamespaceValidator()}

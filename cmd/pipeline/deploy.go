@@ -88,6 +88,7 @@ type DeployOptions struct {
 	IsDependency         bool
 	DependenciesIsSet    bool
 	WorkflowID           string
+	ParentWorkflowID     string
 }
 
 func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
@@ -343,6 +344,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 			return
 		}
 		pipelineOpts.WorkflowID = opts.WorkflowID
+		pipelineOpts.ParentWorkflowID = opts.ParentWorkflowID
 		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", opts.Name, opts.File, opts.Repository, opts.Branch, opts.Namespace)
 
 		resp, err = pc.okClient.Pipeline().Deploy(ctx, pipelineOpts)

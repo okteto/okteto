@@ -838,6 +838,49 @@ func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipel
 	return fd.err
 }
 
+type capturingPipelineDeployer struct {
+	captured []*pipelineCMD.DeployOptions
+}
+
+func (fd *capturingPipelineDeployer) ExecuteDeployPipeline(_ context.Context, opts *pipelineCMD.DeployOptions) error {
+	fd.captured = append(fd.captured, opts)
+	return nil
+}
+
+func TestDeployDependenciesSetsParentWorkflowID(t *testing.T) {
+	fakeManifest := &model.Manifest{
+		Dependencies: deps.ManifestSection{
+			"a": &deps.Dependency{},
+			"b": &deps.Dependency{},
+		},
+	}
+
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	deployer := &capturingPipelineDeployer{}
+	dc := &Command{PipelineCMD: deployer}
+
+	err := dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest})
+	require.NoError(t, err)
+	require.Len(t, deployer.captured, 2)
+
+	parentWorkflowID := deployer.captured[0].ParentWorkflowID
+	require.NotEmpty(t, parentWorkflowID)
+	for _, opts := range deployer.captured {
+		require.Equal(t, parentWorkflowID, opts.ParentWorkflowID)
+		require.True(t, opts.IsDependency)
+	}
+}
+
 func TestDeployDependencies(t *testing.T) {
 	fakeManifest := &model.Manifest{
 		Dependencies: deps.ManifestSection{

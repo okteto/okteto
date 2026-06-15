@@ -21,7 +21,9 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/shurcooL/graphql"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDeployPipeline(t *testing.T) {
@@ -281,9 +283,9 @@ func TestDeployPipelineWorkflowIDFallback(t *testing.T) {
 		},
 	}
 
-	t.Run("workflowID not supported - falls back to legacy mutation", func(t *testing.T) {
+	t.Run("workflowId not supported - falls back to legacy mutation", func(t *testing.T) {
 		client := &fakeGraphQLMultipleCallsClient{
-			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployGitRepository" of type "Mutation"`), nil},
+			errs:           []error{errors.New(`Unknown argument "workflowId" on field "deployGitRepository" of type "Mutation"`), nil},
 			mutationResult: []interface{}{nil, successResult},
 		}
 		pc := pipelineClient{client: client}
@@ -292,9 +294,9 @@ func TestDeployPipelineWorkflowIDFallback(t *testing.T) {
 		assert.Equal(t, expectedResponse, response)
 	})
 
-	t.Run("workflowID not supported with labels - falls back to legacy mutation", func(t *testing.T) {
+	t.Run("workflowId not supported with labels - falls back to legacy mutation", func(t *testing.T) {
 		client := &fakeGraphQLMultipleCallsClient{
-			errs:           []error{errors.New(`Unknown argument "workflowID" on field "deployGitRepository" of type "Mutation"`), nil},
+			errs:           []error{errors.New(`Unknown argument "workflowId" on field "deployGitRepository" of type "Mutation"`), nil},
 			mutationResult: []interface{}{nil, successResult},
 		}
 		pc := pipelineClient{client: client}
@@ -302,6 +304,75 @@ func TestDeployPipelineWorkflowIDFallback(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResponse, response)
 	})
+
+	t.Run("parentWorkflowId not supported - falls back to legacy mutation", func(t *testing.T) {
+		client := &fakeGraphQLMultipleCallsClient{
+			errs:           []error{errors.New(`Unknown argument "parentWorkflowId" on field "deployGitRepository" of type "Mutation"`), nil},
+			mutationResult: []interface{}{nil, successResult},
+		}
+		pc := pipelineClient{client: client}
+		response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{Name: "test", ParentWorkflowID: "parent-id"})
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, response)
+	})
+
+	t.Run("parentWorkflowId not supported with labels - falls back to legacy mutation", func(t *testing.T) {
+		client := &fakeGraphQLMultipleCallsClient{
+			errs:           []error{errors.New(`Unknown argument "parentWorkflowId" on field "deployGitRepository" of type "Mutation"`), nil},
+			mutationResult: []interface{}{nil, successResult},
+		}
+		pc := pipelineClient{client: client}
+		response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{Name: "test", ParentWorkflowID: "parent-id", Labels: []string{"key"}})
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, response)
+	})
+}
+
+// capturingMutateClient records the variables sent on each mutation so tests can
+// assert which arguments are forwarded to the GraphQL backend.
+type capturingMutateClient struct {
+	err  error
+	vars []map[string]interface{}
+}
+
+func (c *capturingMutateClient) Query(_ context.Context, _ interface{}, _ map[string]interface{}) error {
+	return nil
+}
+
+func (c *capturingMutateClient) Mutate(_ context.Context, _ interface{}, vars map[string]interface{}) error {
+	c.vars = append(c.vars, vars)
+	return c.err
+}
+
+func TestDeployPipelineSendsParentWorkflowID(t *testing.T) {
+	client := &capturingMutateClient{}
+	pc := pipelineClient{client: client}
+
+	_, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{
+		Name:             "test",
+		WorkflowID:       "workflow-id",
+		ParentWorkflowID: "parent-id",
+	})
+
+	require.NoError(t, err)
+	require.Len(t, client.vars, 1)
+	require.Equal(t, graphql.String("parent-id"), client.vars[0]["parentWorkflowId"])
+	require.Equal(t, graphql.String("workflow-id"), client.vars[0]["workflowId"])
+}
+
+func TestDeployPipelineOmitsEmptyParentWorkflowID(t *testing.T) {
+	client := &capturingMutateClient{}
+	pc := pipelineClient{client: client}
+
+	_, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{
+		Name:       "test",
+		WorkflowID: "workflow-id",
+	})
+
+	require.NoError(t, err)
+	require.Len(t, client.vars, 1)
+	_, ok := client.vars[0]["parentWorkflowId"]
+	require.False(t, ok, "parentWorkflowId must not be sent when there is no parent")
 }
 
 func TestGetPipelineByName(t *testing.T) {
