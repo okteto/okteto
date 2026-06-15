@@ -574,10 +574,11 @@ func TestPostHogBackend_TrackDeploy_HappyPath(t *testing.T) {
 	require.Equal(t, posthogDeployCompletedEvent, ev.Event)
 	require.Equal(t, "user-123", ev.DistinctId)
 	require.Equal(t, true, ev.Properties["result"])
-	require.Equal(t, "manifest", ev.Properties["deploy_type"])
+	require.Equal(t, "manifest", ev.Properties["manifest_archetype"])
 	require.Equal(t, "ns-uid-789", ev.Properties["namespace"])
-	require.Equal(t, 45, ev.Properties["duration_seconds"])
-	require.Equal(t, false, ev.Properties["is_preview"])
+	require.Equal(t, float64(45), ev.Properties["duration_seconds"])
+	require.Equal(t, false, ev.Properties["is_within_preview"])
+	require.Equal(t, "regular", ev.Properties["namespace_type"])
 	require.Equal(t, true, ev.Properties["is_redeploy"])
 	require.Equal(t, true, ev.Properties["has_dependencies_section"])
 	require.Equal(t, true, ev.Properties["has_build_section"])
@@ -660,4 +661,98 @@ func TestPostHogBackend_TrackDeploy_KnownErrorsSetNormalizedErrorReason(t *testi
 			require.Equal(t, tt.expectedReason, mock.captured[0].Properties["error_reason"])
 		})
 	}
+}
+
+func TestPostHogBackend_TrackDeploy_NewFieldsHashedAndConditional(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{
+		Success:           true,
+		PipelineType:      model.StackType,
+		RepoURL:           "https://github.com/org/repo",
+		ManifestSyntax:    "mixed",
+		ParentExecutionID: "exec-parent-1",
+		IsPreview:         true,
+	})
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, "compose", ev.Properties["manifest_archetype"])
+	require.Equal(t, "mixed", ev.Properties["manifest_syntax"])
+	require.Equal(t, "preview", ev.Properties["namespace_type"])
+	require.Equal(t, true, ev.Properties["is_within_preview"])
+	require.Equal(t, "exec-parent-1", ev.Properties["parent_execution_id"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
+}
+
+func TestPostHogBackend_TrackDeploy_NewFieldsOmittedWhenEmpty(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeploy(DeployMetadata{Success: true})
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.NotContains(t, ev.Properties, "repo_url")
+	require.NotContains(t, ev.Properties, "manifest_syntax")
+	require.NotContains(t, ev.Properties, "parent_execution_id")
+	require.Equal(t, "pipeline", ev.Properties["manifest_archetype"])
+	require.Equal(t, "regular", ev.Properties["namespace_type"])
+}
+
+func TestPostHogBackend_TrackDeployStarted_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackDeployStarted(DeployStartedMetadata{IsRedeploy: true})
+	})
+}
+
+func TestPostHogBackend_TrackDeployStarted_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployStarted(DeployStartedMetadata{IsRedeploy: true})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackDeployStarted_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-654"},
+	}
+	b.TrackDeployStarted(DeployStartedMetadata{
+		Namespace:  "dev-ns",
+		RepoURL:    "https://github.com/org/repo",
+		IsPreview:  true,
+		IsRedeploy: true,
+	})
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogDeployStartedEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, "ns-uid-654", ev.Properties["namespace"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
+	require.Equal(t, true, ev.Properties["is_within_preview"])
+	require.Equal(t, true, ev.Properties["is_redeploy"])
+	require.NotContains(t, ev.Properties, "ui_element")
+
+	// Common props
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
 }

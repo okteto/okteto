@@ -45,6 +45,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	modelutils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/repository"
@@ -139,6 +140,7 @@ type Command struct {
 }
 
 type AnalyticsTrackerInterface interface {
+	TrackDeployStarted(dm analytics.DeployStartedMetadata)
 	TrackDeploy(dm analytics.DeployMetadata)
 	buildTrackerInterface
 }
@@ -386,6 +388,14 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
+
+	dc.AnalyticsTracker.TrackDeployStarted(analytics.DeployStartedMetadata{
+		Namespace:         deployOptions.Namespace,
+		RepoURL:           deployRepoURL(deployOptions.Manifest.ManifestPath),
+		ParentExecutionID: os.Getenv(constants.OktetoDeployParentExecutionIDEnvVar),
+		IsPreview:         isPreviewEnvironment(),
+		IsRedeploy:        dc.isRedeploy,
+	})
 
 	if dc.RunningInInstaller {
 		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
@@ -712,6 +722,44 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string, manifestRemoteFl
 	return runInRemoteFlag || deployImage != "" || manifestRemoteFlag
 }
 
+// isPreviewEnvironment reports whether the deploy targets a preview environment.
+// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility
+// in case an old version of the backend is being used.
+func isPreviewEnvironment() bool {
+	return os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
+		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
+}
+
+// manifestSyntax reports the manifest syntax for analytics: "mixed" when the deploy section
+// declares both commands and a compose section, "compose" when only a compose section is
+// present, and "" otherwise. The deprecated "stack" syntax is indistinguishable from "compose"
+// once parsed, so it is reported as "compose".
+func manifestSyntax(manifest *model.Manifest) string {
+	if manifest == nil || manifest.Deploy == nil {
+		return ""
+	}
+	hasCompose := manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.ComposesInfo != nil
+	hasCommands := len(manifest.Deploy.Commands) > 0
+	switch {
+	case hasCompose && hasCommands:
+		return "mixed"
+	case hasCompose:
+		return "compose"
+	default:
+		return ""
+	}
+}
+
+// deployRepoURL resolves the git repository URL for the given manifest path. It returns an empty
+// string when the path is not within a git repository; the URL is hashed before sending.
+func deployRepoURL(manifestPath string) string {
+	repoURL, err := modelutils.GetRepositoryURL(manifestPath)
+	if err != nil {
+		oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
+	}
+	return repoURL
+}
+
 // deployDependencies deploy the dependencies in the manifest
 func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Options) error {
 	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.GetContext().IsOkteto {
@@ -813,10 +861,10 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		}
 	}
 
-	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
-	// is being used
-	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
+	manifestPath := ""
+	if manifest != nil {
+		manifestPath = manifest.ManifestPath
+	}
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Err:                    err,
 		Success:                err == nil,
@@ -824,12 +872,15 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		Duration:               time.Since(startTime),
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
-		IsPreview:              isPreview,
+		IsPreview:              isPreviewEnvironment(),
 		IsRedeploy:             dc.isRedeploy,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
 		Namespace:              namespace,
+		RepoURL:                deployRepoURL(manifestPath),
+		ManifestSyntax:         manifestSyntax(manifest),
+		ParentExecutionID:      os.Getenv(constants.OktetoDeployParentExecutionIDEnvVar),
 		WaitForDependencies:    waitForDependencies,
 	})
 }

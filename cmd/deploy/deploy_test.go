@@ -281,6 +281,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	fakeDeployer := &fakeDeployer{}
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getManifestWithError,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: test.NewFakeK8sProvider(),
@@ -311,6 +312,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 		CurrentContext: "test",
 	}
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getManifestWithNoDeployNorDependency,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: test.NewFakeK8sProvider(),
@@ -356,6 +358,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	builderV2 := buildv2.NewBuilder(builder, reg, io.NewIOController(), okCtx, io.NewK8sLogger(), []buildv2.OnBuildFinish{})
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getErrorManifest,
 		Builder:           builderV2,
 		K8sClientProvider: fakeK8sClientProvider,
@@ -429,6 +432,7 @@ func TestDeployWithErrorDeploying(t *testing.T) {
 		CurrentContext: "test",
 	}
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
@@ -520,6 +524,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	}
 
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getFakeManifest,
 		GetDeployer:       fakeDeployer.Get,
 		K8sClientProvider: fakeK8sClientProvider,
@@ -571,6 +576,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	}
 
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sClientProvider,
 		EndpointGetter:    getFakeEndpoint,
@@ -655,6 +661,7 @@ func TestDeployWithErrorGettingDivertDriver(t *testing.T) {
 	}
 
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sClientProvider,
 		EndpointGetter:    getFakeEndpoint,
@@ -739,6 +746,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 	}
 
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sClientProvider,
 		EndpointGetter:    getFakeEndpoint,
@@ -898,6 +906,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 	fakeDeployer := &fakeDeployer{}
 
 	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
 		PipelineCMD:       fakePipelineDeployer{nil},
 		GetManifest:       getFakeManifestWithDependency,
 		K8sClientProvider: fakeK8sClientProvider,
@@ -954,6 +963,7 @@ type fakeTracker struct{}
 
 func (*fakeTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
 func (*fakeTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata)   {}
+func (*fakeTracker) TrackDeployStarted(analytics.DeployStartedMetadata)             {}
 func (*fakeTracker) TrackDeploy(analytics.DeployMetadata)                           {}
 
 func TestTrackDeploy(t *testing.T) {
@@ -999,6 +1009,52 @@ func TestTrackDeploy(t *testing.T) {
 			}
 
 			dc.TrackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr, "test-ns")
+		})
+	}
+}
+
+func TestManifestSyntax(t *testing.T) {
+	tt := []struct {
+		manifest *model.Manifest
+		name     string
+		expected string
+	}{
+		{
+			name:     "nil manifest",
+			manifest: nil,
+			expected: "",
+		},
+		{
+			name:     "nil deploy section",
+			manifest: &model.Manifest{},
+			expected: "",
+		},
+		{
+			name: "commands only",
+			manifest: &model.Manifest{Deploy: &model.DeployInfo{
+				Commands: []model.DeployCommand{{Name: "x", Command: "x"}},
+			}},
+			expected: "",
+		},
+		{
+			name: "compose only",
+			manifest: &model.Manifest{Deploy: &model.DeployInfo{
+				ComposeSection: &model.ComposeSectionInfo{ComposesInfo: model.ComposeInfoList{}},
+			}},
+			expected: "compose",
+		},
+		{
+			name: "mixed: commands and compose",
+			manifest: &model.Manifest{Deploy: &model.DeployInfo{
+				Commands:       []model.DeployCommand{{Name: "x", Command: "x"}},
+				ComposeSection: &model.ComposeSectionInfo{ComposesInfo: model.ComposeInfoList{}},
+			}},
+			expected: "mixed",
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, manifestSyntax(tc.manifest))
 		})
 	}
 }

@@ -206,6 +206,20 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	b.enqueue(context.Background(), userID, posthogUpEvent, props, b.withNamespace(m.namespace))
 }
 
+// TrackDeployStarted sends a deploy_started event to PostHog at the beginning of the deploy command.
+func (b *posthogBackend) TrackDeployStarted(m DeployStartedMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	b.enqueue(context.Background(), userID, posthogDeployStartedEvent, props, b.withNamespace(m.Namespace))
+}
+
 // TrackDeploy sends a deploy_completed event to PostHog.
 func (b *posthogBackend) TrackDeploy(m DeployMetadata) {
 	if b.client == nil {

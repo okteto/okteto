@@ -47,6 +47,7 @@ type builderInterface interface {
 
 type analyticsTrackerInterface interface {
 	buildTrackerInterface
+	TrackDeployStarted(analytics.DeployStartedMetadata)
 	TrackDeploy(analytics.DeployMetadata)
 	TrackUp(*analytics.UpMetricsMetadata)
 	TrackUpStarted(service, namespace, repoURL, workflowID string)

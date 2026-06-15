@@ -34,6 +34,10 @@ func (m *mockAnalyticsTracker) TrackEvent(event string, properties map[string]in
 	m.Called(event, properties)
 }
 
+func (m *mockAnalyticsTracker) TrackDeployStarted(metadata analytics.DeployStartedMetadata) {
+	m.Called(metadata)
+}
+
 func (m *mockAnalyticsTracker) TrackDeploy(metadata analytics.DeployMetadata) {
 	m.Called(metadata)
 }

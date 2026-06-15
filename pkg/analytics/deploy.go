@@ -23,6 +23,7 @@ import (
 
 const (
 	deployEvent                 = "Deploy"
+	posthogDeployStartedEvent   = "deploy_started"
 	posthogDeployCompletedEvent = "deploy_completed"
 )
 
@@ -32,6 +33,9 @@ type DeployMetadata struct {
 	PipelineType           model.Archetype
 	DeployType             string
 	Namespace              string
+	RepoURL                string
+	ManifestSyntax         string
+	ParentExecutionID      string
 	Duration               time.Duration
 	Success                bool
 	IsOktetoRepo           bool
@@ -61,23 +65,29 @@ func (d *DeployMetadata) errorReason() string {
 }
 
 func (d *DeployMetadata) toPostHogProps() map[string]any {
-	deployType := string(d.PipelineType)
-	if deployType == "" {
-		deployType = "pipeline"
-	}
 	props := map[string]any{
 		"result":                   d.Success,
-		"deploy_type":              deployType,
-		"is_preview":               d.IsPreview,
+		"manifest_archetype":       d.manifestArchetype(),
+		"is_within_preview":        d.IsPreview,
 		"is_redeploy":              d.IsRedeploy,
 		"has_dependencies_section": d.HasDependenciesSection,
 		"has_build_section":        d.HasBuildSection,
 		"is_remote":                d.IsRemote,
+		"namespace_type":           d.namespaceType(),
+	}
+	if d.RepoURL != "" {
+		props["repo_url"] = hashString(d.RepoURL)
+	}
+	if d.ManifestSyntax != "" {
+		props["manifest_syntax"] = d.ManifestSyntax
+	}
+	if d.ParentExecutionID != "" {
+		props["parent_execution_id"] = d.ParentExecutionID
 	}
 	if d.WaitForDependencies {
 		props["wait_for_dependencies"] = true
 	}
-	if secs := int(d.Duration.Seconds()); secs > 0 {
+	if secs := d.Duration.Seconds(); secs > 0 {
 		props["duration_seconds"] = secs
 	}
 	if !d.Success {
@@ -86,6 +96,51 @@ func (d *DeployMetadata) toPostHogProps() map[string]any {
 		}
 	}
 	return props
+}
+
+func (d *DeployMetadata) manifestArchetype() string {
+	if d.PipelineType == "" {
+		return "pipeline"
+	}
+	return string(d.PipelineType)
+}
+
+func (d *DeployMetadata) namespaceType() string {
+	if d.IsPreview {
+		return "preview"
+	}
+	return "regular"
+}
+
+// DeployStartedMetadata contains the metadata of a deploy_started event, fired at
+// the beginning of the deploy command before the deploy runs.
+type DeployStartedMetadata struct {
+	Namespace         string
+	RepoURL           string
+	ParentExecutionID string
+	IsPreview         bool
+	IsRedeploy        bool
+}
+
+func (d *DeployStartedMetadata) toPostHogProps() map[string]any {
+	props := map[string]any{
+		"is_within_preview": d.IsPreview,
+		"is_redeploy":       d.IsRedeploy,
+	}
+	if d.RepoURL != "" {
+		props["repo_url"] = hashString(d.RepoURL)
+	}
+	if d.ParentExecutionID != "" {
+		props["parent_execution_id"] = d.ParentExecutionID
+	}
+	return props
+}
+
+// TrackDeployStarted fires the deploy_started event at the beginning of the deploy command.
+func (a *Tracker) TrackDeployStarted(metadata DeployStartedMetadata) {
+	for _, b := range a.backends {
+		b.TrackDeployStarted(metadata)
+	}
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys from command okteto deploy

@@ -33,4 +33,6 @@ func (b *mixpanelBackend) TrackUp(_ *UpMetricsMetadata) {}
 
 func (b *mixpanelBackend) TrackUpStarted(_, _, _, _ string) {}
 
+func (b *mixpanelBackend) TrackDeployStarted(_ DeployStartedMetadata) {}
+
 func (b *mixpanelBackend) TrackDeploy(_ DeployMetadata) {}
