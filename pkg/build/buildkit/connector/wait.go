@@ -85,8 +85,16 @@ func NewBuildkitClientWaiter(logger *io.Controller) *Waiter {
 // used by the port-forward connector. The timeout budget is configurable via
 // readinessTimeoutEnvVar and defaults to defaultReadinessTimeout.
 func NewBuildkitClientReadinessWaiter(logger *io.Controller) *Waiter {
+	maxWaitTime := env.LoadTimeOrDefault(readinessTimeoutEnvVar, defaultReadinessTimeout)
+	// A non-positive timeout would make the readiness check fail immediately, so treat it
+	// as invalid and fall back to the default.
+	if maxWaitTime <= 0 {
+		logger.Infof("'%s' must be a positive duration, falling back to %v\n", readinessTimeoutEnvVar, defaultReadinessTimeout)
+		maxWaitTime = defaultReadinessTimeout
+	}
+
 	return &Waiter{
-		maxWaitTime:   env.LoadTimeOrDefault(readinessTimeoutEnvVar, defaultReadinessTimeout),
+		maxWaitTime:   maxWaitTime,
 		retryInterval: readinessRetryInterval,
 		sleeper:       &DefaultSleeper{},
 		logger:        logger,

@@ -178,6 +178,16 @@ func TestNewBuildkitClientReadinessWaiter(t *testing.T) {
 			envValue:            "notaduration",
 			expectedMaxWaitTime: defaultReadinessTimeout,
 		},
+		{
+			name:                "ZeroValueFallsBackToDefault",
+			envValue:            "0s",
+			expectedMaxWaitTime: defaultReadinessTimeout,
+		},
+		{
+			name:                "NegativeValueFallsBackToDefault",
+			envValue:            "-1s",
+			expectedMaxWaitTime: defaultReadinessTimeout,
+		},
 	}
 
 	for _, tt := range tests {
