@@ -65,7 +65,7 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 
 	sessionID := uuid.New().String()
 	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
-	waiter := NewBuildkitClientWaiterWithConfig(ioCtrl, 4*time.Second, 1*time.Second)
+	waiter := NewBuildkitClientReadinessWaiter(ioCtrl)
 
 	ic := &InClusterConnector{
 		sessionID:    sessionID,

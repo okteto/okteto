@@ -35,6 +35,16 @@ const (
 
 	// retryBuildkitTimeEnvVar is the environment variable to set the retry time for buildkit
 	retryBuildkitIntervalEnvVar = "OKTETO_BUILDKIT_RETRY_INTERVAL"
+
+	// defaultReadinessTimeout is the default budget for the buildkit readiness health-check
+	// (the Info() call) used by the port-forward and in-cluster connectors.
+	defaultReadinessTimeout = 6 * time.Second
+
+	// readinessRetryInterval is the interval between buildkit readiness health-check attempts.
+	readinessRetryInterval = 1 * time.Second
+
+	// readinessTimeoutEnvVar overrides defaultReadinessTimeout for the readiness health-check.
+	readinessTimeoutEnvVar = "OKTETO_BUILDKIT_READINESS_TIMEOUT"
 )
 
 // sleeper defines an interface for sleeping
@@ -71,11 +81,13 @@ func NewBuildkitClientWaiter(logger *io.Controller) *Waiter {
 	}
 }
 
-// NewBuildkitClientWaiterWithConfig creates a new buildkitWaiter with custom configuration
-func NewBuildkitClientWaiterWithConfig(logger *io.Controller, maxWaitTime, retryInterval time.Duration) *Waiter {
+// NewBuildkitClientReadinessWaiter creates a waiter for the buildkit readiness health-check
+// used by the port-forward and in-cluster connectors. The timeout budget is configurable via
+// readinessTimeoutEnvVar and defaults to defaultReadinessTimeout.
+func NewBuildkitClientReadinessWaiter(logger *io.Controller) *Waiter {
 	return &Waiter{
-		maxWaitTime:   maxWaitTime,
-		retryInterval: retryInterval,
+		maxWaitTime:   env.LoadTimeOrDefault(readinessTimeoutEnvVar, defaultReadinessTimeout),
+		retryInterval: readinessRetryInterval,
 		sleeper:       &DefaultSleeper{},
 		logger:        logger,
 	}
