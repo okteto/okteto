@@ -37,7 +37,7 @@ const (
 	retryBuildkitIntervalEnvVar = "OKTETO_BUILDKIT_RETRY_INTERVAL"
 
 	// defaultReadinessTimeout is the default budget for the buildkit readiness health-check
-	// (the Info() call) used by the port-forward and in-cluster connectors.
+	// (the Info() call) used by the port-forward connector.
 	defaultReadinessTimeout = 6 * time.Second
 
 	// readinessRetryInterval is the interval between buildkit readiness health-check attempts.
@@ -82,7 +82,7 @@ func NewBuildkitClientWaiter(logger *io.Controller) *Waiter {
 }
 
 // NewBuildkitClientReadinessWaiter creates a waiter for the buildkit readiness health-check
-// used by the port-forward and in-cluster connectors. The timeout budget is configurable via
+// used by the port-forward connector. The timeout budget is configurable via
 // readinessTimeoutEnvVar and defaults to defaultReadinessTimeout.
 func NewBuildkitClientReadinessWaiter(logger *io.Controller) *Waiter {
 	return &Waiter{
