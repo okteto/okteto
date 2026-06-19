@@ -2712,6 +2712,78 @@ func Test_IdentityTokenUnmarshalling_Valid(t *testing.T) {
 	}
 }
 
+// Test_IdentityTokenUnmarshalling_ExpandsEnvVars verifies that the x-okteto-identity-token fields go
+// through the manifest-wide environment expansion (ExpandStackEnvs) like any other compose field, so
+// ${VAR} and ${VAR:-default} notations resolve before the directive is parsed.
+func Test_IdentityTokenUnmarshalling_ExpandsEnvVars(t *testing.T) {
+	tests := []struct {
+		expected *ServiceIdentityToken
+		envs     map[string]string
+		name     string
+		manifest string
+	}{
+		{
+			name: "expands audience and mount_path from env vars",
+			envs: map[string]string{
+				"IDENTITY_AUDIENCE":   "sts.amazonaws.com",
+				"IDENTITY_MOUNT_PATH": "/var/run/secrets/tokens/aws",
+			},
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: ${IDENTITY_AUDIENCE}
+      mount_path: ${IDENTITY_MOUNT_PATH}`,
+			expected: &ServiceIdentityToken{
+				Audience:  "sts.amazonaws.com",
+				MountPath: "/var/run/secrets/tokens/aws",
+			},
+		},
+		{
+			name: "uses default when audience env var is unset",
+			envs: map[string]string{},
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: ${IDENTITY_AUDIENCE:-sts.amazonaws.com}
+      mount_path: /var/run/secrets/tokens`,
+			expected: &ServiceIdentityToken{
+				Audience:  "sts.amazonaws.com",
+				MountPath: "/var/run/secrets/tokens",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for key, value := range tt.envs {
+				t.Setenv(key, value)
+			}
+			s, err := ReadStack([]byte(tt.manifest), true)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, s.Services["app"].IdentityToken)
+		})
+	}
+}
+
+// Test_IdentityTokenUnmarshalling_ExpirationSecondsEnvNotSupported documents a current limitation: the
+// manifest-wide expander (ExpandStackEnvs) preserves the string YAML tag on expanded scalars, so a ${VAR}
+// used for the numeric expiration_seconds field resolves to a string and fails to unmarshal into int64.
+// The string fields (audience, mount_path) expand fine; only the numeric field is affected. Update this
+// test alongside any change that makes expiration_seconds expandable.
+func Test_IdentityTokenUnmarshalling_ExpirationSecondsEnvNotSupported(t *testing.T) {
+	t.Setenv("IDENTITY_EXPIRATION", "1800")
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: ${IDENTITY_EXPIRATION}`
+	_, err := ReadStack([]byte(manifest), true)
+	require.Error(t, err)
+}
+
 func Test_IdentityTokenUnmarshalling_Invalid(t *testing.T) {
 	tests := []struct {
 		name     string
