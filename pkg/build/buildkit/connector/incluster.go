@@ -46,7 +46,6 @@ type InClusterConnector struct {
 	oktetoClient types.OktetoInterface
 	ioCtrl       *io.Controller
 	maxWaitTime  time.Duration
-	waiter       *Waiter
 
 	// Connection state
 	podIP string
@@ -65,7 +64,6 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 
 	sessionID := uuid.New().String()
 	maxWaitTime := env.LoadTimeOrDefault(buildkitQueueWaitTimeoutEnvVar, defaultMaxWaitTimePortForward)
-	waiter := NewBuildkitClientWaiterWithConfig(ioCtrl, 4*time.Second, 1*time.Second)
 
 	ic := &InClusterConnector{
 		sessionID:    sessionID,
@@ -73,7 +71,6 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 		oktetoClient: oktetoClient,
 		ioCtrl:       ioCtrl,
 		maxWaitTime:  maxWaitTime,
-		waiter:       waiter,
 		metrics:      NewConnectorMetrics(analytics.ConnectorTypeInCluster, sessionID, tracker),
 	}
 
