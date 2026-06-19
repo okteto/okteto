@@ -76,7 +76,7 @@ func (d *DeployMetadata) toPostHogProps() map[string]any {
 		"namespace_type":           d.namespaceType(),
 	}
 	if d.RepoURL != "" {
-		props["repo_url"] = hashString(d.RepoURL)
+		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
 	}
 	if d.ManifestSyntax != "" {
 		props["manifest_syntax"] = d.ManifestSyntax
@@ -128,7 +128,7 @@ func (d *DeployStartedMetadata) toPostHogProps() map[string]any {
 		"is_redeploy":       d.IsRedeploy,
 	}
 	if d.RepoURL != "" {
-		props["repo_url"] = hashString(d.RepoURL)
+		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
 	}
 	if d.ParentExecutionID != "" {
 		props["parent_execution_id"] = d.ParentExecutionID
