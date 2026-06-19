@@ -17,13 +17,14 @@ import "context"
 
 // DeployPipelineTriggeredMetadata contains the metadata of a deploy_pipeline_triggered event
 type DeployPipelineTriggeredMetadata struct {
-	WorkflowID      string
-	RepoURL         string
-	Namespace       string
-	DeployType      string
-	UIElement       string
-	IsWithinPreview bool
-	IsRedeploy      bool
+	WorkflowID       string
+	ParentWorkflowID string
+	RepoURL          string
+	Namespace        string
+	DeployType       string
+	UIElement        string
+	IsWithinPreview  bool
+	IsRedeploy       bool
 }
 
 // TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event to all registered backends.

@@ -227,12 +227,22 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	}
 
 	opts.WorkflowID = uuid.New().String()
+	if envWorkflowID := os.Getenv(constants.OktetoWorkflowIDEnvVar); envWorkflowID != "" {
+		opts.WorkflowID = envWorkflowID
+	}
 	if pc.analyticsTracker != nil {
+		deployType := "git_url"
+		if envDeployType := os.Getenv(constants.OktetoDeployTypeEnvVar); envDeployType != "" {
+			deployType = envDeployType
+		}
 		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
 			WorkflowID: opts.WorkflowID,
-			RepoURL:    opts.Repository,
-			Namespace:  opts.Namespace,
-			DeployType: "git_url",
+			// parent_workflow_id is sourced only from the backend-injected env var; opts.ParentWorkflowID
+			// is the GraphQL mutation argument and is intentionally not used for the analytics event.
+			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+			RepoURL:          opts.Repository,
+			Namespace:        opts.Namespace,
+			DeployType:       deployType,
 			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
 				_, err := pc.okClient.Previews().Get(ctx, ns)
 				return err

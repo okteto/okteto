@@ -125,6 +125,8 @@ func TestPostHogBackend_TrackImageBuild_ContextNotInitialized(t *testing.T) {
 func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
+	t.Setenv("OKTETO_ORIGIN", "")
+	t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "")
 
 	mock := &mockPostHogClient{done: make(chan struct{})}
 	b := &posthogBackend{client: mock}
@@ -487,12 +489,13 @@ func TestPostHogBackend_TrackDeployPipelineTriggered_HappyPath(t *testing.T) {
 	}
 
 	m := DeployPipelineTriggeredMetadata{
-		WorkflowID:      "wf-abc-123",
-		RepoURL:         "https://github.com/org/repo",
-		Namespace:       "my-ns",
-		DeployType:      "git_url",
-		IsWithinPreview: true,
-		IsRedeploy:      false,
+		WorkflowID:       "wf-abc-123",
+		ParentWorkflowID: "wf-parent-1",
+		RepoURL:          "https://github.com/org/repo",
+		Namespace:        "my-ns",
+		DeployType:       "git_url",
+		IsWithinPreview:  true,
+		IsRedeploy:       false,
 	}
 	b.TrackDeployPipelineTriggered(context.Background(), m)
 	mock.waitCapture(t)
@@ -502,6 +505,7 @@ func TestPostHogBackend_TrackDeployPipelineTriggered_HappyPath(t *testing.T) {
 	require.Equal(t, posthogDeployPipelineTriggeredEvent, event.Event)
 	require.Equal(t, "user-123", event.DistinctId)
 	require.Equal(t, "wf-abc-123", event.Properties["workflow_id"])
+	require.Equal(t, "wf-parent-1", event.Properties["parent_workflow_id"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
 	require.Equal(t, "git_url", event.Properties["deploy_type"])
 	require.Equal(t, true, event.Properties["is_within_preview"])
@@ -521,6 +525,51 @@ func TestPostHogBackend_TrackDeployPipelineTriggered_OmitsRepoURLWhenEmpty(t *te
 
 	require.Len(t, mock.captured, 1)
 	require.NotContains(t, mock.captured[0].Properties, "repo_url")
+	require.NotContains(t, mock.captured[0].Properties, "parent_workflow_id")
+}
+
+func TestPostHogBackend_TriggerSourceFromOrigin(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("OKTETO_ORIGIN", "web")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "web", mock.captured[0].Properties["trigger_source"])
+}
+
+func TestPostHogBackend_TriggerSourceDefaultsToCLI(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("OKTETO_ORIGIN", "")
+	t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "cli", mock.captured[0].Properties["trigger_source"])
+}
+
+func TestPostHogBackend_TriggerSourceWithinDeployContext(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("OKTETO_ORIGIN", "")
+	t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "true")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "okteto-deploy", mock.captured[0].Properties["trigger_source"])
 }
 
 func TestPostHogBackend_TrackDeployPreviewTriggered_NilClient(t *testing.T) {
@@ -552,11 +601,12 @@ func TestPostHogBackend_TrackDeployPreviewTriggered_HappyPath(t *testing.T) {
 	}
 
 	m := DeployPreviewTriggeredMetadata{
-		WorkflowID:      "wf-preview-456",
-		RepoURL:         "https://github.com/org/repo",
-		Preview:         "my-preview",
-		IsWithinPreview: false,
-		IsRedeploy:      true,
+		WorkflowID:       "wf-preview-456",
+		ParentWorkflowID: "wf-parent-2",
+		RepoURL:          "https://github.com/org/repo",
+		Preview:          "my-preview",
+		IsWithinPreview:  false,
+		IsRedeploy:       true,
 	}
 	b.TrackDeployPreviewTriggered(context.Background(), m)
 	mock.waitCapture(t)
@@ -566,6 +616,7 @@ func TestPostHogBackend_TrackDeployPreviewTriggered_HappyPath(t *testing.T) {
 	require.Equal(t, posthogDeployPreviewTriggeredEvent, event.Event)
 	require.Equal(t, "user-123", event.DistinctId)
 	require.Equal(t, "wf-preview-456", event.Properties["workflow_id"])
+	require.Equal(t, "wf-parent-2", event.Properties["parent_workflow_id"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
 	require.Equal(t, false, event.Properties["is_within_preview"])
 	require.Equal(t, true, event.Properties["is_redeploy"])

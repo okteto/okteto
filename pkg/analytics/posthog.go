@@ -115,7 +115,7 @@ func commonPostHogProperties() posthog.Properties {
 		"arch":               runtime.GOARCH,
 		"machine_id":         get().MachineID,
 		"measurement_source": "cli",
-		"trigger_source":     "cli",
+		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
 	}
 	if agent != "" {
@@ -227,9 +227,11 @@ func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m Dep
 	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
 	props["deploy_type"] = m.DeployType
-	props["ui_element"] = m.UIElement
+	if m.ParentWorkflowID != "" {
+		props["parent_workflow_id"] = m.ParentWorkflowID
+	}
 	if m.RepoURL != "" {
-		props["repo_url"] = hashString(m.RepoURL)
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	b.enqueue(ctx, userID, posthogDeployPipelineTriggeredEvent, props, b.withNamespace(m.Namespace))
 }
@@ -245,9 +247,11 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 	props["workflow_id"] = m.WorkflowID
 	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
-	props["ui_element"] = m.UIElement
+	if m.ParentWorkflowID != "" {
+		props["parent_workflow_id"] = m.ParentWorkflowID
+	}
 	if m.RepoURL != "" {
-		props["repo_url"] = hashString(m.RepoURL)
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
 }
@@ -296,7 +300,7 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	props := commonPostHogProperties()
 	hashedRepoURL := ""
 	if repoURL != "" {
-		hashedRepoURL = hashString(repoURL)
+		hashedRepoURL = hashString(normalizeRepoURL(repoURL))
 	}
 	props["service"] = service
 	props["repo_url"] = hashedRepoURL

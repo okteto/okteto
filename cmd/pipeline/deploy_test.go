@@ -24,6 +24,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model/utils"
@@ -973,4 +974,70 @@ func Test_parseEnvironmentLabelFromLabelsMap(t *testing.T) {
 			require.Equal(t, got, tt.expected)
 		})
 	}
+}
+
+type capturingPipelineTracker struct {
+	captured analytics.DeployPipelineTriggeredMetadata
+}
+
+func (c *capturingPipelineTracker) TrackDeployPipelineTriggered(_ context.Context, m analytics.DeployPipelineTriggeredMetadata) {
+	c.captured = m
+}
+
+func TestExecuteDeployPipeline_AnalyticsSourcedFromEnv(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts:       map[string]*okteto.Context{"test": {}},
+	}
+	t.Setenv(constants.OktetoWorkflowIDEnvVar, "wf-from-env")
+	t.Setenv(constants.OktetoParentWorkflowIDEnvVar, "parent-from-env")
+	t.Setenv(constants.OktetoDeployTypeEnvVar, "compose")
+
+	tracker := &capturingPipelineTracker{}
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: client.NewFakePipelineClient(&client.FakePipelineResponses{
+				DeployResponse: &types.GitDeployResponse{Action: &types.Action{ID: "test", Name: "test"}},
+			}),
+		},
+		k8sClientProvider: test.NewFakeK8sProvider(),
+		analyticsTracker:  tracker,
+	}
+
+	err := pc.ExecuteDeployPipeline(ctx, &DeployOptions{Repository: "http://stest", Name: "test"})
+	require.NoError(t, err)
+	require.Equal(t, "wf-from-env", tracker.captured.WorkflowID)
+	require.Equal(t, "parent-from-env", tracker.captured.ParentWorkflowID)
+	require.Equal(t, "compose", tracker.captured.DeployType)
+}
+
+func TestExecuteDeployPipeline_AnalyticsFallbackWhenEnvUnset(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts:       map[string]*okteto.Context{"test": {}},
+	}
+	t.Setenv(constants.OktetoWorkflowIDEnvVar, "")
+	t.Setenv(constants.OktetoParentWorkflowIDEnvVar, "")
+	t.Setenv(constants.OktetoDeployTypeEnvVar, "")
+
+	tracker := &capturingPipelineTracker{}
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: client.NewFakePipelineClient(&client.FakePipelineResponses{
+				DeployResponse: &types.GitDeployResponse{Action: &types.Action{ID: "test", Name: "test"}},
+			}),
+		},
+		k8sClientProvider: test.NewFakeK8sProvider(),
+		analyticsTracker:  tracker,
+	}
+
+	// opts.ParentWorkflowID feeds the GraphQL mutation but must NOT leak into the analytics event,
+	// which is sourced solely from OKTETO_PARENT_WORKFLOW_ID.
+	err := pc.ExecuteDeployPipeline(ctx, &DeployOptions{Repository: "http://stest", Name: "test", ParentWorkflowID: "opts-parent-should-not-leak"})
+	require.NoError(t, err)
+	require.NotEmpty(t, tracker.captured.WorkflowID)
+	require.Empty(t, tracker.captured.ParentWorkflowID)
+	require.Equal(t, "git_url", tracker.captured.DeployType)
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -106,12 +107,16 @@ okteto preview deploy --wait=false`,
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
 	opts.workflowID = uuid.New().String()
+	if envWorkflowID := os.Getenv(constants.OktetoWorkflowIDEnvVar); envWorkflowID != "" {
+		opts.workflowID = envWorkflowID
+	}
 	if pw.analyticsTracker != nil {
 		_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
-			WorkflowID: opts.workflowID,
-			RepoURL:    opts.repository,
-			Preview:    opts.name,
+			WorkflowID:       opts.workflowID,
+			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+			RepoURL:          opts.repository,
+			Preview:          opts.name,
 			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
 				_, err := pw.okClient.Previews().Get(ctx, ns)
 				return err
