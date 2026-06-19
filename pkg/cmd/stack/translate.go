@@ -69,6 +69,15 @@ const (
 
 	// dependsOnAnnotation represents the annotation to define the depends_on field
 	dependsOnAnnotation = "dev.okteto.com/depends-on"
+
+	// identityTokenVolumeName is the name of the projected service account token volume created for x-okteto-identity-token
+	identityTokenVolumeName = "okteto-identity-token"
+
+	// identityTokenFileName is the file name of the projected token inside the mount path
+	identityTokenFileName = "token"
+
+	// defaultIdentityTokenExpirationSeconds is the default expiration applied to the projected token when not set by the user
+	defaultIdentityTokenExpirationSeconds int64 = 3600
 )
 
 // +enum
@@ -164,6 +173,12 @@ func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.
 				LivenessProbe:   svcHealthchecks.liveness,
 			},
 		},
+	}
+
+	if v := translateIdentityTokenVolume(svc); v != nil {
+		m := translateIdentityTokenVolumeMount(svc)
+		podSpec.Volumes = append(podSpec.Volumes, *v)
+		podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts, *m)
 	}
 
 	if divert != nil {
@@ -463,7 +478,52 @@ func translateVolumes(svc *model.Service) []apiv1.Volume {
 		})
 	}
 
+	if v := translateIdentityTokenVolume(svc); v != nil {
+		volumes = append(volumes, *v)
+	}
+
 	return volumes
+}
+
+// translateIdentityTokenVolume builds the projected service account token volume for a service with
+// x-okteto-identity-token configured. It returns nil when the directive is not set.
+func translateIdentityTokenVolume(svc *model.Service) *apiv1.Volume {
+	if svc.IdentityToken == nil {
+		return nil
+	}
+	expiration := defaultIdentityTokenExpirationSeconds
+	if svc.IdentityToken.ExpirationSeconds != nil {
+		expiration = *svc.IdentityToken.ExpirationSeconds
+	}
+	return &apiv1.Volume{
+		Name: identityTokenVolumeName,
+		VolumeSource: apiv1.VolumeSource{
+			Projected: &apiv1.ProjectedVolumeSource{
+				Sources: []apiv1.VolumeProjection{
+					{
+						ServiceAccountToken: &apiv1.ServiceAccountTokenProjection{
+							Audience:          svc.IdentityToken.Audience,
+							ExpirationSeconds: ptr.To(expiration),
+							Path:              identityTokenFileName,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// translateIdentityTokenVolumeMount builds the read-only mount for the projected service account
+// token volume. It returns nil when x-okteto-identity-token is not set.
+func translateIdentityTokenVolumeMount(svc *model.Service) *apiv1.VolumeMount {
+	if svc.IdentityToken == nil {
+		return nil
+	}
+	return &apiv1.VolumeMount{
+		Name:      identityTokenVolumeName,
+		MountPath: svc.IdentityToken.MountPath,
+		ReadOnly:  true,
+	}
 }
 
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
@@ -617,6 +677,10 @@ func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 				SubPath:   subpath,
 			},
 		)
+	}
+
+	if m := translateIdentityTokenVolumeMount(svc); m != nil {
+		result = append(result, *m)
 	}
 
 	return result

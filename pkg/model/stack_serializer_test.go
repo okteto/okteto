@@ -2652,3 +2652,232 @@ services:
 		})
 	}
 }
+
+func Test_IdentityTokenUnmarshalling_Valid(t *testing.T) {
+	tests := []struct {
+		expected *ServiceIdentityToken
+		name     string
+		manifest string
+	}{
+		{
+			name: "audience and absolute mount_path",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens`,
+			expected: &ServiceIdentityToken{
+				Audience:  "sts.amazonaws.com",
+				MountPath: "/var/run/secrets/tokens",
+			},
+		},
+		{
+			name: "with expiration_seconds 3600",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: 3600`,
+			expected: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(int64(3600)),
+			},
+		},
+		{
+			name: "with expiration_seconds at minimum 600",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: 600`,
+			expected: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(int64(600)),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack([]byte(tt.manifest), true)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, s.Services["app"].IdentityToken)
+		})
+	}
+}
+
+func Test_IdentityTokenUnmarshalling_Invalid(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "missing audience",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      mount_path: /var/run/secrets/tokens`,
+		},
+		{
+			name: "missing mount_path",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com`,
+		},
+		{
+			name: "relative mount_path",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: var/run/x`,
+		},
+		{
+			name: "expiration_seconds below minimum",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: 300`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ReadStack([]byte(tt.manifest), true)
+			require.Error(t, err)
+		})
+	}
+}
+
+func Test_IdentityTokenUnmarshalling_NotSet(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Nil(t, s.Services["app"].IdentityToken)
+}
+
+// Test_IdentityTokenUnmarshalling_NotRejectedByExtensions is a regression test ensuring that the
+// 'x-okteto-identity-token' service-level directive is captured by the dedicated IdentityToken field
+// and therefore is NOT treated as an unsupported service extension by validateExtensions.
+func Test_IdentityTokenUnmarshalling_NotRejectedByExtensions(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.NotNil(t, s.Services["app"].IdentityToken)
+	require.Empty(t, s.Warnings.NotSupportedFields)
+}
+
+func Test_IdentityTokenUnmarshalling_PerService(t *testing.T) {
+	manifest := `services:
+  first:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: first.audience
+      mount_path: /var/run/first
+  second:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: second.audience
+      mount_path: /var/run/second`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Equal(t, &ServiceIdentityToken{
+		Audience:  "first.audience",
+		MountPath: "/var/run/first",
+	}, s.Services["first"].IdentityToken)
+	require.Equal(t, &ServiceIdentityToken{
+		Audience:  "second.audience",
+		MountPath: "/var/run/second",
+	}, s.Services["second"].IdentityToken)
+}
+
+func Test_validateIdentityToken(t *testing.T) {
+	tests := []struct {
+		token       *ServiceIdentityToken
+		name        string
+		expectedErr bool
+	}{
+		{
+			name: "valid with audience and absolute mount_path",
+			token: &ServiceIdentityToken{
+				Audience:  "sts.amazonaws.com",
+				MountPath: "/var/run/secrets/tokens",
+			},
+			expectedErr: false,
+		},
+		{
+			name: "valid with expiration_seconds at minimum",
+			token: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(int64(600)),
+			},
+			expectedErr: false,
+		},
+		{
+			name: "valid with expiration_seconds above minimum",
+			token: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(int64(3600)),
+			},
+			expectedErr: false,
+		},
+		{
+			name: "missing audience",
+			token: &ServiceIdentityToken{
+				MountPath: "/var/run/secrets/tokens",
+			},
+			expectedErr: true,
+		},
+		{
+			name: "missing mount_path",
+			token: &ServiceIdentityToken{
+				Audience: "sts.amazonaws.com",
+			},
+			expectedErr: true,
+		},
+		{
+			name: "relative mount_path",
+			token: &ServiceIdentityToken{
+				Audience:  "sts.amazonaws.com",
+				MountPath: "var/run/x",
+			},
+			expectedErr: true,
+		},
+		{
+			name: "expiration_seconds below minimum",
+			token: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(int64(300)),
+			},
+			expectedErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIdentityToken(tt.token)
+			require.Equal(t, tt.expectedErr, err != nil)
+		})
+	}
+}

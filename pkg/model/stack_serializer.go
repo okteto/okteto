@@ -89,6 +89,7 @@ type ServiceRaw struct {
 	SecurityOpt              *WarningType           `yaml:"security_opt,omitempty"`
 	Secrets                  *WarningType           `yaml:"secrets,omitempty"`
 	Healthcheck              *HealthCheck           `yaml:"healthcheck,omitempty"`
+	IdentityToken            *ServiceIdentityToken  `json:"x-okteto-identity-token,omitempty" yaml:"x-okteto-identity-token,omitempty"`
 	Runtime                  *WarningType           `yaml:"runtime,omitempty"`
 	Labels                   Labels                 `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -436,6 +437,13 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	}
 
 	svc.NodeSelector = serviceRaw.NodeSelector
+
+	if serviceRaw.IdentityToken != nil {
+		if err := validateIdentityToken(serviceRaw.IdentityToken); err != nil {
+			return nil, fmt.Errorf("invalid 'x-okteto-identity-token' for service '%s': %w", svcName, err)
+		}
+		svc.IdentityToken = serviceRaw.IdentityToken
+	}
 
 	if svc.Labels == nil {
 		svc.Labels = make(Labels)
@@ -1635,6 +1643,22 @@ func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	} else {
 		a.Values = multi
+	}
+	return nil
+}
+
+func validateIdentityToken(token *ServiceIdentityToken) error {
+	if token.Audience == "" {
+		return fmt.Errorf("'audience' is required")
+	}
+	if token.MountPath == "" {
+		return fmt.Errorf("'mount_path' is required")
+	}
+	if !filepath.IsAbs(token.MountPath) {
+		return fmt.Errorf("'mount_path' must be an absolute path, got '%s'", token.MountPath)
+	}
+	if token.ExpirationSeconds != nil && *token.ExpirationSeconds < minIdentityTokenExpirationSeconds {
+		return fmt.Errorf("'expiration_seconds' must be at least %d seconds", minIdentityTokenExpirationSeconds)
 	}
 	return nil
 }
