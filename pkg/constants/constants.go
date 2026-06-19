@@ -42,6 +42,10 @@ const (
 	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
 	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
 
+	// OktetoOriginEnvVar holds the origin of the action (cli, web, github-action, okteto-deploy...),
+	// injected by the backend as a.Spec.Source and reported as trigger_source in analytics events.
+	OktetoOriginEnvVar = "OKTETO_ORIGIN"
+
 	// OktetoWorkflowIDEnvVar holds the workflow id injected by the backend when a deploy runs as part
 	// of a workflow. When set, the CLI reuses it instead of generating a new one, so analytics events
 	// correlate across the backend and CLI.
