@@ -63,7 +63,7 @@ type PreviewScope graphql.String
 type labelList []graphql.String
 
 type deployPreviewMutation struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source)"`
 }
 
 func (d *deployPreviewMutation) response() deployPreviewResponse {
@@ -71,7 +71,7 @@ func (d *deployPreviewMutation) response() deployPreviewResponse {
 }
 
 type deployPreviewMutationWithRedeployDependencies struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies)"`
 }
 
 func (d *deployPreviewMutationWithRedeployDependencies) response() deployPreviewResponse {
@@ -79,7 +79,7 @@ func (d *deployPreviewMutationWithRedeployDependencies) response() deployPreview
 }
 
 type deployPreviewMutationWithLabels struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, labels: $labels)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, labels: $labels)"`
 }
 
 func (d *deployPreviewMutationWithLabels) response() deployPreviewResponse {
@@ -87,7 +87,7 @@ func (d *deployPreviewMutationWithLabels) response() deployPreviewResponse {
 }
 
 type deployPreviewMutationWithLabelsAndRedpeloyDependencies struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies, labels: $labels)"`
 }
 
 func (d *deployPreviewMutationWithLabelsAndRedpeloyDependencies) response() deployPreviewResponse {
@@ -95,7 +95,7 @@ func (d *deployPreviewMutationWithLabelsAndRedpeloyDependencies) response() depl
 }
 
 type deployPreviewMutationWithWorkflowID struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, workflowId: $workflowId)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, workflowId: $workflowId)"`
 }
 
 func (d *deployPreviewMutationWithWorkflowID) response() deployPreviewResponse {
@@ -103,7 +103,7 @@ func (d *deployPreviewMutationWithWorkflowID) response() deployPreviewResponse {
 }
 
 type deployPreviewMutationWithRedeployDependenciesAndWorkflowID struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies, workflowId: $workflowId)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies, workflowId: $workflowId)"`
 }
 
 func (d *deployPreviewMutationWithRedeployDependenciesAndWorkflowID) response() deployPreviewResponse {
@@ -111,7 +111,7 @@ func (d *deployPreviewMutationWithRedeployDependenciesAndWorkflowID) response() 
 }
 
 type deployPreviewMutationWithLabelsAndWorkflowID struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, labels: $labels, workflowId: $workflowId)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, labels: $labels, workflowId: $workflowId)"`
 }
 
 func (d *deployPreviewMutationWithLabelsAndWorkflowID) response() deployPreviewResponse {
@@ -119,7 +119,7 @@ func (d *deployPreviewMutationWithLabelsAndWorkflowID) response() deployPreviewR
 }
 
 type deployPreviewMutationWithLabelsAndRedeployDependenciesAndWorkflowID struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, workflowId: $workflowId)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies, labels: $labels, workflowId: $workflowId)"`
 }
 
 func (d *deployPreviewMutationWithLabelsAndRedeployDependenciesAndWorkflowID) response() deployPreviewResponse {
@@ -369,6 +369,7 @@ func (*previewClient) getDeployVariables(name, scope, repository, branch, source
 		"variables":    variablesVariable,
 		"filename":     graphql.String(filename),
 		"dependencies": graphql.Boolean(redeployDependencies),
+		"source":       graphql.String(cliSource),
 	}
 
 	if len(labels) > 0 {

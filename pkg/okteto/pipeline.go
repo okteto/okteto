@@ -53,43 +53,43 @@ func newPipelineClient(client graphqlClientInterface, url string) *pipelineClien
 }
 
 type deployPipelineMutation struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, source: $source)"`
 }
 
 type deployPipelineMutationWithRedeployDependencies struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, source: $source)"`
 }
 
 type deployPipelineMutationWithLabels struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels, source: $source)"`
 }
 
 type deployPipelineMutationWithLabelsWithRedeployDependencies struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, source: $source)"`
 }
 
 type deployPipelineMutationWithWorkflowID struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, workflowId: $workflowId)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, workflowId: $workflowId, source: $source)"`
 }
 
 type deployPipelineMutationWithRedeployDependenciesAndWorkflowID struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, workflowId: $workflowId)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, workflowId: $workflowId, source: $source)"`
 }
 
 type deployPipelineMutationWithLabelsAndWorkflowID struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels, workflowId: $workflowId)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels, workflowId: $workflowId, source: $source)"`
 }
 
 type deployPipelineMutationWithLabelsWithRedeployDependenciesAndWorkflowID struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, workflowId: $workflowId)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, workflowId: $workflowId, source: $source)"`
 }
 
 type deployPipelineMutationWithRedeployDependenciesWorkflowIDAndParentWorkflowID struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, workflowId: $workflowId, parentWorkflowId: $parentWorkflowId)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, workflowId: $workflowId, parentWorkflowId: $parentWorkflowId, source: $source)"`
 }
 
 type deployPipelineMutationWithLabelsRedeployDependenciesWorkflowIDAndParentWorkflowID struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, workflowId: $workflowId, parentWorkflowId: $parentWorkflowId)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, workflowId: $workflowId, parentWorkflowId: $parentWorkflowId, source: $source)"`
 }
 
 type getPipelineByNameQuery struct {
@@ -350,6 +350,7 @@ func (c *pipelineClient) getDeployVariables(opts types.PipelineDeployOptions) ma
 		"filename":     graphql.String(opts.Filename),
 		"dependencies": graphql.Boolean(opts.RedeployDependencies),
 		"isDependency": graphql.Boolean(opts.IsDependency),
+		"source":       graphql.String(cliSource),
 	}
 
 	if len(opts.Labels) > 0 {
