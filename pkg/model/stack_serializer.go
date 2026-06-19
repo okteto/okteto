@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -1654,7 +1655,9 @@ func validateIdentityToken(token *ServiceIdentityToken) error {
 	if token.MountPath == "" {
 		return fmt.Errorf("'mount_path' is required")
 	}
-	if !filepath.IsAbs(token.MountPath) {
+	// mount_path is a Kubernetes container path (always POSIX), so use path.IsAbs rather than the
+	// OS-dependent filepath.IsAbs — otherwise a valid "/var/..." path is rejected on Windows.
+	if !path.IsAbs(token.MountPath) {
 		return fmt.Errorf("'mount_path' must be an absolute path, got '%s'", token.MountPath)
 	}
 	if token.ExpirationSeconds != nil && *token.ExpirationSeconds < minIdentityTokenExpirationSeconds {
