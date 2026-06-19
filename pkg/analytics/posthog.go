@@ -117,11 +117,18 @@ func commonPostHogProperties() posthog.Properties {
 		"measurement_source": "cli",
 		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
+		"is_ci":              isCI(),
+		"is_automation":      !isCI() && agent == "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
 	}
 	return props
+}
+
+// isCI reports whether the CLI is running inside a CI environment.
+func isCI() bool {
+	return env.LoadBoolean(constants.CIEnvVar)
 }
 
 func getAgent() string {

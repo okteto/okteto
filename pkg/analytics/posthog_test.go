@@ -572,6 +572,64 @@ func TestPostHogBackend_TriggerSourceWithinDeployContext(t *testing.T) {
 	require.Equal(t, "okteto-deploy", mock.captured[0].Properties["trigger_source"])
 }
 
+// is_automation is the residual automation flag: true unless the actor is a CI run or an AI agent.
+
+func TestPostHogBackend_IsCIAndIsAutomation_PlainNonHuman(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CI", "")
+	t.Setenv("CLAUDECODE", "")
+	t.Setenv("CODEX_CI", "")
+	t.Setenv("GEMINI_CLI", "")
+	t.Setenv("CURSOR_SANDBOX", "")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	props := mock.captured[0].Properties
+	require.Equal(t, false, props["is_ci"])
+	require.Equal(t, false, props["is_agent"])
+	require.Equal(t, true, props["is_automation"])
+}
+
+func TestPostHogBackend_IsCI_DisablesAutomation(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CI", "true")
+	t.Setenv("CLAUDECODE", "")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	props := mock.captured[0].Properties
+	require.Equal(t, true, props["is_ci"])
+	require.Equal(t, false, props["is_automation"])
+}
+
+func TestPostHogBackend_IsAgent_DisablesAutomation(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CI", "")
+	t.Setenv("CLAUDECODE", "true")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	props := mock.captured[0].Properties
+	require.Equal(t, true, props["is_agent"])
+	require.Equal(t, false, props["is_ci"])
+	require.Equal(t, false, props["is_automation"])
+}
+
 func TestPostHogBackend_TrackDeployPreviewTriggered_NilClient(t *testing.T) {
 	b := &posthogBackend{client: nil}
 	require.NotPanics(t, func() {
