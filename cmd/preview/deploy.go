@@ -23,10 +23,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -52,10 +54,11 @@ type DeployOptions struct {
 	timeout              time.Duration
 	wait                 bool
 	redeployDependencies bool
+	workflowID           string
 }
 
 // Deploy Deploy a preview environment
-func Deploy(ctx context.Context) *cobra.Command {
+func Deploy(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	opts := &DeployOptions{}
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
@@ -81,7 +84,7 @@ okteto preview deploy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			previewCmd, err := NewCommand()
+			previewCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}
@@ -103,6 +106,25 @@ okteto preview deploy --wait=false`,
 }
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
+	opts.workflowID = uuid.New().String()
+	if envWorkflowID := os.Getenv(constants.OktetoWorkflowIDEnvVar); envWorkflowID != "" {
+		opts.workflowID = envWorkflowID
+	}
+	if pw.analyticsTracker != nil {
+		_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
+		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
+			WorkflowID:       opts.workflowID,
+			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+			RepoURL:          opts.repository,
+			Preview:          opts.name,
+			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+				_, err := pw.okClient.Previews().Get(ctx, ns)
+				return err
+			}),
+			IsRedeploy: getErr == nil,
+		})
+	}
+
 	resp, err := pw.deployPreview(ctx, opts)
 	analytics.TrackPreviewDeploy(err == nil, opts.scope)
 	if err != nil {
@@ -140,7 +162,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 		})
 	}
 
-	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList, opts.labels, opts.redeployDependencies)
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, opts.workflowID, varList, opts.labels, opts.redeployDependencies)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string, a *types.Action, timeout time.Duration) error {

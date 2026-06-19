@@ -62,6 +62,9 @@ func (m *mockAnalyticsTracker) TrackBuildkitConnection(meta *analytics.BuildkitC
 	m.Called(meta)
 }
 
+func (m *mockAnalyticsTracker) TrackDeployPipelineTriggered(_ context.Context, _ analytics.DeployPipelineTriggeredMetadata) {
+}
+
 func (m *mockAnalyticsTracker) TrackUpStarted(service, namespace, repoURL, workflowID string) {
 	m.Called(service, namespace, repoURL, workflowID)
 }

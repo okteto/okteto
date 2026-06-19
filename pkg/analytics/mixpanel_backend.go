@@ -29,6 +29,12 @@ func (b *mixpanelBackend) TrackImageBuild(_ context.Context, m *ImageBuildMetada
 	b.trackFn(imageBuildEvent, m.Success, m.toMixpanelProps())
 }
 
+func (b *mixpanelBackend) TrackDeployPipelineTriggered(_ context.Context, _ DeployPipelineTriggeredMetadata) {
+}
+
+func (b *mixpanelBackend) TrackDeployPreviewTriggered(_ context.Context, _ DeployPreviewTriggeredMetadata) {
+}
+
 func (b *mixpanelBackend) TrackUp(_ *UpMetricsMetadata) {}
 
 func (b *mixpanelBackend) TrackUpStarted(_, _, _, _ string) {}

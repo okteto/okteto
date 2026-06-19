@@ -127,6 +127,8 @@ func TestPostHogBackend_TrackImageBuild_ContextNotInitialized(t *testing.T) {
 func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
+	t.Setenv("OKTETO_ORIGIN", "")
+	t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "")
 
 	mock := &mockPostHogClient{done: make(chan struct{})}
 	b := &posthogBackend{client: mock}
@@ -362,6 +364,339 @@ func TestPostHogBackend_withNamespace_setsEmptyOnResolverError(t *testing.T) {
 	b.withNamespace("my-ns")(context.Background(), props)
 
 	require.Equal(t, "", props["namespace"])
+}
+
+func TestPostHogBackend_withPreview_addsUID(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "preview-uid-abc"}}
+
+	props := posthog.Properties{}
+	b.withPreview("my-preview")(context.Background(), props)
+
+	require.Equal(t, "preview-uid-abc", props["preview"])
+}
+
+func TestPostHogBackend_withPreview_setsEmptyWhenPreviewEmpty(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "preview-uid-abc"}}
+
+	props := posthog.Properties{}
+	b.withPreview("")(context.Background(), props)
+
+	require.Equal(t, "", props["preview"])
+}
+
+func TestPostHogBackend_withPreview_setsEmptyWhenResolverNil(t *testing.T) {
+	b := &posthogBackend{nsResolver: nil}
+
+	props := posthog.Properties{}
+	b.withPreview("my-preview")(context.Background(), props)
+
+	require.Equal(t, "", props["preview"])
+}
+
+func TestPostHogBackend_withPreview_setsEmptyOnResolverError(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{err: errors.New("k8s down")}}
+
+	props := posthog.Properties{}
+	b.withPreview("my-preview")(context.Background(), props)
+
+	require.Equal(t, "", props["preview"])
+}
+
+func TestIsWithinPreview_TrueWhenEnvSet(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "true")
+	require.True(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_FalseWhenEnvEmpty(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	require.False(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_FalseWhenEnvOtherValue(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "false")
+	require.False(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://cloud.okteto.net",
+		Contexts: map[string]*okteto.Context{
+			"https://cloud.okteto.net": {Namespace: "my-preview-ns"},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	checker := func(_ context.Context, _ string) error { return nil }
+	require.True(t, IsWithinPreview(context.Background(), checker))
+}
+
+func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://cloud.okteto.net",
+		Contexts: map[string]*okteto.Context{
+			"https://cloud.okteto.net": {Namespace: "regular-ns"},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	checker := func(_ context.Context, _ string) error { return errors.New("not found") }
+	require.False(t, IsWithinPreview(context.Background(), checker))
+}
+
+func TestIsWithinPreview_FalseWhenNamespaceEmpty(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://cloud.okteto.net",
+		Contexts: map[string]*okteto.Context{
+			"https://cloud.okteto.net": {Namespace: ""},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	called := false
+	checker := func(_ context.Context, _ string) error { called = true; return nil }
+	require.False(t, IsWithinPreview(context.Background(), checker))
+	require.False(t, called, "checker must not be called when namespace is empty")
+}
+
+func TestPostHogBackend_TrackDeployPipelineTriggered_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	})
+}
+
+func TestPostHogBackend_TrackDeployPipelineTriggered_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackDeployPipelineTriggered_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-xyz"},
+	}
+
+	m := DeployPipelineTriggeredMetadata{
+		WorkflowID:       "wf-abc-123",
+		ParentWorkflowID: "wf-parent-1",
+		RepoURL:          "https://github.com/org/repo",
+		Namespace:        "my-ns",
+		DeployType:       "git_url",
+		IsWithinPreview:  true,
+		IsRedeploy:       false,
+	}
+	b.TrackDeployPipelineTriggered(context.Background(), m)
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	event := mock.captured[0]
+	require.Equal(t, posthogDeployPipelineTriggeredEvent, event.Event)
+	require.Equal(t, "user-123", event.DistinctId)
+	require.Equal(t, "wf-abc-123", event.Properties["workflow_id"])
+	require.Equal(t, "wf-parent-1", event.Properties["parent_workflow_id"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
+	require.Equal(t, "git_url", event.Properties["deploy_type"])
+	require.Equal(t, true, event.Properties["is_within_preview"])
+	require.Equal(t, false, event.Properties["is_redeploy"])
+	require.Equal(t, "ns-uid-xyz", event.Properties["namespace"])
+	require.NotEmpty(t, event.Properties["cli_version"])
+}
+
+func TestPostHogBackend_TrackDeployPipelineTriggered_OmitsRepoURLWhenEmpty(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1", RepoURL: ""})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.NotContains(t, mock.captured[0].Properties, "repo_url")
+	require.NotContains(t, mock.captured[0].Properties, "parent_workflow_id")
+}
+
+func TestPostHogBackend_TriggerSourceFromOrigin(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("OKTETO_ORIGIN", "web")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "web", mock.captured[0].Properties["trigger_source"])
+}
+
+func TestPostHogBackend_TriggerSourceDefaultsToCLI(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("OKTETO_ORIGIN", "")
+	t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "cli", mock.captured[0].Properties["trigger_source"])
+}
+
+func TestPostHogBackend_TriggerSourceWithinDeployContext(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("OKTETO_ORIGIN", "")
+	t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "true")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.Equal(t, "okteto-deploy", mock.captured[0].Properties["trigger_source"])
+}
+
+// is_automation is the residual automation flag: true unless the actor is a CI run or an AI agent.
+
+func TestPostHogBackend_IsCIAndIsAutomation_PlainNonHuman(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CI", "")
+	t.Setenv("CLAUDECODE", "")
+	t.Setenv("CODEX_CI", "")
+	t.Setenv("GEMINI_CLI", "")
+	t.Setenv("CURSOR_SANDBOX", "")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	props := mock.captured[0].Properties
+	require.Equal(t, false, props["is_ci"])
+	require.Equal(t, false, props["is_agent"])
+	require.Equal(t, true, props["is_automation"])
+}
+
+func TestPostHogBackend_IsCI_DisablesAutomation(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CI", "true")
+	t.Setenv("CLAUDECODE", "")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	props := mock.captured[0].Properties
+	require.Equal(t, true, props["is_ci"])
+	require.Equal(t, false, props["is_automation"])
+}
+
+func TestPostHogBackend_IsAgent_DisablesAutomation(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	t.Setenv("CI", "")
+	t.Setenv("CLAUDECODE", "true")
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	props := mock.captured[0].Properties
+	require.Equal(t, true, props["is_agent"])
+	require.Equal(t, false, props["is_ci"])
+	require.Equal(t, false, props["is_automation"])
+}
+
+func TestPostHogBackend_TrackDeployPreviewTriggered_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackDeployPreviewTriggered(context.Background(), DeployPreviewTriggeredMetadata{WorkflowID: "wf-1"})
+	})
+}
+
+func TestPostHogBackend_TrackDeployPreviewTriggered_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPreviewTriggered(context.Background(), DeployPreviewTriggeredMetadata{WorkflowID: "wf-1"})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackDeployPreviewTriggered_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "preview-uid-xyz"},
+	}
+
+	m := DeployPreviewTriggeredMetadata{
+		WorkflowID:       "wf-preview-456",
+		ParentWorkflowID: "wf-parent-2",
+		RepoURL:          "https://github.com/org/repo",
+		Preview:          "my-preview",
+		IsWithinPreview:  false,
+		IsRedeploy:       true,
+	}
+	b.TrackDeployPreviewTriggered(context.Background(), m)
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	event := mock.captured[0]
+	require.Equal(t, posthogDeployPreviewTriggeredEvent, event.Event)
+	require.Equal(t, "user-123", event.DistinctId)
+	require.Equal(t, "wf-preview-456", event.Properties["workflow_id"])
+	require.Equal(t, "wf-parent-2", event.Properties["parent_workflow_id"])
+	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
+	require.Equal(t, false, event.Properties["is_within_preview"])
+	require.Equal(t, true, event.Properties["is_redeploy"])
+	require.Equal(t, "preview-uid-xyz", event.Properties["preview"])
+	require.NotEmpty(t, event.Properties["cli_version"])
+}
+
+func TestPostHogBackend_TrackDeployPreviewTriggered_OmitsRepoURLWhenEmpty(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{done: make(chan struct{})}
+	b := &posthogBackend{client: mock}
+	b.TrackDeployPreviewTriggered(context.Background(), DeployPreviewTriggeredMetadata{WorkflowID: "wf-1", RepoURL: ""})
+	mock.waitCapture(t)
+
+	require.Len(t, mock.captured, 1)
+	require.NotContains(t, mock.captured[0].Properties, "repo_url")
 }
 
 func TestPostHogBackend_TrackUp_NilClient(t *testing.T) {
