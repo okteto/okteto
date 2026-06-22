@@ -118,7 +118,7 @@ func commonPostHogProperties() posthog.Properties {
 		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
 		"is_ci":              isCI(),
-		"is_automation":      !isCI() && agent == "",
+		"is_automation":      isCI() || agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
@@ -231,7 +231,6 @@ func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m Dep
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	props["workflow_id"] = m.WorkflowID
-	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
 	props["deploy_type"] = m.DeployType
 	if m.ParentWorkflowID != "" {
@@ -257,24 +256,6 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
-}
-
-// IsWithinPreview reports whether the current CLI context is inside a preview
-// environment. It first checks the platform env var (set when running inside a
-// preview); if not set, it calls checkPreview with the active namespace so that
-// `okteto ns use <preview-name>` is also detected. Pass nil to skip the API check.
-func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, string) error) bool {
-	if os.Getenv(constants.OktetoIsPreviewEnvVar) == "true" {
-		return true
-	}
-	if checkPreview == nil {
-		return false
-	}
-	ns := okteto.GetContext().Namespace
-	if ns == "" {
-		return false
-	}
-	return checkPreview(ctx, ns) == nil
 }
 
 // TrackUp sends an up event to PostHog.

@@ -243,11 +243,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 			RepoURL:          opts.Repository,
 			Namespace:        opts.Namespace,
 			DeployType:       deployType,
-			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
-				_, err := pc.okClient.Previews().Get(ctx, ns)
-				return err
-			}),
-			IsRedeploy: exists,
+			IsRedeploy:       exists,
 		})
 	}
 

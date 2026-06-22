@@ -398,68 +398,6 @@ func TestPostHogBackend_withPreview_setsEmptyOnResolverError(t *testing.T) {
 	require.Equal(t, "", props["preview"])
 }
 
-func TestIsWithinPreview_TrueWhenEnvSet(t *testing.T) {
-	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "true")
-	require.True(t, IsWithinPreview(context.Background(), nil))
-}
-
-func TestIsWithinPreview_FalseWhenEnvEmpty(t *testing.T) {
-	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
-	require.False(t, IsWithinPreview(context.Background(), nil))
-}
-
-func TestIsWithinPreview_FalseWhenEnvOtherValue(t *testing.T) {
-	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "false")
-	require.False(t, IsWithinPreview(context.Background(), nil))
-}
-
-func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
-	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
-	prevStore := okteto.CurrentStore
-	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
-		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {Namespace: "my-preview-ns"},
-		},
-	}
-	defer func() { okteto.CurrentStore = prevStore }()
-
-	checker := func(_ context.Context, _ string) error { return nil }
-	require.True(t, IsWithinPreview(context.Background(), checker))
-}
-
-func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
-	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
-	prevStore := okteto.CurrentStore
-	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
-		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {Namespace: "regular-ns"},
-		},
-	}
-	defer func() { okteto.CurrentStore = prevStore }()
-
-	checker := func(_ context.Context, _ string) error { return errors.New("not found") }
-	require.False(t, IsWithinPreview(context.Background(), checker))
-}
-
-func TestIsWithinPreview_FalseWhenNamespaceEmpty(t *testing.T) {
-	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
-	prevStore := okteto.CurrentStore
-	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
-		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {Namespace: ""},
-		},
-	}
-	defer func() { okteto.CurrentStore = prevStore }()
-
-	called := false
-	checker := func(_ context.Context, _ string) error { called = true; return nil }
-	require.False(t, IsWithinPreview(context.Background(), checker))
-	require.False(t, called, "checker must not be called when namespace is empty")
-}
-
 func TestPostHogBackend_TrackDeployPipelineTriggered_NilClient(t *testing.T) {
 	b := &posthogBackend{client: nil}
 	require.NotPanics(t, func() {
@@ -494,7 +432,6 @@ func TestPostHogBackend_TrackDeployPipelineTriggered_HappyPath(t *testing.T) {
 		RepoURL:          "https://github.com/org/repo",
 		Namespace:        "my-ns",
 		DeployType:       "git_url",
-		IsWithinPreview:  true,
 		IsRedeploy:       false,
 	}
 	b.TrackDeployPipelineTriggered(context.Background(), m)
@@ -508,7 +445,7 @@ func TestPostHogBackend_TrackDeployPipelineTriggered_HappyPath(t *testing.T) {
 	require.Equal(t, "wf-parent-1", event.Properties["parent_workflow_id"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
 	require.Equal(t, "git_url", event.Properties["deploy_type"])
-	require.Equal(t, true, event.Properties["is_within_preview"])
+	require.NotContains(t, event.Properties, "is_within_preview")
 	require.Equal(t, false, event.Properties["is_redeploy"])
 	require.Equal(t, "ns-uid-xyz", event.Properties["namespace"])
 	require.NotEmpty(t, event.Properties["cli_version"])
@@ -572,9 +509,9 @@ func TestPostHogBackend_TriggerSourceWithinDeployContext(t *testing.T) {
 	require.Equal(t, "okteto-deploy", mock.captured[0].Properties["trigger_source"])
 }
 
-// is_automation is the residual automation flag: true unless the actor is a CI run or an AI agent.
+// is_automation is true when the actor is a CI run or an AI agent, and false for a manual human run.
 
-func TestPostHogBackend_IsCIAndIsAutomation_PlainNonHuman(t *testing.T) {
+func TestPostHogBackend_IsAutomation_FalseForManualRun(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -592,10 +529,10 @@ func TestPostHogBackend_IsCIAndIsAutomation_PlainNonHuman(t *testing.T) {
 	props := mock.captured[0].Properties
 	require.Equal(t, false, props["is_ci"])
 	require.Equal(t, false, props["is_agent"])
-	require.Equal(t, true, props["is_automation"])
+	require.Equal(t, false, props["is_automation"])
 }
 
-func TestPostHogBackend_IsCI_DisablesAutomation(t *testing.T) {
+func TestPostHogBackend_IsCI_EnablesAutomation(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -609,10 +546,10 @@ func TestPostHogBackend_IsCI_DisablesAutomation(t *testing.T) {
 	require.Len(t, mock.captured, 1)
 	props := mock.captured[0].Properties
 	require.Equal(t, true, props["is_ci"])
-	require.Equal(t, false, props["is_automation"])
+	require.Equal(t, true, props["is_automation"])
 }
 
-func TestPostHogBackend_IsAgent_DisablesAutomation(t *testing.T) {
+func TestPostHogBackend_IsAgent_EnablesAutomation(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -627,7 +564,7 @@ func TestPostHogBackend_IsAgent_DisablesAutomation(t *testing.T) {
 	props := mock.captured[0].Properties
 	require.Equal(t, true, props["is_agent"])
 	require.Equal(t, false, props["is_ci"])
-	require.Equal(t, false, props["is_automation"])
+	require.Equal(t, true, props["is_automation"])
 }
 
 func TestPostHogBackend_TrackDeployPreviewTriggered_NilClient(t *testing.T) {
