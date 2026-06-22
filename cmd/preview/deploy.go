@@ -113,14 +113,9 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 	if pw.analyticsTracker != nil {
 		_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
-			WorkflowID:       opts.workflowID,
-			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
-			RepoURL:          opts.repository,
-			Preview:          opts.name,
-			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
-				_, err := pw.okClient.Previews().Get(ctx, ns)
-				return err
-			}),
+			WorkflowID: opts.workflowID,
+			RepoURL:    opts.repository,
+			Preview:    opts.name,
 			IsRedeploy: getErr == nil,
 		})
 	}

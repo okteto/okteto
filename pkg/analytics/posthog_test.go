@@ -659,12 +659,10 @@ func TestPostHogBackend_TrackDeployPreviewTriggered_HappyPath(t *testing.T) {
 	}
 
 	m := DeployPreviewTriggeredMetadata{
-		WorkflowID:       "wf-preview-456",
-		ParentWorkflowID: "wf-parent-2",
-		RepoURL:          "https://github.com/org/repo",
-		Preview:          "my-preview",
-		IsWithinPreview:  false,
-		IsRedeploy:       true,
+		WorkflowID: "wf-preview-456",
+		RepoURL:    "https://github.com/org/repo",
+		Preview:    "my-preview",
+		IsRedeploy: true,
 	}
 	b.TrackDeployPreviewTriggered(context.Background(), m)
 	mock.waitCapture(t)
@@ -674,11 +672,11 @@ func TestPostHogBackend_TrackDeployPreviewTriggered_HappyPath(t *testing.T) {
 	require.Equal(t, posthogDeployPreviewTriggeredEvent, event.Event)
 	require.Equal(t, "user-123", event.DistinctId)
 	require.Equal(t, "wf-preview-456", event.Properties["workflow_id"])
-	require.Equal(t, "wf-parent-2", event.Properties["parent_workflow_id"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
-	require.Equal(t, false, event.Properties["is_within_preview"])
-	require.Equal(t, true, event.Properties["is_redeploy"])
+	require.True(t, event.Properties["is_redeploy"].(bool))
 	require.Equal(t, "preview-uid-xyz", event.Properties["preview"])
+	require.NotContains(t, event.Properties, "is_within_preview")
+	require.NotContains(t, event.Properties, "parent_workflow_id")
 	require.NotEmpty(t, event.Properties["cli_version"])
 }
 
