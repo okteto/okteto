@@ -394,7 +394,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	dc.AnalyticsTracker.TrackDeployStarted(analytics.DeployStartedMetadata{
 		Namespace:         deployOptions.Namespace,
 		RepoURL:           deployRepoURL(deployOptions.Manifest.ManifestPath),
-		ParentExecutionID: os.Getenv(constants.OktetoDeployParentExecutionIDEnvVar),
+		WorkflowID:        os.Getenv(constants.OktetoWorkflowIDEnvVar),
+		ParentExecutionID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 		IsPreview:         isPreviewEnvironment(),
 		IsRedeploy:        dc.isRedeploy,
 	})
@@ -887,7 +888,8 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		Namespace:              namespace,
 		RepoURL:                deployRepoURL(manifestPath),
 		ManifestSyntax:         manifestSyntax(manifest),
-		ParentExecutionID:      os.Getenv(constants.OktetoDeployParentExecutionIDEnvVar),
+		WorkflowID:             os.Getenv(constants.OktetoWorkflowIDEnvVar),
+		ParentExecutionID:      os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 		WaitForDependencies:    waitForDependencies,
 	})
 }

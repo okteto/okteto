@@ -35,6 +35,7 @@ type DeployMetadata struct {
 	Namespace              string
 	RepoURL                string
 	ManifestSyntax         string
+	WorkflowID             string
 	ParentExecutionID      string
 	Duration               time.Duration
 	Success                bool
@@ -81,6 +82,9 @@ func (d *DeployMetadata) toPostHogProps() map[string]any {
 	if d.ManifestSyntax != "" {
 		props["manifest_syntax"] = d.ManifestSyntax
 	}
+	if d.WorkflowID != "" {
+		props["workflow_id"] = d.WorkflowID
+	}
 	if d.ParentExecutionID != "" {
 		props["parent_execution_id"] = d.ParentExecutionID
 	}
@@ -117,6 +121,7 @@ func (d *DeployMetadata) namespaceType() string {
 type DeployStartedMetadata struct {
 	Namespace         string
 	RepoURL           string
+	WorkflowID        string
 	ParentExecutionID string
 	IsPreview         bool
 	IsRedeploy        bool
@@ -129,6 +134,9 @@ func (d *DeployStartedMetadata) toPostHogProps() map[string]any {
 	}
 	if d.RepoURL != "" {
 		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
+	}
+	if d.WorkflowID != "" {
+		props["workflow_id"] = d.WorkflowID
 	}
 	if d.ParentExecutionID != "" {
 		props["parent_execution_id"] = d.ParentExecutionID

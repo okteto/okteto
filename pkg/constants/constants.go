@@ -152,10 +152,6 @@ const (
 	// OktetoIsPreviewEnvVar Env variable containing a boolean indicating if the environment is a preview environment
 	OktetoIsPreviewEnvVar = "OKTETO_IS_PREVIEW_ENVIRONMENT"
 
-	// OktetoDeployParentExecutionIDEnvVar holds the execution id of a parent deploy, set so a nested
-	// deploy can report parent_execution_id in analytics. Empty when the deploy is not nested.
-	OktetoDeployParentExecutionIDEnvVar = "OKTETO_DEPLOY_PARENT_EXECUTION_ID"
-
 	// CIEnvVar Env variable defines if the environment is a CI environment
 	CIEnvVar = "CI"
 

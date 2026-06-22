@@ -894,6 +894,7 @@ func TestPostHogBackend_TrackDeploy_HappyPath(t *testing.T) {
 		Success:                true,
 		PipelineType:           model.OktetoManifestType,
 		Namespace:              "dev-ns",
+		WorkflowID:             "wf-deploy-1",
 		Duration:               45 * time.Second,
 		IsPreview:              false,
 		IsRedeploy:             true,
@@ -910,6 +911,7 @@ func TestPostHogBackend_TrackDeploy_HappyPath(t *testing.T) {
 	require.Equal(t, "user-123", ev.DistinctId)
 	require.Equal(t, true, ev.Properties["result"])
 	require.Equal(t, "manifest", ev.Properties["manifest_archetype"])
+	require.Equal(t, "wf-deploy-1", ev.Properties["workflow_id"])
 	require.Equal(t, "ns-uid-789", ev.Properties["namespace"])
 	require.Equal(t, float64(45), ev.Properties["duration_seconds"])
 	require.Equal(t, false, ev.Properties["is_within_preview"])
@@ -1072,6 +1074,7 @@ func TestPostHogBackend_TrackDeployStarted_HappyPath(t *testing.T) {
 	b.TrackDeployStarted(DeployStartedMetadata{
 		Namespace:  "dev-ns",
 		RepoURL:    "https://github.com/org/repo",
+		WorkflowID: "wf-deploy-1",
 		IsPreview:  true,
 		IsRedeploy: true,
 	})
@@ -1083,6 +1086,7 @@ func TestPostHogBackend_TrackDeployStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "user-123", ev.DistinctId)
 	require.Equal(t, "ns-uid-654", ev.Properties["namespace"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", ev.Properties["repo_url"])
+	require.Equal(t, "wf-deploy-1", ev.Properties["workflow_id"])
 	require.Equal(t, true, ev.Properties["is_within_preview"])
 	require.Equal(t, true, ev.Properties["is_redeploy"])
 	require.NotContains(t, ev.Properties, "ui_element")
