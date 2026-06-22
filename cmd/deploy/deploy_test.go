@@ -1058,6 +1058,77 @@ func TestTrackDeploy(t *testing.T) {
 	}
 }
 
+type capturingDeployTracker struct {
+	started   analytics.DeployStartedMetadata
+	completed analytics.DeployMetadata
+}
+
+func (*capturingDeployTracker) TrackImageBuild(context.Context, *analytics.ImageBuildMetadata) {}
+func (*capturingDeployTracker) TrackBuildkitConnection(*analytics.BuildkitConnectorMetadata)   {}
+func (c *capturingDeployTracker) TrackDeployStarted(m analytics.DeployStartedMetadata)         { c.started = m }
+func (c *capturingDeployTracker) TrackDeploy(m analytics.DeployMetadata)                       { c.completed = m }
+func (*capturingDeployTracker) TrackDeployPipelineTriggered(context.Context, analytics.DeployPipelineTriggeredMetadata) {
+}
+
+func newWorkflowIDTestCommand(t *testing.T) (*Command, *capturingDeployTracker, *Options) {
+	t.Helper()
+	fakeNamespace := "test"
+	fakeK8sClientProvider := test.NewFakeK8sProvider(&v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    map[string]string{model.DeployedByLabel: "movies"},
+			Namespace: fakeNamespace,
+		},
+	})
+	fakeDeployer := &fakeDeployer{}
+	divert := &fakeDivert{}
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts:       map[string]*okteto.Context{"test": {Namespace: fakeNamespace, Cfg: &api.Config{}}},
+		CurrentContext: "test",
+	}
+	tracker := &capturingDeployTracker{}
+	c := &Command{
+		AnalyticsTracker:  tracker,
+		GetManifest:       getFakeManifest,
+		K8sClientProvider: fakeK8sClientProvider,
+		EndpointGetter:    getFakeEndpoint,
+		Fs:                afero.NewMemMapFs(),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		GetDeployer:       fakeDeployer.Get,
+		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
+		DivertDeployerGetter: func(_ *model.DivertDeploy, _, _ string, _ kubernetes.Interface, _ *io.Controller) (DivertDeployer, error) {
+			return divert, nil
+		},
+	}
+	fakeDeployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fakeDeployer, nil)
+	fakeDeployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	divert.On("Deploy", mock.Anything).Return(nil)
+	opts := &Options{Name: "movies", Namespace: fakeNamespace, Variables: []string{}}
+	return c, tracker, opts
+}
+
+func TestDeployWorkflowID_GeneratedAndSharedWhenEnvUnset(t *testing.T) {
+	t.Setenv(constants.OktetoWorkflowIDEnvVar, "")
+	c, tracker, opts := newWorkflowIDTestCommand(t)
+
+	require.NoError(t, c.Run(context.Background(), opts))
+	require.NotEmpty(t, tracker.started.WorkflowID)
+
+	c.TrackDeploy(opts.Manifest, false, time.Now(), nil, opts.Namespace)
+	require.Equal(t, tracker.started.WorkflowID, tracker.completed.WorkflowID)
+}
+
+func TestDeployWorkflowID_UsesEnvVarWhenSet(t *testing.T) {
+	t.Setenv(constants.OktetoWorkflowIDEnvVar, "wf-from-env")
+	c, tracker, opts := newWorkflowIDTestCommand(t)
+
+	require.NoError(t, c.Run(context.Background(), opts))
+	require.Equal(t, "wf-from-env", tracker.started.WorkflowID)
+
+	c.TrackDeploy(opts.Manifest, false, time.Now(), nil, opts.Namespace)
+	require.Equal(t, "wf-from-env", tracker.completed.WorkflowID)
+}
+
 func TestManifestSyntax(t *testing.T) {
 	tt := []struct {
 		manifest *model.Manifest

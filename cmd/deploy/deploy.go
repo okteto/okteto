@@ -131,6 +131,9 @@ type Command struct {
 
 	PipelineType model.Archetype
 	isRedeploy   bool
+	// workflowID correlates the deploy_started and deploy_completed events of this deploy. It is the
+	// backend-injected OKTETO_WORKFLOW_ID when present, or a generated UUID otherwise.
+	workflowID string
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
 	// to be able to call to deployer's cleanUp function as the deployer is gotten at runtime.
 	// This can probably be improved using context cancellation
@@ -391,10 +394,15 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
 
+	dc.workflowID = os.Getenv(constants.OktetoWorkflowIDEnvVar)
+	if dc.workflowID == "" {
+		dc.workflowID = uuid.New().String()
+	}
+
 	dc.AnalyticsTracker.TrackDeployStarted(analytics.DeployStartedMetadata{
 		Namespace:         deployOptions.Namespace,
 		RepoURL:           deployRepoURL(deployOptions.Manifest.ManifestPath),
-		WorkflowID:        os.Getenv(constants.OktetoWorkflowIDEnvVar),
+		WorkflowID:        dc.workflowID,
 		ParentExecutionID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 		IsPreview:         isPreviewEnvironment(),
 		IsRedeploy:        dc.isRedeploy,
@@ -888,7 +896,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		Namespace:              namespace,
 		RepoURL:                deployRepoURL(manifestPath),
 		ManifestSyntax:         manifestSyntax(manifest),
-		WorkflowID:             os.Getenv(constants.OktetoWorkflowIDEnvVar),
+		WorkflowID:             dc.workflowID,
 		ParentExecutionID:      os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 		WaitForDependencies:    waitForDependencies,
 	})
