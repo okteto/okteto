@@ -53,19 +53,43 @@ func newPipelineClient(client graphqlClientInterface, url string) *pipelineClien
 }
 
 type deployPipelineMutation struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, source: $source)"`
 }
 
 type deployPipelineMutationWithRedeployDependencies struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, source: $source)"`
 }
 
 type deployPipelineMutationWithLabels struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels, source: $source)"`
 }
 
 type deployPipelineMutationWithLabelsWithRedeployDependencies struct {
-	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency)"`
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, source: $source)"`
+}
+
+type deployPipelineMutationWithWorkflowID struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, workflowId: $workflowId, source: $source)"`
+}
+
+type deployPipelineMutationWithRedeployDependenciesAndWorkflowID struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, workflowId: $workflowId, source: $source)"`
+}
+
+type deployPipelineMutationWithLabelsAndWorkflowID struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, labels: $labels, workflowId: $workflowId, source: $source)"`
+}
+
+type deployPipelineMutationWithLabelsWithRedeployDependenciesAndWorkflowID struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, workflowId: $workflowId, source: $source)"`
+}
+
+type deployPipelineMutationWithRedeployDependenciesWorkflowIDAndParentWorkflowID struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, isDependency: $isDependency, workflowId: $workflowId, parentWorkflowId: $parentWorkflowId, source: $source)"`
+}
+
+type deployPipelineMutationWithLabelsRedeployDependenciesWorkflowIDAndParentWorkflowID struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels, isDependency: $isDependency, workflowId: $workflowId, parentWorkflowId: $parentWorkflowId, source: $source)"`
 }
 
 type getPipelineByNameQuery struct {
@@ -116,22 +140,107 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 	oktetoLog.Infof("deploying pipeline '%s' mutation on %s", opts.Name, opts.Namespace)
 
 	mutationVariables := c.getDeployVariables(opts)
+	mutationVariables["workflowId"] = graphql.String(opts.WorkflowID)
 	oktetoLog.Infof("deploying pipeline with variables: %v", mutationVariables)
+
+	// Only pipelines deployed as a dependency have a parent. When there is none, skip
+	// the parentWorkflowId argument entirely instead of sending an empty value.
+	if opts.ParentWorkflowID == "" {
+		return c.deployWithoutParent(ctx, opts, mutationVariables)
+	}
+	mutationVariables["parentWorkflowId"] = graphql.String(opts.ParentWorkflowID)
+
+	var response deployPipelineResponse
+	var err error
+	if len(opts.Labels) == 0 {
+		mutationStruct := &deployPipelineMutationWithRedeployDependenciesWorkflowIDAndParentWorkflowID{}
+		err = mutate(ctx, mutationStruct, mutationVariables, c.client)
+		if err != nil {
+			if !isAnyUnknownArgErr(err) {
+				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+			}
+			delete(mutationVariables, "parentWorkflowId")
+			return c.deployWithoutParent(ctx, opts, mutationVariables)
+		}
+		response = mutationStruct.Response
+	} else {
+		mutationStruct := &deployPipelineMutationWithLabelsRedeployDependenciesWorkflowIDAndParentWorkflowID{}
+		err = mutate(ctx, mutationStruct, mutationVariables, c.client)
+		if err != nil {
+			if !isAnyUnknownArgErr(err) {
+				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+			}
+			delete(mutationVariables, "parentWorkflowId")
+			return c.deployWithoutParent(ctx, opts, mutationVariables)
+		}
+		response = mutationStruct.Response
+	}
+
+	gitDeployResponse := &types.GitDeployResponse{
+		Action: &types.Action{
+			ID:     string(response.Action.Id),
+			Name:   string(response.Action.Name),
+			Status: string(response.Action.Status),
+		},
+		GitDeploy: &types.GitDeploy{
+			ID:         string(response.GitDeploy.Id),
+			Name:       string(response.GitDeploy.Name),
+			Repository: string(response.GitDeploy.Repository),
+			Status:     string(response.GitDeploy.Status),
+		},
+	}
+	return gitDeployResponse, nil
+}
+
+// deployWithoutParent runs the legacy deploy mutation ladder (without parentWorkflowId),
+// falling back to older mutation variants when the backend does not support newer arguments.
+func (c *pipelineClient) deployWithoutParent(ctx context.Context, opts types.PipelineDeployOptions, mutationVariables map[string]interface{}) (*types.GitDeployResponse, error) {
 	var response deployPipelineResponse
 	if len(opts.Labels) == 0 {
-		mutationStruct := &deployPipelineMutationWithRedeployDependencies{}
+		mutationStruct := &deployPipelineMutationWithRedeployDependenciesAndWorkflowID{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
 			oktetoLog.Infof("deploy pipeline error: %s", err)
-			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
-				mutationWithoutDependencies := &deployPipelineMutation{}
+			if isUnknownArgErr(err, "workflowId") {
+				delete(mutationVariables, "workflowId")
+				legacyMutation := &deployPipelineMutationWithRedeployDependencies{}
+				err = mutate(ctx, legacyMutation, mutationVariables, c.client)
+				if err != nil {
+					if isUnknownArgErr(err, "dependencies") {
+						delete(mutationVariables, "dependencies")
+						delete(mutationVariables, "isDependency")
+						basicMutation := &deployPipelineMutation{}
+						err = mutate(ctx, basicMutation, mutationVariables, c.client)
+						if err != nil {
+							return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+						}
+						response = basicMutation.Response
+					} else {
+						return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+					}
+				} else {
+					response = legacyMutation.Response
+				}
+			} else if isUnknownArgErr(err, "dependencies") {
 				delete(mutationVariables, "dependencies")
 				delete(mutationVariables, "isDependency")
-				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+				mutationWithWID := &deployPipelineMutationWithWorkflowID{}
+				err = mutate(ctx, mutationWithWID, mutationVariables, c.client)
 				if err != nil {
-					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+					if isUnknownArgErr(err, "workflowId") {
+						delete(mutationVariables, "workflowId")
+						basicMutation := &deployPipelineMutation{}
+						err = mutate(ctx, basicMutation, mutationVariables, c.client)
+						if err != nil {
+							return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+						}
+						response = basicMutation.Response
+					} else {
+						return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+					}
+				} else {
+					response = mutationWithWID.Response
 				}
-				response = mutationWithoutDependencies.Response
 			} else {
 				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 			}
@@ -139,22 +248,57 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 			response = mutationStruct.Response
 		}
 	} else {
-		mutationStruct := &deployPipelineMutationWithLabelsWithRedeployDependencies{}
+		mutationStruct := &deployPipelineMutationWithLabelsWithRedeployDependenciesAndWorkflowID{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
-			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployGitRepository\" of type \"Mutation\"") {
+			if isUnknownArgErr(err, "workflowId") {
+				delete(mutationVariables, "workflowId")
+				legacyMutation := &deployPipelineMutationWithLabelsWithRedeployDependencies{}
+				err = mutate(ctx, legacyMutation, mutationVariables, c.client)
+				if err != nil {
+					if isUnknownArgErr(err, "labels") {
+						return nil, oktetoErrors.UserError{E: ErrDeployPipelineLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+					}
+					if isUnknownArgErr(err, "dependencies") {
+						delete(mutationVariables, "dependencies")
+						delete(mutationVariables, "isDependency")
+						mutationWithLabels := &deployPipelineMutationWithLabels{}
+						err = mutate(ctx, mutationWithLabels, mutationVariables, c.client)
+						if err != nil {
+							return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+						}
+						response = mutationWithLabels.Response
+					} else {
+						return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+					}
+				} else {
+					response = legacyMutation.Response
+				}
+			} else if isUnknownArgErr(err, "labels") {
 				return nil, oktetoErrors.UserError{E: ErrDeployPipelineLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
-			}
-			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployGitRepository\" of type \"Mutation\"") {
-				mutationWithoutDependencies := &deployPipelineMutationWithLabels{}
+			} else if isUnknownArgErr(err, "dependencies") {
 				delete(mutationVariables, "dependencies")
 				delete(mutationVariables, "isDependency")
-				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+				mutationWithLabelsAndWID := &deployPipelineMutationWithLabelsAndWorkflowID{}
+				err = mutate(ctx, mutationWithLabelsAndWID, mutationVariables, c.client)
 				if err != nil {
-					return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+					if isUnknownArgErr(err, "workflowId") {
+						delete(mutationVariables, "workflowId")
+						mutationWithLabels := &deployPipelineMutationWithLabels{}
+						err = mutate(ctx, mutationWithLabels, mutationVariables, c.client)
+						if err != nil {
+							return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+						}
+						response = mutationWithLabels.Response
+					} else {
+						return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+					}
+				} else {
+					response = mutationWithLabelsAndWID.Response
 				}
+			} else {
+				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 			}
-			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		} else {
 			response = mutationStruct.Response
 		}
@@ -206,6 +350,7 @@ func (c *pipelineClient) getDeployVariables(opts types.PipelineDeployOptions) ma
 		"filename":     graphql.String(opts.Filename),
 		"dependencies": graphql.Boolean(opts.RedeployDependencies),
 		"isDependency": graphql.Boolean(opts.IsDependency),
+		"source":       graphql.String(cliSource),
 	}
 
 	if len(opts.Labels) > 0 {
@@ -258,7 +403,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 	err := mutate(ctx, &mutation, queryVariables, c.client)
 	response = mutation.Response
 	if err != nil {
-		if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"destroyGitRepository\" of type \"Mutation\"") {
+		if isUnknownArgErr(err, "dependencies") {
 			mutationWithoutDependencies := &destroyPipelineMutation{}
 			delete(queryVariables, "dependencies")
 			delete(queryVariables, "isDependency")

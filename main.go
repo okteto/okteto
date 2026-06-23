@@ -166,7 +166,7 @@ func main() {
 	root.AddCommand(cmd.Status(fs))
 	root.AddCommand(cmd.Doctor(k8sLogger, fs))
 	root.AddCommand(exec.NewExec(fs, ioController, k8sClientProvider).Cmd(ctx))
-	root.AddCommand(preview.Preview(ctx))
+	root.AddCommand(preview.Preview(ctx, at))
 	root.AddCommand(cmd.Restart(fs))
 	root.AddCommand(deploy.Deploy(ctx, at, insights, ioController, k8sLogger))
 	root.AddCommand(destroy.Destroy(ctx, at, insights, ioController, k8sLogger, fs))
@@ -178,7 +178,7 @@ func main() {
 	root.AddCommand(cmd.GenerateSchema())
 	root.AddCommand(cmd.Validate(fs))
 
-	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(pipeline.Pipeline(ctx, at))
 
 	err = root.Execute()
 	at.Close()

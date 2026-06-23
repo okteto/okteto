@@ -16,38 +16,45 @@ package preview
 import (
 	"context"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
+type previewAnalyticsTracker interface {
+	TrackDeployPreviewTriggered(ctx context.Context, m analytics.DeployPreviewTriggeredMetadata)
+}
+
 type Command struct {
-	okClient types.OktetoInterface
+	okClient         types.OktetoInterface
+	analyticsTracker previewAnalyticsTracker
 }
 
 // NewCommand creates a namespace command for previews
-func NewCommand() (*Command, error) {
+func NewCommand(at previewAnalyticsTracker) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 	return &Command{
-		okClient: c,
+		okClient:         c,
+		analyticsTracker: at,
 	}, nil
 }
 
 // Preview preview management commands
-func Preview(ctx context.Context) *cobra.Command {
+func Preview(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview",
 		Short: "Preview Environment management commands",
 	}
 
-	cmd.AddCommand(Deploy(ctx))
+	cmd.AddCommand(Deploy(ctx, at))
 	cmd.AddCommand(Destroy(ctx))
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Endpoints(ctx))
-	cmd.AddCommand(Sleep(ctx))
-	cmd.AddCommand(Wake(ctx))
+	cmd.AddCommand(Sleep(ctx, at))
+	cmd.AddCommand(Wake(ctx, at))
 	return cmd
 }

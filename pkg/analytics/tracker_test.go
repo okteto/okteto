@@ -33,6 +33,12 @@ func (m *mockAnalyticsBackend) TrackImageBuild(ctx context.Context, meta *ImageB
 	}
 }
 
+func (m *mockAnalyticsBackend) TrackDeployPipelineTriggered(_ context.Context, _ DeployPipelineTriggeredMetadata) {
+}
+
+func (m *mockAnalyticsBackend) TrackDeployPreviewTriggered(_ context.Context, _ DeployPreviewTriggeredMetadata) {
+}
+
 func (m *mockAnalyticsBackend) TrackUp(meta *UpMetricsMetadata) {
 	if m.trackUpFn != nil {
 		m.trackUpFn(meta)

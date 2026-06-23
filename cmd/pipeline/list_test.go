@@ -73,7 +73,7 @@ func TestPipelineListCommandHandler_OnlyOktetoCluster(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
+	err := pipelineListCommandHandler(ctx, &listFlags{}, nil, initOkCtx)
 
 	assert.ErrorIs(t, err, oktetoErrors.ErrContextIsNotOktetoCluster)
 }
@@ -95,7 +95,7 @@ func TestPipelineListCommandHandler_InitOktetoContextFail(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	err := pipelineListCommandHandler(ctx, &listFlags{}, initOkCtx)
+	err := pipelineListCommandHandler(ctx, &listFlags{}, nil, initOkCtx)
 
 	assert.ErrorIs(t, err, assert.AnError)
 }
