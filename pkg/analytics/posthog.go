@@ -105,7 +105,7 @@ func commonPostHogProperties() posthog.Properties {
 		"customer_name": ctx.CompanyName,
 		// customer_id is derived server-side in PostHog, not sent from the CLI.
 		"cluster_id":      ctx.ClusterID,
-		"cluster_url":     ctx.Name,
+		"cluster_url":     okteto.NormalizeClusterURL(ctx.Name),
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 
@@ -118,7 +118,7 @@ func commonPostHogProperties() posthog.Properties {
 		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
 		"is_ci":              isCI(),
-		"is_automation":      !isCI() && agent == "",
+		"is_automation":      isCI() || agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent

@@ -227,8 +227,8 @@ func TestDeployPreview(t *testing.T) {
 				namespaceValidator: newNamespaceValidator(),
 			}
 			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", "", tc.input.variables, tc.input.labels, tc.input.dependencies)
-			assert.ErrorIs(t, err, tc.expected.err)
-			assert.Equal(t, tc.expected.response, response)
+			require.ErrorIs(t, err, tc.expected.err)
+			require.Equal(t, tc.expected.response, response)
 		})
 	}
 }

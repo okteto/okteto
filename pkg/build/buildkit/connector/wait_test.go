@@ -22,6 +22,7 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // MockSleeper is a mock implementation of the sleeper interface.
@@ -152,6 +153,55 @@ func TestNewBuildkitClientWaiter(t *testing.T) {
 			assert.Equal(t, tt.expectedRetryTime, bw.retryInterval)
 			assert.IsType(t, &DefaultSleeper{}, bw.sleeper)
 			assert.Equal(t, logger, bw.logger)
+		})
+	}
+}
+
+func TestNewBuildkitClientReadinessWaiter(t *testing.T) {
+	tests := []struct {
+		name                string
+		envValue            string
+		expectedMaxWaitTime time.Duration
+	}{
+		{
+			name:                "DefaultValue",
+			envValue:            "",
+			expectedMaxWaitTime: defaultReadinessTimeout,
+		},
+		{
+			name:                "CustomValue",
+			envValue:            "30s",
+			expectedMaxWaitTime: 30 * time.Second,
+		},
+		{
+			name:                "InvalidValueFallsBackToDefault",
+			envValue:            "notaduration",
+			expectedMaxWaitTime: defaultReadinessTimeout,
+		},
+		{
+			name:                "ZeroValueFallsBackToDefault",
+			envValue:            "0s",
+			expectedMaxWaitTime: defaultReadinessTimeout,
+		},
+		{
+			name:                "NegativeValueFallsBackToDefault",
+			envValue:            "-1s",
+			expectedMaxWaitTime: defaultReadinessTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setting an empty value is equivalent to the variable being unset for LoadTimeOrDefault.
+			t.Setenv(readinessTimeoutEnvVar, tt.envValue)
+
+			logger := io.NewIOController()
+			bw := NewBuildkitClientReadinessWaiter(logger)
+
+			require.Equal(t, tt.expectedMaxWaitTime, bw.maxWaitTime)
+			require.Equal(t, readinessRetryInterval, bw.retryInterval)
+			require.IsType(t, &DefaultSleeper{}, bw.sleeper)
+			require.Equal(t, logger, bw.logger)
 		})
 	}
 }

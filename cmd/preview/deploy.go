@@ -111,6 +111,9 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 		opts.workflowID = envWorkflowID
 	}
 	if pw.analyticsTracker != nil {
+		// IsRedeploy is true when the preview already exists. Only a NotFound error
+		// means a brand-new preview; a transient error leaves existence undetermined,
+		// so it is not misreported as a first-time deploy.
 		_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
 			WorkflowID:       opts.workflowID,
@@ -121,7 +124,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 				_, err := pw.okClient.Previews().Get(ctx, ns)
 				return err
 			}),
-			IsRedeploy: getErr == nil,
+			IsRedeploy: !oktetoErrors.IsNotFound(getErr),
 		})
 	}
 

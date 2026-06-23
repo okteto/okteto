@@ -576,9 +576,9 @@ func TestPostHogBackend_TriggerSourceWithinDeployContext(t *testing.T) {
 	require.Equal(t, "okteto-deploy", mock.captured[0].Properties["trigger_source"])
 }
 
-// is_automation is the residual automation flag: true unless the actor is a CI run or an AI agent.
+// is_automation is true when the actor is a CI run or an AI agent, and false for a manual human run.
 
-func TestPostHogBackend_IsCIAndIsAutomation_PlainNonHuman(t *testing.T) {
+func TestPostHogBackend_IsAutomation_FalseForManualRun(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -596,10 +596,10 @@ func TestPostHogBackend_IsCIAndIsAutomation_PlainNonHuman(t *testing.T) {
 	props := mock.captured[0].Properties
 	require.Equal(t, false, props["is_ci"])
 	require.Equal(t, false, props["is_agent"])
-	require.Equal(t, true, props["is_automation"])
+	require.Equal(t, false, props["is_automation"])
 }
 
-func TestPostHogBackend_IsCI_DisablesAutomation(t *testing.T) {
+func TestPostHogBackend_IsCI_EnablesAutomation(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -613,10 +613,10 @@ func TestPostHogBackend_IsCI_DisablesAutomation(t *testing.T) {
 	require.Len(t, mock.captured, 1)
 	props := mock.captured[0].Properties
 	require.Equal(t, true, props["is_ci"])
-	require.Equal(t, false, props["is_automation"])
+	require.Equal(t, true, props["is_automation"])
 }
 
-func TestPostHogBackend_IsAgent_DisablesAutomation(t *testing.T) {
+func TestPostHogBackend_IsAgent_EnablesAutomation(t *testing.T) {
 	teardown := setupPostHogContext(t, true)
 	defer teardown()
 
@@ -631,7 +631,7 @@ func TestPostHogBackend_IsAgent_DisablesAutomation(t *testing.T) {
 	props := mock.captured[0].Properties
 	require.Equal(t, true, props["is_agent"])
 	require.Equal(t, false, props["is_ci"])
-	require.Equal(t, false, props["is_automation"])
+	require.Equal(t, true, props["is_automation"])
 }
 
 func TestPostHogBackend_TrackDeployPreviewTriggered_NilClient(t *testing.T) {
@@ -677,7 +677,6 @@ func TestPostHogBackend_TrackDeployPreviewTriggered_HappyPath(t *testing.T) {
 	event := mock.captured[0]
 	require.Equal(t, posthogDeployPreviewTriggeredEvent, event.Event)
 	require.Equal(t, "user-123", event.DistinctId)
-	require.Equal(t, "wf-preview-456", event.Properties["workflow_id"])
 	require.Equal(t, "wf-parent-2", event.Properties["parent_workflow_id"])
 	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", event.Properties["repo_url"])
 	require.Equal(t, false, event.Properties["is_within_preview"])

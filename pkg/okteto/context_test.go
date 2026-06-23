@@ -108,6 +108,55 @@ func Test_RemoveSchema(t *testing.T) {
 	}
 }
 
+func Test_NormalizeClusterURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{
+			name: "full https url",
+			url:  "https://okteto.example.com",
+			want: "https://okteto.example.com",
+		},
+		{
+			name: "trailing slash is removed",
+			url:  "https://okteto.example.com/",
+			want: "https://okteto.example.com",
+		},
+		{
+			name: "missing scheme is added",
+			url:  "okteto.example.com",
+			want: "https://okteto.example.com",
+		},
+		{
+			name: "missing scheme and trailing slash",
+			url:  "okteto.example.com/",
+			want: "https://okteto.example.com",
+		},
+		{
+			name: "http scheme is preserved",
+			url:  "http://okteto.example.com/",
+			want: "http://okteto.example.com",
+		},
+		{
+			name: "host case is preserved",
+			url:  "https://Okteto.Example.com",
+			want: "https://Okteto.Example.com",
+		},
+		{
+			name: "empty string",
+			url:  "",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, NormalizeClusterURL(tt.url))
+		})
+	}
+}
+
 func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 	credCert := "credential-certificate"
 	oktetoCert := "okteto-certificate"

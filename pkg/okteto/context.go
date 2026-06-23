@@ -507,6 +507,17 @@ func AddSchema(oCtx string) string {
 	return oCtx
 }
 
+// NormalizeClusterURL returns the canonical form of an Okteto cluster URL used
+// as the cluster_url analytics property: the full URL with an https scheme and
+// without a trailing slash. This is the contract shared with backend event
+// emitters so CLI and backend events group by the same cluster_url value.
+func NormalizeClusterURL(clusterURL string) string {
+	if clusterURL == "" {
+		return ""
+	}
+	return strings.TrimSuffix(AddSchema(clusterURL), "/")
+}
+
 func (okctx *Context) SetClusterType(clusterHost string) {
 	if isLocalHostname(clusterHost) {
 		okctx.ClusterType = localClusterType
