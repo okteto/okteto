@@ -290,7 +290,7 @@ func TestDeployPipelineWorkflowIDFallback(t *testing.T) {
 		}
 		pc := pipelineClient{client: client}
 		response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{Name: "test"})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expectedResponse, response)
 	})
 
