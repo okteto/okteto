@@ -493,7 +493,7 @@ func translateIdentityTokenVolume(svc *model.Service) *apiv1.Volume {
 	}
 	expiration := defaultIdentityTokenExpirationSeconds
 	if svc.IdentityToken.ExpirationSeconds != nil {
-		expiration = *svc.IdentityToken.ExpirationSeconds
+		expiration = int64(*svc.IdentityToken.ExpirationSeconds)
 	}
 	return &apiv1.Volume{
 		Name: identityTokenVolumeName,

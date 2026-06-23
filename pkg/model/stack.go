@@ -136,10 +136,16 @@ const minIdentityTokenExpirationSeconds int64 = 600
 // federation) without static credentials. The token is audience-scoped and refreshed automatically
 // by the kubelet.
 type ServiceIdentityToken struct {
-	ExpirationSeconds *int64 `json:"expiration_seconds,omitempty" yaml:"expiration_seconds,omitempty"`
-	Audience          string `json:"audience,omitempty" yaml:"audience,omitempty"`
-	MountPath         string `json:"mount_path,omitempty" yaml:"mount_path,omitempty"`
+	ExpirationSeconds *IdentityTokenExpiration `json:"expiration_seconds,omitempty" yaml:"expiration_seconds,omitempty"`
+	Audience          string                   `json:"audience,omitempty" yaml:"audience,omitempty"`
+	MountPath         string                   `json:"mount_path,omitempty" yaml:"mount_path,omitempty"`
 }
+
+// IdentityTokenExpiration is the projected token expiration in seconds. It unmarshals from either a
+// YAML integer (the common case, e.g. expiration_seconds: 3600) or a numeric string, so a value
+// supplied through environment-variable expansion (e.g. expiration_seconds: ${EXP}) — which arrives as
+// a string after manifest expansion — is parsed correctly.
+type IdentityTokenExpiration int64
 
 // StackSecurityContext defines which user and group use
 type StackSecurityContext struct {

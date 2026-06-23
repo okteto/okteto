@@ -820,7 +820,7 @@ func TestStack_Merge(t *testing.T) {
 }
 
 func TestStack_MergeIdentityToken(t *testing.T) {
-	overrideExpiration := int64(3600)
+	overrideExpiration := IdentityTokenExpiration(3600)
 	tests := []struct {
 		stack      *Stack
 		otherStack *Stack

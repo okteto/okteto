@@ -2684,7 +2684,7 @@ func Test_IdentityTokenUnmarshalling_Valid(t *testing.T) {
 			expected: &ServiceIdentityToken{
 				Audience:          "sts.amazonaws.com",
 				MountPath:         "/var/run/secrets/tokens",
-				ExpirationSeconds: ptr.To(int64(3600)),
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(3600)),
 			},
 		},
 		{
@@ -2699,7 +2699,7 @@ func Test_IdentityTokenUnmarshalling_Valid(t *testing.T) {
 			expected: &ServiceIdentityToken{
 				Audience:          "sts.amazonaws.com",
 				MountPath:         "/var/run/secrets/tokens",
-				ExpirationSeconds: ptr.To(int64(600)),
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(600)),
 			},
 		},
 	}
@@ -2753,6 +2753,40 @@ func Test_IdentityTokenUnmarshalling_ExpandsEnvVars(t *testing.T) {
 				MountPath: "/var/run/secrets/tokens",
 			},
 		},
+		{
+			name: "expands expiration_seconds from env var",
+			envs: map[string]string{
+				"IDENTITY_EXPIRATION": "1800",
+			},
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: ${IDENTITY_EXPIRATION}`,
+			expected: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(1800)),
+			},
+		},
+		{
+			name: "uses default expiration_seconds when env var is unset",
+			envs: map[string]string{},
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: ${IDENTITY_EXPIRATION:-3600}`,
+			expected: &ServiceIdentityToken{
+				Audience:          "sts.amazonaws.com",
+				MountPath:         "/var/run/secrets/tokens",
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(3600)),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2764,24 +2798,6 @@ func Test_IdentityTokenUnmarshalling_ExpandsEnvVars(t *testing.T) {
 			require.Equal(t, tt.expected, s.Services["app"].IdentityToken)
 		})
 	}
-}
-
-// Test_IdentityTokenUnmarshalling_ExpirationSecondsEnvNotSupported documents a current limitation: the
-// manifest-wide expander (ExpandStackEnvs) preserves the string YAML tag on expanded scalars, so a ${VAR}
-// used for the numeric expiration_seconds field resolves to a string and fails to unmarshal into int64.
-// The string fields (audience, mount_path) expand fine; only the numeric field is affected. Update this
-// test alongside any change that makes expiration_seconds expandable.
-func Test_IdentityTokenUnmarshalling_ExpirationSecondsEnvNotSupported(t *testing.T) {
-	t.Setenv("IDENTITY_EXPIRATION", "1800")
-	manifest := `services:
-  app:
-    image: okteto/vote:1
-    x-okteto-identity-token:
-      audience: sts.amazonaws.com
-      mount_path: /var/run/secrets/tokens
-      expiration_seconds: ${IDENTITY_EXPIRATION}`
-	_, err := ReadStack([]byte(manifest), true)
-	require.Error(t, err)
 }
 
 func Test_IdentityTokenUnmarshalling_Invalid(t *testing.T) {
@@ -2823,6 +2839,16 @@ func Test_IdentityTokenUnmarshalling_Invalid(t *testing.T) {
       audience: sts.amazonaws.com
       mount_path: /var/run/secrets/tokens
       expiration_seconds: 300`,
+		},
+		{
+			name: "expiration_seconds non-numeric",
+			manifest: `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/secrets/tokens
+      expiration_seconds: not-a-number`,
 		},
 	}
 	for _, tt := range tests {
@@ -2901,7 +2927,7 @@ func Test_validateIdentityToken(t *testing.T) {
 			token: &ServiceIdentityToken{
 				Audience:          "sts.amazonaws.com",
 				MountPath:         "/var/run/secrets/tokens",
-				ExpirationSeconds: ptr.To(int64(600)),
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(600)),
 			},
 			expectedErr: false,
 		},
@@ -2910,7 +2936,7 @@ func Test_validateIdentityToken(t *testing.T) {
 			token: &ServiceIdentityToken{
 				Audience:          "sts.amazonaws.com",
 				MountPath:         "/var/run/secrets/tokens",
-				ExpirationSeconds: ptr.To(int64(3600)),
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(3600)),
 			},
 			expectedErr: false,
 		},
@@ -2941,7 +2967,7 @@ func Test_validateIdentityToken(t *testing.T) {
 			token: &ServiceIdentityToken{
 				Audience:          "sts.amazonaws.com",
 				MountPath:         "/var/run/secrets/tokens",
-				ExpirationSeconds: ptr.To(int64(300)),
+				ExpirationSeconds: ptr.To(IdentityTokenExpiration(300)),
 			},
 			expectedErr: true,
 		},

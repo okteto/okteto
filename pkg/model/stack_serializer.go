@@ -1648,6 +1648,27 @@ func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func (e *IdentityTokenExpiration) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// A plain YAML integer (the common case) unmarshals directly.
+	var i int64
+	if err := unmarshal(&i); err == nil {
+		*e = IdentityTokenExpiration(i)
+		return nil
+	}
+	// Otherwise it is a string — e.g. the result of env-var expansion (${EXP}) which keeps the YAML
+	// string tag. Parse it as an integer.
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	parsed, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid 'expiration_seconds' value '%s': must be an integer", s)
+	}
+	*e = IdentityTokenExpiration(parsed)
+	return nil
+}
+
 func validateIdentityToken(token *ServiceIdentityToken) error {
 	if token.Audience == "" {
 		return fmt.Errorf("'audience' is required")
@@ -1660,7 +1681,7 @@ func validateIdentityToken(token *ServiceIdentityToken) error {
 	if !path.IsAbs(token.MountPath) {
 		return fmt.Errorf("'mount_path' must be an absolute path, got '%s'", token.MountPath)
 	}
-	if token.ExpirationSeconds != nil && *token.ExpirationSeconds < minIdentityTokenExpirationSeconds {
+	if token.ExpirationSeconds != nil && int64(*token.ExpirationSeconds) < minIdentityTokenExpirationSeconds {
 		return fmt.Errorf("'expiration_seconds' must be at least %d seconds", minIdentityTokenExpirationSeconds)
 	}
 	return nil

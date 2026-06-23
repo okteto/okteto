@@ -2072,7 +2072,7 @@ func Test_translateIdentityTokenVolume(t *testing.T) {
 				IdentityToken: &model.ServiceIdentityToken{
 					Audience:          "sts.amazonaws.com",
 					MountPath:         "/var/run/secrets/tokens/aws",
-					ExpirationSeconds: ptr.To(int64(1200)),
+					ExpirationSeconds: ptr.To(model.IdentityTokenExpiration(1200)),
 				},
 			},
 			expected: &apiv1.Volume{
