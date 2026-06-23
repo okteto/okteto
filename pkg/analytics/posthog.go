@@ -105,7 +105,7 @@ func commonPostHogProperties() posthog.Properties {
 		"customer_name": ctx.CompanyName,
 		// customer_id is derived server-side in PostHog, not sent from the CLI.
 		"cluster_id":      ctx.ClusterID,
-		"cluster_url":     ctx.Name,
+		"cluster_url":     okteto.NormalizeClusterURL(ctx.Name),
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 
