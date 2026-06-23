@@ -42,6 +42,19 @@ const (
 	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
 	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
 
+	// OktetoWorkflowIDEnvVar holds the workflow id injected by the backend when a deploy runs as part
+	// of a workflow. When set, the CLI reuses it instead of generating a new one, so analytics events
+	// correlate across the backend and CLI.
+	OktetoWorkflowIDEnvVar = "OKTETO_WORKFLOW_ID"
+
+	// OktetoParentWorkflowIDEnvVar holds the parent workflow id injected by the backend for nested
+	// deploys, used to correlate a deploy with the workflow that triggered it.
+	OktetoParentWorkflowIDEnvVar = "OKTETO_PARENT_WORKFLOW_ID"
+
+	// OktetoDeployTypeEnvVar holds the deploy type injected by the backend, reported as deploy_type
+	// in analytics events.
+	OktetoDeployTypeEnvVar = "OKTETO_DEPLOY_TYPE"
+
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"
 

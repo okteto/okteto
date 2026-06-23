@@ -25,8 +25,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -85,9 +87,11 @@ type DeployOptions struct {
 	RedeployDependencies bool
 	IsDependency         bool
 	DependenciesIsSet    bool
+	WorkflowID           string
+	ParentWorkflowID     string
 }
 
-func deploy(ctx context.Context) *cobra.Command {
+func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 	flags := &deployFlags{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -114,7 +118,7 @@ okteto pipeline deploy --wait=false`,
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			pipelineCmd, err := NewCommand()
+			pipelineCmd, err := NewCommand(at)
 			if err != nil {
 				return err
 			}
@@ -222,6 +226,27 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		}
 	}
 
+	opts.WorkflowID = uuid.New().String()
+	if envWorkflowID := os.Getenv(constants.OktetoWorkflowIDEnvVar); envWorkflowID != "" {
+		opts.WorkflowID = envWorkflowID
+	}
+	if pc.analyticsTracker != nil {
+		deployType := "git_url"
+		if envDeployType := os.Getenv(constants.OktetoDeployTypeEnvVar); envDeployType != "" {
+			deployType = envDeployType
+		}
+		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
+			WorkflowID: opts.WorkflowID,
+			// parent_workflow_id is sourced only from the backend-injected env var; opts.ParentWorkflowID
+			// is the GraphQL mutation argument and is intentionally not used for the analytics event.
+			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+			RepoURL:          opts.Repository,
+			Namespace:        opts.Namespace,
+			DeployType:       deployType,
+			IsRedeploy:       exists,
+		})
+	}
+
 	resp, err := pc.deployPipeline(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline '%s': %w", opts.Name, err)
@@ -324,6 +349,8 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 			exit <- err
 			return
 		}
+		pipelineOpts.WorkflowID = opts.WorkflowID
+		pipelineOpts.ParentWorkflowID = opts.ParentWorkflowID
 		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", opts.Name, opts.File, opts.Repository, opts.Branch, opts.Namespace)
 
 		resp, err = pc.okClient.Pipeline().Deploy(ctx, pipelineOpts)

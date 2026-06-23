@@ -63,7 +63,7 @@ type PreviewScope graphql.String
 type labelList []graphql.String
 
 type deployPreviewMutation struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source)"`
 }
 
 func (d *deployPreviewMutation) response() deployPreviewResponse {
@@ -71,7 +71,7 @@ func (d *deployPreviewMutation) response() deployPreviewResponse {
 }
 
 type deployPreviewMutationWithRedeployDependencies struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies)"`
 }
 
 func (d *deployPreviewMutationWithRedeployDependencies) response() deployPreviewResponse {
@@ -79,7 +79,7 @@ func (d *deployPreviewMutationWithRedeployDependencies) response() deployPreview
 }
 
 type deployPreviewMutationWithLabels struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, labels: $labels)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, labels: $labels)"`
 }
 
 func (d *deployPreviewMutationWithLabels) response() deployPreviewResponse {
@@ -87,10 +87,42 @@ func (d *deployPreviewMutationWithLabels) response() deployPreviewResponse {
 }
 
 type deployPreviewMutationWithLabelsAndRedpeloyDependencies struct {
-	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, dependencies: $dependencies, labels: $labels)"`
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies, labels: $labels)"`
 }
 
 func (d *deployPreviewMutationWithLabelsAndRedpeloyDependencies) response() deployPreviewResponse {
+	return d.Response
+}
+
+type deployPreviewMutationWithWorkflowID struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, workflowId: $workflowId)"`
+}
+
+func (d *deployPreviewMutationWithWorkflowID) response() deployPreviewResponse {
+	return d.Response
+}
+
+type deployPreviewMutationWithRedeployDependenciesAndWorkflowID struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies, workflowId: $workflowId)"`
+}
+
+func (d *deployPreviewMutationWithRedeployDependenciesAndWorkflowID) response() deployPreviewResponse {
+	return d.Response
+}
+
+type deployPreviewMutationWithLabelsAndWorkflowID struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, labels: $labels, workflowId: $workflowId)"`
+}
+
+func (d *deployPreviewMutationWithLabelsAndWorkflowID) response() deployPreviewResponse {
+	return d.Response
+}
+
+type deployPreviewMutationWithLabelsAndRedeployDependenciesAndWorkflowID struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, source: $source, dependencies: $dependencies, labels: $labels, workflowId: $workflowId)"`
+}
+
+func (d *deployPreviewMutationWithLabelsAndRedeployDependenciesAndWorkflowID) response() deployPreviewResponse {
 	return d.Response
 }
 
@@ -182,26 +214,58 @@ type getPreviewQuery struct {
 }
 
 // DeployPreview creates a preview environment
-func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string, redeployDependencies bool) (*types.PreviewResponse, error) {
+func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename, workflowId string, variables []types.Variable, labels []string, redeployDependencies bool) (*types.PreviewResponse, error) {
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 
 	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels, redeployDependencies)
+	mutationVariables["workflowId"] = graphql.String(workflowId)
+
 	var response deployPreviewResponse
 	if len(labels) == 0 {
-		mutationStruct := &deployPreviewMutationWithRedeployDependencies{}
+		mutationStruct := &deployPreviewMutationWithRedeployDependenciesAndWorkflowID{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
 			oktetoLog.Infof("deploy preview error: %s", err)
-			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployPreview\" of type \"Mutation\"") {
-				mutationWithoutDependencies := &deployPreviewMutation{}
-				delete(mutationVariables, "dependencies")
-				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+			if isUnknownArgErr(err, "workflowId") {
+				delete(mutationVariables, "workflowId")
+				legacyMutation := &deployPreviewMutationWithRedeployDependencies{}
+				err = mutate(ctx, legacyMutation, mutationVariables, c.client)
 				if err != nil {
-					return nil, c.translateErr(err, name)
+					if isUnknownArgErr(err, "dependencies") {
+						delete(mutationVariables, "dependencies")
+						basicMutation := &deployPreviewMutation{}
+						err = mutate(ctx, basicMutation, mutationVariables, c.client)
+						if err != nil {
+							return nil, c.translateErr(err, name)
+						}
+						response = basicMutation.response()
+					} else {
+						return nil, fmt.Errorf("failed to deploy preview: %w", err)
+					}
+				} else {
+					response = legacyMutation.response()
 				}
-				response = mutationWithoutDependencies.response()
+			} else if isUnknownArgErr(err, "dependencies") {
+				delete(mutationVariables, "dependencies")
+				mutationWithWID := &deployPreviewMutationWithWorkflowID{}
+				err = mutate(ctx, mutationWithWID, mutationVariables, c.client)
+				if err != nil {
+					if isUnknownArgErr(err, "workflowId") {
+						delete(mutationVariables, "workflowId")
+						basicMutation := &deployPreviewMutation{}
+						err = mutate(ctx, basicMutation, mutationVariables, c.client)
+						if err != nil {
+							return nil, c.translateErr(err, name)
+						}
+						response = basicMutation.response()
+					} else {
+						return nil, fmt.Errorf("failed to deploy preview: %w", err)
+					}
+				} else {
+					response = mutationWithWID.response()
+				}
 			} else {
 				return nil, fmt.Errorf("failed to deploy preview: %w", err)
 			}
@@ -209,20 +273,54 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			response = mutationStruct.response()
 		}
 	} else {
-		mutationStruct := &deployPreviewMutationWithLabelsAndRedpeloyDependencies{}
+		mutationStruct := &deployPreviewMutationWithLabelsAndRedeployDependenciesAndWorkflowID{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
-			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\"") {
-				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
-			}
-			if strings.Contains(err.Error(), "Unknown argument \"dependencies\" on field \"deployPreview\" of type \"Mutation\"") {
-				mutationWithoutDependencies := &deployPreviewMutationWithLabels{}
-				delete(mutationVariables, "dependencies")
-				err = mutate(ctx, mutationWithoutDependencies, mutationVariables, c.client)
+			if isUnknownArgErr(err, "workflowId") {
+				delete(mutationVariables, "workflowId")
+				legacyMutation := &deployPreviewMutationWithLabelsAndRedpeloyDependencies{}
+				err = mutate(ctx, legacyMutation, mutationVariables, c.client)
 				if err != nil {
-					return nil, c.translateErr(err, name)
+					if isUnknownArgErr(err, "labels") {
+						return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+					}
+					if isUnknownArgErr(err, "dependencies") {
+						delete(mutationVariables, "dependencies")
+						mutationWithLabels := &deployPreviewMutationWithLabels{}
+						err = mutate(ctx, mutationWithLabels, mutationVariables, c.client)
+						if err != nil {
+							return nil, c.translateErr(err, name)
+						}
+						response = mutationWithLabels.response()
+					} else {
+						return nil, fmt.Errorf("failed to deploy preview: %w", err)
+					}
+				} else {
+					response = legacyMutation.response()
 				}
-				response = mutationWithoutDependencies.response()
+			} else if isUnknownArgErr(err, "labels") {
+				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+			} else if isUnknownArgErr(err, "dependencies") {
+				delete(mutationVariables, "dependencies")
+				mutationWithLabelsAndWID := &deployPreviewMutationWithLabelsAndWorkflowID{}
+				err = mutate(ctx, mutationWithLabelsAndWID, mutationVariables, c.client)
+				if err != nil {
+					if isUnknownArgErr(err, "workflowId") {
+						delete(mutationVariables, "workflowId")
+						mutationWithLabels := &deployPreviewMutationWithLabels{}
+						err = mutate(ctx, mutationWithLabels, mutationVariables, c.client)
+						if err != nil {
+							return nil, c.translateErr(err, name)
+						}
+						response = mutationWithLabels.response()
+					} else {
+						return nil, fmt.Errorf("failed to deploy preview: %w", err)
+					}
+				} else {
+					response = mutationWithLabelsAndWID.response()
+				}
+			} else {
+				return nil, fmt.Errorf("failed to deploy preview: %w", err)
 			}
 		} else {
 			response = mutationStruct.response()
@@ -271,6 +369,7 @@ func (*previewClient) getDeployVariables(name, scope, repository, branch, source
 		"variables":    variablesVariable,
 		"filename":     graphql.String(filename),
 		"dependencies": graphql.Boolean(redeployDependencies),
+		"source":       graphql.String(cliSource),
 	}
 
 	if len(labels) > 0 {
@@ -293,7 +392,7 @@ func (c *previewClient) Destroy(ctx context.Context, name string, timeout int) e
 
 	err := mutate(ctx, &mutationStruct, variables, c.client)
 	if err != nil {
-		if strings.Contains(err.Error(), "Unknown argument \"timeout\" on field \"destroyPreview\" of type \"Mutation\"") {
+		if isUnknownArgErr(err, "timeout") {
 			mutationStruct := destroyPreviewMutation{}
 			variables := map[string]interface{}{
 				"id": graphql.String(name),

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -36,9 +37,11 @@ const (
 	// posthogEndpoint is the Okteto-owned reverse proxy for PostHog.
 	posthogEndpoint = "https://ph.okteto.com"
 
-	posthogImageBuildEvent = "image_build"
-	posthogUpEvent         = "up"
-	posthogUpStartedEvent  = "up_started"
+	posthogImageBuildEvent              = "image_build"
+	posthogDeployPipelineTriggeredEvent = "deploy_pipeline_triggered"
+	posthogDeployPreviewTriggeredEvent  = "deploy_preview_triggered"
+	posthogUpEvent                      = "up"
+	posthogUpStartedEvent               = "up_started"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -102,7 +105,7 @@ func commonPostHogProperties() posthog.Properties {
 		"customer_name": ctx.CompanyName,
 		// customer_id is derived server-side in PostHog, not sent from the CLI.
 		"cluster_id":      ctx.ClusterID,
-		"cluster_url":     ctx.Name,
+		"cluster_url":     okteto.NormalizeClusterURL(ctx.Name),
 		"cluster_version": ctx.ClusterVersion,
 		"user_id":         ctx.UserID,
 
@@ -112,13 +115,20 @@ func commonPostHogProperties() posthog.Properties {
 		"arch":               runtime.GOARCH,
 		"machine_id":         get().MachineID,
 		"measurement_source": "cli",
-		"trigger_source":     "cli",
+		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
+		"is_ci":              isCI(),
+		"is_automation":      isCI() || agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
 	}
 	return props
+}
+
+// isCI reports whether the CLI is running inside a CI environment.
+func isCI() bool {
+	return env.LoadBoolean(constants.CIEnvVar)
 }
 
 func getAgent() string {
@@ -177,6 +187,26 @@ func (b *posthogBackend) withNamespace(namespace string) enricherFn {
 	}
 }
 
+// withPreview returns an enricherFn that resolves the preview namespace UID and sets
+// it as the "preview" property. Sets an empty string when preview is empty,
+// the resolver is unavailable, or the lookup fails.
+func (b *posthogBackend) withPreview(previewName string) enricherFn {
+	return func(ctx context.Context, props posthog.Properties) {
+		if previewName == "" || b.nsResolver == nil {
+			props["preview"] = ""
+			return
+		}
+		fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, previewName); err != nil {
+			oktetoLog.Infof("analytics: failed to get preview namespace UID: %s", err)
+			props["preview"] = ""
+		} else {
+			props["preview"] = uid
+		}
+	}
+}
+
 // TrackImageBuild sends an image_build event to PostHog.
 func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
 	if b.client == nil {
@@ -190,6 +220,42 @@ func (b *posthogBackend) TrackImageBuild(ctx context.Context, m *ImageBuildMetad
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
 	b.enqueue(ctx, userID, posthogImageBuildEvent, props, b.withNamespace(m.Namespace))
+}
+
+// TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event to PostHog.
+func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata) {
+	if b.client == nil || !analyticsEnabled() {
+		return
+	}
+
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	props["workflow_id"] = m.WorkflowID
+	props["is_redeploy"] = m.IsRedeploy
+	props["deploy_type"] = m.DeployType
+	if m.ParentWorkflowID != "" {
+		props["parent_workflow_id"] = m.ParentWorkflowID
+	}
+	if m.RepoURL != "" {
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+	}
+	b.enqueue(ctx, userID, posthogDeployPipelineTriggeredEvent, props, b.withNamespace(m.Namespace))
+}
+
+// TrackDeployPreviewTriggered sends a deploy_preview_triggered event to PostHog.
+func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata) {
+	if b.client == nil || !analyticsEnabled() {
+		return
+	}
+
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	props["workflow_id"] = m.WorkflowID
+	props["is_redeploy"] = m.IsRedeploy
+	if m.RepoURL != "" {
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+	}
+	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
 }
 
 // TrackUp sends an up event to PostHog.
@@ -218,7 +284,7 @@ func (b *posthogBackend) TrackUpStarted(service, namespace, repoURL, workflowID 
 	props := commonPostHogProperties()
 	hashedRepoURL := ""
 	if repoURL != "" {
-		hashedRepoURL = hashString(repoURL)
+		hashedRepoURL = hashString(normalizeRepoURL(repoURL))
 	}
 	props["service"] = service
 	props["repo_url"] = hashedRepoURL

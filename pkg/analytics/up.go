@@ -267,7 +267,7 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 	}
 	repoURL := ""
 	if u.repoURL != "" {
-		repoURL = hashString(u.repoURL)
+		repoURL = hashString(normalizeRepoURL(u.repoURL))
 	}
 	props["workflow_id"] = u.workflowID
 	props["service"] = u.service
