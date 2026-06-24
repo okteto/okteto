@@ -131,6 +131,9 @@ type Command struct {
 
 	PipelineType model.Archetype
 	isRedeploy   bool
+	// isWithinPreview reports whether the deploy runs inside a preview environment. It is true when the
+	// preview platform env var is set or when the active namespace is a preview (e.g. after `okteto ns use`).
+	isWithinPreview bool
 	// workflowID correlates the deploy_started and deploy_completed events of this deploy. It is the
 	// backend-injected OKTETO_WORKFLOW_ID when present, or a generated UUID otherwise.
 	workflowID string
@@ -394,6 +397,15 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
 
+	dc.isWithinPreview = analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+		okClient, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		_, err = okClient.Previews().Get(ctx, ns)
+		return err
+	})
+
 	dc.workflowID = os.Getenv(constants.OktetoWorkflowIDEnvVar)
 	if dc.workflowID == "" {
 		dc.workflowID = uuid.New().String()
@@ -404,7 +416,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		RepoURL:           deployRepoURL(deployOptions.Manifest.ManifestPath),
 		WorkflowID:        dc.workflowID,
 		ParentExecutionID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
-		IsPreview:         isPreviewEnvironment(),
+		IsPreview:         dc.isWithinPreview,
 		IsRedeploy:        dc.isRedeploy,
 	})
 
@@ -733,14 +745,6 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string, manifestRemoteFl
 	return runInRemoteFlag || deployImage != "" || manifestRemoteFlag
 }
 
-// isPreviewEnvironment reports whether the deploy targets a preview environment.
-// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility
-// in case an old version of the backend is being used.
-func isPreviewEnvironment() bool {
-	return os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
-}
-
 // manifestSyntax reports the manifest syntax for analytics: "mixed" when the deploy section
 // declares both commands and a compose section, "compose" when only a compose section is
 // present, and "" otherwise. The deprecated "stack" syntax is indistinguishable from "compose"
@@ -888,7 +892,7 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 		Duration:               time.Since(startTime),
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
-		IsPreview:              isPreviewEnvironment(),
+		IsPreview:              dc.isWithinPreview,
 		IsRedeploy:             dc.isRedeploy,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
