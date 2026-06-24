@@ -43,6 +43,10 @@ import (
 const (
 	// PermissionsOwnerOnly is the permission for the secret temp folder
 	PermissionsOwnerOnly = 0700
+
+	// OciMediaTypesEnvVar controls whether BuildKit uses OCI media types for image exports.
+	// Defaults to true (OCI media types). Set to false for legacy Docker media types.
+	OciMediaTypesEnvVar = "OKTETO_BUILD_OCI_MEDIATYPES"
 )
 
 // SolveOptBuilder is a builder for SolveOpt
@@ -254,6 +258,8 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		if forceCompression := os.Getenv("OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"); forceCompression != "" {
 			exportAttrs["force-compression"] = forceCompression
 		}
+
+		exportAttrs["oci-mediatypes"] = fmt.Sprintf("%t", env.LoadBooleanOrDefault(OciMediaTypesEnvVar, true))
 
 		opt.Exports = []client.ExportEntry{
 			{
