@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
+	"github.com/tonistiigi/fsutil"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -225,8 +226,17 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		}
 		attachable = append(attachable, secretProvider)
 	}
+	localMounts := make(map[string]fsutil.FS, len(localDirs))
+	for name, dir := range localDirs {
+		mount, err := fsutil.NewFS(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create local mount for %q: %w", name, err)
+		}
+		localMounts[name] = mount
+	}
+
 	opt := &client.SolveOpt{
-		LocalDirs:     localDirs,
+		LocalMounts:   localMounts,
 		Frontend:      string(frontend.Frontend),
 		FrontendAttrs: frontendAttrs,
 		Session:       attachable,
