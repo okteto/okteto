@@ -14,25 +14,141 @@
 package analytics
 
 import (
+	"errors"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const deployEvent = "Deploy"
+const (
+	deployEvent                 = "Deploy"
+	posthogDeployStartedEvent   = "deploy_started"
+	posthogDeployCompletedEvent = "deploy_completed"
+)
 
 // DeployMetadata contains the metadata of a deploy event
 type DeployMetadata struct {
 	Err                    error
 	PipelineType           model.Archetype
 	DeployType             string
+	Namespace              string
+	RepoURL                string
+	ManifestSyntax         string
+	WorkflowID             string
+	ParentExecutionID      string
 	Duration               time.Duration
 	Success                bool
 	IsOktetoRepo           bool
 	IsPreview              bool
+	IsRedeploy             bool
 	HasDependenciesSection bool
 	HasBuildSection        bool
 	IsRemote               bool
+	WaitForDependencies    bool
+}
+
+func (d *DeployMetadata) errorReason() string {
+	switch {
+	case errors.Is(d.Err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands):
+		return "no_deploy_commands"
+	case errors.Is(d.Err, oktetoErrors.ErrTimeout):
+		return "timeout"
+	case errors.Is(d.Err, oktetoErrors.ErrCommandFailed):
+		return "command_failed"
+	case errors.Is(d.Err, oktetoErrors.ErrInternalServerError):
+		return "internal_server_error"
+	case errors.As(d.Err, &oktetoErrors.UserError{}):
+		return "user_error"
+	default:
+		return ""
+	}
+}
+
+func (d *DeployMetadata) toPostHogProps() map[string]any {
+	props := map[string]any{
+		"result":                   d.Success,
+		"manifest_archetype":       d.manifestArchetype(),
+		"is_within_preview":        d.IsPreview,
+		"is_redeploy":              d.IsRedeploy,
+		"has_dependencies_section": d.HasDependenciesSection,
+		"has_build_section":        d.HasBuildSection,
+		"is_remote":                d.IsRemote,
+		"namespace_type":           d.namespaceType(),
+	}
+	if d.RepoURL != "" {
+		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
+	}
+	if d.ManifestSyntax != "" {
+		props["manifest_syntax"] = d.ManifestSyntax
+	}
+	if d.WorkflowID != "" {
+		props["workflow_id"] = d.WorkflowID
+	}
+	if d.ParentExecutionID != "" {
+		props["parent_execution_id"] = d.ParentExecutionID
+	}
+	if d.WaitForDependencies {
+		props["wait_for_dependencies"] = true
+	}
+	if secs := d.Duration.Seconds(); secs > 0 {
+		props["duration_seconds"] = secs
+	}
+	if !d.Success {
+		if reason := d.errorReason(); reason != "" {
+			props["error_reason"] = reason
+		}
+	}
+	return props
+}
+
+func (d *DeployMetadata) manifestArchetype() string {
+	if d.PipelineType == "" {
+		return "pipeline"
+	}
+	return string(d.PipelineType)
+}
+
+func (d *DeployMetadata) namespaceType() string {
+	if d.IsPreview {
+		return "preview"
+	}
+	return "regular"
+}
+
+// DeployStartedMetadata contains the metadata of a deploy_started event, fired at
+// the beginning of the deploy command before the deploy runs.
+type DeployStartedMetadata struct {
+	Namespace         string
+	RepoURL           string
+	WorkflowID        string
+	ParentExecutionID string
+	IsPreview         bool
+	IsRedeploy        bool
+}
+
+func (d *DeployStartedMetadata) toPostHogProps() map[string]any {
+	props := map[string]any{
+		"is_within_preview": d.IsPreview,
+		"is_redeploy":       d.IsRedeploy,
+	}
+	if d.RepoURL != "" {
+		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
+	}
+	if d.WorkflowID != "" {
+		props["workflow_id"] = d.WorkflowID
+	}
+	if d.ParentExecutionID != "" {
+		props["parent_execution_id"] = d.ParentExecutionID
+	}
+	return props
+}
+
+// TrackDeployStarted fires the deploy_started event at the beginning of the deploy command.
+func (a *Tracker) TrackDeployStarted(metadata DeployStartedMetadata) {
+	for _, b := range a.backends {
+		b.TrackDeployStarted(metadata)
+	}
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys from command okteto deploy
@@ -54,4 +170,7 @@ func (a *Tracker) TrackDeploy(metadata DeployMetadata) {
 		props["error"] = metadata.Err.Error()
 	}
 	a.trackFn(deployEvent, metadata.Success, props)
+	for _, b := range a.backends {
+		b.TrackDeploy(metadata)
+	}
 }

@@ -47,6 +47,7 @@ type builderInterface interface {
 
 type analyticsTrackerInterface interface {
 	buildTrackerInterface
+	TrackDeployStarted(analytics.DeployStartedMetadata)
 	TrackDeploy(analytics.DeployMetadata)
 	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
 	TrackUp(*analytics.UpMetricsMetadata)

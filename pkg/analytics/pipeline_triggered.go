@@ -23,6 +23,7 @@ type DeployPipelineTriggeredMetadata struct {
 	Namespace        string
 	DeployType       string
 	UIElement        string
+	IsWithinPreview  bool
 	IsRedeploy       bool
 }
 
