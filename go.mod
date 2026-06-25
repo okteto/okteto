@@ -127,7 +127,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
-	github.com/tonistiigi/fsutil v0.0.0-20260609091201-0257b3308df4 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20260609091201-0257b3308df4
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea
 	github.com/tonistiigi/vt100 v0.0.0-20240514184818-90bafcd6abab // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
@@ -298,4 +298,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 )
 
-replace github.com/moby/buildkit => github.com/okteto/buildkit v0.31.1-0.20260624082309-08e9af6e0285 // v0.31.0-okteto1
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.31.2-0.20260624195634-c4a7b690093b // v0.31.1-okteto1
