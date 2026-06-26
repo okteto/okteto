@@ -141,6 +141,12 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		DependenciesEnvVars: rd.getDependencyEnvVars(os.Environ),
 		OktetoCommandSpecificEnvVars: map[string]string{
 			constants.OktetoIsPreviewEnvVar: os.Getenv(constants.OktetoIsPreviewEnvVar),
+			// Forward the backend-injected attribution vars so the nested okteto deploy inside the
+			// runner reports the same trigger_source/deploy_type/workflow correlation in analytics.
+			constants.OktetoOriginEnvVar:           os.Getenv(constants.OktetoOriginEnvVar),
+			constants.OktetoDeployTypeEnvVar:       os.Getenv(constants.OktetoDeployTypeEnvVar),
+			constants.OktetoWorkflowIDEnvVar:       os.Getenv(constants.OktetoWorkflowIDEnvVar),
+			constants.OktetoParentWorkflowIDEnvVar: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 		},
 		DockerfileName:              dockerfileTemporalName,
 		Deployable:                  dep,

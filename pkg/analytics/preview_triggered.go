@@ -17,11 +17,13 @@ import "context"
 
 // DeployPreviewTriggeredMetadata contains the metadata of a deploy_preview_triggered event
 type DeployPreviewTriggeredMetadata struct {
-	WorkflowID string
-	RepoURL    string
-	Preview    string
-	UIElement  string
-	IsRedeploy bool
+	WorkflowID       string
+	ParentWorkflowID string
+	RepoURL          string
+	Preview          string
+	UIElement        string
+	IsWithinPreview  bool
+	IsRedeploy       bool
 }
 
 // TrackDeployPreviewTriggered sends a deploy_preview_triggered event to all registered backends.

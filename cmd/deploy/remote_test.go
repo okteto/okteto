@@ -232,6 +232,10 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 		},
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+			"OKTETO_ORIGIN":                 "",
+			"OKTETO_DEPLOY_TYPE":            "",
+			"OKTETO_WORKFLOW_ID":            "",
+			"OKTETO_PARENT_WORKFLOW_ID":     "",
 			"OKTETO_DEV_GATEWAY_NAME":       "dev-gateway",
 			"OKTETO_DEV_GATEWAY_NAMESPACE":  "gateway-ns",
 		},
@@ -330,6 +334,10 @@ func TestDeployRemote(t *testing.T) {
 		},
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+			"OKTETO_ORIGIN":                 "",
+			"OKTETO_DEPLOY_TYPE":            "",
+			"OKTETO_WORKFLOW_ID":            "",
+			"OKTETO_PARENT_WORKFLOW_ID":     "",
 		},
 		Manifest:                    manifest,
 		Command:                     remote.DeployCommand,
@@ -396,6 +404,10 @@ func TestDeployRemoteWithError(t *testing.T) {
 		},
 		OktetoCommandSpecificEnvVars: map[string]string{
 			"OKTETO_IS_PREVIEW_ENVIRONMENT": "",
+			"OKTETO_ORIGIN":                 "",
+			"OKTETO_DEPLOY_TYPE":            "",
+			"OKTETO_WORKFLOW_ID":            "",
+			"OKTETO_PARENT_WORKFLOW_ID":     "",
 		},
 		Manifest:                    manifest,
 		Command:                     remote.DeployCommand,

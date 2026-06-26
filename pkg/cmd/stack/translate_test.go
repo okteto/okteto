@@ -2012,3 +2012,276 @@ func TestGetStrategyStrategy(t *testing.T) {
 		})
 	}
 }
+
+// hasIdentityTokenVolume reports whether the slice contains the projected identity-token volume.
+func hasIdentityTokenVolume(t *testing.T, volumes []apiv1.Volume) bool {
+	t.Helper()
+	for _, v := range volumes {
+		if v.Name == identityTokenVolumeName {
+			return true
+		}
+	}
+	return false
+}
+
+// hasIdentityTokenVolumeMount reports whether the slice contains the projected identity-token mount.
+func hasIdentityTokenVolumeMount(t *testing.T, mounts []apiv1.VolumeMount) bool {
+	t.Helper()
+	for _, m := range mounts {
+		if m.Name == identityTokenVolumeName {
+			return true
+		}
+	}
+	return false
+}
+
+func Test_translateIdentityTokenVolume(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		expected *apiv1.Volume
+	}{
+		{
+			name: "identity token set without expiration uses default",
+			svc: &model.Service{
+				IdentityToken: &model.ServiceIdentityToken{
+					Audience:  "sts.amazonaws.com",
+					MountPath: "/var/run/secrets/tokens/aws",
+				},
+			},
+			expected: &apiv1.Volume{
+				Name: identityTokenVolumeName,
+				VolumeSource: apiv1.VolumeSource{
+					Projected: &apiv1.ProjectedVolumeSource{
+						Sources: []apiv1.VolumeProjection{
+							{
+								ServiceAccountToken: &apiv1.ServiceAccountTokenProjection{
+									Audience:          "sts.amazonaws.com",
+									ExpirationSeconds: ptr.To(int64(3600)),
+									Path:              identityTokenFileName,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "identity token set with explicit expiration",
+			svc: &model.Service{
+				IdentityToken: &model.ServiceIdentityToken{
+					Audience:          "sts.amazonaws.com",
+					MountPath:         "/var/run/secrets/tokens/aws",
+					ExpirationSeconds: ptr.To(model.IdentityTokenExpiration(1200)),
+				},
+			},
+			expected: &apiv1.Volume{
+				Name: identityTokenVolumeName,
+				VolumeSource: apiv1.VolumeSource{
+					Projected: &apiv1.ProjectedVolumeSource{
+						Sources: []apiv1.VolumeProjection{
+							{
+								ServiceAccountToken: &apiv1.ServiceAccountTokenProjection{
+									Audience:          "sts.amazonaws.com",
+									ExpirationSeconds: ptr.To(int64(1200)),
+									Path:              identityTokenFileName,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "identity token not set returns nil",
+			svc:      &model.Service{},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := translateIdentityTokenVolume(tt.svc)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_translateIdentityTokenVolumeMount(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		expected *apiv1.VolumeMount
+	}{
+		{
+			name: "identity token set returns read-only mount",
+			svc: &model.Service{
+				IdentityToken: &model.ServiceIdentityToken{
+					Audience:  "sts.amazonaws.com",
+					MountPath: "/var/run/secrets/tokens/aws",
+				},
+			},
+			expected: &apiv1.VolumeMount{
+				Name:      identityTokenVolumeName,
+				MountPath: "/var/run/secrets/tokens/aws",
+				ReadOnly:  true,
+			},
+		},
+		{
+			name:     "identity token not set returns nil",
+			svc:      &model.Service{},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := translateIdentityTokenVolumeMount(tt.svc)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_translateDeployment_withIdentityToken(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image:         "image",
+				Replicas:      1,
+				RestartPolicy: apiv1.RestartPolicyAlways,
+				IdentityToken: &model.ServiceIdentityToken{
+					Audience:  "sts.amazonaws.com",
+					MountPath: "/var/run/secrets/tokens/aws",
+				},
+			},
+		},
+	}
+	require.True(t, s.Services["svcName"].IsDeployment())
+
+	result := translateDeployment("svcName", s, nil)
+
+	require.True(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
+	require.True(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
+}
+
+func Test_translateDeployment_withoutIdentityToken(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image:         "image",
+				Replicas:      1,
+				RestartPolicy: apiv1.RestartPolicyAlways,
+			},
+		},
+	}
+	require.True(t, s.Services["svcName"].IsDeployment())
+
+	result := translateDeployment("svcName", s, nil)
+
+	require.False(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
+	require.False(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
+}
+
+func Test_translateStatefulSet_withIdentityToken(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image:         "image",
+				Replicas:      1,
+				RestartPolicy: apiv1.RestartPolicyAlways,
+				Volumes:       []build.VolumeMounts{{RemotePath: "/volume1"}},
+				Resources: &model.StackResources{
+					Requests: model.ServiceResources{
+						Storage: model.StorageResource{
+							Size: model.Quantity{Value: resource.MustParse("20Gi")},
+						},
+					},
+				},
+				IdentityToken: &model.ServiceIdentityToken{
+					Audience:  "sts.amazonaws.com",
+					MountPath: "/var/run/secrets/tokens/aws",
+				},
+			},
+		},
+	}
+	require.True(t, s.Services["svcName"].IsStatefulset())
+
+	result := translateStatefulSet("svcName", s, nil)
+
+	require.True(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
+	require.True(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
+}
+
+func Test_translateStatefulSet_withoutIdentityToken(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image:         "image",
+				Replicas:      1,
+				RestartPolicy: apiv1.RestartPolicyAlways,
+				Volumes:       []build.VolumeMounts{{RemotePath: "/volume1"}},
+				Resources: &model.StackResources{
+					Requests: model.ServiceResources{
+						Storage: model.StorageResource{
+							Size: model.Quantity{Value: resource.MustParse("20Gi")},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.True(t, s.Services["svcName"].IsStatefulset())
+
+	result := translateStatefulSet("svcName", s, nil)
+
+	require.False(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
+	require.False(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
+}
+
+func Test_translateJob_withIdentityToken(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image:         "image",
+				Replicas:      1,
+				RestartPolicy: apiv1.RestartPolicyNever,
+				BackOffLimit:  5,
+				IdentityToken: &model.ServiceIdentityToken{
+					Audience:  "sts.amazonaws.com",
+					MountPath: "/var/run/secrets/tokens/aws",
+				},
+			},
+		},
+	}
+	require.True(t, s.Services["svcName"].IsJob())
+
+	result := translateJob("svcName", s, nil)
+
+	require.True(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
+	require.True(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
+}
+
+func Test_translateJob_withoutIdentityToken(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image:         "image",
+				Replicas:      1,
+				RestartPolicy: apiv1.RestartPolicyNever,
+				BackOffLimit:  5,
+			},
+		},
+	}
+	require.True(t, s.Services["svcName"].IsJob())
+
+	result := translateJob("svcName", s, nil)
+
+	require.False(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
+	require.False(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
+}

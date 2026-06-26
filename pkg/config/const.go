@@ -27,9 +27,6 @@ const (
 	// userProfileEnvVar defines user profile
 	userProfileEnvVar = "USERPROFILE"
 
-	// oktetoOriginEnvVar defines where is executing okteto
-	oktetoOriginEnvVar = "OKTETO_ORIGIN"
-
 	// oktetoInInstaller if set to true okteto is running inside the pipeline installer
 	oktetoInInstaller = "OKTETO_IN_INSTALLER"
 )

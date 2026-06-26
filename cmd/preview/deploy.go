@@ -116,9 +116,14 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 		// so it is not misreported as a first-time deploy.
 		_, getErr := pw.okClient.Previews().Get(ctx, opts.name)
 		pw.analyticsTracker.TrackDeployPreviewTriggered(ctx, analytics.DeployPreviewTriggeredMetadata{
-			WorkflowID: opts.workflowID,
-			RepoURL:    opts.repository,
-			Preview:    opts.name,
+			WorkflowID:       opts.workflowID,
+			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+			RepoURL:          opts.repository,
+			Preview:          opts.name,
+			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+				_, err := pw.okClient.Previews().Get(ctx, ns)
+				return err
+			}),
 			IsRedeploy: !oktetoErrors.IsNotFound(getErr),
 		})
 	}

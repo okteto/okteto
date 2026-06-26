@@ -46,6 +46,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
+	modelutils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/repository"
@@ -129,6 +130,13 @@ type Command struct {
 	DivertDeployerGetter getDivertDeployer
 
 	PipelineType model.Archetype
+	isRedeploy   bool
+	// isWithinPreview reports whether the deploy runs inside a preview environment. It is true when the
+	// preview platform env var is set or when the active namespace is a preview (e.g. after `okteto ns use`).
+	isWithinPreview bool
+	// workflowID correlates the deploy_started and deploy_completed events of this deploy. It is the
+	// backend-injected OKTETO_WORKFLOW_ID when present, or a generated UUID otherwise.
+	workflowID string
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack
 	// to be able to call to deployer's cleanUp function as the deployer is gotten at runtime.
 	// This can probably be improved using context cancellation
@@ -139,6 +147,7 @@ type Command struct {
 }
 
 type AnalyticsTrackerInterface interface {
+	TrackDeployStarted(dm analytics.DeployStartedMetadata)
 	TrackDeploy(dm analytics.DeployMetadata)
 	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
 	buildTrackerInterface
@@ -285,7 +294,7 @@ $ okteto deploy --no-build=true`,
 				}
 				err := c.Run(ctx, options)
 				c.InsightsTracker.TrackDeploy(ctx, options.Name, options.Namespace, err == nil)
-				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err)
+				c.TrackDeploy(options.Manifest, options.RunInRemote, startTime, err, options.Namespace)
 				exit <- err
 			}()
 
@@ -385,6 +394,31 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c, dc.K8sLogger); err != nil {
 		return err
 	}
+
+	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
+
+	dc.isWithinPreview = analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+		okClient, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		_, err = okClient.Previews().Get(ctx, ns)
+		return err
+	})
+
+	dc.workflowID = os.Getenv(constants.OktetoWorkflowIDEnvVar)
+	if dc.workflowID == "" {
+		dc.workflowID = uuid.New().String()
+	}
+
+	dc.AnalyticsTracker.TrackDeployStarted(analytics.DeployStartedMetadata{
+		Namespace:         deployOptions.Namespace,
+		RepoURL:           deployRepoURL(deployOptions.Manifest.ManifestPath),
+		WorkflowID:        dc.workflowID,
+		ParentExecutionID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+		IsPreview:         dc.isWithinPreview,
+		IsRedeploy:        dc.isRedeploy,
+	})
 
 	if dc.RunningInInstaller {
 		currentVars, err := dc.CfgMapHandler.GetConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Namespace)
@@ -711,6 +745,36 @@ func isRemoteDeployer(runInRemoteFlag bool, deployImage string, manifestRemoteFl
 	return runInRemoteFlag || deployImage != "" || manifestRemoteFlag
 }
 
+// manifestSyntax reports the manifest syntax for analytics: "mixed" when the deploy section
+// declares both commands and a compose section, "compose" when only a compose section is
+// present, and "" otherwise. The deprecated "stack" syntax is indistinguishable from "compose"
+// once parsed, so it is reported as "compose".
+func manifestSyntax(manifest *model.Manifest) string {
+	if manifest == nil || manifest.Deploy == nil {
+		return ""
+	}
+	hasCompose := manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.ComposesInfo != nil
+	hasCommands := len(manifest.Deploy.Commands) > 0
+	switch {
+	case hasCompose && hasCommands:
+		return "mixed"
+	case hasCompose:
+		return "compose"
+	default:
+		return ""
+	}
+}
+
+// deployRepoURL resolves the git repository URL for the given manifest path. It returns an empty
+// string when the path is not within a git repository; the URL is hashed before sending.
+func deployRepoURL(manifestPath string) string {
+	repoURL, err := modelutils.GetRepositoryURL(manifestPath)
+	if err != nil {
+		oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
+	}
+	return repoURL
+}
+
 // deployDependencies deploy the dependencies in the manifest
 func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Options) error {
 	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.GetContext().IsOkteto {
@@ -792,11 +856,12 @@ func (dc *Command) recreateFailedPods(ctx context.Context, name string) error {
 	return nil
 }
 
-func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
+func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error, namespace string) {
 	deployType := "custom"
 	hasDependencySection := false
 	hasBuildSection := false
 	isRunningOnRemoteDeployer := false
+	waitForDependencies := false
 	if manifest != nil {
 		if manifest.Deploy != nil {
 			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image, manifest.Deploy.Remote != nil && *manifest.Deploy.Remote)
@@ -808,22 +873,36 @@ func (dc *Command) TrackDeploy(manifest *model.Manifest, runInRemoteFlag bool, s
 
 		hasDependencySection = manifest.HasDependencies()
 		hasBuildSection = manifest.HasBuildSection()
+		for _, dep := range manifest.Dependencies {
+			if dep.Wait {
+				waitForDependencies = true
+				break
+			}
+		}
 	}
 
-	// We keep DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar for backward compatibility in case an old version of the backend
-	// is being used
-	isPreview := os.Getenv(model.DeprecatedOktetoCurrentDeployBelongsToPreviewEnvVar) == "true" ||
-		os.Getenv(constants.OktetoIsPreviewEnvVar) == "true"
+	manifestPath := ""
+	if manifest != nil {
+		manifestPath = manifest.ManifestPath
+	}
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
+		Err:                    err,
 		Success:                err == nil,
 		IsOktetoRepo:           utils.IsOktetoRepo(),
 		Duration:               time.Since(startTime),
 		PipelineType:           dc.PipelineType,
 		DeployType:             deployType,
-		IsPreview:              isPreview,
+		IsPreview:              dc.isWithinPreview,
+		IsRedeploy:             dc.isRedeploy,
 		HasDependenciesSection: hasDependencySection,
 		HasBuildSection:        hasBuildSection,
 		IsRemote:               isRunningOnRemoteDeployer,
+		Namespace:              namespace,
+		RepoURL:                deployRepoURL(manifestPath),
+		ManifestSyntax:         manifestSyntax(manifest),
+		WorkflowID:             dc.workflowID,
+		ParentExecutionID:      os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
+		WaitForDependencies:    waitForDependencies,
 	})
 }
 

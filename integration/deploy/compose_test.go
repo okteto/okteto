@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -217,6 +218,24 @@ deploy:
   compose: docker-compose.yml
 `
 )
+
+const (
+	identityTokenVolumeName     = "okteto-identity-token"
+	identityTokenAudience       = "sts.amazonaws.com"
+	identityTokenMountPath      = "/var/run/okteto/identity"
+	identityTokenProjectionPath = "token"
+	identityTokenExpiration     = int64(3600)
+)
+
+const composeTemplateWithIdentityToken = `services:
+  app:
+    image: nginx:latest
+    ports:
+      - 80
+    x-okteto-identity-token:
+      audience: sts.amazonaws.com
+      mount_path: /var/run/okteto/identity
+`
 
 // TestDeployPipelineFromCompose tests the following scenario:
 // - Deploying a pipeline manifest locally from a compose file
@@ -795,4 +814,106 @@ func createNginxDockerfile(dir string) error {
 		return err
 	}
 	return nil
+}
+
+// TestDeployComposeWithIdentityToken tests the following scenario (PROD-497):
+//   - Deploying a compose file with a stateless service (image, no volumes) that declares
+//     x-okteto-identity-token with an audience + mount_path.
+//   - The service is rendered as a Deployment whose pod template has a projected volume named
+//     "okteto-identity-token" backed by a ServiceAccountToken projection (configured audience,
+//     path "token", default expiration 3600s).
+//   - The service container mounts that volume read-only at the configured mount_path.
+func TestDeployComposeWithIdentityToken(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	require.NoError(t, os.WriteFile(composePath, []byte(composeTemplateWithIdentityToken), 0600))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+		OktetoHome: dir,
+	}))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		LogOutput:  "info",
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// A stateless service (no volumes) is rendered as a Deployment.
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+
+	// The pod template must contain the projected service account token volume.
+	tokenVolume := findIdentityTokenVolume(t, appDeployment.Spec.Template.Spec.Volumes)
+	require.NotNil(t, tokenVolume.VolumeSource.Projected)
+
+	projection := findServiceAccountTokenProjection(t, tokenVolume.VolumeSource.Projected.Sources)
+	require.Equal(t, identityTokenAudience, projection.Audience)
+	require.Equal(t, identityTokenProjectionPath, projection.Path)
+	require.NotNil(t, projection.ExpirationSeconds)
+	require.Equal(t, identityTokenExpiration, *projection.ExpirationSeconds)
+
+	// The service container must mount the token volume read-only at the configured mount_path.
+	tokenMount := findIdentityTokenVolumeMount(t, appDeployment.Spec.Template.Spec.Containers[0].VolumeMounts)
+	require.Equal(t, identityTokenMountPath, tokenMount.MountPath)
+	require.True(t, tokenMount.ReadOnly)
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// findIdentityTokenVolume returns the projected identity-token volume, failing the test if it is absent.
+func findIdentityTokenVolume(t *testing.T, volumes []corev1.Volume) corev1.Volume {
+	t.Helper()
+	for i := range volumes {
+		if volumes[i].Name == identityTokenVolumeName {
+			return volumes[i]
+		}
+	}
+	require.FailNow(t, "identity token volume not found", "expected a volume named %q in the pod template", identityTokenVolumeName)
+	return corev1.Volume{}
+}
+
+// findServiceAccountTokenProjection returns the first ServiceAccountToken projection, failing the test if none exists.
+func findServiceAccountTokenProjection(t *testing.T, sources []corev1.VolumeProjection) *corev1.ServiceAccountTokenProjection {
+	t.Helper()
+	for i := range sources {
+		if sources[i].ServiceAccountToken != nil {
+			return sources[i].ServiceAccountToken
+		}
+	}
+	require.FailNow(t, "service account token projection not found", "expected a ServiceAccountToken projection in the projected volume sources")
+	return nil
+}
+
+// findIdentityTokenVolumeMount returns the identity-token volume mount, failing the test if it is absent.
+func findIdentityTokenVolumeMount(t *testing.T, mounts []corev1.VolumeMount) corev1.VolumeMount {
+	t.Helper()
+	for i := range mounts {
+		if mounts[i].Name == identityTokenVolumeName {
+			return mounts[i]
+		}
+	}
+	require.FailNow(t, "identity token volume mount not found", "expected a volume mount named %q on the service container", identityTokenVolumeName)
+	return corev1.VolumeMount{}
 }

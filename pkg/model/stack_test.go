@@ -819,6 +819,102 @@ func TestStack_Merge(t *testing.T) {
 	}
 }
 
+func TestStack_MergeIdentityToken(t *testing.T) {
+	overrideExpiration := IdentityTokenExpiration(3600)
+	tests := []struct {
+		stack      *Stack
+		otherStack *Stack
+		expected   *ServiceIdentityToken
+		name       string
+	}{
+		{
+			name: "override sets identity token when base has none",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto",
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						IdentityToken: &ServiceIdentityToken{
+							Audience:  "sts.amazonaws.com",
+							MountPath: "/var/run/secrets/tokens",
+						},
+					},
+				},
+			},
+			expected: &ServiceIdentityToken{
+				Audience:  "sts.amazonaws.com",
+				MountPath: "/var/run/secrets/tokens",
+			},
+		},
+		{
+			name: "override replaces existing identity token",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto",
+						IdentityToken: &ServiceIdentityToken{
+							Audience:  "base.audience",
+							MountPath: "/var/run/base",
+						},
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						IdentityToken: &ServiceIdentityToken{
+							Audience:          "override.audience",
+							MountPath:         "/var/run/override",
+							ExpirationSeconds: &overrideExpiration,
+						},
+					},
+				},
+			},
+			expected: &ServiceIdentityToken{
+				Audience:          "override.audience",
+				MountPath:         "/var/run/override",
+				ExpirationSeconds: &overrideExpiration,
+			},
+		},
+		{
+			name: "override without identity token keeps base value",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto",
+						IdentityToken: &ServiceIdentityToken{
+							Audience:  "base.audience",
+							MountPath: "/var/run/base",
+						},
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto-dev",
+					},
+				},
+			},
+			expected: &ServiceIdentityToken{
+				Audience:  "base.audience",
+				MountPath: "/var/run/base",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.stack.Merge(tt.otherStack)
+			require.Equal(t, tt.expected, result.Services["app"].IdentityToken)
+		})
+	}
+}
+
 func TestStack_ResourcesIsDefault(t *testing.T) {
 	tests := []struct {
 		resources *StackResources

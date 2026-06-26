@@ -23,6 +23,8 @@ type analyticsBackend interface {
 	TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata)
 	TrackUp(meta *UpMetricsMetadata)
 	TrackUpStarted(service, namespace, repoURL, workflowID string)
+	TrackDeployStarted(meta DeployStartedMetadata)
+	TrackDeploy(meta DeployMetadata)
 }
 
 // closer is implemented by backends that hold resources that need flushing on exit.

@@ -231,6 +231,7 @@ func (b *posthogBackend) TrackDeployPipelineTriggered(ctx context.Context, m Dep
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	props["workflow_id"] = m.WorkflowID
+	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
 	props["deploy_type"] = m.DeployType
 	if m.ParentWorkflowID != "" {
@@ -251,11 +252,33 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	props["workflow_id"] = m.WorkflowID
+	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
+	if m.ParentWorkflowID != "" {
+		props["parent_workflow_id"] = m.ParentWorkflowID
+	}
 	if m.RepoURL != "" {
 		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
+}
+
+// IsWithinPreview reports whether the current CLI context is inside a preview
+// environment. It first checks the platform env var (set when running inside a
+// preview); if not set, it calls checkPreview with the active namespace so that
+// `okteto ns use <preview-name>` is also detected. Pass nil to skip the API check.
+func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, string) error) bool {
+	if os.Getenv(constants.OktetoIsPreviewEnvVar) == "true" {
+		return true
+	}
+	if checkPreview == nil {
+		return false
+	}
+	ns := okteto.GetContext().Namespace
+	if ns == "" {
+		return false
+	}
+	return checkPreview(ctx, ns) == nil
 }
 
 // TrackUp sends an up event to PostHog.
@@ -270,6 +293,34 @@ func (b *posthogBackend) TrackUp(m *UpMetricsMetadata) {
 	props := commonPostHogProperties()
 	maps.Copy(props, m.toPostHogProps())
 	b.enqueue(context.Background(), userID, posthogUpEvent, props, b.withNamespace(m.namespace))
+}
+
+// TrackDeployStarted sends a deploy_started event to PostHog at the beginning of the deploy command.
+func (b *posthogBackend) TrackDeployStarted(m DeployStartedMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	b.enqueue(context.Background(), userID, posthogDeployStartedEvent, props, b.withNamespace(m.Namespace))
+}
+
+// TrackDeploy sends a deploy_completed event to PostHog.
+func (b *posthogBackend) TrackDeploy(m DeployMetadata) {
+	if b.client == nil {
+		return
+	}
+	if !analyticsEnabled() {
+		return
+	}
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	maps.Copy(props, m.toPostHogProps())
+	b.enqueue(context.Background(), userID, posthogDeployCompletedEvent, props, b.withNamespace(m.Namespace))
 }
 
 // TrackUpStarted sends an up_started event to PostHog at the beginning of the up command.

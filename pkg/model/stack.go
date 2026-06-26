@@ -103,6 +103,7 @@ type Service struct {
 	User          *StackSecurityContext `yaml:"user,omitempty"`
 	DependsOn     DependsOn             `yaml:"depends_on,omitempty"`
 	Build         *build.Info           `yaml:"build,omitempty"`
+	IdentityToken *ServiceIdentityToken `json:"x-okteto-identity-token,omitempty" yaml:"x-okteto-identity-token,omitempty"`
 	Workdir       string                `yaml:"workdir,omitempty"`
 	Image         string                `yaml:"image,omitempty"`
 	RestartPolicy apiv1.RestartPolicy   `yaml:"restart,omitempty"`
@@ -126,6 +127,25 @@ type Service struct {
 
 	EndpointMode EndpointMode `yaml:"endpoint_mode,omitempty"` // For compose services.deploy.endpoint_mode
 }
+
+// minIdentityTokenExpirationSeconds is the minimum expiration (in seconds) the kubelet accepts for a projected service account token
+const minIdentityTokenExpirationSeconds int64 = 600
+
+// ServiceIdentityToken projects a Kubernetes ServiceAccount token into the service container so the
+// application can authenticate against OIDC-based identity providers (e.g. AWS STS web identity
+// federation) without static credentials. The token is audience-scoped and refreshed automatically
+// by the kubelet.
+type ServiceIdentityToken struct {
+	ExpirationSeconds *IdentityTokenExpiration `json:"expiration_seconds,omitempty" yaml:"expiration_seconds,omitempty"`
+	Audience          string                   `json:"audience,omitempty" yaml:"audience,omitempty"`
+	MountPath         string                   `json:"mount_path,omitempty" yaml:"mount_path,omitempty"`
+}
+
+// IdentityTokenExpiration is the projected token expiration in seconds. It unmarshals from either a
+// YAML integer (the common case, e.g. expiration_seconds: 3600) or a numeric string, so a value
+// supplied through environment-variable expansion (e.g. expiration_seconds: ${EXP}) — which arrives as
+// a string after manifest expansion — is parsed correctly.
+type IdentityTokenExpiration int64
 
 // StackSecurityContext defines which user and group use
 type StackSecurityContext struct {
@@ -770,6 +790,9 @@ func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
 		}
 		if len(svc.NodeSelector) > 0 {
 			resultSvc.NodeSelector = svc.NodeSelector
+		}
+		if svc.IdentityToken != nil {
+			resultSvc.IdentityToken = svc.IdentityToken
 		}
 		if len(svc.Ports) > 0 {
 			resultSvc.Ports = svc.Ports

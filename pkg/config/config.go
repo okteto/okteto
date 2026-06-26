@@ -289,7 +289,7 @@ func GetCertificatePath() string {
 // GetDeployOrigin gets the pipeline deploy origin. This is the initiator of the
 // deploy action: web, cli, github-action, etc
 func GetDeployOrigin() (src string) {
-	src = os.Getenv(oktetoOriginEnvVar)
+	src = os.Getenv(constants.OktetoOriginEnvVar)
 	if src == "" {
 		src = "cli"
 	}
