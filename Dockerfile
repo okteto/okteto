@@ -66,15 +66,15 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # Stage 3: Set up Go build environment for Kubernetes tools and Okteto CLI
 FROM golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA} AS golang-builder
 
-# Stage 3.1: Build kustomize from source (Kubernetes resource customization tool)
-# Built from source instead of using the upstream release binary so it is compiled
-# with the patched Go toolchain (the prebuilt binary ships with a vulnerable stdlib).
+# Stage 3.1: Download kustomize (Kubernetes resource customization tool)
 FROM golang-builder AS kustomize-builder
+ARG TARGETARCH
 ARG KUSTOMIZE_VERSION
-ENV CGO_ENABLED=0
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg/mod \
-    GOBIN=/usr/local/bin go install "sigs.k8s.io/kustomize/kustomize/v5@v${KUSTOMIZE_VERSION}" \
+RUN curl -sLf --retry 3 -o kustomize.tar.gz \
+    "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz" \
+    && tar -xzf kustomize.tar.gz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/kustomize \
+    && rm kustomize.tar.gz \
     # Verify binary works
     && /usr/local/bin/kustomize version
 
