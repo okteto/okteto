@@ -37,12 +37,17 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
+	"github.com/tonistiigi/fsutil"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
 	// PermissionsOwnerOnly is the permission for the secret temp folder
 	PermissionsOwnerOnly = 0700
+
+	// OciMediaTypesEnvVar controls whether BuildKit uses OCI media types for image exports.
+	// Defaults to true (OCI media types). Set to false for legacy Docker media types.
+	OciMediaTypesEnvVar = "OKTETO_BUILD_OCI_MEDIATYPES"
 )
 
 // SolveOptBuilder is a builder for SolveOpt
@@ -221,8 +226,17 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		}
 		attachable = append(attachable, secretProvider)
 	}
+	localMounts := make(map[string]fsutil.FS, len(localDirs))
+	for name, dir := range localDirs {
+		mount, err := fsutil.NewFS(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create local mount for %q: %w", name, err)
+		}
+		localMounts[name] = mount
+	}
+
 	opt := &client.SolveOpt{
-		LocalDirs:     localDirs,
+		LocalMounts:   localMounts,
 		Frontend:      string(frontend.Frontend),
 		FrontendAttrs: frontendAttrs,
 		Session:       attachable,
@@ -254,6 +268,8 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		if forceCompression := os.Getenv("OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"); forceCompression != "" {
 			exportAttrs["force-compression"] = forceCompression
 		}
+
+		exportAttrs["oci-mediatypes"] = fmt.Sprintf("%t", env.LoadBooleanOrDefault(OciMediaTypesEnvVar, true))
 
 		opt.Exports = []client.ExportEntry{
 			{
