@@ -1,12 +1,12 @@
 # Base image versions - Centralized version control for easier updates
 # Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
-ARG KUBECTL_VERSION=1.35.5
-ARG HELM3_VERSION=3.21.0
-ARG HELM4_VERSION=4.2.0
+ARG KUBECTL_VERSION=1.35.6
+ARG HELM3_VERSION=3.21.2
+ARG HELM4_VERSION=4.2.2
 ARG KUSTOMIZE_VERSION=5.8.1
 # Okteto components
-ARG SYNCTHING_VERSION=2.1.0
-ARG SYNCTHING_SHA=sha256:7c60eb0ec887696c8684de88aea2dfe39a7391184b29d33c0aad778c99c7683e
+ARG SYNCTHING_VERSION=2.1.1
+ARG SYNCTHING_SHA=sha256:775c4aac486263ca8653055bba7d3061799281974b706695e17bc798da3f4e92
 # Base images
 ARG GOLANG_VERSION=1.26.4
 ARG GOLANG_SHA=sha256:dc8e692a67c88c1a76afc36bea0814e8be5ab0d37210695f19e47cf136e0fcd5
@@ -66,15 +66,15 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # Stage 3: Set up Go build environment for Kubernetes tools and Okteto CLI
 FROM golang:${GOLANG_VERSION}-bookworm@${GOLANG_SHA} AS golang-builder
 
-# Stage 3.1: Download kustomize (Kubernetes resource customization tool)
+# Stage 3.1: Build kustomize from source (Kubernetes resource customization tool)
+# Built from source instead of using the upstream release binary so it is compiled
+# with the patched Go toolchain (the prebuilt binary ships with a vulnerable stdlib).
 FROM golang-builder AS kustomize-builder
-ARG TARGETARCH
 ARG KUSTOMIZE_VERSION
-RUN curl -sLf --retry 3 -o kustomize.tar.gz \
-    "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz" \
-    && tar -xzf kustomize.tar.gz -C /usr/local/bin \
-    && chmod +x /usr/local/bin/kustomize \
-    && rm kustomize.tar.gz \
+ENV CGO_ENABLED=0
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    GOBIN=/usr/local/bin go install "sigs.k8s.io/kustomize/kustomize/v5@v${KUSTOMIZE_VERSION}" \
     # Verify binary works
     && /usr/local/bin/kustomize version
 
