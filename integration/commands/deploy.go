@@ -50,6 +50,7 @@ type DestroyOptions struct {
 	Token        string
 	Name         string
 	IsRemote     bool
+	All          bool
 }
 
 // GetOktetoDeployCmdOutput runs an okteto deploy command
@@ -109,6 +110,18 @@ func RunOktetoDestroyAndGetOutput(oktetoPath string, destroyOptions *DestroyOpti
 	return string(o), nil
 }
 
+// RunOktetoDestroyAll runs an okteto destroy --all command
+func RunOktetoDestroyAll(oktetoPath string, destroyOptions *DestroyOptions) error {
+	log.Printf("okteto destroy --all %s", oktetoPath)
+	cmd := getDestroyCmd(oktetoPath, destroyOptions)
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto destroy --all failed: %s - %w", string(o), err)
+	}
+	log.Printf("okteto destroy --all success")
+	return nil
+}
+
 // RunOktetoDestroyRemote runs an okteto destroy command in remote
 func RunOktetoDestroyRemote(oktetoPath string, destroyOptions *DestroyOptions) error {
 	log.Printf("okteto destroy %s", oktetoPath)
@@ -139,6 +152,9 @@ func getDestroyCmd(oktetoPath string, destroyOptions *DestroyOptions) *exec.Cmd 
 	}
 	if destroyOptions.IsRemote {
 		cmd.Args = append(cmd.Args, "--remote")
+	}
+	if destroyOptions.All {
+		cmd.Args = append(cmd.Args, "--all")
 	}
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {

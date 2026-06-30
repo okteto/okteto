@@ -61,6 +61,28 @@ func RunOktetoCreateNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 	return nil
 }
 
+// RunOktetoNamespaceSleep runs okteto namespace sleep
+func RunOktetoNamespaceSleep(oktetoPath string, namespaceOpts *NamespaceOptions) error {
+	log.Printf("okteto namespace sleep %s", namespaceOpts.Namespace)
+	sleepCMD := exec.Command(oktetoPath, "namespace", "sleep", namespaceOpts.Namespace)
+
+	sleepCMD.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		sleepCMD.Env = append(sleepCMD.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+	if namespaceOpts.Token != "" {
+		sleepCMD.Env = append(sleepCMD.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
+	}
+	if namespaceOpts.OktetoHome != "" {
+		sleepCMD.Env = append(sleepCMD.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+	}
+	o, err := sleepCMD.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto namespace sleep failed: %s - %w", string(o), err)
+	}
+	return nil
+}
+
 // RunOktetoDeleteNamespace runs okteto namespace delete
 func RunOktetoDeleteNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) error {
 	log.Printf("okteto namespace delete %s", namespaceOpts.Namespace)
