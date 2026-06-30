@@ -145,7 +145,10 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 			}
 
 			switch status {
-			case "Active":
+			case "Active", constants.NamespaceStatusSleeping:
+				// The backend sets the namespace back to its previous status when destroy all
+				// succeeds: "Active" for active namespaces and "Sleeping" for namespaces that were
+				// already sleeping (e.g. emptied by the garbage collector). Both are success states.
 				// If we haven't been in DestroyingAll state for at least destroyingAllTickerDuration, wait before checking resources.
 				if !hasBeenDestroyingAll && time.Since(destroyingAllTicker) < destroyingAllTickerDuration {
 					jobNotFoundAfterXSeconds = true
