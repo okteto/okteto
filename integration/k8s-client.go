@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,6 +58,32 @@ func UpdateStatefulset(ctx context.Context, ns string, sfs *appsv1.StatefulSet, 
 // GetConfigmap returns a configmap given name and namespace
 func GetConfigmap(ctx context.Context, ns, name string, client kubernetes.Interface) (*corev1.ConfigMap, error) {
 	return client.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
+}
+
+// GetNamespace returns a namespace given its name
+func GetNamespace(ctx context.Context, name string, client kubernetes.Interface) (*corev1.Namespace, error) {
+	return client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+}
+
+// WaitForNamespaceStatus polls the namespace until its status label matches the expected value or the timeout is reached
+func WaitForNamespaceStatus(ctx context.Context, name, status string, client kubernetes.Interface, timeout time.Duration) error {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	to := time.After(timeout)
+	for {
+		select {
+		case <-to:
+			return fmt.Errorf("namespace %q didn't reach status %q after %s", name, status, timeout)
+		case <-ticker.C:
+			ns, err := client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			if ns.Labels[constants.NamespaceStatusLabel] == status {
+				return nil
+			}
+		}
+	}
 }
 
 // GetDeploymentList returns all deployments given a namespace
