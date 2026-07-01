@@ -152,6 +152,9 @@ const (
 	// OktetoIsPreviewEnvVar Env variable containing a boolean indicating if the environment is a preview environment
 	OktetoIsPreviewEnvVar = "OKTETO_IS_PREVIEW_ENVIRONMENT"
 
+	// OktetoIsRedeployEnvVar Env variable containing a boolean set by the installer indicating if the deploy is a redeploy of an existing development environment
+	OktetoIsRedeployEnvVar = "OKTETO_IS_REDEPLOY"
+
 	// CIEnvVar Env variable defines if the environment is a CI environment
 	CIEnvVar = "CI"
 
