@@ -47,7 +47,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -1477,4 +1479,89 @@ func TestCalculateManifestPathToBeStored(t *testing.T) {
 
 func boolPointer(v bool) *bool {
 	return &v
+}
+
+func Test_resolveIsRedeploy_EnvVarTakesPrecedence(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test"
+	name := "movies"
+
+	// A configmap in "deployed" status is present so IsDeployed would return true. The env var must
+	// take precedence over it, proving the fallback is not used when the variable is set.
+	deployedCfg := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName(name),
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"status": pipeline.DeployedStatus,
+		},
+	}
+
+	var tests = []struct {
+		name     string
+		envValue string
+		expected bool
+	}{
+		{
+			name:     "env var true",
+			envValue: "true",
+			expected: true,
+		},
+		{
+			name:     "env var false overrides deployed configmap",
+			envValue: "false",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoIsRedeployEnvVar, tt.envValue)
+			c := fake.NewSimpleClientset(deployedCfg)
+			result := resolveIsRedeploy(ctx, name, namespace, c)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_resolveIsRedeploy_FallbackToConfigmap(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test"
+	name := "movies"
+
+	deployedCfg := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName(name),
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"status": pipeline.DeployedStatus,
+		},
+	}
+
+	var tests = []struct {
+		name     string
+		objects  []runtime.Object
+		expected bool
+	}{
+		{
+			name:     "no configmap - first deploy",
+			objects:  nil,
+			expected: false,
+		},
+		{
+			name:     "deployed configmap - redeploy",
+			objects:  []runtime.Object{deployedCfg},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewSimpleClientset(tt.objects...)
+			result := resolveIsRedeploy(ctx, name, namespace, c)
+			require.Equal(t, tt.expected, result)
+		})
+	}
 }
