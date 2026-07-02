@@ -395,7 +395,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return err
 	}
 
-	dc.isRedeploy = pipeline.IsDeployed(ctx, deployOptions.Name, deployOptions.Namespace, c)
+	dc.isRedeploy = resolveIsRedeploy(ctx, deployOptions.Name, deployOptions.Namespace, c)
 
 	dc.isWithinPreview = analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
 		okClient, err := okteto.NewOktetoClient()
@@ -773,6 +773,14 @@ func deployRepoURL(manifestPath string) string {
 		oktetoLog.Infof("failed to get repo URL for analytics: %s", err)
 	}
 	return repoURL
+}
+
+// resolveIsRedeploy determines whether this deploy is a redeploy of an existing development
+func resolveIsRedeploy(ctx context.Context, name, namespace string, c kubernetes.Interface) bool {
+	if _, ok := os.LookupEnv(constants.OktetoIsRedeployEnvVar); ok {
+		return env.LoadBoolean(constants.OktetoIsRedeployEnvVar)
+	}
+	return pipeline.IsDeployed(ctx, name, namespace, c)
 }
 
 // deployDependencies deploy the dependencies in the manifest
