@@ -252,7 +252,6 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 	userID := okteto.GetContext().UserID
 	props := commonPostHogProperties()
 	props["workflow_id"] = m.WorkflowID
-	props["is_within_preview"] = m.IsWithinPreview
 	props["is_redeploy"] = m.IsRedeploy
 	if m.ParentWorkflowID != "" {
 		props["parent_workflow_id"] = m.ParentWorkflowID

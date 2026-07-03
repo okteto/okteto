@@ -120,11 +120,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 			RepoURL:          opts.repository,
 			Preview:          opts.name,
-			IsWithinPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
-				_, err := pw.okClient.Previews().Get(ctx, ns)
-				return err
-			}),
-			IsRedeploy: !oktetoErrors.IsNotFound(getErr),
+			IsRedeploy:       !oktetoErrors.IsNotFound(getErr),
 		})
 	}
 

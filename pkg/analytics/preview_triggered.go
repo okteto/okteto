@@ -22,7 +22,6 @@ type DeployPreviewTriggeredMetadata struct {
 	RepoURL          string
 	Preview          string
 	UIElement        string
-	IsWithinPreview  bool
 	IsRedeploy       bool
 }
 
