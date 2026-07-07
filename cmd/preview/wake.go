@@ -19,6 +19,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -64,6 +65,11 @@ func (pr *Command) ExecuteWakePreview(ctx context.Context, preview string) error
 	if err := pr.okClient.Namespaces().Wake(ctx, preview); err != nil {
 		return fmt.Errorf("%w: %w", errFailedWakePreview, err)
 	}
+
+	pr.analyticsTracker.TrackWakeTriggered(ctx, analytics.WakeTriggeredMetadata{
+		Namespace: preview,
+		IsPreview: true,
+	})
 
 	oktetoLog.Success("Preview environment '%s' is awake now", preview)
 	return nil

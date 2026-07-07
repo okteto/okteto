@@ -14,9 +14,12 @@
 package namespace
 
 import (
+	"context"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
@@ -24,6 +27,14 @@ import (
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type fakeWakeAnalyticsTracker struct {
+	calls []analytics.WakeTriggeredMetadata
+}
+
+func (f *fakeWakeAnalyticsTracker) TrackWakeTriggered(_ context.Context, m analytics.WakeTriggeredMetadata) {
+	f.calls = append(f.calls, m)
+}
 
 type fakeK8sProvider struct {
 	k8sClient kubernetes.Interface

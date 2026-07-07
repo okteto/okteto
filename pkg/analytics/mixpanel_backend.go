@@ -35,6 +35,9 @@ func (b *mixpanelBackend) TrackDeployPipelineTriggered(_ context.Context, _ Depl
 func (b *mixpanelBackend) TrackDeployPreviewTriggered(_ context.Context, _ DeployPreviewTriggeredMetadata) {
 }
 
+func (b *mixpanelBackend) TrackWakeTriggered(_ context.Context, _ WakeTriggeredMetadata) {
+}
+
 func (b *mixpanelBackend) TrackUp(_ *UpMetricsMetadata) {}
 
 func (b *mixpanelBackend) TrackUpStarted(_, _, _, _ string) {}

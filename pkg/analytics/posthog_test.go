@@ -1094,3 +1094,51 @@ func TestPostHogBackend_TrackDeployStarted_HappyPath(t *testing.T) {
 	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
 	require.Equal(t, "cli", ev.Properties["measurement_source"])
 }
+
+func TestPostHogBackend_TrackWakeTriggered_NilClient(t *testing.T) {
+	b := &posthogBackend{client: nil}
+	require.NotPanics(t, func() {
+		b.TrackWakeTriggered(context.Background(), WakeTriggeredMetadata{Namespace: "dev-ns"})
+	})
+}
+
+func TestPostHogBackend_TrackWakeTriggered_AnalyticsDisabled(t *testing.T) {
+	teardown := setupPostHogContext(t, false /* disabled */)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{client: mock}
+	b.TrackWakeTriggered(context.Background(), WakeTriggeredMetadata{Namespace: "dev-ns"})
+
+	require.Empty(t, mock.captured, "Enqueue must not be called when analytics is disabled")
+}
+
+func TestPostHogBackend_TrackWakeTriggered_HappyPath(t *testing.T) {
+	teardown := setupPostHogContext(t, true)
+	defer teardown()
+
+	mock := &mockPostHogClient{}
+	b := &posthogBackend{
+		client:     mock,
+		nsResolver: &mockNamespaceUIDResolver{uid: "ns-uid-wake"},
+	}
+	b.TrackWakeTriggered(context.Background(), WakeTriggeredMetadata{
+		Namespace: "dev-ns",
+		IsPreview: true,
+	})
+	b.wg.Wait()
+
+	require.Len(t, mock.captured, 1)
+	ev := mock.captured[0]
+	require.Equal(t, posthogWakeTriggeredEvent, ev.Event)
+	require.Equal(t, "user-123", ev.DistinctId)
+	require.Equal(t, "ns-uid-wake", ev.Properties["namespace"])
+	require.Equal(t, true, ev.Properties["is_preview"])
+	require.NotContains(t, ev.Properties, "workflow_id")
+	require.NotContains(t, ev.Properties, "ui_element")
+
+	// Common props
+	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
+	require.Equal(t, "cli", ev.Properties["measurement_source"])
+	require.Equal(t, "user-123", ev.Properties["user_id"])
+}
