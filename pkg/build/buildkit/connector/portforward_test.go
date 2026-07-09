@@ -31,7 +31,14 @@ import (
 func runWithDeadlockGuard(t *testing.T, fn func() error) error {
 	t.Helper()
 	done := make(chan error, 1)
-	go func() { done <- fn() }()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				done <- errors.New("panic in guarded function")
+			}
+		}()
+		done <- fn()
+	}()
 	select {
 	case err := <-done:
 		return err
