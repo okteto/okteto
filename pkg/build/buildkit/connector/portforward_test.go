@@ -145,7 +145,7 @@ func TestPortForwarder_WaitUntilReady_UnblockedByPortForwardFailure(t *testing.T
 	require.NotContains(t, err.Error(), "connection timed out", "raw cause must only go to the logs")
 	var userErr oktetoErrors.UserError
 	require.ErrorAs(t, err, &userErr)
-	require.Contains(t, userErr.Hint, "--log-level=debug")
+	require.Contains(t, userErr.Hint, "--log-level=info")
 	require.Eventually(t, func() bool {
 		pf.mu.Lock()
 		defer pf.mu.Unlock()

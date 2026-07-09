@@ -158,7 +158,7 @@ const buildkitPort = 1234
 func newPortForwardCreationUserError() oktetoErrors.UserError {
 	return oktetoErrors.UserError{
 		E:    errors.New("port forward creation to BuildKit has failed"),
-		Hint: "Run the command again with the '--log-level=debug' flag to get more information about the failure",
+		Hint: "Run the command again with the '--log-level=info' flag to get more information about the failure",
 	}
 }
 
