@@ -303,23 +303,36 @@ func (pf *PortForwarder) establishPortForward() error {
 		return fmt.Errorf("failed to create port forwarder: %w", err)
 	}
 
+	// Bind this attempt's error channel: pf.errChan is reassigned on every retry, and a
+	// late failure from this goroutine must never leak into a newer attempt's channel.
+	errChan := pf.errChan
 	go func() {
 		if err := forwarder.ForwardPorts(); err != nil {
-			pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
-			// Only send error to channel if it's a port conflict (address already in use)
-			// so we can retry with a different port
-			if containsAddressInUse(err) {
-				pf.errChan <- fmt.Errorf("port %d is already in use. Please check if another process is using it.", pf.localPort)
-				return
-			}
-			pf.mu.Lock()
-			pf.podName = ""
-			pf.mu.Unlock()
-			pf.Stop()
+			pf.handlePortForwardError(err, errChan)
 		}
 	}()
 
 	return nil
+}
+
+// handlePortForwardError reports a ForwardPorts failure and cleans up the connection state.
+// The error must be sent to errChan before acquiring pf.mu: Start() holds the lock while
+// blocked in waitUntilPortForwardIsReady, so locking first would deadlock the whole process.
+// errChan must be the channel of the attempt that failed, not read from pf.errChan, which
+// may already belong to a newer attempt.
+func (pf *PortForwarder) handlePortForwardError(err error, errChan chan<- error) {
+	pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
+	if containsAddressInUse(err) {
+		errChan <- fmt.Errorf("port %d is already in use. Please check if another process is using it.", pf.localPort)
+		return
+	}
+	// errChan is buffered, so this never blocks even if nobody is waiting anymore
+	// (e.g. the connection dropped after the port forward was ready)
+	errChan <- err
+	pf.mu.Lock()
+	pf.podName = ""
+	pf.mu.Unlock()
+	pf.Stop()
 }
 
 // waitUntilReady waits for the port forward to be ready or context to be cancelled
@@ -335,7 +348,9 @@ func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error 
 		pf.ioCtrl.Logger().Infof("port forward failed: %s", err)
 		return fmt.Errorf("port forward failed: %w", err)
 	case <-ctx.Done():
-		pf.Stop()
+		// Calling Stop() here would self-deadlock: Start() already holds pf.mu and the
+		// mutex is not reentrant. Close stopChan directly to terminate the forwarder.
+		close(pf.stopChan)
 		pf.metrics.SetErrReason("ContextCancelledWhileWaitingForPortForward")
 		return fmt.Errorf("context cancelled while waiting for port forward: %w", ctx.Err())
 	}
