@@ -46,6 +46,7 @@ func Test_WakeNamespace(t *testing.T) {
 		// toWakeNs the namespace to wake
 		toWakeNs                        string
 		initialNamespacesAtOktetoClient []types.Namespace
+		expectTracked                   bool
 	}{
 		{
 			name:                            "wakes existing ns, the current one",
@@ -57,6 +58,7 @@ func Test_WakeNamespace(t *testing.T) {
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
+			expectTracked: true,
 		},
 		{
 			name:                            "wakes existing ns, not the current one",
@@ -68,6 +70,7 @@ func Test_WakeNamespace(t *testing.T) {
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
+			expectTracked: true,
 		},
 		{
 			name:                            "wakes a non existing ns",
@@ -80,6 +83,7 @@ func Test_WakeNamespace(t *testing.T) {
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 			err:           errFailedWakeNamespace,
+			expectTracked: false,
 		},
 	}
 
@@ -98,12 +102,21 @@ func Test_WakeNamespace(t *testing.T) {
 				},
 				CurrentContext: "test-context",
 			}
+			tracker := &fakeWakeAnalyticsTracker{}
 			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
-			err := nsFakeCommand.ExecuteWakeNamespace(ctx, tt.toWakeNs)
+			err := nsFakeCommand.ExecuteWakeNamespace(ctx, tt.toWakeNs, tracker)
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err)
 			} else {
 				assert.NoError(t, err)
+			}
+
+			if tt.expectTracked {
+				assert.Len(t, tracker.calls, 1)
+				assert.Equal(t, tt.toWakeNs, tracker.calls[0].Namespace)
+				assert.False(t, tracker.calls[0].IsPreview)
+			} else {
+				assert.Empty(t, tracker.calls)
 			}
 		})
 	}

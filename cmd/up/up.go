@@ -309,7 +309,7 @@ okteto up api -- echo this is a test
 						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
 						return
 					}
-					if err := wakeNamespaceIfApplies(ctx, up.Namespace, k8sClient, okClient); err != nil {
+					if err := wakeNamespaceIfApplies(ctx, up.Namespace, k8sClient, okClient, at); err != nil {
 						// If there is an error waking up namespace, we don't want to fail the up command
 						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
 					}
@@ -849,8 +849,13 @@ func printDisplayContext(up *upContext) {
 	oktetoLog.Println()
 }
 
+// wakeAnalyticsTracker tracks the wake_triggered event.
+type wakeAnalyticsTracker interface {
+	TrackWakeTriggered(ctx context.Context, m analytics.WakeTriggeredMetadata)
+}
+
 // wakeNamespaceIfApplies wakes the namespace if it is sleeping
-func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes.Interface, okClient types.OktetoInterface) error {
+func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes.Interface, okClient types.OktetoInterface, at wakeAnalyticsTracker) error {
 	n, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -862,7 +867,19 @@ func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes
 	}
 
 	oktetoLog.Information("Namespace '%s' is sleeping, waking it up...", ns)
-	return okClient.Namespaces().Wake(ctx, ns)
+	if err := okClient.Namespaces().Wake(ctx, ns); err != nil {
+		return err
+	}
+
+	at.TrackWakeTriggered(ctx, analytics.WakeTriggeredMetadata{
+		Namespace: ns,
+		IsPreview: analytics.IsWithinPreview(ctx, func(ctx context.Context, ns string) error {
+			_, err := okClient.Previews().Get(ctx, ns)
+			return err
+		}),
+	})
+
+	return nil
 }
 
 // tokenUpgrader updates the token of the config when the token is outdated

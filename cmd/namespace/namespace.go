@@ -18,11 +18,17 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
+
+// wakeAnalyticsTracker tracks the wake_triggered event.
+type wakeAnalyticsTracker interface {
+	TrackWakeTriggered(ctx context.Context, m analytics.WakeTriggeredMetadata)
+}
 
 // Command has all the namespaces subcommands
 type Command struct {
@@ -58,7 +64,7 @@ func NewCommandStateless(c *okteto.Client, ioCtrl *io.Controller) *Command {
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
+func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller, at wakeAnalyticsTracker) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
@@ -74,6 +80,6 @@ func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controll
 	cmd.AddCommand(Create(ctx, ioCtrl))
 	cmd.AddCommand(Delete(ctx, k8sLogger, ioCtrl))
 	cmd.AddCommand(Sleep(ctx, ioCtrl))
-	cmd.AddCommand(Wake(ctx, ioCtrl))
+	cmd.AddCommand(Wake(ctx, ioCtrl, at))
 	return cmd
 }

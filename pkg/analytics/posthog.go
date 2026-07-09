@@ -42,6 +42,7 @@ const (
 	posthogDeployPreviewTriggeredEvent  = "deploy_preview_triggered"
 	posthogUpEvent                      = "up"
 	posthogUpStartedEvent               = "up_started"
+	posthogWakeTriggeredEvent           = "wake_triggered"
 )
 
 // posthogEnqueuer is a narrow interface over posthog.Client that only exposes
@@ -260,6 +261,18 @@ func (b *posthogBackend) TrackDeployPreviewTriggered(ctx context.Context, m Depl
 		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	b.enqueue(ctx, userID, posthogDeployPreviewTriggeredEvent, props, b.withPreview(m.Preview))
+}
+
+// TrackWakeTriggered sends a wake_triggered event to PostHog.
+func (b *posthogBackend) TrackWakeTriggered(ctx context.Context, m WakeTriggeredMetadata) {
+	if b.client == nil || !analyticsEnabled() {
+		return
+	}
+
+	userID := okteto.GetContext().UserID
+	props := commonPostHogProperties()
+	props["is_preview"] = m.IsPreview
+	b.enqueue(ctx, userID, posthogWakeTriggeredEvent, props, b.withNamespace(m.Namespace))
 }
 
 // IsWithinPreview reports whether the current CLI context is inside a preview

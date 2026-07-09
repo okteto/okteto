@@ -318,9 +318,10 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 
 func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 	tests := []struct {
-		name              string
-		ns                v1.Namespace
-		expectedWakeCalls int
+		name               string
+		ns                 v1.Namespace
+		expectedWakeCalls  int
+		expectedTrackCalls int
 	}{
 		{
 			name: "wake namespace if it is not sleeping",
@@ -332,7 +333,8 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 					},
 				},
 			},
-			expectedWakeCalls: 0,
+			expectedWakeCalls:  0,
+			expectedTrackCalls: 0,
 		},
 		{
 			name: "wake namespace if it is sleeping",
@@ -344,10 +346,19 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 					},
 				},
 			},
-			expectedWakeCalls: 1,
+			expectedWakeCalls:  1,
+			expectedTrackCalls: 1,
 		},
 	}
 	ctx := context.Background()
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -355,12 +366,19 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 			nsClient := client.NewFakeNamespaceClient([]types.Namespace{}, nil)
 			oktetoClient := &client.FakeOktetoClient{
 				Namespace: nsClient,
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{ErrGetPreview: assert.AnError}),
 			}
+			tracker := &mockAnalyticsTracker{}
 
-			err := wakeNamespaceIfApplies(ctx, tt.ns.Name, k8sClient, oktetoClient)
+			err := wakeNamespaceIfApplies(ctx, tt.ns.Name, k8sClient, oktetoClient, tracker)
 
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedWakeCalls, nsClient.WakeCalls)
+			require.Len(t, tracker.wakeCalls, tt.expectedTrackCalls)
+			if tt.expectedTrackCalls > 0 {
+				require.Equal(t, tt.ns.Name, tracker.wakeCalls[0].Namespace)
+				require.False(t, tracker.wakeCalls[0].IsPreview)
+			}
 		})
 	}
 }

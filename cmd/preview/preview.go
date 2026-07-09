@@ -24,6 +24,7 @@ import (
 
 type previewAnalyticsTracker interface {
 	TrackDeployPreviewTriggered(ctx context.Context, m analytics.DeployPreviewTriggeredMetadata)
+	TrackWakeTriggered(ctx context.Context, m analytics.WakeTriggeredMetadata)
 }
 
 type Command struct {

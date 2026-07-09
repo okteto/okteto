@@ -28,6 +28,7 @@ import (
 
 type mockAnalyticsTracker struct {
 	mock.Mock
+	wakeCalls []analytics.WakeTriggeredMetadata
 }
 
 func (m *mockAnalyticsTracker) TrackEvent(event string, properties map[string]interface{}) {
@@ -63,6 +64,10 @@ func (m *mockAnalyticsTracker) TrackBuildkitConnection(meta *analytics.BuildkitC
 }
 
 func (m *mockAnalyticsTracker) TrackDeployPipelineTriggered(_ context.Context, _ analytics.DeployPipelineTriggeredMetadata) {
+}
+
+func (m *mockAnalyticsTracker) TrackWakeTriggered(_ context.Context, meta analytics.WakeTriggeredMetadata) {
+	m.wakeCalls = append(m.wakeCalls, meta)
 }
 
 func (m *mockAnalyticsTracker) TrackUpStarted(service, namespace, repoURL, workflowID string) {

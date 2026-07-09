@@ -21,6 +21,7 @@ type analyticsBackend interface {
 	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
 	TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata)
 	TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata)
+	TrackWakeTriggered(ctx context.Context, m WakeTriggeredMetadata)
 	TrackUp(meta *UpMetricsMetadata)
 	TrackUpStarted(service, namespace, repoURL, workflowID string)
 	TrackDeployStarted(meta DeployStartedMetadata)

@@ -19,6 +19,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -26,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Wake(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
+func Wake(ctx context.Context, ioCtrl *io.Controller, at wakeAnalyticsTracker) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
 		Short: "Wakes an Okteto Namespace. By default, it wakes the default namespace in the Okteto Context",
@@ -48,14 +49,14 @@ func Wake(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteWakeNamespace(ctx, nsToWake)
+			err = nsCmd.ExecuteWakeNamespace(ctx, nsToWake, at)
 			return err
 		},
 	}
 	return cmd
 }
 
-func (nc *Command) ExecuteWakeNamespace(ctx context.Context, namespace string) error {
+func (nc *Command) ExecuteWakeNamespace(ctx context.Context, namespace string, at wakeAnalyticsTracker) error {
 	// Spinner to be loaded before waking a namespace
 	oktetoLog.Spinner(fmt.Sprintf("Waking %s namespace", namespace))
 	oktetoLog.StartSpinner()
@@ -65,6 +66,11 @@ func (nc *Command) ExecuteWakeNamespace(ctx context.Context, namespace string) e
 	if err := nc.okClient.Namespaces().Wake(ctx, namespace); err != nil {
 		return fmt.Errorf("%w: %w", errFailedWakeNamespace, err)
 	}
+
+	at.TrackWakeTriggered(ctx, analytics.WakeTriggeredMetadata{
+		Namespace: namespace,
+		IsPreview: false,
+	})
 
 	oktetoLog.Success("Namespace '%s' is awake now", namespace)
 	return nil

@@ -50,6 +50,7 @@ type analyticsTrackerInterface interface {
 	TrackDeployStarted(analytics.DeployStartedMetadata)
 	TrackDeploy(analytics.DeployMetadata)
 	TrackDeployPipelineTriggered(ctx context.Context, m analytics.DeployPipelineTriggeredMetadata)
+	TrackWakeTriggered(ctx context.Context, m analytics.WakeTriggeredMetadata)
 	TrackUp(*analytics.UpMetricsMetadata)
 	TrackUpStarted(service, namespace, repoURL, workflowID string)
 	TrackDown(bool)
