@@ -180,7 +180,7 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		}
 		if err := r.connector.Start(ctx); err != nil {
 			r.logger.Logger().Infof("failed to start buildkit connector: %s", err)
-			return fmt.Errorf("could not start buildkit connector: %w", err)
+			return err
 		}
 
 		// if buildkit is not available for 10 minutes, we should fail

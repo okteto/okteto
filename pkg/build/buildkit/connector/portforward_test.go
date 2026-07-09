@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/require"
 )
@@ -140,7 +141,11 @@ func TestPortForwarder_WaitUntilReady_UnblockedByPortForwardFailure(t *testing.T
 		return pf.waitUntilPortForwardIsReady(context.Background())
 	})
 
-	require.ErrorContains(t, err, "connection timed out")
+	require.EqualError(t, err, "port forward creation to BuildKit has failed")
+	require.NotContains(t, err.Error(), "connection timed out", "raw cause must only go to the logs")
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	require.Contains(t, userErr.Hint, "--log-level=debug")
 	require.Eventually(t, func() bool {
 		pf.mu.Lock()
 		defer pf.mu.Unlock()
@@ -193,7 +198,30 @@ func TestPortForwarder_HandlePortForwardError_AddressInUse(t *testing.T) {
 
 	err := <-pf.errChan
 	require.ErrorContains(t, err, "port 8080 is already in use")
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	require.NotEmpty(t, userErr.Hint)
 	require.Equal(t, "buildkit-0", pf.podName, "pod assignment should be kept for a local port conflict")
+}
+
+func TestPortForwarder_WaitUntilReady_KeepsAddressInUseMessage(t *testing.T) {
+	pf := &PortForwarder{
+		stopChan:  make(chan struct{}, 1),
+		readyChan: make(chan struct{}, 1),
+		errChan:   make(chan error, 1),
+		podName:   "buildkit-0",
+		localPort: 8080,
+		ioCtrl:    io.NewIOController(),
+		metrics:   NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{}),
+	}
+	pf.handlePortForwardError(errors.New("unable to listen on any of the requested ports"), pf.errChan)
+
+	err := pf.waitUntilPortForwardIsReady(context.Background())
+
+	require.EqualError(t, err, "port 8080 is already in use", "specific message must not be replaced by the generic one")
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	require.Contains(t, userErr.Hint, "Check which process is using the port")
 }
 
 func TestPortForwarder_HandlePortForwardError_StaleAttemptDoesNotLeakIntoNewChannel(t *testing.T) {
