@@ -151,6 +151,17 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 // buildkitPort is the port where buildkit listens inside the pod
 const buildkitPort = 1234
 
+// newPortForwardCreationUserError returns the user-facing error for a port forward
+// failure. It deliberately hides the raw cause, which must have been written to the
+// logs by the caller, so the console shows an intuitive message instead of a low-level
+// kubernetes connection error.
+func newPortForwardCreationUserError() oktetoErrors.UserError {
+	return oktetoErrors.UserError{
+		E:    errors.New("port forward creation to BuildKit has failed"),
+		Hint: "Run the command again with the '--log-level=info' flag to get more information about the failure",
+	}
+}
+
 // Start establishes the port forward connection to the buildkit pod.
 // If already active, it reuses the existing connection.
 // If not active, it gets the least loaded pod and establishes a new connection.
@@ -177,7 +188,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		pf.ioCtrl.Logger().Infof("failed to establish port forward: %s", err)
 		pf.metrics.SetErrReason("PortForwardCreation")
 		pf.metrics.TrackFailure()
-		return err
+		return newPortForwardCreationUserError()
 	}
 
 	if err := pf.waitUntilPortForwardIsReady(ctx); err != nil {
@@ -303,23 +314,39 @@ func (pf *PortForwarder) establishPortForward() error {
 		return fmt.Errorf("failed to create port forwarder: %w", err)
 	}
 
+	// Bind this attempt's error channel: pf.errChan is reassigned on every retry, and a
+	// late failure from this goroutine must never leak into a newer attempt's channel.
+	errChan := pf.errChan
 	go func() {
 		if err := forwarder.ForwardPorts(); err != nil {
-			pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
-			// Only send error to channel if it's a port conflict (address already in use)
-			// so we can retry with a different port
-			if containsAddressInUse(err) {
-				pf.errChan <- fmt.Errorf("port %d is already in use. Please check if another process is using it.", pf.localPort)
-				return
-			}
-			pf.mu.Lock()
-			pf.podName = ""
-			pf.mu.Unlock()
-			pf.Stop()
+			pf.handlePortForwardError(err, errChan)
 		}
 	}()
 
 	return nil
+}
+
+// handlePortForwardError reports a ForwardPorts failure and cleans up the connection state.
+// The error must be sent to errChan before acquiring pf.mu: Start() holds the lock while
+// blocked in waitUntilPortForwardIsReady, so locking first would deadlock the whole process.
+// errChan must be the channel of the attempt that failed, not read from pf.errChan, which
+// may already belong to a newer attempt.
+func (pf *PortForwarder) handlePortForwardError(err error, errChan chan<- error) {
+	pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
+	if containsAddressInUse(err) {
+		errChan <- oktetoErrors.UserError{
+			E:    fmt.Errorf("port %d is already in use", pf.localPort),
+			Hint: "Check which process is using the port or free it and try again",
+		}
+		return
+	}
+	// errChan is buffered, so this never blocks even if nobody is waiting anymore
+	// (e.g. the connection dropped after the port forward was ready)
+	errChan <- err
+	pf.mu.Lock()
+	pf.podName = ""
+	pf.mu.Unlock()
+	pf.Stop()
 }
 
 // waitUntilReady waits for the port forward to be ready or context to be cancelled
@@ -333,9 +360,16 @@ func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error 
 		return nil
 	case err := <-pf.errChan:
 		pf.ioCtrl.Logger().Infof("port forward failed: %s", err)
-		return fmt.Errorf("port forward failed: %w", err)
+		// known failures already carry a user-facing message and hint
+		var userErr oktetoErrors.UserError
+		if errors.As(err, &userErr) {
+			return userErr
+		}
+		return newPortForwardCreationUserError()
 	case <-ctx.Done():
-		pf.Stop()
+		// Calling Stop() here would self-deadlock: Start() already holds pf.mu and the
+		// mutex is not reentrant. Close stopChan directly to terminate the forwarder.
+		close(pf.stopChan)
 		pf.metrics.SetErrReason("ContextCancelledWhileWaitingForPortForward")
 		return fmt.Errorf("context cancelled while waiting for port forward: %w", ctx.Err())
 	}
@@ -398,7 +432,7 @@ func containsAddressInUse(err error) bool {
 func (pf *PortForwarder) WaitUntilIsReady(ctx context.Context) error {
 	if !pf.isActive {
 		if err := pf.Start(ctx); err != nil {
-			return fmt.Errorf("failed to start port forward: %w", err)
+			return err
 		}
 	}
 	return pf.waiter.WaitUntilIsUp(ctx, pf.GetBuildkitClient)
