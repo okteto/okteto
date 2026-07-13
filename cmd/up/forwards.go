@@ -90,6 +90,11 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
+	// assign the SSH tunnel port right before creating the forward, to minimize
+	// the window between choosing a free port and binding it. If it is already
+	// assigned (user-pinned or a previous connection), the same port is reused.
+	up.Dev.AssignRemotePort()
+
 	oktetoLog.Infof("starting SSH port forwards")
 	f := forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Namespace)
 	if err := f.Add(forward.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
@@ -109,14 +114,14 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	if err := ssh.AddEntry(up.Dev.Name, up.Dev.Interface, up.Dev.RemotePort); err != nil {
-		oktetoLog.Infof("failed to add entry to your SSH config file: %s", err)
-		return fmt.Errorf("failed to add entry to your SSH config file")
-	}
-
 	err = up.Forwarder.Start(up.Pod.Name, up.Namespace)
 	if err != nil {
 		return err
+	}
+
+	if err := ssh.AddEntry(up.Dev.Name, up.Dev.Interface, up.Dev.RemotePort); err != nil {
+		oktetoLog.Infof("failed to add entry to your SSH config file: %s", err)
+		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
 	if isNeededGlobalForwarder(up.Manifest.GlobalForward) {

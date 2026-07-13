@@ -634,8 +634,15 @@ func Test_Reverse(t *testing.T) {
 
 	dev.LoadRemote("/tmp/key.pub")
 
+	// a dev with reverse forwards runs in remote mode; the local SSH port is
+	// assigned separately (right before opening the tunnel) via AssignRemotePort
+	if !dev.RemoteModeEnabled() {
+		t.Error("remote mode was not automatically enabled")
+	}
+
+	dev.AssignRemotePort()
 	if dev.RemotePort == 0 {
-		t.Error("remote port was not automatically enabled")
+		t.Error("remote port was not assigned")
 	}
 
 	if dev.Reverse[0].Local != 8080 {
