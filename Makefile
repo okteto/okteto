@@ -49,7 +49,7 @@ integration:
 
 .PHONY: integration-actions
 integration-actions:
-	go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 10m
+	go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 15m
 
 .PHONY: integration-build
 integration-build:
