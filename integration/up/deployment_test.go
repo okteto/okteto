@@ -65,8 +65,24 @@ dev:
     workdir: /usr/src/app
     sync:
     - .:/usr/src/app
+`
+	// deploymentManifestV2Reset is dedicated to TestUpResetFlag. It uses its
+	// own local forward port so it does not collide with the other tests that
+	// run in parallel and also forward a local port (each up test must own a
+	// unique local port).
+	deploymentManifestV2Reset = `
+dev:
+  e2etest:
+    image: python:alpine
+    command:
+    - sh
+    - -c
+    - "echo -n $VAR > var.html && python -m http.server 8080"
+    workdir: /usr/src/app
+    sync:
+    - .:/usr/src/app
     forward:
-    - 8084:8080
+    - 8087:8080
 `
 
 	k8sManifestTemplate = `
@@ -313,7 +329,7 @@ func TestUpResetFlag(t *testing.T) {
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
 	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yml"), k8sManifestTemplate))
-	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2Exec))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2Reset))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	kubectlOpts := &commands.KubectlOptions{
@@ -344,7 +360,7 @@ func TestUpResetFlag(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	indexLocalEndpoint := "http://localhost:8084/index.html"
+	indexLocalEndpoint := "http://localhost:8087/index.html"
 	require.Equal(t, testNamespace, integration.GetContentFromURL(indexLocalEndpoint, timeout))
 
 	updatedContent := fmt.Sprintf("%s-before-reset", testNamespace)
