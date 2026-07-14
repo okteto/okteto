@@ -31,11 +31,11 @@ import (
 
 const manifestWithDependencies = `
 deploy:
-  - echo "dependency variable ${OKTETO_DEPENDENCY_POSTGRESQL_VARIABLE_TEST_VARIABLE}"
+  - echo "dependency variable ${OKTETO_DEPENDENCY_E2E_VARIABLE_TEST_VARIABLE}"
 dependencies:
-  postgresql:
-    repository: https://github.com/okteto/movies
-    branch: cli-e2e
+  e2e:
+    repository: https://github.com/okteto/e2e-dependency
+    branch: main
     wait: true
     variables:
       TEST_VARIABLE: test-value
@@ -45,11 +45,11 @@ const remoteManifestWithDependencies = `
 deploy:
   remote: true
   commands:
-    - echo "dependency variable ${OKTETO_DEPENDENCY_POSTGRESQL_VARIABLE_TEST_VARIABLE}"
+    - echo "dependency variable ${OKTETO_DEPENDENCY_E2E_VARIABLE_TEST_VARIABLE}"
 dependencies:
-  postgresql:
-    repository: https://github.com/okteto/movies
-    branch: cli-e2e
+  e2e:
+    repository: https://github.com/okteto/e2e-dependency
+    branch: main
     wait: true
     variables:
       TEST_VARIABLE: test-value
@@ -100,7 +100,7 @@ func TestDependencies(t *testing.T) {
 	expectedOutputCommand := "dependency variable test-value"
 	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
 
-	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
+	contentURL := fmt.Sprintf("https://e2e-dependency-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
@@ -138,7 +138,7 @@ func TestDependenciesOnRemote(t *testing.T) {
 	expectedOutputCommand := "dependency variable test-value"
 	require.Contains(t, strings.ToLower(string(output)), expectedOutputCommand)
 
-	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
+	contentURL := fmt.Sprintf("https://e2e-dependency-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
