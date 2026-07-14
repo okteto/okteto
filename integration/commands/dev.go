@@ -197,7 +197,12 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 func HasUpCommandFinished(pid int) bool {
 	var err error
 	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(15 * time.Second)
+	// After `okteto down` deactivates the dev container, the `up` process
+	// self-exits once it observes the deactivation, which can take up to a
+	// minute under CI load.
+	to := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	defer to.Stop()
 	for {
 		select {
 		case <-to.C:
