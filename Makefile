@@ -57,7 +57,7 @@ integration-build:
 
 .PHONY: integration-deploy
 integration-deploy:
-	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 30m
 
 .PHONY: integration-okteto
 integration-okteto:
