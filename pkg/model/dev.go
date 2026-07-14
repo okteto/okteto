@@ -693,19 +693,30 @@ func (dev *Dev) validateSecurityContext() error {
 	return nil
 }
 
-// LoadRemote configures remote execution
-func (dev *Dev) LoadRemote(pubKeyPath string) {
-	if dev.RemotePort == 0 {
-		p, err := GetAvailablePort(dev.Interface)
-		if err != nil {
-			oktetoLog.Infof("failed to get random port for SSH connection: %s", err)
-			p = oktetoDefaultSSHServerPort
-		}
-
-		dev.RemotePort = p
-		oktetoLog.Infof("remote port not set, using %d", dev.RemotePort)
+// AssignRemotePort assigns a free local port for the SSH tunnel when one is not
+// already set. It is meant to be called right before the tunnel is opened, to
+// minimize the window between choosing a free port and binding it. A port
+// already set (user-pinned via the manifest 'remote' field or the --remote
+// flag, or assigned by a previous connection) is kept, so the same port is
+// reused across reconnections.
+func (dev *Dev) AssignRemotePort() {
+	if dev.RemotePort != 0 {
+		return
 	}
 
+	p, err := GetAvailablePort(dev.Interface)
+	if err != nil {
+		oktetoLog.Infof("failed to get random port for SSH connection: %s", err)
+		p = oktetoDefaultSSHServerPort
+	}
+
+	dev.RemotePort = p
+	oktetoLog.Infof("remote port not set, using %d", dev.RemotePort)
+}
+
+// LoadRemote configures remote execution. The local SSH port is assigned
+// separately (see AssignRemotePort) right before the tunnel is opened.
+func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
