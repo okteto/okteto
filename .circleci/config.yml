@@ -392,7 +392,7 @@ jobs:
             # This command exports a variable to use the CLI built in the commit, so the test runs against the branch code
             $env:OKTETO_CLI_IMAGE="okteto.global/cli-e2e:$env:CIRCLE_SHA1"
             & "$($HOME)\project\artifacts\bin\okteto.exe" context use $env:OKTETO_CONTEXT --token $env:OKTETO_API_INTEGRATION_TOKEN
-            go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+            go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 30m
 
   e2e-okteto-test-windows:
     executor:

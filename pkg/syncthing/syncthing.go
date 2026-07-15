@@ -919,7 +919,13 @@ func (s *Syncthing) HardTerminate() error {
 
 		cmdline, err := p.Cmdline()
 		if err != nil {
-			return err
+			// reading a process command line can fail transiently (e.g. the
+			// process is exiting, or "cannot read process PEB" on Windows).
+			// This is best-effort cleanup, so skip processes we cannot inspect.
+			if err != io.EOF {
+				oktetoLog.Infof("error getting command line for process %d: %s", p.Pid, err.Error())
+			}
+			continue
 		}
 
 		oktetoLog.Infof("checking syncthing home '%s' with command '%s'", s.Home, cmdline)
