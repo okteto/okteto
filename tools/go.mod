@@ -7,7 +7,7 @@ require (
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-cmd/cmd v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/pkg/sftp v1.12.0
+	github.com/pkg/sftp v1.13.10
 	github.com/ramr/go-reaper v0.3.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -20,7 +20,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
