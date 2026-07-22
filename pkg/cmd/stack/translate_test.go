@@ -2285,3 +2285,93 @@ func Test_translateJob_withoutIdentityToken(t *testing.T) {
 	require.False(t, hasIdentityTokenVolume(t, result.Spec.Template.Spec.Volumes))
 	require.False(t, hasIdentityTokenVolumeMount(t, result.Spec.Template.Spec.Containers[0].VolumeMounts))
 }
+
+func Test_translateDeployment_enableServiceLinks(t *testing.T) {
+	tests := []struct {
+		enableServiceLinks *bool
+		name               string
+	}{
+		{name: "unset", enableServiceLinks: nil},
+		{name: "disabled", enableServiceLinks: ptr.To(false)},
+		{name: "enabled", enableServiceLinks: ptr.To(true)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image:              "image",
+						Replicas:           1,
+						EnableServiceLinks: tt.enableServiceLinks,
+					},
+				},
+			}
+
+			result := translateDeployment("svcName", s, nil)
+
+			require.Equal(t, tt.enableServiceLinks, result.Spec.Template.Spec.EnableServiceLinks)
+		})
+	}
+}
+
+func Test_translateStatefulSet_enableServiceLinks(t *testing.T) {
+	tests := []struct {
+		enableServiceLinks *bool
+		name               string
+	}{
+		{name: "unset", enableServiceLinks: nil},
+		{name: "disabled", enableServiceLinks: ptr.To(false)},
+		{name: "enabled", enableServiceLinks: ptr.To(true)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image:              "image",
+						Replicas:           1,
+						EnableServiceLinks: tt.enableServiceLinks,
+					},
+				},
+			}
+
+			result := translateStatefulSet("svcName", s, nil)
+
+			require.Equal(t, tt.enableServiceLinks, result.Spec.Template.Spec.EnableServiceLinks)
+		})
+	}
+}
+
+func Test_translateJob_enableServiceLinks(t *testing.T) {
+	tests := []struct {
+		enableServiceLinks *bool
+		name               string
+	}{
+		{name: "unset", enableServiceLinks: nil},
+		{name: "disabled", enableServiceLinks: ptr.To(false)},
+		{name: "enabled", enableServiceLinks: ptr.To(true)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image:              "image",
+						Replicas:           1,
+						RestartPolicy:      apiv1.RestartPolicyNever,
+						BackOffLimit:       5,
+						EnableServiceLinks: tt.enableServiceLinks,
+					},
+				},
+			}
+			require.True(t, s.Services["svcName"].IsJob())
+
+			result := translateJob("svcName", s, nil)
+
+			require.Equal(t, tt.enableServiceLinks, result.Spec.Template.Spec.EnableServiceLinks)
+		})
+	}
+}

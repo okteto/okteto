@@ -480,6 +480,50 @@ func Test_NodeSelectorUnmarshalling(t *testing.T) {
 	}
 }
 
+func Test_EnableServiceLinksUnmarshalling(t *testing.T) {
+	tests := []struct {
+		expected      *bool
+		name          string
+		manifest      []byte
+		expectedError bool
+	}{
+		{
+			name:     "not set defaults to nil",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1"),
+			expected: nil,
+		},
+		{
+			name:     "explicitly disabled",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    x-enable-service-links: false"),
+			expected: ptr.To(false),
+		},
+		{
+			name:     "explicitly enabled",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    x-enable-service-links: true"),
+			expected: ptr.To(true),
+		},
+		{
+			name:          "invalid value",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    x-enable-service-links: notabool"),
+			expectedError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, true)
+			if err != nil && !tt.expectedError {
+				t.Fatal(err)
+			} else if err == nil && tt.expectedError {
+				t.Fatal("error not thrown")
+			}
+
+			if !tt.expectedError {
+				assert.Equal(t, tt.expected, s.Services["app"].EnableServiceLinks)
+			}
+		})
+	}
+}
+
 func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 	tests := []struct {
 		expected *composeBuildInfo

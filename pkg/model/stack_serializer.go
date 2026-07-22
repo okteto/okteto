@@ -95,6 +95,7 @@ type ServiceRaw struct {
 	Labels                   Labels                 `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	NodeSelector             Selector               `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
+	EnableServiceLinks       *bool                  `json:"x-enable-service-links,omitempty" yaml:"x-enable-service-links,omitempty"`
 	ReadOnly                 *WarningType           `yaml:"read_only,omitempty"`
 	PullPolicy               *WarningType           `yaml:"pull_policy,omitempty"`
 	ContainerName            *WarningType           `yaml:"container_name,omitempty"`
@@ -438,6 +439,8 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	}
 
 	svc.NodeSelector = serviceRaw.NodeSelector
+
+	svc.EnableServiceLinks = serviceRaw.EnableServiceLinks
 
 	if serviceRaw.IdentityToken != nil {
 		if err := validateIdentityToken(serviceRaw.IdentityToken); err != nil {
