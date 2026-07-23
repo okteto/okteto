@@ -96,17 +96,18 @@ const (
 
 // Service represents an okteto stack service
 type Service struct {
-	Healtcheck    *HealthCheck          `yaml:"healthcheck,omitempty"`
-	Labels        Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Resources     *StackResources       `yaml:"resources,omitempty"` // For okteto stack only
-	NodeSelector  Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
-	User          *StackSecurityContext `yaml:"user,omitempty"`
-	DependsOn     DependsOn             `yaml:"depends_on,omitempty"`
-	Build         *build.Info           `yaml:"build,omitempty"`
-	IdentityToken *ServiceIdentityToken `json:"x-okteto-identity-token,omitempty" yaml:"x-okteto-identity-token,omitempty"`
-	Workdir       string                `yaml:"workdir,omitempty"`
-	Image         string                `yaml:"image,omitempty"`
-	RestartPolicy apiv1.RestartPolicy   `yaml:"restart,omitempty"`
+	Healtcheck         *HealthCheck          `yaml:"healthcheck,omitempty"`
+	Labels             Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Resources          *StackResources       `yaml:"resources,omitempty"` // For okteto stack only
+	NodeSelector       Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
+	EnableServiceLinks *bool                 `json:"x-enable-service-links,omitempty" yaml:"x-enable-service-links,omitempty"`
+	User               *StackSecurityContext `yaml:"user,omitempty"`
+	DependsOn          DependsOn             `yaml:"depends_on,omitempty"`
+	Build              *build.Info           `yaml:"build,omitempty"`
+	IdentityToken      *ServiceIdentityToken `json:"x-okteto-identity-token,omitempty" yaml:"x-okteto-identity-token,omitempty"`
+	Workdir            string                `yaml:"workdir,omitempty"`
+	Image              string                `yaml:"image,omitempty"`
+	RestartPolicy      apiv1.RestartPolicy   `yaml:"restart,omitempty"`
 
 	Environment     env.Environment      `yaml:"environment,omitempty"`
 	Ports           []Port               `yaml:"ports,omitempty"`
