@@ -84,7 +84,7 @@ Then list each CVE found with details:
 **Syncthing — keep the Go constant in sync**:
 
 - Bumping `ARG SYNCTHING_VERSION` in the Dockerfile is NOT enough. The CLI also downloads syncthing on the user's machine using the `syncthingVersion` constant in `pkg/syncthing/install.go`.
-- Whenever you change `SYNCTHING_VERSION`, update `syncthingVersion` in `pkg/syncthing/install.go` to the same value, then run `go test ./pkg/syncthing/...`.
+- Whenever you change `ARG SYNCTHING_VERSION`, update `syncthingVersion` in `pkg/syncthing/install.go` to the same value, then run `go test ./pkg/syncthing/...`.
 - Both must always point to the same version so the image and the locally-downloaded binary match.
 
 **For Go dependencies** (okteto binary):
