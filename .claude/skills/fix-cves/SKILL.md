@@ -81,6 +81,12 @@ Then list each CVE found with details:
 - Update version ARG at top of Dockerfile (e.g., `ARG KUBECTL_VERSION=1.34.5`)
 - Follow version update policy above
 
+**Syncthing — keep the Go constant in sync**:
+
+- Bumping `ARG SYNCTHING_VERSION` in the Dockerfile is NOT enough. The CLI also downloads syncthing on the user's machine using the `syncthingVersion` constant in `pkg/syncthing/install.go`.
+- Whenever you change `ARG SYNCTHING_VERSION`, update `syncthingVersion` in `pkg/syncthing/install.go` to the same value, then run `go test ./pkg/syncthing/...`.
+- Both must always point to the same version so the image and the locally-downloaded binary match.
+
 **For Go dependencies** (okteto binary):
 
 - Update to specific patched version: `go get -u <module>@<patch-version>`
