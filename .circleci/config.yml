@@ -282,8 +282,13 @@ jobs:
           name: Run gateway integration tests
           command: |
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_CLI_IMAGE=okteto.global/cli-e2e:${CIRCLE_SHA1}
+            echo "OKTETO_CLI_IMAGE=$OKTETO_CLI_IMAGE"
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
             make integration-gateway
+          environment:
+            OKTETO_SKIP_CLEANUP: "true"
+
 
   test-e2e-setup:
     executor: golang-ci
