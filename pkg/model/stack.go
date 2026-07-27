@@ -792,6 +792,9 @@ func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
 		if len(svc.NodeSelector) > 0 {
 			resultSvc.NodeSelector = svc.NodeSelector
 		}
+		if svc.EnableServiceLinks != nil {
+			resultSvc.EnableServiceLinks = svc.EnableServiceLinks
+		}
 		if svc.IdentityToken != nil {
 			resultSvc.IdentityToken = svc.IdentityToken
 		}

@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -911,6 +912,78 @@ func TestStack_MergeIdentityToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.stack.Merge(tt.otherStack)
 			require.Equal(t, tt.expected, result.Services["app"].IdentityToken)
+		})
+	}
+}
+
+func TestStack_MergeEnableServiceLinks(t *testing.T) {
+	tests := []struct {
+		stack      *Stack
+		otherStack *Stack
+		expected   *bool
+		name       string
+	}{
+		{
+			name: "override sets enable service links when base has none",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto",
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						EnableServiceLinks: ptr.To(false),
+					},
+				},
+			},
+			expected: ptr.To(false),
+		},
+		{
+			name: "override replaces existing enable service links",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:              "okteto",
+						EnableServiceLinks: ptr.To(true),
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						EnableServiceLinks: ptr.To(false),
+					},
+				},
+			},
+			expected: ptr.To(false),
+		},
+		{
+			name: "override without enable service links keeps base value",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:              "okteto",
+						EnableServiceLinks: ptr.To(false),
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto-dev",
+					},
+				},
+			},
+			expected: ptr.To(false),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.stack.Merge(tt.otherStack)
+			require.Equal(t, tt.expected, result.Services["app"].EnableServiceLinks)
 		})
 	}
 }
