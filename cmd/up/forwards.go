@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -101,7 +102,10 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Namespace)
+	// Use an explicit host. Dialing ":port" targets 0.0.0.0 and breaks SSH
+	// handshakes on some platforms (e.g. macOS with a VPN default route).
+	sshAddr := net.JoinHostPort(up.Dev.Interface, fmt.Sprintf("%d", up.Dev.RemotePort))
+	up.Forwarder = ssh.NewForwardManager(ctx, sshAddr, up.Dev.Interface, "0.0.0.0", f, up.Namespace)
 	if err := up.Forwarder.Add(forward.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
