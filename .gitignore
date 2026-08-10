@@ -1,5 +1,8 @@
 # Add any directories, files, or patterns you don't want to be tracked by version control
 
+# macOS
+.DS_Store
+
 # IDEs
 .vscode
 .idea
@@ -25,5 +28,8 @@ golangci-report.xml
 node_modules
 
 # Claude local config (personal, not shared)
+# tasks.local is listed separately: the glob above needs a dot after "local",
+# so it does not match a directory named tasks.local.
 .claude/*.local.*
+.claude/tasks.local/
 .claude/worktrees/
