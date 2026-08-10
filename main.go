@@ -30,6 +30,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
+	"github.com/okteto/okteto/cmd/divert"
+	"github.com/okteto/okteto/cmd/divertrouter"
 	"github.com/okteto/okteto/cmd/exec"
 	"github.com/okteto/okteto/cmd/kubetoken"
 	"github.com/okteto/okteto/cmd/logs"
@@ -174,6 +176,8 @@ func main() {
 	root.AddCommand(logs.Logs(ctx, k8sLogger, fs))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	root.AddCommand(remoterun.RemoteRun(ctx, k8sLogger, ioController))
+	root.AddCommand(divertrouter.DivertRouter(ioController))
+	root.AddCommand(divert.Divert(ctx, ioController))
 	root.AddCommand(test.Test(ctx, ioController, k8sLogger, at, insights))
 	root.AddCommand(cmd.GenerateSchema())
 	root.AddCommand(cmd.Validate(fs))
