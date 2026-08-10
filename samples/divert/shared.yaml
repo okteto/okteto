@@ -1,0 +1,192 @@
+---
+# The shared baseline: frontend -> api -> catalog -> inventory, all in one namespace.
+# Deploy this once into the shared namespace (staging in the README).
+#
+# Four services rather than two, so that a divert can be shown in the middle of the chain
+# with shared services both in front of it and behind it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: hop
+          image: ifbyol/divert-sample:1
+          env:
+            - name: NAME
+              value: frontend
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: UPSTREAM
+              value: http://api
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: hop
+          image: ifbyol/divert-sample:1
+          env:
+            - name: NAME
+              value: api
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: UPSTREAM
+              value: http://catalog
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+# This is the Service `okteto divert up --service api` puts a router in front of.
+# Single port, numeric targetPort, a real selector: everything bring-up requires.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  type: ClusterIP
+  selector:
+    app: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      containers:
+        - name: hop
+          image: ifbyol/divert-sample:1
+          env:
+            - name: NAME
+              value: catalog
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: UPSTREAM
+              value: http://inventory
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+# The other divertable Service in this sample. It sits in the middle of the chain, with a
+# shared service in front of it (api) and another behind it (inventory), so diverting it
+# only works if api forwards the baggage header on its own outbound call.
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+spec:
+  type: ClusterIP
+  selector:
+    app: catalog
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory
+  template:
+    metadata:
+      labels:
+        app: inventory
+    spec:
+      containers:
+        - name: hop
+          image: ifbyol/divert-sample:1
+          env:
+            - name: NAME
+              value: inventory
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+spec:
+  type: ClusterIP
+  selector:
+    app: inventory
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

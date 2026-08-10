@@ -14,6 +14,7 @@ To begin using these samples, make sure you have the Okteto CLI installed and a 
 Select a framework from the list below to explore examples for that environment. Each link directs you to a README file that has detailed instructions on setting up and running the sample using Okteto.
 
 - [**ASP.NET**](/samples/aspnetcore/README.md): Explore how to use Okteto with ASP.NET Core applications.
+- [**Divert**](/samples/divert/README.md): A four-service chain demonstrating header-based traffic divert without a service mesh.
 - [**Golang**](/samples/golang/README.md): See an example of a Go application developed in Okteto.
 - [**Java (Gradle)**](/samples/java-gradle/README.md): A sample Java application using Gradle built in Okteto.
 - [**Java (Maven)**](/samples/java-maven/README.md): A Maven-based Java application running in Okteto.

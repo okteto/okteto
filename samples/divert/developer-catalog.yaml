@@ -1,0 +1,62 @@
+---
+# The developer's own copy of `catalog`, and nothing else.
+#
+# This is the more interesting of the two manifests. `catalog` sits in the middle of the
+# chain, so diverting it puts two shared services in front of your copy (frontend and api)
+# and one behind it (inventory):
+#
+#   frontend(staging) -> api(staging) -> catalog-DEV(you) -> inventory(staging)
+#
+# For a request to reach your copy at all, `api` — a service you did not deploy and are not
+# diverting — has to forward the baggage header on its own outbound call. That is the
+# application requirement the README keeps pointing at, and this is where it becomes
+# load-bearing rather than theoretical.
+#
+# Deploy it into your own namespace, alongside developer-api.yaml or on its own.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      containers:
+        - name: hop
+          image: ifbyol/divert-sample:1
+          env:
+            - name: NAME
+              value: catalog-DEV
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            # The bare name `inventory`, exactly as in the shared namespace. It resolves
+            # here through the mirror `okteto divert up` creates.
+            - name: UPSTREAM
+              value: http://inventory
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+spec:
+  type: ClusterIP
+  selector:
+    app: catalog
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
