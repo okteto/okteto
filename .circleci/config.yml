@@ -6,9 +6,9 @@ aliases:
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
     gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-  # semver tags: X.Y.Z with optional prerelease/build metadata (e.g. 3.22.0, 3.22.0-beta.3).
+  # semver release tags: stable X.Y.Z and prerelease X.Y.Z-{beta,rc,dev}.N (see scripts/ci/release.sh).
   # Kept short because CircleCI's new config compiler (2026-09-21) rejects overly long patterns.
-  - &release-regex /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/
+  - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(beta|rc|dev)\.\d+)?$/
   - &release-branch-regex /^release-\d+\.\d+$/
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
   - &github-packages-login echo "$GITHUB_PACKAGES_OKTETOBOT_TOKEN" | docker login ghcr.io -u "oktetobot" --password-stdin
