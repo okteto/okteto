@@ -7,7 +7,7 @@ require (
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-cmd/cmd v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/pkg/sftp v1.13.10
+	github.com/pkg/sftp v1.13.11
 	github.com/ramr/go-reaper v0.3.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
