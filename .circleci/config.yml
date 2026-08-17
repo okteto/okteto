@@ -6,8 +6,9 @@ aliases:
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
     gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-  # standard semver regex as defined in: https://semver.org/
-  - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+  # semver release tags: stable X.Y.Z and prerelease X.Y.Z-{beta}.N (see scripts/ci/release.sh).
+  # Kept short because CircleCI's new config compiler (https://discuss.circleci.com/t/breaking-changes-config-compilation-updates-september-21-2026/54719) rejects overly long patterns.
+  - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(beta)\.(0|[1-9]\d*))?$/
   - &release-branch-regex /^release-\d+\.\d+$/
   - &docker-login echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
   - &github-packages-login echo "$GITHUB_PACKAGES_OKTETOBOT_TOKEN" | docker login ghcr.io -u "oktetobot" --password-stdin
