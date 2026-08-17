@@ -15,13 +15,338 @@ package forward
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"net/url"
 	"reflect"
 	"sort"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"k8s.io/client-go/tools/portforward"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+type fakeDevPortForwarder struct {
+	forward func() error
+	ports   []portforward.ForwardedPort
+	portErr error
+}
+
+func (f *fakeDevPortForwarder) ForwardPorts() error {
+	return f.forward()
+}
+
+func (f *fakeDevPortForwarder) GetPorts() ([]portforward.ForwardedPort, error) {
+	return f.ports, f.portErr
+}
+
+func newTestActive() *active {
+	return &active{
+		readyChan: make(chan struct{}),
+		stopChan:  make(chan struct{}),
+		doneChan:  make(chan struct{}),
+	}
+}
+
+func TestAddAcceptsAutomaticPortWithoutPrebinding(t *testing.T) {
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	if err := pf.Add(forward.Forward{Local: 0, Remote: 2222}); err != nil {
+		t.Fatalf("automatic port was rejected: %v", err)
+	}
+	if got := pf.ports[0]; got.Local != 0 || got.Remote != 2222 {
+		t.Fatalf("automatic port mapping = %+v, want 0:2222", got)
+	}
+	if err := pf.Add(forward.Forward{Local: 0, Remote: 2223}); err == nil {
+		t.Fatal("duplicate automatic port was accepted")
+	}
+}
+
+func TestStartDoesNotTreatFailureAsReadiness(t *testing.T) {
+	t.Parallel()
+
+	sentinel := errors.New("listener bind failed")
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	pf.buildDevForwarder = func(context.Context, string, string) (*active, devPortForwarder, error) {
+		a := newTestActive()
+		return a, &fakeDevPortForwarder{forward: func() error { return sentinel }}, nil
+	}
+
+	if err := pf.Start("pod", "namespace"); !errors.Is(err, sentinel) {
+		t.Fatalf("Start() error = %v, want %v", err, sentinel)
+	}
+	if _, err := pf.ForwardedPorts(); err == nil {
+		t.Fatal("ForwardedPorts succeeded after startup failure")
+	}
+}
+
+func TestStartContextCancelsForwarderBeforeReadiness(t *testing.T) {
+	t.Parallel()
+
+	forwarding := make(chan struct{})
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	pf.buildDevForwarder = func(ctx context.Context, _ string, _ string) (*active, devPortForwarder, error) {
+		a := newTestActive()
+		return a, &fakeDevPortForwarder{forward: func() error {
+			close(forwarding)
+			<-ctx.Done()
+			return ctx.Err()
+		}}, nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	result := make(chan error, 1)
+	go func() { result <- pf.StartContext(ctx, "pod", "namespace") }()
+	<-forwarding
+	cancel()
+
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("StartContext() error = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("StartContext did not stop after cancellation")
+	}
+	if _, err := pf.ForwardedPorts(); err == nil {
+		t.Fatal("cancelled attempt remained active")
+	}
+}
+
+func TestStartContextDisarmsStartupCancellationAfterReadiness(t *testing.T) {
+	t.Parallel()
+
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	var attemptCtx context.Context
+	pf.buildDevForwarder = func(ctx context.Context, _ string, _ string) (*active, devPortForwarder, error) {
+		attemptCtx = ctx
+		a := newTestActive()
+		return a, &fakeDevPortForwarder{
+			ports: []portforward.ForwardedPort{{Local: 34567, Remote: 2222}},
+			forward: func() error {
+				close(a.readyChan)
+				<-ctx.Done()
+				return ctx.Err()
+			},
+		}, nil
+	}
+	startupCtx, cancelStartup := context.WithCancel(context.Background())
+	if err := pf.StartContext(startupCtx, "pod", "namespace"); err != nil {
+		t.Fatal(err)
+	}
+	cancelStartup()
+	select {
+	case <-attemptCtx.Done():
+		t.Fatal("completed startup context remained attached to the live forward")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	ports, err := pf.ForwardedPorts()
+	if err != nil || len(ports) != 1 || ports[0].Local != 34567 {
+		t.Fatalf("startup-context cancellation stopped live forward: ports=%+v error=%v", ports, err)
+	}
+	pf.Stop()
+}
+
+func TestContextDialerCancelsUpgradeRequest(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	requestStarted := make(chan struct{})
+	dialer := &contextDialer{
+		ctx: ctx,
+		client: &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+			close(requestStarted)
+			<-request.Context().Done()
+			return nil, request.Context().Err()
+		})},
+		method: http.MethodPost,
+		url:    &url.URL{Scheme: "http", Host: "127.0.0.1", Path: "/portforward"},
+	}
+	result := make(chan error, 1)
+	go func() {
+		_, _, err := dialer.Dial("portforward.k8s.io")
+		result <- err
+	}()
+	<-requestStarted
+	cancel()
+
+	select {
+	case err := <-result:
+		if err == nil {
+			t.Fatal("Dial succeeded after request context cancellation")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("SPDY upgrade request ignored context cancellation")
+	}
+}
+
+func TestForwardedPortsRequiresLiveReadyAttempt(t *testing.T) {
+	t.Parallel()
+
+	a := newTestActive()
+	fake := &fakeDevPortForwarder{
+		ports: []portforward.ForwardedPort{{Local: 34567, Remote: 2222}},
+		forward: func() error {
+			close(a.readyChan)
+			<-a.stopChan
+			return nil
+		},
+	}
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	pf.buildDevForwarder = func(context.Context, string, string) (*active, devPortForwarder, error) {
+		return a, fake, nil
+	}
+
+	if _, err := pf.ForwardedPorts(); err == nil {
+		t.Fatal("ForwardedPorts succeeded before Start")
+	}
+	if err := pf.Start("pod", "namespace"); err != nil {
+		t.Fatal(err)
+	}
+	ports, err := pf.ForwardedPorts()
+	if err != nil || !reflect.DeepEqual(ports, fake.ports) {
+		t.Fatalf("ForwardedPorts() = %+v, %v; want %+v, nil", ports, err, fake.ports)
+	}
+	pf.Stop()
+	if _, err := pf.ForwardedPorts(); err == nil {
+		t.Fatal("ForwardedPorts succeeded after Stop")
+	}
+}
+
+func TestForwardedPortsRejectsNotReadyAndPropagatesGetPortsError(t *testing.T) {
+	t.Parallel()
+
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	a := newTestActive()
+	sentinel := errors.New("get ports failed")
+	fake := &fakeDevPortForwarder{forward: func() error { return nil }, portErr: sentinel}
+	pf.activeDev = a
+	pf.activeDevPF = fake
+	if _, err := pf.ForwardedPorts(); err == nil {
+		t.Fatal("ForwardedPorts succeeded before readiness")
+	}
+	close(a.readyChan)
+	if _, err := pf.ForwardedPorts(); !errors.Is(err, sentinel) {
+		t.Fatalf("ForwardedPorts() error = %v, want %v", err, sentinel)
+	}
+}
+
+func TestStartRejectsInvalidInjectedForwarderState(t *testing.T) {
+	t.Parallel()
+
+	for _, builder := range []func(context.Context, string, string) (*active, devPortForwarder, error){
+		func(context.Context, string, string) (*active, devPortForwarder, error) {
+			return nil, &fakeDevPortForwarder{}, nil
+		},
+		func(context.Context, string, string) (*active, devPortForwarder, error) {
+			return newTestActive(), nil, nil
+		},
+		func(context.Context, string, string) (*active, devPortForwarder, error) {
+			return &active{stopChan: make(chan struct{}), doneChan: make(chan struct{})}, &fakeDevPortForwarder{}, nil
+		},
+	} {
+		pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+		pf.buildDevForwarder = builder
+		if err := pf.Start("pod", "namespace"); err == nil {
+			t.Fatal("Start accepted invalid injected forwarder state")
+		}
+	}
+}
+
+func TestStopDuringBuildPreventsForwarderLaunch(t *testing.T) {
+	t.Parallel()
+
+	building := make(chan struct{})
+	release := make(chan struct{})
+	forwardCalled := false
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	pf.buildDevForwarder = func(context.Context, string, string) (*active, devPortForwarder, error) {
+		close(building)
+		<-release
+		return newTestActive(), &fakeDevPortForwarder{forward: func() error {
+			forwardCalled = true
+			return nil
+		}}, nil
+	}
+
+	result := make(chan error, 1)
+	go func() { result <- pf.Start("pod", "namespace") }()
+	<-building
+	pf.Stop()
+	close(release)
+	if err := <-result; err == nil {
+		t.Fatal("Start succeeded after Stop during construction")
+	}
+	if forwardCalled {
+		t.Fatal("forwarder launched after Stop")
+	}
+}
+
+func TestDelayedOldAttemptCannotClearNewAttempt(t *testing.T) {
+	t.Parallel()
+
+	firstRunning := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	var mu sync.Mutex
+	call := 0
+	var second *active
+	pf := NewPortForwardManager(context.Background(), "127.0.0.1", nil, nil, "")
+	pf.stopTimeout = 10 * time.Millisecond
+	pf.buildDevForwarder = func(context.Context, string, string) (*active, devPortForwarder, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		call++
+		a := newTestActive()
+		if call == 1 {
+			return a, &fakeDevPortForwarder{forward: func() error {
+				close(firstRunning)
+				<-releaseFirst
+				return errors.New("old attempt failed")
+			}}, nil
+		}
+		second = a
+		return a, &fakeDevPortForwarder{
+			ports: []portforward.ForwardedPort{{Local: 34568, Remote: 2222}},
+			forward: func() error {
+				close(a.readyChan)
+				<-a.stopChan
+				return nil
+			},
+		}, nil
+	}
+
+	firstResult := make(chan error, 1)
+	go func() { firstResult <- pf.Start("pod-one", "namespace") }()
+	<-firstRunning
+	pf.Stop()
+	if err := pf.Start("pod-two", "namespace"); err != nil {
+		t.Fatal(err)
+	}
+	close(releaseFirst)
+	if err := <-firstResult; err == nil {
+		t.Fatal("old attempt unexpectedly succeeded")
+	}
+
+	pf.mu.RLock()
+	gotActive := pf.activeDev
+	pf.mu.RUnlock()
+	if gotActive != second {
+		t.Fatal("old attempt cleared the active retry")
+	}
+	ports, err := pf.ForwardedPorts()
+	if err != nil || len(ports) != 1 || ports[0].Local != 34568 {
+		t.Fatalf("new attempt ports = %+v, %v", ports, err)
+	}
+	pf.Stop()
+}
 
 func TestAdd(t *testing.T) {
 
@@ -113,37 +438,18 @@ func Test_active_stop(t *testing.T) {
 	}
 }
 
-func Test_active_closeReady(t *testing.T) {
-	tests := []struct {
-		readyChan chan struct{}
-		name      string
-		close     bool
-	}{
-		{
-			name: "nil-channel",
-		},
-		{
-			name:      "channel",
-			readyChan: make(chan struct{}, 1),
-		},
-		{
-			name:      "closed-channel",
-			readyChan: make(chan struct{}, 1),
-			close:     true,
-		},
+func Test_active_finishIsIdempotent(t *testing.T) {
+	a := newTestActive()
+	want := errors.New("finished")
+	a.finish(want)
+	a.finish(errors.New("ignored"))
+	if !errors.Is(a.error(), want) {
+		t.Fatalf("active error = %v, want %v", a.error(), want)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := &active{
-				readyChan: tt.readyChan,
-			}
-
-			if tt.close {
-				a.closeReady()
-			}
-
-			a.closeReady()
-		})
+	select {
+	case <-a.doneChan:
+	default:
+		t.Fatal("finish did not close done channel")
 	}
 }
 

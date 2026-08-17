@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/okteto/okteto/internal/sshtransport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	forwardk8s "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -26,7 +27,30 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type k8sForwardManagerFactory func(context.Context, string, *rest.Config, kubernetes.Interface, string) *forwardk8s.PortForwardManager
+type sshForwardManagerFactory func(context.Context, string, string, string, *forwardk8s.PortForwardManager, string) forwarder
+type sshPortForwardAdder func(*forwardk8s.PortForwardManager, forward.Forward) error
+type sshEntryAdder func(name, host string, port int) error
+type k8sConfigGetter func() *clientcmdapi.Config
+
+func (up *upContext) createK8sForwardManager(ctx context.Context, iface string, restConfig *rest.Config, client kubernetes.Interface, namespace string) *forwardk8s.PortForwardManager {
+	if up.newK8sForwardManager != nil {
+		return up.newK8sForwardManager(ctx, iface, restConfig, client, namespace)
+	}
+	return forwardk8s.NewPortForwardManager(ctx, iface, restConfig, client, namespace)
+}
+
+func (up *upContext) createSSHForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *forwardk8s.PortForwardManager, namespace string) forwarder {
+	if up.newSSHForwardManager != nil {
+		return up.newSSHForwardManager(ctx, sshAddr, localInterface, remoteInterface, pf, namespace)
+	}
+	return ssh.NewForwardManager(ctx, sshAddr, localInterface, remoteInterface, pf, namespace)
+}
 
 func (up *upContext) forwards(ctx context.Context) error {
 	msg := "Configuring SSH tunnel to your development container..."
@@ -85,23 +109,55 @@ func (up *upContext) forwards(ctx context.Context) error {
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
-	k8sClient, restConfig, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
+	var cfg *clientcmdapi.Config
+	if up.getK8sConfig != nil {
+		cfg = up.getK8sConfig()
+	} else {
+		cfg = okteto.GetContext().Cfg
+	}
+	k8sClient, restConfig, err := up.K8sClientProvider.Provide(cfg)
 	if err != nil {
 		return err
 	}
 
-	// assign the SSH tunnel port right before creating the forward, to minimize
-	// the window between choosing a free port and binding it. If it is already
-	// assigned (user-pinned or a previous connection), the same port is reused.
-	up.Dev.AssignRemotePort()
-
-	oktetoLog.Infof("starting SSH port forwards")
-	f := forwardk8s.NewPortForwardManager(ctx, up.Dev.Interface, restConfig, k8sClient, up.Namespace)
-	if err := f.Add(forward.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
+	// Port zero is intentionally preserved here. client-go will allocate and
+	// hold the local listener atomically, and its concrete port is published
+	// only after the forward reports ready.
+	sshEndpoint, err := sshtransport.PlanRequested(up.Dev.Interface, up.Dev.RemotePort)
+	if err != nil {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Namespace)
+	oktetoLog.Infof("starting SSH port forwards")
+	pf := up.createK8sForwardManager(ctx, sshEndpoint.BindHost(), restConfig, k8sClient, up.Namespace)
+	if pf == nil {
+		return fmt.Errorf("failed to create SSH port-forward manager")
+	}
+	addSSHPortForward := up.addSSHPortForward
+	if addSSHPortForward == nil {
+		addSSHPortForward = func(pf *forwardk8s.PortForwardManager, f forward.Forward) error { return pf.Add(f) }
+	}
+	if err := addSSHPortForward(pf, forward.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
+		return err
+	}
+
+	up.Forwarder = up.createSSHForwardManager(ctx, sshEndpoint.Address(), up.Dev.Interface, "0.0.0.0", pf, up.Namespace)
+	if up.Forwarder == nil {
+		return fmt.Errorf("failed to create SSH forward manager")
+	}
+	if len(up.Manifest.GlobalForward) > 0 {
+		reserver, ok := up.Forwarder.(interface{ ReserveLocalPort(int) error })
+		if !ok {
+			up.Forwarder.Stop()
+			return fmt.Errorf("SSH forward manager cannot reserve global-forward ports")
+		}
+		for _, globalForward := range up.Manifest.GlobalForward {
+			if err := reserver.ReserveLocalPort(globalForward.Local); err != nil {
+				up.Forwarder.Stop()
+				return err
+			}
+		}
+	}
 	if err := up.Forwarder.Add(forward.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
@@ -110,7 +166,11 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	if err := addToForwarder(up); err != nil {
+	addForwards := up.addToForwarderFn
+	if addForwards == nil {
+		addForwards = addToForwarder
+	}
+	if err := addForwards(up); err != nil {
 		return err
 	}
 
@@ -119,10 +179,26 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	if err := ssh.AddEntry(up.Dev.Name, up.Dev.Interface, up.Dev.RemotePort); err != nil {
+	portProvider, ok := up.Forwarder.(interface{ SSHPort() (int, error) })
+	if !ok {
+		up.Forwarder.Stop()
+		return fmt.Errorf("SSH forward manager did not expose its bound port")
+	}
+	boundPort, err := portProvider.SSHPort()
+	if err != nil {
+		up.Forwarder.Stop()
+		return fmt.Errorf("failed to resolve bound SSH port: %w", err)
+	}
+	addEntry := up.sshEntryAdder
+	if addEntry == nil {
+		addEntry = ssh.AddEntry
+	}
+	if err := addEntry(up.Dev.Name, sshEndpoint.DialHost(), boundPort); err != nil {
+		up.Forwarder.Stop()
 		oktetoLog.Infof("failed to add entry to your SSH config file: %s", err)
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
+	up.Dev.RemotePort = boundPort
 
 	if isNeededGlobalForwarder(up.Manifest.GlobalForward) {
 		up.GlobalForwarderStatus = make(chan error, 1)

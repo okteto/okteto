@@ -64,7 +64,7 @@ func RemoveEntry(name string) error {
 	return remove(getSSHConfigPath(), buildHostname(name))
 }
 
-// GetPort returns the corresponding SSH port for the dev env
+// GetPort returns the corresponding SSH port for the dev env.
 func GetPort(name string) (int, error) {
 	cfg, err := getConfig(getSSHConfigPath())
 	if err != nil {
@@ -86,8 +86,36 @@ func GetPort(name string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("invalid port: %s", param.value())
 	}
-
 	return port, nil
+}
+
+// GetStoredEndpoint returns the endpoint metadata recorded by okteto up.
+// The host is untrusted configuration data and must only be used as a
+// consistency check, never directly as a dial destination.
+func GetStoredEndpoint(name string) (string, int, error) {
+	cfg, err := getConfig(getSSHConfigPath())
+	if err != nil {
+		return "", 0, err
+	}
+
+	i, found := findHost(cfg, buildHostname(name))
+	if !found {
+		return "", 0, fmt.Errorf("development container not found")
+	}
+	hostParam := cfg.hosts[i].getParam(hostNameKeyword)
+	if hostParam == nil || hostParam.value() == "" {
+		return "", 0, fmt.Errorf("host not found")
+	}
+	portParam := cfg.hosts[i].getParam(portKeyword)
+	if portParam == nil {
+		return "", 0, fmt.Errorf("port not found")
+	}
+	port, err := strconv.Atoi(portParam.value())
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid port: %s", portParam.value())
+	}
+
+	return hostParam.value(), port, nil
 }
 
 func remove(path, name string) error {

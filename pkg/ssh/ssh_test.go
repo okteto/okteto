@@ -220,8 +220,6 @@ func TestGetPort(t *testing.T) {
 
 	t.Setenv(constants.OktetoHomeEnvVar, dir)
 
-	defer os.Unsetenv(constants.OktetoHomeEnvVar)
-
 	if _, err := GetPort(t.Name()); err == nil {
 		t.Fatal("expected error on non existing host")
 	}
@@ -238,7 +236,22 @@ func TestGetPort(t *testing.T) {
 	if p != 123456 {
 		t.Errorf("got %d, expected %d", p, 123456)
 	}
+}
 
+func TestGetStoredEndpoint(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(constants.OktetoHomeEnvVar, dir)
+
+	if err := AddEntry(t.Name(), "127.0.0.1", 23456); err != nil {
+		t.Fatal(err)
+	}
+	host, port, err := GetStoredEndpoint(t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if host != "127.0.0.1" || port != 23456 {
+		t.Fatalf("GetStoredEndpoint() = %q, %d; want 127.0.0.1, 23456", host, port)
+	}
 }
 
 func Test_getSSHConfigPath(t *testing.T) {

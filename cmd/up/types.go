@@ -77,6 +77,12 @@ type upContext struct {
 	autoDown              *autoDownRunner
 	StartTime             time.Time
 	Forwarder             forwarder
+	newK8sForwardManager  k8sForwardManagerFactory
+	newSSHForwardManager  sshForwardManagerFactory
+	addSSHPortForward     sshPortForwardAdder
+	addToForwarderFn      func(*upContext) error
+	sshEntryAdder         sshEntryAdder
+	getK8sConfig          k8sConfigGetter
 	tokenUpdater          tokenUpdater
 	builder               builderInterface
 	analyticsTracker      analyticsTrackerInterface

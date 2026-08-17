@@ -51,9 +51,9 @@ func getOktetoSSHTimeout() time.Duration {
 			return
 		}
 
-		parsed, err := time.ParseDuration(t)
+		parsed, err := parseSSHTimeout(t)
 		if err != nil {
-			oktetoLog.Infof("'%s' is not a valid duration, ignoring", t)
+			oktetoLog.Infof("'%s' is not a valid positive duration, ignoring", t)
 			return
 		}
 
@@ -62,6 +62,17 @@ func getOktetoSSHTimeout() time.Duration {
 	})
 
 	return timeout
+}
+
+func parseSSHTimeout(value string) (time.Duration, error) {
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, err
+	}
+	if parsed <= 0 {
+		return 0, fmt.Errorf("SSH timeout must be positive")
+	}
+	return parsed, nil
 }
 
 func getSSHClientConfig() (*ssh.ClientConfig, error) {

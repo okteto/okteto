@@ -24,6 +24,7 @@ import (
 
 	"al.essio.dev/pkg/shellescape"
 	dockerterm "github.com/moby/term"
+	"github.com/okteto/okteto/internal/sshtransport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -34,6 +35,10 @@ import (
 
 // Exec executes the command over SSH
 func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
+	serverAddress, err := localSSHAddress(iface, remotePort)
+	if err != nil {
+		return fmt.Errorf("refusing unsafe SSH endpoint: %w", err)
+	}
 	sshConfig, err := getSSHClientConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get SSH configuration: %w", err)
@@ -42,15 +47,30 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	// dockerterm.StdStreams() configures the terminal on windows
 	dockerterm.StdStreams()
 
+	connectionCtx := ctx
+	cancel := func() {}
+	if sshConfig.Timeout > 0 {
+		connectionCtx, cancel = context.WithTimeout(ctx, sshConfig.Timeout)
+	}
+	defer cancel()
+
 	var connection *ssh.Client
 	t := time.NewTicker(100 * time.Millisecond)
+	defer t.Stop()
+
+connectLoop:
 	for i := 0; i < 100; i++ {
-		connection, err = dial(ctx, "tcp", net.JoinHostPort(iface, fmt.Sprintf("%d", remotePort)), sshConfig)
+		connection, err = dial(connectionCtx, "tcp", serverAddress, sshConfig)
 		if err == nil {
 			break
 		}
 
-		<-t.C
+		select {
+		case <-t.C:
+		case <-connectionCtx.Done():
+			err = connectionCtx.Err()
+			break connectLoop
+		}
 	}
 
 	if err != nil {
@@ -187,6 +207,14 @@ More information is available here: https://okteto.com/docs/reference/okteto-man
 	return err
 }
 
+func localSSHAddress(iface string, remotePort int) (string, error) {
+	endpoint, err := sshtransport.Plan(iface, remotePort)
+	if err != nil {
+		return "", err
+	}
+	return sshtransport.LocalAddress(endpoint.DialHost(), remotePort)
+}
+
 func isTerminal(r io.Reader) (int, bool) {
 	switch v := r.(type) {
 	case *os.File:
@@ -202,8 +230,24 @@ func dial(ctx context.Context, network, addr string, config *ssh.ClientConfig) (
 	if err != nil {
 		return nil, err
 	}
+	if err := setConnectionDeadline(ctx, conn, config.Timeout); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	disarmCancellation := interruptConnectionOnCancel(ctx, conn)
+	defer disarmCancellation()
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
 	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	disarmCancellation()
+	if err := ctx.Err(); err != nil {
+		c.Close()
+		return nil, err
+	}
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		c.Close()
 		return nil, err
 	}
 	return ssh.NewClient(c, chans, reqs), nil

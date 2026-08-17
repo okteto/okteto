@@ -31,6 +31,9 @@ type reverse struct {
 
 // AddReverse adds a reverse forward
 func (fm *ForwardManager) AddReverse(f model.Reverse) error {
+	if _, reserved := fm.reservedLocalPorts[f.Local]; reserved {
+		return fmt.Errorf("port %d conflicts with a configured global forward", f.Local)
+	}
 
 	if err := fm.canAdd(f.Local, false); err != nil {
 		return err

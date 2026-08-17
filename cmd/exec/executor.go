@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd/up"
+	"github.com/okteto/okteto/internal/sshtransport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -106,7 +107,10 @@ func (h *hybridExecutor) execute(ctx context.Context, cmdToExec []string) error 
 }
 
 type sshExecutor struct {
-	dev *model.Dev
+	dev               *model.Dev
+	getStoredEndpoint func(string) (string, int, error)
+	isLocalAddress    func(string) (bool, error)
+	runRemoteCommand  func(context.Context, string, int, []string) error
 }
 
 func (s *sshExecutor) execute(ctx context.Context, cmd []string) error {
@@ -114,23 +118,71 @@ func (s *sshExecutor) execute(ctx context.Context, cmd []string) error {
 	if s.dev.Autocreate {
 		devName = strings.TrimSuffix(s.dev.Name, "-okteto")
 	}
-	p, err := ssh.GetPort(devName)
+	getStoredEndpoint := s.getStoredEndpoint
+	if getStoredEndpoint == nil {
+		getStoredEndpoint = ssh.GetStoredEndpoint
+	}
+	storedHost, port, err := getStoredEndpoint(devName)
 	if err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("development mode is not enabled on your deployment"),
 			Hint: "Run 'okteto up' to enable it and try again",
 		}
 	}
+	endpoint, err := sshtransport.Plan(s.dev.Interface, port)
+	if err != nil {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("development mode has an invalid local SSH endpoint: %w", err),
+			Hint: "Run 'okteto up' to refresh it and try again",
+		}
+	}
+	// New entries store the concrete dial host. Older entries stored the bind
+	// interface; accept that exact legacy value as a consistency check, but
+	// always dial the independently planned concrete endpoint.
+	if storedHost != endpoint.DialHost() && storedHost != s.dev.Interface {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("stored SSH host %q does not match the planned local endpoint %q", storedHost, endpoint.DialHost()),
+			Hint: "Run 'okteto up' to refresh it and try again",
+		}
+	}
+	if !endpoint.DialIsLoopback() {
+		isLocalAddress := s.isLocalAddress
+		if isLocalAddress == nil {
+			isLocalAddress = sshtransport.IsLocalAddress
+		}
+		local, err := isLocalAddress(endpoint.DialHost())
+		if err != nil || !local {
+			if err == nil {
+				err = fmt.Errorf("SSH endpoint %s is not assigned to this machine", endpoint.DialHost())
+			}
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("development mode has an unsafe local SSH endpoint: %w", err),
+				Hint: "Run 'okteto up' to refresh it and try again",
+			}
+		}
+	}
+	if _, err := sshtransport.ConcreteAddress(endpoint.DialHost(), port); err != nil {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("development mode has an invalid local SSH endpoint: %w", err),
+			Hint: "Run 'okteto up' to refresh it and try again",
+		}
+	}
 	s.dev.LoadRemote(ssh.GetPublicKey())
-	return ssh.Exec(
-		ctx,
-		s.dev.Interface,
-		p,
-		true,
-		defaultStdin,
-		defaultStdout,
-		defaultStderr,
-		cmd)
+	runRemoteCommand := s.runRemoteCommand
+	if runRemoteCommand == nil {
+		runRemoteCommand = func(ctx context.Context, host string, port int, cmd []string) error {
+			return ssh.Exec(
+				ctx,
+				host,
+				port,
+				true,
+				defaultStdin,
+				defaultStdout,
+				defaultStderr,
+				cmd)
+		}
+	}
+	return runRemoteCommand(ctx, endpoint.DialHost(), port, cmd)
 }
 
 type k8sExecutor struct {

@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/internal/sshtransport"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -132,11 +133,16 @@ func NewHybridExecutor(ctx context.Context, hybridCtx *HybridExecCtx) (*hybridEx
 	}, nil
 }
 
-func newSyncExecutor(up *upContext) *syncExecutor {
-	return &syncExecutor{
-		iface:      up.Dev.Interface,
-		remotePort: up.Dev.RemotePort,
+func newSyncExecutor(up *upContext) (*syncExecutor, error) {
+	endpoint, err := sshtransport.Plan(up.Dev.Interface, up.Dev.RemotePort)
+	if err != nil {
+		return nil, err
 	}
+
+	return &syncExecutor{
+		iface:      endpoint.DialHost(),
+		remotePort: up.Dev.RemotePort,
+	}, nil
 }
 
 type devContainerEnvGetterInterface interface {
@@ -458,7 +464,10 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 
 			return executor.RunCommand(cmd)
 		} else {
-			executor := newSyncExecutor(up)
+			executor, err := newSyncExecutor(up)
+			if err != nil {
+				return err
+			}
 			return executor.RunCommand(ctx, cmd)
 		}
 
