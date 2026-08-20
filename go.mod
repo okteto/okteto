@@ -8,7 +8,7 @@ require (
 	github.com/a8m/envsubst v1.4.3
 	github.com/briandowns/spinner v1.23.2
 	github.com/chainguard-dev/git-urls v1.0.2
-	github.com/cheggaaa/pb/v3 v3.1.7
+	github.com/cheggaaa/pb/v3 v3.2.0
 	github.com/chzyer/readline v1.5.1
 	github.com/compose-spec/godotenv v1.1.1
 	github.com/containerd/console v1.0.5 // indirect
@@ -104,9 +104,9 @@ require (
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.23 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
