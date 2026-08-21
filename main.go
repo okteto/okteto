@@ -47,6 +47,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/plugin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -179,6 +180,9 @@ func main() {
 	root.AddCommand(cmd.Validate(fs))
 
 	root.AddCommand(pipeline.Pipeline(ctx, at))
+
+	// Alpha plugin passthrough: returns unless it execs an okteto-<name> binary
+	plugin.MaybeExec(root)
 
 	err = root.Execute()
 	at.Close()
