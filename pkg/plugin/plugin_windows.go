@@ -11,16 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !windows
-// +build !windows
+//go:build windows
+// +build windows
 
 package plugin
 
-import "syscall"
+import "github.com/spf13/cobra"
 
-// execPlugin replaces the current process image with the plugin binary, the
-// same mechanism kubectl and git use: the child owns the TTY, signals, and
-// the exit code. It returns only when the exec itself fails.
-func execPlugin(path string, argv []string, environ []string) error {
-	return syscall.Exec(path, argv, environ)
-}
+// MaybeExec is a no-op on Windows: the alpha plugin passthrough is only
+// supported on unix, so the CLI keeps its default behavior here and unknown
+// commands still produce cobra's usual error.
+func MaybeExec(_ *cobra.Command) {}

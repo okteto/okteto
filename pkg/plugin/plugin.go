@@ -18,15 +18,14 @@
 // commands. Plugin binaries run with the user's privileges and full
 // environment, and no signature or digest verification is performed — the
 // same trust model used by kubectl plugins and git external subcommands.
+//
+// The passthrough is only available on unix during this alpha: MaybeExec is
+// a no-op on Windows (see plugin_windows.go).
 package plugin
 
 import (
-	"os"
-	"os/exec"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/env"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -53,24 +52,6 @@ var reservedNames = map[string]struct{}{
 }
 
 type lookPathFn func(file string) (string, error)
-
-// MaybeExec forwards the invocation to an okteto-<name> plugin binary from
-// PATH when OKTETO_ALPHA_PLUGIN_ENABLED is true and os.Args[1] is not a
-// builtin command. It returns whenever cobra should handle the invocation
-// instead. When a plugin is dispatched it never returns: the process image
-// is replaced (unix) or the process exits with the child's exit code
-// (windows), or with 1 if the resolved binary fails to start.
-func MaybeExec(root *cobra.Command) {
-	path, ok := resolve(root, os.Args, env.LoadBoolean(OktetoAlphaPluginEnabledEnvVar), exec.LookPath)
-	if !ok {
-		return
-	}
-	oktetoLog.Infof("dispatching %q to plugin binary %s", os.Args[1], path)
-	if err := execPlugin(path, pluginArgv(path, os.Args), os.Environ()); err != nil {
-		oktetoLog.Fail("failed to execute plugin %s: %s", path, err)
-		os.Exit(1) // skipcq: RVV-A0003
-	}
-}
 
 // resolve decides whether args must be dispatched to a plugin: gate on,
 // args[1] shaped like a command token (non-empty, no leading dash, no path
