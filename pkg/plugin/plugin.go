@@ -73,18 +73,23 @@ func MaybeExec(root *cobra.Command) {
 }
 
 // resolve decides whether args must be dispatched to a plugin: gate on,
-// args[1] shaped like a command token, not a reserved cobra name, not a
-// builtin (root.Find matches names, aliases, and hidden commands), and a
-// matching okteto-<name> binary found in PATH. Any lookPath failure —
-// including exec.ErrDot for matches relative to the current directory,
-// which are deliberately rejected — means "no plugin", so cobra keeps
-// producing its usual unknown-command error.
+// args[1] shaped like a command token (non-empty, no leading dash, no path
+// separator), not a reserved cobra name, not a builtin (root.Find matches
+// names, aliases, and hidden commands), and a matching okteto-<name> binary
+// found in PATH. Any lookPath failure — including exec.ErrDot for matches
+// relative to the current directory, which are deliberately rejected —
+// means "no plugin", so cobra keeps producing its usual unknown-command
+// error.
 func resolve(root *cobra.Command, args []string, enabled bool, lookPath lookPathFn) (string, bool) {
 	if !enabled || len(args) <= 1 {
 		return "", false
 	}
 	name := args[1]
-	if name == "" || strings.HasPrefix(name, "-") {
+	if name == "" || strings.HasPrefix(name, "-") || strings.ContainsAny(name, `/\:`) {
+		// A name with a path separator makes exec.LookPath resolve it
+		// directly instead of searching PATH, which bypasses the ErrDot
+		// rejection below and would run a binary relative to the current
+		// directory. Command tokens never contain separators, so reject them.
 		return "", false
 	}
 	if _, isReserved := reservedNames[name]; isReserved {

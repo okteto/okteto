@@ -116,6 +116,21 @@ func TestResolveNoDispatchGateAndArgsShape(t *testing.T) {
 			args:    []string{"okteto", ""},
 			enabled: true,
 		},
+		{
+			name:    "token with unix path separator",
+			args:    []string{"okteto", "tools/build"},
+			enabled: true,
+		},
+		{
+			name:    "token with windows path separator",
+			args:    []string{"okteto", `..\evil`},
+			enabled: true,
+		},
+		{
+			name:    "token with windows volume separator",
+			args:    []string{"okteto", "C:evil"},
+			enabled: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
