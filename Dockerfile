@@ -1,8 +1,8 @@
 # Base image versions - Centralized version control for easier updates
 # Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
 ARG KUBECTL_VERSION=1.35.7
-ARG HELM3_VERSION=3.21.3
-ARG HELM4_VERSION=4.2.3
+ARG HELM3_VERSION=3.21.4
+ARG HELM4_VERSION=4.2.4
 ARG KUSTOMIZE_VERSION=5.8.1
 # Okteto components
 ARG SYNCTHING_VERSION=2.1.2
