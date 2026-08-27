@@ -373,9 +373,9 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 				devContainerCreationDuration: 5 * time.Second,
 			},
 			expected: baseProps(map[string]any{
-				"result":                                  true,
-				"duration_seconds":                        60,
-				"initial_sync_duration_seconds":           10,
+				"result":                        true,
+				"duration_seconds":              60,
+				"initial_sync_duration_seconds": 10,
 				"dev_container_creation_duration_seconds": 5,
 			}),
 		},
