@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ func newTestRoot() *cobra.Command {
 }
 
 // mustNotBeCalledLookPath returns a lookPathFn that fails the test if the
-// resolver reaches the PATH lookup at all.
+// resolver reaches any PATH lookup at all.
 func mustNotBeCalledLookPath(t *testing.T) lookPathFn {
 	t.Helper()
 	return func(file string) (string, error) {
@@ -46,7 +47,24 @@ func mustNotBeCalledLookPath(t *testing.T) lookPathFn {
 	}
 }
 
-func TestResolveDispatchesToPlugin(t *testing.T) {
+type lookupResult struct {
+	path string
+	err  error
+}
+
+// scriptedLookPath returns a lookPathFn that records every queried file into
+// calls and returns the scripted results in call order.
+func scriptedLookPath(calls *[]string, results ...lookupResult) lookPathFn {
+	i := 0
+	return func(file string) (string, error) {
+		*calls = append(*calls, file)
+		r := results[i]
+		i++
+		return r.path, r.err
+	}
+}
+
+func TestResolveDispatchesFromPATH(t *testing.T) {
 	tests := []struct {
 		name           string
 		expectedLookup string
@@ -70,71 +88,93 @@ func TestResolveDispatchesToPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var lookedUp string
-			lookPath := func(file string) (string, error) {
-				lookedUp = file
-				return "/usr/local/bin/" + file, nil
-			}
+			var calls []string
+			lookPath := scriptedLookPath(&calls, lookupResult{"/usr/local/bin/" + tt.expectedLookup, nil})
 
-			path, ok := resolve(newTestRoot(), tt.args, true, lookPath)
+			path, ok := resolve(newTestRoot(), tt.args, lookPath, t.TempDir())
 
 			require.True(t, ok)
-			require.Equal(t, tt.expectedLookup, lookedUp)
+			require.Equal(t, []string{tt.expectedLookup}, calls)
 			require.Equal(t, "/usr/local/bin/"+tt.expectedLookup, path)
 		})
 	}
 }
 
-func TestResolveNoDispatchGateAndArgsShape(t *testing.T) {
+func TestResolveDispatchesFromPluginDir(t *testing.T) {
+	pluginDir := t.TempDir()
+	dirBinary := filepath.Join(pluginDir, "okteto-launch")
+	var calls []string
+	lookPath := scriptedLookPath(&calls,
+		lookupResult{"", exec.ErrNotFound}, // not on PATH
+		lookupResult{dirBinary, nil},       // found in the plugins dir
+	)
+
+	path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, lookPath, pluginDir)
+
+	require.True(t, ok)
+	require.Equal(t, dirBinary, path)
+	require.Equal(t, []string{"okteto-launch", dirBinary}, calls)
+}
+
+func TestResolvePATHTakesPrecedenceOverPluginDir(t *testing.T) {
+	var calls []string
+	lookPath := scriptedLookPath(&calls, lookupResult{"/usr/local/bin/okteto-launch", nil})
+
+	path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, lookPath, t.TempDir())
+
+	require.True(t, ok)
+	require.Equal(t, "/usr/local/bin/okteto-launch", path)
+	require.Equal(t, []string{"okteto-launch"}, calls)
+}
+
+func TestResolveIgnoresNonAbsolutePluginDir(t *testing.T) {
+	var calls []string
+	lookPath := scriptedLookPath(&calls, lookupResult{"", exec.ErrNotFound})
+
+	path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, lookPath, "relative/plugins")
+
+	require.False(t, ok)
+	require.Empty(t, path)
+	require.Equal(t, []string{"okteto-launch"}, calls)
+}
+
+func TestResolveNoDispatchArgsShape(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    []string
-		enabled bool
+		name string
+		args []string
 	}{
 		{
-			name:    "gate disabled",
-			args:    []string{"okteto", "launch"},
-			enabled: false,
+			name: "bare invocation",
+			args: []string{"okteto"},
 		},
 		{
-			name:    "bare invocation",
-			args:    []string{"okteto"},
-			enabled: true,
+			name: "long flag as first arg",
+			args: []string{"okteto", "--version"},
 		},
 		{
-			name:    "long flag as first arg",
-			args:    []string{"okteto", "--version"},
-			enabled: true,
+			name: "short flag before command token",
+			args: []string{"okteto", "-l", "debug", "launch"},
 		},
 		{
-			name:    "short flag before command token",
-			args:    []string{"okteto", "-l", "debug", "launch"},
-			enabled: true,
+			name: "empty token",
+			args: []string{"okteto", ""},
 		},
 		{
-			name:    "empty token",
-			args:    []string{"okteto", ""},
-			enabled: true,
+			name: "token with unix path separator",
+			args: []string{"okteto", "tools/build"},
 		},
 		{
-			name:    "token with unix path separator",
-			args:    []string{"okteto", "tools/build"},
-			enabled: true,
+			name: "token with windows path separator",
+			args: []string{"okteto", `..\evil`},
 		},
 		{
-			name:    "token with windows path separator",
-			args:    []string{"okteto", `..\evil`},
-			enabled: true,
-		},
-		{
-			name:    "token with windows volume separator",
-			args:    []string{"okteto", "C:evil"},
-			enabled: true,
+			name: "token with windows volume separator",
+			args: []string{"okteto", "C:evil"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, ok := resolve(newTestRoot(), tt.args, tt.enabled, mustNotBeCalledLookPath(t))
+			path, ok := resolve(newTestRoot(), tt.args, mustNotBeCalledLookPath(t), t.TempDir())
 
 			require.False(t, ok)
 			require.Empty(t, path)
@@ -157,7 +197,7 @@ func TestResolveNoDispatchBuiltins(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, ok := resolve(newTestRoot(), tt.args, true, mustNotBeCalledLookPath(t))
+			path, ok := resolve(newTestRoot(), tt.args, mustNotBeCalledLookPath(t), t.TempDir())
 
 			require.False(t, ok)
 			require.Empty(t, path)
@@ -177,7 +217,7 @@ func TestResolveNoDispatchReservedCobraNames(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, ok := resolve(newTestRoot(), tt.args, true, mustNotBeCalledLookPath(t))
+			path, ok := resolve(newTestRoot(), tt.args, mustNotBeCalledLookPath(t), t.TempDir())
 
 			require.False(t, ok)
 			require.Empty(t, path)
@@ -185,14 +225,14 @@ func TestResolveNoDispatchReservedCobraNames(t *testing.T) {
 	}
 }
 
-func TestResolveNoDispatchLookPathFailures(t *testing.T) {
+func TestResolveNoDispatchNotFoundAnywhere(t *testing.T) {
 	tests := []struct {
 		err  error
 		name string
 		path string
 	}{
 		{
-			name: "not found in PATH",
+			name: "not found in PATH nor plugin dir",
 			path: "",
 			err:  exec.ErrNotFound,
 		},
@@ -209,20 +249,20 @@ func TestResolveNoDispatchLookPathFailures(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lookPath := func(string) (string, error) {
-				return tt.path, tt.err
-			}
+			var calls []string
+			lookPath := scriptedLookPath(&calls, lookupResult{tt.path, tt.err}, lookupResult{tt.path, tt.err})
 
-			path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, true, lookPath)
+			path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, lookPath, t.TempDir())
 
 			require.False(t, ok)
 			require.Empty(t, path)
+			require.Len(t, calls, 2)
 		})
 	}
 }
 
 func TestResolveNoDispatchSubcommandArgs(t *testing.T) {
-	path, ok := resolve(newTestRoot(), []string{"okteto", "context", "unknownsub"}, true, mustNotBeCalledLookPath(t))
+	path, ok := resolve(newTestRoot(), []string{"okteto", "context", "unknownsub"}, mustNotBeCalledLookPath(t), t.TempDir())
 
 	require.False(t, ok)
 	require.Empty(t, path)

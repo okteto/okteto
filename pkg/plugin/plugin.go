@@ -13,17 +13,19 @@
 
 // Package plugin implements an alpha kubectl/git-style plugin passthrough:
 // when enabled, an unknown top-level command like `okteto launch` is
-// forwarded to a binary named `okteto-launch` found in PATH. Builtin
-// commands always take precedence, and there are no plugin management
-// commands. Plugin binaries run with the user's privileges and full
-// environment, and no signature or digest verification is performed — the
-// same trust model used by kubectl plugins and git external subcommands.
+// forwarded to a binary named `okteto-launch` found in PATH or in the okteto
+// plugins directory (<okteto-home>/plugins). Builtin commands always take
+// precedence, and there are no plugin management commands. Plugin binaries
+// run with the user's privileges and full environment, and no signature or
+// digest verification is performed — the same trust model used by kubectl
+// plugins and git external subcommands.
 //
 // The passthrough is only available on unix during this alpha: MaybeExec is
 // a no-op on Windows (see plugin_windows.go).
 package plugin
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -53,16 +55,17 @@ var reservedNames = map[string]struct{}{
 
 type lookPathFn func(file string) (string, error)
 
-// resolve decides whether args must be dispatched to a plugin: gate on,
-// args[1] shaped like a command token (non-empty, no leading dash, no path
+// resolve decides whether args must be dispatched to a plugin: args[1]
+// shaped like a command token (non-empty, no leading dash, no path
 // separator), not a reserved cobra name, not a builtin (root.Find matches
 // names, aliases, and hidden commands), and a matching okteto-<name> binary
-// found in PATH. Any lookPath failure — including exec.ErrDot for matches
-// relative to the current directory, which are deliberately rejected —
-// means "no plugin", so cobra keeps producing its usual unknown-command
-// error.
-func resolve(root *cobra.Command, args []string, enabled bool, lookPath lookPathFn) (string, bool) {
-	if !enabled || len(args) <= 1 {
+// found in PATH or, failing that, in pluginDir. Both lookups go through
+// lookPath (exec.LookPath), so a match relative to the current directory
+// (exec.ErrDot) is rejected; pluginDir is used only when absolute, so its
+// candidate path is never cwd-relative. Any lookup failure means "no
+// plugin", so cobra keeps producing its usual unknown-command error.
+func resolve(root *cobra.Command, args []string, lookPath lookPathFn, pluginDir string) (string, bool) {
+	if len(args) <= 1 {
 		return "", false
 	}
 	name := args[1]
@@ -79,11 +82,17 @@ func resolve(root *cobra.Command, args []string, enabled bool, lookPath lookPath
 	if _, _, err := root.Find([]string{name}); err == nil {
 		return "", false
 	}
-	path, err := lookPath(binaryPrefix + name)
-	if err != nil {
-		return "", false
+
+	binary := binaryPrefix + name
+	if path, err := lookPath(binary); err == nil {
+		return path, true
 	}
-	return path, true
+	if filepath.IsAbs(pluginDir) {
+		if path, err := lookPath(filepath.Join(pluginDir, binary)); err == nil {
+			return path, true
+		}
+	}
+	return "", false
 }
 
 // pluginArgv builds the child argv: the resolved path as argv[0], then the
