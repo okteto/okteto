@@ -18,7 +18,5 @@ package plugin
 
 import "github.com/spf13/cobra"
 
-// MaybeExec is a no-op on Windows: the alpha plugin passthrough is only
-// supported on unix, so the CLI keeps its default behavior here and unknown
-// commands still produce cobra's usual error.
+// MaybeExec is a no-op on Windows: the alpha plugin passthrough is unix-only.
 func MaybeExec(_ *cobra.Command) {}

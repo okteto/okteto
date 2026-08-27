@@ -24,9 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newTestRoot mirrors the registration shapes of the real root command:
-// visible commands, aliased commands, hidden commands, and a hidden command
-// with an alias.
+// newTestRoot mirrors the real root's registration shapes: visible, aliased, hidden, hidden+alias.
 func newTestRoot() *cobra.Command {
 	root := &cobra.Command{Use: "okteto"}
 	root.AddCommand(&cobra.Command{Use: "up"})
@@ -37,8 +35,6 @@ func newTestRoot() *cobra.Command {
 	return root
 }
 
-// mustNotBeCalledLookPath returns a lookPathFn that fails the test if the
-// resolver reaches any PATH lookup at all.
 func mustNotBeCalledLookPath(t *testing.T) lookPathFn {
 	t.Helper()
 	return func(file string) (string, error) {
@@ -52,8 +48,7 @@ type lookupResult struct {
 	err  error
 }
 
-// scriptedLookPath returns a lookPathFn that records every queried file into
-// calls and returns the scripted results in call order.
+// scriptedLookPath records each lookup into calls and returns the scripted results in call order.
 func scriptedLookPath(calls *[]string, results ...lookupResult) lookPathFn {
 	i := 0
 	return func(file string) (string, error) {
@@ -116,15 +111,21 @@ func TestResolveDispatchesFromPluginDir(t *testing.T) {
 	require.Equal(t, []string{"okteto-launch", dirBinary}, calls)
 }
 
-func TestResolvePATHTakesPrecedenceOverPluginDir(t *testing.T) {
+func TestResolveRejectsRelativePATHMatch(t *testing.T) {
+	pluginDir := t.TempDir()
 	var calls []string
-	lookPath := scriptedLookPath(&calls, lookupResult{"/usr/local/bin/okteto-launch", nil})
+	// exec.LookPath can return a cwd-relative match with a nil error under
+	// GODEBUG=execerrdot=0; resolve must reject it and keep searching.
+	lookPath := scriptedLookPath(&calls,
+		lookupResult{"okteto-launch", nil}, // relative match on PATH
+		lookupResult{"", exec.ErrNotFound}, // plugins dir miss
+	)
 
-	path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, lookPath, t.TempDir())
+	path, ok := resolve(newTestRoot(), []string{"okteto", "launch"}, lookPath, pluginDir)
 
-	require.True(t, ok)
-	require.Equal(t, "/usr/local/bin/okteto-launch", path)
-	require.Equal(t, []string{"okteto-launch"}, calls)
+	require.False(t, ok)
+	require.Empty(t, path)
+	require.Equal(t, []string{"okteto-launch", filepath.Join(pluginDir, "okteto-launch")}, calls)
 }
 
 func TestResolveIgnoresNonAbsolutePluginDir(t *testing.T) {

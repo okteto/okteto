@@ -28,22 +28,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// pluginsDir is the subdirectory of the okteto home that holds plugin
-// binaries (<okteto-home>/plugins).
 const pluginsDir = "plugins"
 
-// MaybeExec forwards the invocation to an okteto-<name> plugin binary from
-// PATH or the okteto plugins directory when OKTETO_ALPHA_PLUGIN_ENABLED is
-// true and os.Args[1] is not a builtin command. It returns whenever cobra
-// should handle the invocation instead. When a plugin is dispatched it never
-// returns: syscall.Exec replaces the current process image with the plugin
-// binary — the mechanism kubectl and git use, so the plugin owns the TTY,
-// signals, and the exit code — or, if the resolved binary fails to start,
-// the process exits with status 1.
+// MaybeExec execs the okteto-<name> plugin for os.Args[1] when
+// OKTETO_ALPHA_PLUGIN_ENABLED is true and the command is not a builtin; it
+// returns whenever cobra should handle the invocation instead. On dispatch it
+// never returns: syscall.Exec replaces the process — the plugin owns the TTY,
+// signals, and exit code — and a failed exec exits with status 1.
 func MaybeExec(root *cobra.Command) {
 	if !env.LoadBoolean(OktetoAlphaPluginEnabledEnvVar) {
-		// Return before resolving the okteto home directory so a disabled
-		// feature has no side effects (GetOktetoHome creates the folder).
+		// Disabled: return before any work so the feature has zero side effects.
 		return
 	}
 	dir := filepath.Join(config.GetOktetoHome(), pluginsDir)
