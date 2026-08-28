@@ -161,7 +161,7 @@ require (
 )
 
 require (
-	github.com/bluekeyes/go-gitdiff v0.8.1
+	github.com/bluekeyes/go-gitdiff v0.9.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heimdalr/dag v1.5.1
 	github.com/kubeark/jsonschema v0.3.0
