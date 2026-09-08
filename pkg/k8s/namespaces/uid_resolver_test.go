@@ -16,9 +16,9 @@ package namespaces
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -170,6 +170,7 @@ func TestUIDResolver_SingleFlight(t *testing.T) {
 	const n = 8
 	results := make(chan string, n)
 	errs := make(chan error, n)
+	ready := make(chan struct{}, n-1)
 
 	// Leader goroutine — will block inside Provide.
 	go func() {
@@ -182,14 +183,21 @@ func TestUIDResolver_SingleFlight(t *testing.T) {
 	<-provider.started
 	for i := 0; i < n-1; i++ {
 		go func() {
+			ready <- struct{}{}
 			uid, err := r.GetNamespaceUID(context.Background(), "my-ns")
 			results <- uid
 			errs <- err
 		}()
 	}
 
-	// Give the followers time to block in singleflight, then release the leader.
-	time.Sleep(50 * time.Millisecond)
+	// Wait until every follower has started, then yield so they park inside
+	// singleflight before releasing the leader. The callCount()==1 assertion is
+	// the real guarantee: a follower that had not yet collapsed would trigger a
+	// second Provide and fail the test.
+	for i := 0; i < n-1; i++ {
+		<-ready
+	}
+	runtime.Gosched()
 	close(provider.release)
 
 	for i := 0; i < n; i++ {

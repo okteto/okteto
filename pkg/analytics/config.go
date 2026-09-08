@@ -83,9 +83,9 @@ func deprecatedFileExists() bool {
 }
 
 // get returns the analytics config, memoizing the first successful load so later
-// calls skip the disk read. The shared *Analytics is read lock-free, safe only
-// because Enable/Disable/Init never run concurrently with tracking. Disabled
-// fallbacks (missing file / read error) are returned fresh, not cached.
+// calls skip the disk read. Access to the shared *Analytics is guarded by
+// analyticsMu, so concurrent callers are safe. Disabled fallbacks (missing file
+// / read error) are returned fresh, not cached.
 func get() *Analytics {
 	analyticsMu.Lock()
 	defer analyticsMu.Unlock()

@@ -16,9 +16,9 @@ package analytics
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -88,16 +88,27 @@ func TestPreviewResolver_ConcurrentCallsCollapse(t *testing.T) {
 
 	const n = 8
 	results := make(chan bool, n)
+	ready := make(chan struct{}, n-1)
 
 	// Leader blocks inside checker.
 	go func() { results <- r.isWithinPreview(context.Background(), "ns", checker) }()
 
 	<-started
 	for i := 0; i < n-1; i++ {
-		go func() { results <- r.isWithinPreview(context.Background(), "ns", checker) }()
+		go func() {
+			ready <- struct{}{}
+			results <- r.isWithinPreview(context.Background(), "ns", checker)
+		}()
 	}
 
-	time.Sleep(50 * time.Millisecond)
+	// Wait until every follower has started, then yield so they park inside
+	// singleflight before releasing the leader. The calls==1 assertion is the
+	// real guarantee: a follower that had not yet collapsed would start a second
+	// call and fail the test.
+	for i := 0; i < n-1; i++ {
+		<-ready
+	}
+	runtime.Gosched()
 	close(release)
 
 	for i := 0; i < n; i++ {
