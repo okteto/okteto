@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/okteto/okteto/pkg/okteto"
+	"golang.org/x/sync/singleflight"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,6 +27,7 @@ import (
 type UIDResolver struct {
 	provider okteto.K8sClientProvider
 	cache    sync.Map // namespace name → UID string
+	sg       singleflight.Group
 }
 
 // NewUIDResolver creates a UIDResolver backed by the given K8sClientProvider.
@@ -35,28 +37,40 @@ func NewUIDResolver(provider okteto.K8sClientProvider) *UIDResolver {
 
 // GetNamespaceUID returns the UID of the given namespace. The result is cached so
 // sequential calls for the same namespace name do not hit the K8s API. Concurrent
-// callers racing on the same namespace may make redundant lookups; results are consistent.
+// callers of the same namespace collapse into a single lookup via singleflight,
+// governed by the first caller's context; followers share that result and error.
+// Errors are not cached, so a subsequent call retries cleanly.
 func (r *UIDResolver) GetNamespaceUID(ctx context.Context, namespace string) (string, error) {
 	if uid, ok := r.cache.Load(namespace); ok {
 		return uid.(string), nil
 	}
 
-	cfg := okteto.GetContext().Cfg
-	if cfg == nil {
-		return "", fmt.Errorf("k8s config not available")
-	}
+	v, err, _ := r.sg.Do(namespace, func() (any, error) {
+		if uid, ok := r.cache.Load(namespace); ok {
+			return uid.(string), nil
+		}
 
-	k8sClient, _, err := r.provider.Provide(cfg)
+		cfg := okteto.GetContext().Cfg
+		if cfg == nil {
+			return "", fmt.Errorf("k8s config not available")
+		}
+
+		k8sClient, _, err := r.provider.Provide(cfg)
+		if err != nil {
+			return "", fmt.Errorf("providing k8s client: %w", err)
+		}
+
+		ns, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+		if err != nil {
+			return "", fmt.Errorf("getting namespace %q: %w", namespace, err)
+		}
+
+		uid := string(ns.UID)
+		r.cache.Store(namespace, uid)
+		return uid, nil
+	})
 	if err != nil {
-		return "", fmt.Errorf("providing k8s client: %w", err)
+		return "", err
 	}
-
-	ns, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-	if err != nil {
-		return "", fmt.Errorf("getting namespace %q: %w", namespace, err)
-	}
-
-	uid := string(ns.UID)
-	r.cache.Store(namespace, uid)
-	return uid, nil
+	return v.(string), nil
 }
