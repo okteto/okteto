@@ -35,11 +35,9 @@ func NewUIDResolver(provider okteto.K8sClientProvider) *UIDResolver {
 	return &UIDResolver{provider: provider}
 }
 
-// GetNamespaceUID returns the UID of the given namespace. The result is cached so
-// sequential calls for the same namespace name do not hit the K8s API. Concurrent
-// callers of the same namespace collapse into a single lookup via singleflight,
-// governed by the first caller's context; followers share that result and error.
-// Errors are not cached, so a subsequent call retries cleanly.
+// GetNamespaceUID returns the namespace UID, cached by name. Concurrent callers
+// for the same namespace collapse into one lookup via singleflight (governed by
+// the first caller's context). Errors are not cached, so later calls retry.
 func (r *UIDResolver) GetNamespaceUID(ctx context.Context, namespace string) (string, error) {
 	if uid, ok := r.cache.Load(namespace); ok {
 		return uid.(string), nil

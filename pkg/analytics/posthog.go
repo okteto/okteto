@@ -168,10 +168,8 @@ func (b *posthogBackend) enqueue(ctx context.Context, userID, event string, prop
 	}()
 }
 
-// withNamespaceUID returns an enricherFn that resolves the UID of the given
-// namespace and stores it under propKey. Sets an empty string when nsName is
-// empty, the resolver is unavailable, or the lookup fails, so downstream can
-// distinguish "none" from "not resolved".
+// withNamespaceUID returns an enricherFn that resolves nsName's UID into propKey,
+// or "" when nsName is empty, the resolver is nil, or the lookup fails.
 func (b *posthogBackend) withNamespaceUID(propKey, nsName string) enricherFn {
 	return func(ctx context.Context, props posthog.Properties) {
 		if nsName == "" || b.nsResolver == nil {
@@ -282,8 +280,7 @@ func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, str
 		return false
 	}
 	// Memoized per namespace so the preview API check runs at most once per
-	// session, even though it is evaluated from several command call sites
-	// (up wake, deploy, pipeline) during a single okteto up.
+	// session across the up/deploy/pipeline call sites.
 	return defaultPreviewResolver.isWithinPreview(ctx, ns, checkPreview)
 }
 

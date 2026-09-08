@@ -20,22 +20,18 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// previewResolver memoizes, per namespace, whether the namespace is a preview
-// environment, so the analytics preview check hits the Okteto API at most once
-// per session even though it is evaluated from several command call sites
-// (up wake, deploy, pipeline) during a single okteto up.
+// previewResolver memoizes, per namespace, whether it is a preview environment,
+// so the analytics preview check hits the Okteto API at most once per session
+// across the up/deploy/pipeline call sites.
 type previewResolver struct {
 	cache sync.Map // namespace name → bool (is within preview)
 	sg    singleflight.Group
 }
 
-// isWithinPreview returns whether ns is a preview environment, evaluated via
-// checkPreview and cached by namespace name. Unlike UIDResolver, the boolean
-// result IS cached even when checkPreview reports "not a preview" (a non-nil
-// error), because that is the common case and caching it is what deduplicates
-// the dominant path. Errors are collapsed to false (best-effort analytics) and
-// not retried; concurrent callers of the same namespace collapse into a single
-// checkPreview call via singleflight.
+// isWithinPreview reports whether ns is a preview, via checkPreview, cached by
+// namespace. The bool is cached even for "not a preview" (a non-nil error) — the
+// common case — so errors collapse to false and are not retried. Concurrent
+// callers for the same namespace collapse into one checkPreview via singleflight.
 func (r *previewResolver) isWithinPreview(ctx context.Context, ns string, checkPreview func(context.Context, string) error) bool {
 	if v, ok := r.cache.Load(ns); ok {
 		return v.(bool)
@@ -52,7 +48,6 @@ func (r *previewResolver) isWithinPreview(ctx context.Context, ns string, checkP
 	return v.(bool)
 }
 
-// defaultPreviewResolver is the process-wide resolver shared by IsWithinPreview
-// across all command call sites, mirroring how currentAnalytics is a package
-// singleton in config.go.
+// defaultPreviewResolver is the process-wide resolver shared by IsWithinPreview,
+// mirroring the currentAnalytics package singleton in config.go.
 var defaultPreviewResolver = &previewResolver{}

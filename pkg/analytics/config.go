@@ -82,13 +82,10 @@ func deprecatedFileExists() bool {
 	return false
 }
 
-// get returns the analytics configuration, memoizing the first successful load
-// into currentAnalytics so subsequent calls do not re-read the file from disk.
-// The returned *Analytics is shared and its fields (Enabled, MachineID) are read
-// lock-free by callers; this is safe only because Enable/Disable/Init never run
-// concurrently with the tracking goroutines that read them. The disabled
-// fallbacks (file missing / read or unmarshal error) are returned fresh and are
-// intentionally not cached, so a later successful load still takes effect.
+// get returns the analytics config, memoizing the first successful load so later
+// calls skip the disk read. The shared *Analytics is read lock-free, safe only
+// because Enable/Disable/Init never run concurrently with tracking. Disabled
+// fallbacks (missing file / read error) are returned fresh, not cached.
 func get() *Analytics {
 	analyticsMu.Lock()
 	defer analyticsMu.Unlock()
@@ -151,10 +148,8 @@ func (a *Analytics) save() error {
 	return nil
 }
 
-// Disable disables analytics.
-// It mutates the shared memoized *Analytics returned by get(); this is safe only
-// because Disable/Enable/Init never run concurrently with tracking goroutines. If
-// that ever changes, gate Enabled behind analyticsMu or an atomic snapshot.
+// Disable disables analytics. It mutates the shared *Analytics from get(), safe
+// only because Enable/Disable/Init never run concurrently with tracking.
 func Disable() error {
 	a := get()
 	a.Enabled = false
@@ -162,9 +157,8 @@ func Disable() error {
 	return a.save()
 }
 
-// Enable enables analytics.
-// Like Disable, it mutates the shared memoized *Analytics from get(); safe only
-// because Enable/Disable/Init never run concurrently with tracking goroutines.
+// Enable enables analytics. Like Disable, it mutates the shared *Analytics from
+// get() (see Disable for the concurrency invariant).
 func Enable() error {
 	a := get()
 	a.Enabled = true
