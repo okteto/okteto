@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/okteto/okteto/pkg/config"
@@ -28,6 +29,9 @@ var (
 	EnterpriseContext = "Enterprise"
 	KubernetesContext = "Kubernetes"
 	currentAnalytics  *Analytics
+	// analyticsMu guards currentAnalytics so the memoized load in get() and the
+	// write in save() never race.
+	analyticsMu sync.Mutex
 )
 
 // Analytics contains the analytics configuration
@@ -78,7 +82,17 @@ func deprecatedFileExists() bool {
 	return false
 }
 
+// get returns the analytics configuration, memoizing the first successful load
+// into currentAnalytics so subsequent calls do not re-read the file from disk.
+// The returned *Analytics is shared and its fields (Enabled, MachineID) are read
+// lock-free by callers; this is safe only because Enable/Disable/Init never run
+// concurrently with the tracking goroutines that read them. The disabled
+// fallbacks (file missing / read or unmarshal error) are returned fresh and are
+// intentionally not cached, so a later successful load still takes effect.
 func get() *Analytics {
+	analyticsMu.Lock()
+	defer analyticsMu.Unlock()
+
 	if currentAnalytics != nil {
 		return currentAnalytics
 	}
@@ -99,13 +113,16 @@ func get() *Analytics {
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
 
-	return result
+	currentAnalytics = result
+	return currentAnalytics
 }
 
 func (a *Analytics) save() error {
+	analyticsMu.Lock()
 	if currentAnalytics == nil {
 		currentAnalytics = a
 	}
+	analyticsMu.Unlock()
 	if a.MachineID == "" || a.MachineID == "na" {
 		a.MachineID = generateMachineID()
 	}
@@ -134,7 +151,10 @@ func (a *Analytics) save() error {
 	return nil
 }
 
-// Disable disables analytics
+// Disable disables analytics.
+// It mutates the shared memoized *Analytics returned by get(); this is safe only
+// because Disable/Enable/Init never run concurrently with tracking goroutines. If
+// that ever changes, gate Enabled behind analyticsMu or an atomic snapshot.
 func Disable() error {
 	a := get()
 	a.Enabled = false
@@ -142,7 +162,9 @@ func Disable() error {
 	return a.save()
 }
 
-// Enable enables analytics
+// Enable enables analytics.
+// Like Disable, it mutates the shared memoized *Analytics from get(); safe only
+// because Enable/Disable/Init never run concurrently with tracking goroutines.
 func Enable() error {
 	a := get()
 	a.Enabled = true

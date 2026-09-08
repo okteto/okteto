@@ -101,6 +101,7 @@ func newPostHogBackend() *posthogBackend {
 func commonPostHogProperties() posthog.Properties {
 	ctx := okteto.GetContext()
 	agent := getAgent()
+	ci := isCI()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
 		"customer_name": ctx.CompanyName,
@@ -118,8 +119,8 @@ func commonPostHogProperties() posthog.Properties {
 		"measurement_source": "cli",
 		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
-		"is_ci":              isCI(),
-		"is_automation":      isCI() || agent != "",
+		"is_ci":              ci,
+		"is_automation":      ci || agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
