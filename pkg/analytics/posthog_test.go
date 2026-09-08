@@ -1140,3 +1140,12 @@ func TestPostHogBackend_TrackWakeTriggered_HappyPath(t *testing.T) {
 	require.Equal(t, "cli", ev.Properties["measurement_source"])
 	require.Equal(t, "user-123", ev.Properties["user_id"])
 }
+
+func TestPostHogBackend_withNamespaceUID_writesGivenKey(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "uid-9"}}
+
+	props := posthog.Properties{}
+	b.withNamespaceUID("custom_key", "some-ns")(context.Background(), props)
+
+	require.Equal(t, "uid-9", props["custom_key"])
+}
