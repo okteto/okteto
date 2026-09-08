@@ -22,7 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v6/plumbing/transport"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/repository"
@@ -89,7 +89,7 @@ func IsOktetoRepo() bool {
 }
 
 func isOktetoRepoFromURL(repoUrl string) bool {
-	endpoint, err := transport.NewEndpoint(repoUrl)
+	endpoint, err := transport.ParseURL(repoUrl)
 	if err != nil {
 		oktetoLog.Infof("failed to get endpoint in isOktetoRepoFromURL: %v", err)
 		return false
