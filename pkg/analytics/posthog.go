@@ -281,7 +281,10 @@ func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, str
 	if ns == "" {
 		return false
 	}
-	return checkPreview(ctx, ns) == nil
+	// Memoized per namespace so the preview API check runs at most once per
+	// session, even though it is evaluated from several command call sites
+	// (up wake, deploy, pipeline) during a single okteto up.
+	return defaultPreviewResolver.isWithinPreview(ctx, ns, checkPreview)
 }
 
 // TrackUp sends an up event to PostHog.

@@ -418,6 +418,7 @@ func TestIsWithinPreview_FalseWhenEnvOtherValue(t *testing.T) {
 }
 
 func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
+	resetPreviewResolver(t)
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
@@ -433,6 +434,7 @@ func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
 }
 
 func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
+	resetPreviewResolver(t)
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
