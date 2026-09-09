@@ -25,9 +25,9 @@ import (
 	"time"
 
 	giturls "github.com/chainguard-dev/git-urls"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -455,7 +455,7 @@ type oktetoGitWorktree struct {
 }
 
 func (ogr oktetoGitWorktree) GetRoot() string {
-	return ogr.worktree.Filesystem.Root()
+	return ogr.worktree.Filesystem().Root()
 }
 
 type oktetoGitStatus struct {
@@ -604,7 +604,7 @@ func FindTopLevelGitDir(workingDir string) (string, error) {
 		return "", fmt.Errorf("%w: failed to find top level git repo: %w", errFindingRepo, err)
 	}
 
-	return worktree.Filesystem.Root(), nil
+	return worktree.Filesystem().Root(), nil
 }
 
 // FindTopLevelGitRepoFromPath returns the git repository for the given absolute path taking into parent folders

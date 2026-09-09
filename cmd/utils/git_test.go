@@ -20,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,6 +31,18 @@ func Test_getBranch(t *testing.T) {
 
 	r, err := git.PlainInit(dir, false)
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Disable commit signing at the repo level so the test does not depend on
+	// the machine's global git config. go-git v6 honors commit.gpgSign and
+	// fails the commit below when signing is enabled but no signer is set up.
+	cfg, err := r.Config()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Raw.Section("commit").SetOption("gpgsign", "false")
+	if err := r.SetConfig(cfg); err != nil {
 		t.Fatal(err)
 	}
 
