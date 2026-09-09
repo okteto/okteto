@@ -24,6 +24,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsClean(t *testing.T) {
@@ -579,4 +580,28 @@ func Test_gitRepoController_sanitiseURL(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// TestFindTopLevelGitRepoFromPath_worktreeConfig reproduces the failure seen
+// when running okteto from a repository that uses git worktrees. Such
+// repositories set the "extensions.worktreeConfig" option in their git config,
+// and go-git must be able to open them without erroring out with
+// "core.repositoryformatversion does not support extension: worktreeconfig".
+func TestFindTopLevelGitRepoFromPath_worktreeConfig(t *testing.T) {
+	dir := t.TempDir()
+
+	_, err := git.PlainInit(dir, false)
+	require.NoError(t, err)
+
+	// Simulate a repository that uses git worktrees, which sets the
+	// worktreeConfig extension in the repository's git config.
+	cfgPath := filepath.Join(dir, ".git", "config")
+	cfg, err := os.ReadFile(cfgPath)
+	require.NoError(t, err)
+	cfg = append(cfg, []byte("[extensions]\n\tworktreeconfig = true\n")...)
+	require.NoError(t, os.WriteFile(cfgPath, cfg, 0600))
+
+	repo, err := FindTopLevelGitRepoFromPath(dir)
+	require.NoError(t, err)
+	require.NotNil(t, repo)
 }
