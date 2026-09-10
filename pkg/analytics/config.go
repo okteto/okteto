@@ -148,12 +148,13 @@ func (a *Analytics) save() error {
 	return nil
 }
 
-// Disable disables analytics. It mutates the shared *Analytics from get(), safe
-// only because Enable/Disable/Init never run concurrently with tracking.
+// Disable disables analytics. trackDisable must run before flipping Enabled:
+// get() returns the shared *Analytics that the tracking path also reads, so
+// disabling first would make analyticsEnabled() short-circuit and drop the event.
 func Disable() error {
 	a := get()
-	a.Enabled = false
 	trackDisable(true)
+	a.Enabled = false
 	return a.save()
 }
 
