@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,7 +51,7 @@ func TestPreviewResolver_CachesFalse(t *testing.T) {
 	var calls int32
 	checker := func(context.Context, string) error {
 		atomic.AddInt32(&calls, 1)
-		return errors.New("not a preview")
+		return oktetoErrors.ErrNotFound
 	}
 
 	require.False(t, r.isWithinPreview(context.Background(), "ns", checker))
@@ -58,10 +59,24 @@ func TestPreviewResolver_CachesFalse(t *testing.T) {
 	require.Equal(t, int32(1), atomic.LoadInt32(&calls))
 }
 
+func TestPreviewResolver_DoesNotCacheTransientError(t *testing.T) {
+	r := &previewResolver{}
+	var calls int32
+	// A transient error (not a not-found) must not be cached: a later call retries.
+	checker := func(context.Context, string) error {
+		atomic.AddInt32(&calls, 1)
+		return errors.New("server temporarily unavailable, please try again")
+	}
+
+	require.False(t, r.isWithinPreview(context.Background(), "ns", checker))
+	require.False(t, r.isWithinPreview(context.Background(), "ns", checker))
+	require.Equal(t, int32(2), atomic.LoadInt32(&calls))
+}
+
 func TestPreviewResolver_DifferentNamespacesDoNotCollide(t *testing.T) {
 	r := &previewResolver{}
 	yes := func(context.Context, string) error { return nil }
-	no := func(context.Context, string) error { return errors.New("not a preview") }
+	no := func(context.Context, string) error { return oktetoErrors.ErrNotFound }
 
 	require.True(t, r.isWithinPreview(context.Background(), "preview", yes))
 	require.False(t, r.isWithinPreview(context.Background(), "regular", no))
@@ -83,7 +98,7 @@ func TestPreviewResolver_ConcurrentCallsCollapse(t *testing.T) {
 			close(started)
 			<-release
 		}
-		return errors.New("not a preview")
+		return oktetoErrors.ErrNotFound
 	}
 
 	const n = 8

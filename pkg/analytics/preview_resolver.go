@@ -17,6 +17,7 @@ import (
 	"context"
 	"sync"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -29,9 +30,11 @@ type previewResolver struct {
 }
 
 // isWithinPreview reports whether ns is a preview, via checkPreview, cached by
-// namespace. The bool is cached even for "not a preview" (a non-nil error) — the
-// common case — so errors collapse to false and are not retried. Concurrent
-// callers for the same namespace collapse into one checkPreview via singleflight.
+// namespace. Only definitive outcomes are cached: a preview (nil error) or a
+// not-found error ("not a preview", the common case). A transient error (e.g. a
+// timeout) returns false but is NOT cached, so a later call can retry instead of
+// being stuck with a poisoned false. Concurrent callers for the same namespace
+// collapse into one checkPreview via singleflight.
 func (r *previewResolver) isWithinPreview(ctx context.Context, ns string, checkPreview func(context.Context, string) error) bool {
 	if v, ok := r.cache.Load(ns); ok {
 		return v.(bool)
@@ -41,7 +44,12 @@ func (r *previewResolver) isWithinPreview(ctx context.Context, ns string, checkP
 		if v, ok := r.cache.Load(ns); ok {
 			return v.(bool), nil
 		}
-		result := checkPreview(ctx, ns) == nil
+		err := checkPreview(ctx, ns)
+		if err != nil && !oktetoErrors.IsNotFound(err) {
+			// Transient error: don't cache it, allow a later call to retry.
+			return false, nil
+		}
+		result := err == nil
 		r.cache.Store(ns, result)
 		return result, nil
 	})
