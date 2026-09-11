@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/okteto/okteto/pkg/config"
@@ -28,6 +29,9 @@ var (
 	EnterpriseContext = "Enterprise"
 	KubernetesContext = "Kubernetes"
 	currentAnalytics  *Analytics
+	// analyticsMu guards currentAnalytics so the memoized load in get() and the
+	// write in save() never race.
+	analyticsMu sync.Mutex
 )
 
 // Analytics contains the analytics configuration
@@ -78,7 +82,14 @@ func deprecatedFileExists() bool {
 	return false
 }
 
+// get returns the analytics config, memoizing the first successful load so later
+// calls skip the disk read. Access to the shared *Analytics is guarded by
+// analyticsMu, so concurrent callers are safe. Disabled fallbacks (missing file
+// / read error) are returned fresh, not cached.
 func get() *Analytics {
+	analyticsMu.Lock()
+	defer analyticsMu.Unlock()
+
 	if currentAnalytics != nil {
 		return currentAnalytics
 	}
@@ -99,13 +110,16 @@ func get() *Analytics {
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
 
-	return result
+	currentAnalytics = result
+	return currentAnalytics
 }
 
 func (a *Analytics) save() error {
+	analyticsMu.Lock()
 	if currentAnalytics == nil {
 		currentAnalytics = a
 	}
+	analyticsMu.Unlock()
 	if a.MachineID == "" || a.MachineID == "na" {
 		a.MachineID = generateMachineID()
 	}
@@ -134,15 +148,18 @@ func (a *Analytics) save() error {
 	return nil
 }
 
-// Disable disables analytics
+// Disable disables analytics. trackDisable must run before flipping Enabled:
+// get() returns the shared *Analytics that the tracking path also reads, so
+// disabling first would make analyticsEnabled() short-circuit and drop the event.
 func Disable() error {
 	a := get()
-	a.Enabled = false
 	trackDisable(true)
+	a.Enabled = false
 	return a.save()
 }
 
-// Enable enables analytics
+// Enable enables analytics. Like Disable, it mutates the shared *Analytics from
+// get() (see Disable for the concurrency invariant).
 func Enable() error {
 	a := get()
 	a.Enabled = true

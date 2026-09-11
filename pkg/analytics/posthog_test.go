@@ -418,6 +418,7 @@ func TestIsWithinPreview_FalseWhenEnvOtherValue(t *testing.T) {
 }
 
 func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
+	resetPreviewResolver(t)
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
@@ -433,6 +434,7 @@ func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
 }
 
 func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
+	resetPreviewResolver(t)
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
@@ -1139,4 +1141,13 @@ func TestPostHogBackend_TrackWakeTriggered_HappyPath(t *testing.T) {
 	require.Equal(t, "ACME Corp", ev.Properties["customer_name"])
 	require.Equal(t, "cli", ev.Properties["measurement_source"])
 	require.Equal(t, "user-123", ev.Properties["user_id"])
+}
+
+func TestPostHogBackend_withNamespaceUID_writesGivenKey(t *testing.T) {
+	b := &posthogBackend{nsResolver: &mockNamespaceUIDResolver{uid: "uid-9"}}
+
+	props := posthog.Properties{}
+	b.withNamespaceUID("custom_key", "some-ns")(context.Background(), props)
+
+	require.Equal(t, "uid-9", props["custom_key"])
 }

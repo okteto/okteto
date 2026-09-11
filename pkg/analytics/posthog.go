@@ -101,6 +101,7 @@ func newPostHogBackend() *posthogBackend {
 func commonPostHogProperties() posthog.Properties {
 	ctx := okteto.GetContext()
 	agent := getAgent()
+	ci := isCI()
 	props := posthog.Properties{
 		// Common (all PostHog sources)
 		"customer_name": ctx.CompanyName,
@@ -118,8 +119,8 @@ func commonPostHogProperties() posthog.Properties {
 		"measurement_source": "cli",
 		"trigger_source":     config.GetDeployOrigin(),
 		"is_agent":           agent != "",
-		"is_ci":              isCI(),
-		"is_automation":      isCI() || agent != "",
+		"is_ci":              ci,
+		"is_automation":      ci || agent != "",
 	}
 	if agent != "" {
 		props["agent_type"] = agent
@@ -167,45 +168,33 @@ func (b *posthogBackend) enqueue(ctx context.Context, userID, event string, prop
 	}()
 }
 
-// withNamespace returns an enricherFn that resolves the namespace UID and sets
-// it as the "namespace" property. Sets an empty string when namespace is empty,
-// the resolver is unavailable, or the lookup fails, so downstream can distinguish
-// "no namespace" from "namespace not resolved".
-func (b *posthogBackend) withNamespace(namespace string) enricherFn {
+// withNamespaceUID returns an enricherFn that resolves nsName's UID into propKey,
+// or "" when nsName is empty, the resolver is nil, or the lookup fails.
+func (b *posthogBackend) withNamespaceUID(propKey, nsName string) enricherFn {
 	return func(ctx context.Context, props posthog.Properties) {
-		if namespace == "" || b.nsResolver == nil {
-			props["namespace"] = ""
+		if nsName == "" || b.nsResolver == nil {
+			props[propKey] = ""
 			return
 		}
 		fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
-		if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, namespace); err != nil {
-			oktetoLog.Infof("analytics: failed to get namespace UID: %s", err)
-			props["namespace"] = ""
+		if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, nsName); err != nil {
+			oktetoLog.Infof("analytics: failed to get %s UID: %s", propKey, err)
+			props[propKey] = ""
 		} else {
-			props["namespace"] = uid
+			props[propKey] = uid
 		}
 	}
 }
 
-// withPreview returns an enricherFn that resolves the preview namespace UID and sets
-// it as the "preview" property. Sets an empty string when preview is empty,
-// the resolver is unavailable, or the lookup fails.
+// withNamespace resolves the namespace UID into the "namespace" property.
+func (b *posthogBackend) withNamespace(namespace string) enricherFn {
+	return b.withNamespaceUID("namespace", namespace)
+}
+
+// withPreview resolves the preview namespace UID into the "preview" property.
 func (b *posthogBackend) withPreview(previewName string) enricherFn {
-	return func(ctx context.Context, props posthog.Properties) {
-		if previewName == "" || b.nsResolver == nil {
-			props["preview"] = ""
-			return
-		}
-		fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		if uid, err := b.nsResolver.GetNamespaceUID(fetchCtx, previewName); err != nil {
-			oktetoLog.Infof("analytics: failed to get preview namespace UID: %s", err)
-			props["preview"] = ""
-		} else {
-			props["preview"] = uid
-		}
-	}
+	return b.withNamespaceUID("preview", previewName)
 }
 
 // TrackImageBuild sends an image_build event to PostHog.
@@ -290,7 +279,9 @@ func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, str
 	if ns == "" {
 		return false
 	}
-	return checkPreview(ctx, ns) == nil
+	// Memoized per namespace so the preview API check runs at most once per
+	// session across the up/deploy/pipeline call sites.
+	return defaultPreviewResolver.isWithinPreview(ctx, ns, checkPreview)
 }
 
 // TrackUp sends an up event to PostHog.

@@ -14,8 +14,10 @@
 package analytics
 
 import (
+	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
@@ -163,4 +165,45 @@ func TestAnalyticsEnabled(t *testing.T) {
 			require.Equal(t, tt.expected, analyticsEnabled())
 		})
 	}
+}
+
+func TestGet_MemoizesAfterFirstLoad(t *testing.T) {
+	prev := currentAnalytics
+	defer func() { currentAnalytics = prev }()
+
+	dir := t.TempDir()
+	t.Setenv(constants.OktetoFolderEnvVar, dir)
+	currentAnalytics = nil
+
+	require.NoError(t, os.WriteFile(config.GetAnalyticsPath(),
+		[]byte(`{"machineID":"machine-1","enabled":true}`), 0600))
+
+	first := get()
+	require.Equal(t, "machine-1", first.MachineID)
+
+	// Overwrite the file on disk; a memoized get() must NOT re-read it.
+	require.NoError(t, os.WriteFile(config.GetAnalyticsPath(),
+		[]byte(`{"machineID":"machine-2","enabled":true}`), 0600))
+
+	second := get()
+	require.Same(t, first, second)
+	require.Equal(t, "machine-1", second.MachineID)
+}
+
+func TestGet_DoesNotCacheDisabledFallback(t *testing.T) {
+	prev := currentAnalytics
+	defer func() { currentAnalytics = prev }()
+
+	dir := t.TempDir()
+	t.Setenv(constants.OktetoFolderEnvVar, dir)
+	currentAnalytics = nil
+
+	// No file on disk → disabled fallback, must NOT populate the cache.
+	require.False(t, get().Enabled)
+	require.Nil(t, currentAnalytics)
+
+	// A later successful load must still take effect (cache was not poisoned).
+	require.NoError(t, os.WriteFile(config.GetAnalyticsPath(),
+		[]byte(`{"machineID":"m","enabled":true}`), 0600))
+	require.True(t, get().Enabled)
 }
