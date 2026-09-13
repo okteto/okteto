@@ -104,3 +104,51 @@ func Test_Var_MarshalYAML(t *testing.T) {
 		})
 	}
 }
+
+func Test_Parse(t *testing.T) {
+	tests := []struct {
+		name        string
+		vars        []string
+		expected    []Var
+		expectedErr bool
+	}{
+		{
+			name: "valid variables",
+			vars: []string{"FOO=bar", "BAZ=qux"},
+			expected: []Var{
+				{Name: "FOO", Value: "bar"},
+				{Name: "BAZ", Value: "qux"},
+			},
+		},
+		{
+			name: "trims key whitespace",
+			vars: []string{"  FOO  =bar"},
+			expected: []Var{
+				{Name: "FOO", Value: "bar"},
+			},
+		},
+		{
+			name:        "invalid syntax missing equals",
+			vars:        []string{"INVALID"},
+			expectedErr: true,
+		},
+		{
+			name:        "empty key",
+			vars:        []string{"=bar"},
+			expectedErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := Parse(tt.vars)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, res)
+			}
+		})
+	}
+}
+
