@@ -70,7 +70,11 @@ func Parse(variables []string) ([]Var, error) {
 		if len(kv) != variableFormatParts {
 			return nil, fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}
-		result = append(result, Var{Name: kv[0], Value: kv[1]})
+		key := strings.TrimSpace(kv[0])
+		if key == "" {
+			return nil, fmt.Errorf("invalid variable value '%s': KEY cannot be empty", v)
+		}
+		result = append(result, Var{Name: key, Value: kv[1]})
 	}
 	return result, nil
 }
