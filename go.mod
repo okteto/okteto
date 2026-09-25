@@ -121,7 +121,7 @@ require (
 	github.com/stretchr/testify v1.12.0
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
-	github.com/tonistiigi/fsutil v0.0.0-20260609091201-0257b3308df4
+	github.com/tonistiigi/fsutil v0.0.0-20260819142231-83cac42c1c52
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea
 	github.com/tonistiigi/vt100 v0.0.0-20240514184818-90bafcd6abab // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
