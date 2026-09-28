@@ -48,7 +48,62 @@ const (
 	// OciMediaTypesEnvVar controls whether BuildKit uses OCI media types for image exports.
 	// Defaults to true (OCI media types). Set to false for legacy Docker media types.
 	OciMediaTypesEnvVar = "OKTETO_BUILD_OCI_MEDIATYPES"
+
+	// BuildCompressionEnvVar sets the compression type of the exported image layers
+	// (gzip, estargz, zstd, uncompressed). Unset means BuildKit's default.
+	BuildCompressionEnvVar = "OKTETO_BUILD_COMPRESSION"
+
+	// BuildCompressionLevelEnvVar sets the compression level of the exported image layers
+	// (0-22 for zstd, 0-9 for gzip). Unset means BuildKit's default.
+	BuildCompressionLevelEnvVar = "OKTETO_BUILD_COMPRESSION_LEVEL"
+
+	// BuildForceCompressionEnvVar forces recompression of already compressed layers.
+	// Unset means BuildKit's default.
+	BuildForceCompressionEnvVar = "OKTETO_BUILD_FORCE_COMPRESSION"
+
+	// AlphaBuildCompressionEnvVar is the legacy name of BuildCompressionEnvVar.
+	//
+	// Deprecated: use BuildCompressionEnvVar instead.
+	AlphaBuildCompressionEnvVar = "OKTETO_ALPHA_BUILD_COMPRESSION"
+
+	// AlphaBuildCompressionLevelEnvVar is the legacy name of BuildCompressionLevelEnvVar.
+	//
+	// Deprecated: use BuildCompressionLevelEnvVar instead.
+	AlphaBuildCompressionLevelEnvVar = "OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL"
+
+	// AlphaBuildForceCompressionEnvVar is the legacy name of BuildForceCompressionEnvVar.
+	//
+	// Deprecated: use BuildForceCompressionEnvVar instead.
+	AlphaBuildForceCompressionEnvVar = "OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"
 )
+
+// compressionEnvVar maps a BuildKit image exporter attribute to the env var that sets it
+// and its deprecated alias
+type compressionEnvVar struct {
+	name           string
+	deprecatedName string
+	attr           string
+}
+
+var compressionEnvVars = []compressionEnvVar{
+	{name: BuildCompressionEnvVar, deprecatedName: AlphaBuildCompressionEnvVar, attr: "compression"},
+	{name: BuildCompressionLevelEnvVar, deprecatedName: AlphaBuildCompressionLevelEnvVar, attr: "compression-level"},
+	{name: BuildForceCompressionEnvVar, deprecatedName: AlphaBuildForceCompressionEnvVar, attr: "force-compression"},
+}
+
+// EnvVarAlias returns the other name of an env var that has a deprecated alias
+// (the deprecated name for a current one and vice versa), or "" if it has no alias
+func EnvVarAlias(name string) string {
+	for _, v := range compressionEnvVars {
+		switch name {
+		case v.name:
+			return v.deprecatedName
+		case v.deprecatedName:
+			return v.name
+		}
+	}
+	return ""
+}
 
 // SolveOptBuilder is a builder for SolveOpt
 type SolveOptBuilder struct {
@@ -250,31 +305,10 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 	}
 
 	if buildOptions.Tag != "" {
-		exportAttrs := map[string]string{
-			"name": buildOptions.Tag,
-			"push": "true",
-		}
-
-		// Alpha feature: allow customizing build compression via environment variables
-		// OKTETO_ALPHA_BUILD_COMPRESSION: compression type (gzip, estargz, zstd, uncompressed)
-		// OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL: compression level (0-22 for zstd, 0-9 for gzip)
-		// OKTETO_ALPHA_BUILD_FORCE_COMPRESSION: force recompression of already compressed layers
-		if compression := os.Getenv("OKTETO_ALPHA_BUILD_COMPRESSION"); compression != "" {
-			exportAttrs["compression"] = compression
-		}
-		if compressionLevel := os.Getenv("OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL"); compressionLevel != "" {
-			exportAttrs["compression-level"] = compressionLevel
-		}
-		if forceCompression := os.Getenv("OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"); forceCompression != "" {
-			exportAttrs["force-compression"] = forceCompression
-		}
-
-		exportAttrs["oci-mediatypes"] = fmt.Sprintf("%t", env.LoadBooleanOrDefault(OciMediaTypesEnvVar, true))
-
 		opt.Exports = []client.ExportEntry{
 			{
 				Type:  "image",
-				Attrs: exportAttrs,
+				Attrs: b.imageExportAttrs(buildOptions.Tag),
 			},
 		}
 	}
@@ -314,6 +348,37 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 	}
 
 	return opt, nil
+}
+
+// imageExportAttrs returns the attributes of the BuildKit image exporter to push the given tag
+func (b *SolveOptBuilder) imageExportAttrs(tag string) map[string]string {
+	exportAttrs := map[string]string{
+		"name": tag,
+		"push": "true",
+	}
+
+	// Values are passed as-is: BuildKit validates them
+	for _, v := range compressionEnvVars {
+		if value := b.getCompressionEnv(v); value != "" {
+			exportAttrs[v.attr] = value
+		}
+	}
+
+	exportAttrs["oci-mediatypes"] = fmt.Sprintf("%t", env.LoadBooleanOrDefault(OciMediaTypesEnvVar, true))
+	return exportAttrs
+}
+
+// getCompressionEnv returns the value of the env var, falling back to its deprecated alias
+func (b *SolveOptBuilder) getCompressionEnv(v compressionEnvVar) string {
+	if value := os.Getenv(v.name); value != "" {
+		return value
+	}
+	value := os.Getenv(v.deprecatedName)
+	if value != "" {
+		// Logged at debug level: older Okteto platforms only send the deprecated name
+		b.logger.Logger().Infof("%s is deprecated, please use %s instead", v.deprecatedName, v.name)
+	}
+	return value
 }
 
 // validate validates the build options

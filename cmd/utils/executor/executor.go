@@ -17,7 +17,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
+	"strings"
 
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -73,6 +76,26 @@ func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
 	}
 }
 
+// withAliases adds the alias of each env var that has one, with the same value, unless the alias is
+// also set. Otherwise a command variable (e.g. OKTETO_ALPHA_BUILD_COMPRESSION) would be shadowed by
+// an inherited alias with higher precedence (e.g. OKTETO_BUILD_COMPRESSION exported from the platform)
+func withAliases(env []string) []string {
+	names := make(map[string]bool, len(env))
+	for _, kv := range env {
+		name, _, _ := strings.Cut(kv, "=")
+		names[name] = true
+	}
+
+	result := slices.Clone(env)
+	for _, kv := range env {
+		name, value, _ := strings.Cut(kv, "=")
+		if alias := buildkit.EnvVarAlias(name); alias != "" && !names[alias] {
+			result = append(result, alias+"="+value)
+		}
+	}
+	return result
+}
+
 // Execute executes the specified command adding `env` to the execution environment
 func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
@@ -80,7 +103,7 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 	if e.runWithoutBash {
 		cmd = exec.Command(cmdInfo.Command)
 	}
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(os.Environ(), withAliases(env)...)
 
 	if e.dir != "" {
 		cmd.Dir = e.dir
