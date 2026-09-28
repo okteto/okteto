@@ -187,6 +187,54 @@ During initial rollout this read `LoadBooleanOrDefault(..., false)`. The default
 
 ---
 
+## Renaming a Flag — Deprecated Aliases
+
+When an env var is renamed (e.g. an `OKTETO_ALPHA_*` feature is promoted), keep the old name working as a deprecated alias. Never break the old name in the same release.
+
+### Rules
+
+- **New name wins when non-empty**; otherwise fall back to the deprecated name; otherwise use the default (or omit the setting).
+- An empty new name (`NEW=""`) does **not** mask a non-empty deprecated name.
+- Define both constants; mark the old one with a Go `Deprecated:` paragraph so linters flag new usages:
+
+```go
+// BuildCompressionEnvVar sets the compression type of the exported image layers.
+BuildCompressionEnvVar = "OKTETO_BUILD_COMPRESSION"
+
+// AlphaBuildCompressionEnvVar is the legacy name of BuildCompressionEnvVar.
+//
+// Deprecated: use BuildCompressionEnvVar instead.
+AlphaBuildCompressionEnvVar = "OKTETO_ALPHA_BUILD_COMPRESSION"
+```
+
+- Log the deprecation **only when just the old name is set**, and choose the level on purpose:
+  - **Debug** (`logger.Infof`) when the old name can be injected by the Okteto platform (older platforms only send the old name — a user-facing warning would be noise the user cannot fix).
+  - **User-facing warning** (`Warning`) when only the user sets the var.
+
+### Platform variables are alias-aware
+
+Platform variables are exported to the env in `cmd/context/use.go` `exportPlatformVariablesToEnv`, skipping any var that already exists locally. Because the new name takes precedence, a plain same-name check is not enough: a local `OLD=zstd` would be overridden by a platform `NEW=gzip`. Aliases are therefore resolved through `buildkit.EnvVarAlias()`:
+
+- If a local env var exists with **either** name of a pair, **neither** platform value is written (the "overridden by a local environment variable" warning is kept, and only shown when the values differ).
+- Names exported earlier in the same call are not treated as local; duplicate platform entries → first wins.
+
+Manifest commands inherit the parent env (`cmd/utils/executor/executor.go`), which already contains the platform values. When the command env sets one name of a pair (e.g. a remote `--var OLD=zstd`, installer variables or `$OKTETO_ENV`), `withAliases` also sets the other name with the same value (like the platform does), so the inherited alias cannot take precedence.
+
+When adding a new alias pair whose values can come from platform variables, register it in `EnvVarAlias()` so both places pick it up.
+
+### Examples
+
+- `OKTETO_CLI_IMAGE` ← `OKTETO_BIN` / `OKTETO_REMOTE_CLI_IMAGE` in `pkg/config/image.go` (`GetCliImage`, tests in `image_test.go`). User-set only, so it warns.
+- Build compression in `pkg/build/buildkit/opt.go` (table `compressionEnvVars`, helper `getCompressionEnv`). Platform-sent, so it logs at debug level:
+
+| New                              | Deprecated alias                       | BuildKit attr       |
+| -------------------------------- | -------------------------------------- | ------------------- |
+| `OKTETO_BUILD_COMPRESSION`       | `OKTETO_ALPHA_BUILD_COMPRESSION`       | `compression`       |
+| `OKTETO_BUILD_COMPRESSION_LEVEL` | `OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL` | `compression-level` |
+| `OKTETO_BUILD_FORCE_COMPRESSION` | `OKTETO_ALPHA_BUILD_FORCE_COMPRESSION` | `force-compression` |
+
+---
+
 ## Checklist When Adding a Feature Flag
 
 - [ ] Constant defined with `OKTETO_` prefix at package level
