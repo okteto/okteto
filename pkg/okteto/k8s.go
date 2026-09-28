@@ -15,11 +15,14 @@ package okteto
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	ioCtrl "github.com/okteto/okteto/pkg/log/io"
@@ -40,6 +43,13 @@ var (
 )
 
 const (
+	// FieldManager is the field manager of the CLI write operations to the Kubernetes API. The API server derives it
+	// from the user agent prefix, so it must be the user agent product name
+	FieldManager = "okteto"
+
+	// devVersion is the version sent in the user agent when the CLI version is not set
+	devVersion = "dev"
+
 	// oktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
 	oktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
 )
@@ -142,63 +152,70 @@ func GetKubernetesTimeout() time.Duration {
 	return timeout
 }
 
+// newRESTConfig builds the rest config shared by all the Kubernetes clients created by the CLI
+func newRESTConfig(clientAPIConfig *clientcmdapi.Config) (*rest.Config, error) {
+	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
+	restConfig, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	restConfig.WarningHandler = rest.NoWarnings{}
+	restConfig.Timeout = GetKubernetesTimeout()
+	// The API server uses the user agent prefix as field manager when the request doesn't set one
+	restConfig.UserAgent = userAgent()
+	return restConfig, nil
+}
+
+// userAgent returns the user agent sent to the Kubernetes API server. Its prefix must be FieldManager
+func userAgent() string {
+	version := config.VersionString
+	if version == "" {
+		version = devVersion
+	}
+	return fmt.Sprintf("%s/%s (%s/%s)", FieldManager, version, runtime.GOOS, runtime.GOARCH)
+}
+
 func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config, k8sLogger *ioCtrl.K8sLogger) (*kubernetes.Clientset, *rest.Config, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
-	config, err := clientConfig.ClientConfig()
+	restConfig, err := newRESTConfig(clientApiConfig)
 	if err != nil {
 		return nil, nil, err
 	}
-	config.WarningHandler = rest.NoWarnings{}
 
-	config.Timeout = GetKubernetesTimeout()
-
-	var client *kubernetes.Clientset
-
-	config.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+	restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 		return newTokenRotationTransport(rt, k8sLogger)
 	}
 
-	client, err = kubernetes.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, nil, err
 	}
-	return client, config, nil
+	return client, restConfig, nil
 }
 
 func getDynamicClient(clientAPIConfig *clientcmdapi.Config) (dynamic.Interface, *rest.Config, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-	config.WarningHandler = rest.NoWarnings{}
-
-	config.Timeout = GetKubernetesTimeout()
-
-	dc, err := dynamic.NewForConfig(config)
+	restConfig, err := newRESTConfig(clientAPIConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return dc, config, err
+	dc, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return dc, restConfig, err
 }
 
 func getDiscoveryClient(clientAPIConfig *clientcmdapi.Config) (discovery.DiscoveryInterface, *rest.Config, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-	config.WarningHandler = rest.NoWarnings{}
-
-	config.Timeout = GetKubernetesTimeout()
-
-	dc, err := discovery.NewDiscoveryClientForConfig(config)
+	restConfig, err := newRESTConfig(clientAPIConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return dc, config, err
+	dc, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return dc, restConfig, err
 }

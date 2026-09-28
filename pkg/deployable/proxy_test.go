@@ -15,6 +15,8 @@ package deployable
 
 import (
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -338,4 +340,37 @@ metadata:
 	err = encoder.Encode(deployment, buf)
 	require.NoError(t, err)
 	assert.NotEmpty(t, encoded)
+}
+
+// Requests going through the proxy must keep the user agent of the client doing them (kubectl, helm, the CLI...),
+// so the API server keeps using their field manager. The cluster config has a user agent to ensure it doesn't
+// override the one of the incoming request
+func TestProxyHandlerKeepsUserAgent(t *testing.T) {
+	var receivedUserAgent string
+	upstream := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedUserAgent = r.Header.Get("User-Agent")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	clusterConfig := &rest.Config{
+		Host:      upstream.URL,
+		UserAgent: "okteto/test",
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+	}
+	ph := &proxyHandler{}
+	handler, err := ph.getProxyHandler("session-token", clusterConfig)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/test/configmaps", nil)
+	req.Header.Set("Authorization", "Bearer session-token")
+	req.Header.Set("User-Agent", "kubectl/v1.34.0 (darwin/arm64) kubernetes/abcdef")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "kubectl/v1.34.0 (darwin/arm64) kubernetes/abcdef", receivedUserAgent)
 }
