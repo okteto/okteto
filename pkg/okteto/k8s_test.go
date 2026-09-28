@@ -14,10 +14,14 @@
 package okteto
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
+	"strings"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
@@ -164,26 +168,8 @@ func TestGetK8sClientWithApiConfig(t *testing.T) {
 		name      string
 	}{
 		{
-			name: "ok",
-			apiConfig: &clientcmdapi.Config{
-				Clusters: map[string]*clientcmdapi.Cluster{
-					"test": {
-						Server: "https://test.com",
-					},
-				},
-				AuthInfos: map[string]*clientcmdapi.AuthInfo{
-					"test": {
-						Token: "test",
-					},
-				},
-				Contexts: map[string]*clientcmdapi.Context{
-					"test": {
-						Cluster:  "test",
-						AuthInfo: "test",
-					},
-				},
-				CurrentContext: "test",
-			},
+			name:      "ok",
+			apiConfig: newTestAPIConfig(),
 			expected: expected{
 				cfg: &rest.Config{
 					Host: "https://test.com",
@@ -206,4 +192,88 @@ func TestGetK8sClientWithApiConfig(t *testing.T) {
 		})
 	}
 
+}
+
+func newTestAPIConfig() *clientcmdapi.Config {
+	return &clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"test": {
+				Server: "https://test.com",
+			},
+		},
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"test": {
+				Token: "test",
+			},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"test": {
+				Cluster:  "test",
+				AuthInfo: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+}
+
+func setVersionString(t *testing.T, version string) {
+	t.Helper()
+	original := config.VersionString
+	config.VersionString = version
+	t.Cleanup(func() {
+		config.VersionString = original
+	})
+}
+
+func TestUserAgentWithVersion(t *testing.T) {
+	setVersionString(t, "3.12.0")
+
+	expected := fmt.Sprintf("okteto/3.12.0 (%s/%s)", runtime.GOOS, runtime.GOARCH)
+	require.Equal(t, expected, userAgent())
+}
+
+func TestUserAgentWithoutVersion(t *testing.T) {
+	setVersionString(t, "")
+
+	expected := fmt.Sprintf("okteto/dev (%s/%s)", runtime.GOOS, runtime.GOARCH)
+	require.Equal(t, expected, userAgent())
+}
+
+// The API server uses the user agent prefix before the first "/" as field manager when the request doesn't set one
+func requireFieldManagerFromUserAgent(t *testing.T, cfg *rest.Config) {
+	t.Helper()
+	require.Equal(t, "okteto", FieldManager)
+	require.Equal(t, FieldManager, strings.Split(cfg.UserAgent, "/")[0])
+}
+
+func TestNewRESTConfig(t *testing.T) {
+	cfg, err := newRESTConfig(newTestAPIConfig())
+	require.NoError(t, err)
+	require.Equal(t, "https://test.com", cfg.Host)
+	require.Equal(t, rest.NoWarnings{}, cfg.WarningHandler)
+	require.Equal(t, GetKubernetesTimeout(), cfg.Timeout)
+	requireFieldManagerFromUserAgent(t, cfg)
+}
+
+func TestNewRESTConfigInvalidConfig(t *testing.T) {
+	_, err := newRESTConfig(&clientcmdapi.Config{})
+	require.Error(t, err)
+}
+
+func TestGetK8sClientWithApiConfigUserAgent(t *testing.T) {
+	_, cfg, err := getK8sClientWithApiConfig(newTestAPIConfig(), nil)
+	require.NoError(t, err)
+	requireFieldManagerFromUserAgent(t, cfg)
+}
+
+func TestGetDynamicClientUserAgent(t *testing.T) {
+	_, cfg, err := getDynamicClient(newTestAPIConfig())
+	require.NoError(t, err)
+	requireFieldManagerFromUserAgent(t, cfg)
+}
+
+func TestGetDiscoveryClientUserAgent(t *testing.T) {
+	_, cfg, err := getDiscoveryClient(newTestAPIConfig())
+	require.NoError(t, err)
+	requireFieldManagerFromUserAgent(t, cfg)
 }
