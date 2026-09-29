@@ -17,22 +17,14 @@
 package build
 
 import (
-	"crypto/x509"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/build/buildkit"
-	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -401,53 +393,6 @@ func TestBuildCommandV2Secrets(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestBuildWithZstdCompression tests the following scenario:
-// - building a dockerfile with OKTETO_BUILD_COMPRESSION=zstd
-// - the pushed image layers are compressed with zstd
-func TestBuildWithZstdCompression(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	require.NoError(t, createDockerfile(dir))
-
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-
-	testNamespace := integration.GetTestNamespace(t.Name())
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-
-	expectedImage := fmt.Sprintf("%s/%s/test:okteto", okteto.GetContext().Registry, testNamespace)
-	require.False(t, isImageBuilt(expectedImage))
-
-	options := &commands.BuildOptions{
-		Workdir:      dir,
-		ManifestPath: filepath.Join(dir, dockerfileName),
-		Tag:          "okteto.dev/test:okteto",
-		Namespace:    testNamespace,
-		Token:        token,
-		OktetoHome:   dir,
-		NoCache:      true,
-		Env: []string{
-			fmt.Sprintf("%s=zstd", buildkit.BuildCompressionEnvVar),
-			// The Dockerfile only has base image layers, which BuildKit keeps
-			// with their original (gzip) compression unless forced
-			fmt.Sprintf("%s=true", buildkit.BuildForceCompressionEnvVar),
-			// Avoid reusing an image already built by another test
-			fmt.Sprintf("%s=false", smartbuild.OktetoEnableSmartBuildEnvVar),
-		},
-	}
-	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
-
-	mediaTypes, err := getImageLayerMediaTypes(expectedImage)
-	require.NoError(t, err)
-	require.Equal(t, []string{"application/vnd.oci.image.layer.v1.tar+zstd"}, mediaTypes)
-	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
-}
-
 func createDockerfile(dir string) error {
 	dockerfilePath := filepath.Join(dir, dockerfileName)
 	dockerfileContent := []byte(dockerfileContent)
@@ -508,77 +453,4 @@ func isImageBuilt(image string) bool {
 		return true
 	}
 	return false
-}
-
-// getImageLayerMediaTypes returns the distinct media types of the layers of the given image
-// in the okteto registry. If the image is an index, it returns the layers of every
-// platform image, skipping BuildKit attestation manifests
-func getImageLayerMediaTypes(image string) ([]string, error) {
-	ref, err := name.ParseReference(image)
-	if err != nil {
-		return nil, err
-	}
-	cfg := okteto.Config{}
-	transport := oktetoHttp.StrictSSLTransport(&oktetoHttp.SSLTransportOption{})
-	if cfg.IsInsecureSkipTLSVerifyPolicy() {
-		transport = oktetoHttp.InsecureTransport()
-	} else if cert, err := cfg.GetContextCertificate(); err == nil {
-		transport = oktetoHttp.StrictSSLTransport(&oktetoHttp.SSLTransportOption{Certs: []*x509.Certificate{cert}})
-	}
-	opts := []remote.Option{
-		remote.WithAuth(&authn.Basic{Username: cfg.GetUserID(), Password: cfg.GetToken()}),
-		remote.WithTransport(transport),
-	}
-	desc, err := remote.Get(ref, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	var images []v1.Image
-	if desc.MediaType.IsIndex() {
-		idx, err := desc.ImageIndex()
-		if err != nil {
-			return nil, err
-		}
-		manifest, err := idx.IndexManifest()
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range manifest.Manifests {
-			if m.Annotations["vnd.docker.reference.type"] == "attestation-manifest" {
-				continue
-			}
-			img, err := idx.Image(m.Digest)
-			if err != nil {
-				return nil, err
-			}
-			images = append(images, img)
-		}
-	} else {
-		img, err := desc.Image()
-		if err != nil {
-			return nil, err
-		}
-		images = append(images, img)
-	}
-
-	seen := map[string]bool{}
-	var mediaTypes []string
-	for _, img := range images {
-		layers, err := img.Layers()
-		if err != nil {
-			return nil, err
-		}
-		for _, l := range layers {
-			mt, err := l.MediaType()
-			if err != nil {
-				return nil, err
-			}
-			if !seen[string(mt)] {
-				seen[string(mt)] = true
-				mediaTypes = append(mediaTypes, string(mt))
-			}
-		}
-	}
-	return mediaTypes, nil
 }

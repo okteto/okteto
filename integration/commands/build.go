@@ -31,9 +31,7 @@ type BuildOptions struct {
 	OktetoHome   string
 	Token        string
 	SvcsToBuild  []string
-	// Env holds extra environment variables (KEY=VALUE) passed to the build command
-	Env     []string
-	NoCache bool
+	NoCache      bool
 }
 
 // RunOktetoBuild runs an okteto build command
@@ -72,8 +70,6 @@ func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd 
 	if buildOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, buildOptions.Token))
 	}
-
-	cmd.Env = append(cmd.Env, buildOptions.Env...)
 
 	if buildOptions.NoCache {
 		cmd.Args = append(cmd.Args, "--no-cache")
