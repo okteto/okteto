@@ -289,27 +289,3 @@ func TestImageExportAttrs(t *testing.T) {
 		})
 	}
 }
-
-func TestEnvVarAlias(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name     string
-		envVar   string
-		expected string
-	}{
-		{name: "compression", envVar: "OKTETO_BUILD_COMPRESSION", expected: "OKTETO_ALPHA_BUILD_COMPRESSION"},
-		{name: "compression level", envVar: "OKTETO_BUILD_COMPRESSION_LEVEL", expected: "OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL"},
-		{name: "force compression", envVar: "OKTETO_BUILD_FORCE_COMPRESSION", expected: "OKTETO_ALPHA_BUILD_FORCE_COMPRESSION"},
-		{name: "deprecated compression", envVar: "OKTETO_ALPHA_BUILD_COMPRESSION", expected: "OKTETO_BUILD_COMPRESSION"},
-		{name: "deprecated compression level", envVar: "OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL", expected: "OKTETO_BUILD_COMPRESSION_LEVEL"},
-		{name: "deprecated force compression", envVar: "OKTETO_ALPHA_BUILD_FORCE_COMPRESSION", expected: "OKTETO_BUILD_FORCE_COMPRESSION"},
-		{name: "no alias", envVar: "OKTETO_BUILD_OCI_MEDIATYPES", expected: ""},
-		{name: "empty", envVar: "", expected: ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tt.expected, EnvVarAlias(tt.envVar))
-		})
-	}
-}

@@ -21,7 +21,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -246,44 +245,17 @@ func getContext(ctxOptions *Options) (string, error) {
 	return oktetoContext, nil
 }
 
-// exportPlatformVariablesToEnv sets the platform variables as env vars, unless they are already
-// defined locally. A local env var also takes precedence over the platform variables with an alias
-// of its name (e.g. a local OKTETO_ALPHA_BUILD_COMPRESSION prevents writing both
-// OKTETO_BUILD_COMPRESSION and OKTETO_ALPHA_BUILD_COMPRESSION). If a variable is sent more than
-// once, the first value wins.
 func exportPlatformVariablesToEnv(variables []env.Var) {
-	exported := map[string]bool{}
 	for _, v := range variables {
-		if exported[v.Name] {
-			continue
-		}
-		if localName, value, exists := lookupLocalEnv(v.Name, buildkit.EnvVarAlias(v.Name), exported); exists {
+		value, exists := os.LookupEnv(v.Name)
+		if exists {
 			if value != v.Value {
-				if localName == v.Name {
-					oktetoLog.Warning("Okteto Variable '%s' is overridden by a local environment variable with the same name", v.Name)
-				} else {
-					oktetoLog.Warning("Okteto Variable '%s' is overridden by the local environment variable '%s'", v.Name, localName)
-				}
+				oktetoLog.Warning("Okteto Variable '%s' is overridden by a local environment variable with the same name", v.Name)
 			}
 			oktetoLog.AddMaskedWord(value)
 			continue
 		}
 		os.Setenv(v.Name, v.Value)
 		oktetoLog.AddMaskedWord(v.Value)
-		exported[v.Name] = true
 	}
-}
-
-// lookupLocalEnv returns the first of name or alias defined in the environment, ignoring the
-// variables exported from the platform
-func lookupLocalEnv(name, alias string, exported map[string]bool) (string, string, bool) {
-	for _, n := range []string{name, alias} {
-		if n == "" || exported[n] {
-			continue
-		}
-		if value, exists := os.LookupEnv(n); exists {
-			return n, value, true
-		}
-	}
-	return "", "", false
 }

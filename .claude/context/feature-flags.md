@@ -208,19 +208,12 @@ AlphaBuildCompressionEnvVar = "OKTETO_ALPHA_BUILD_COMPRESSION"
 ```
 
 - Log the deprecation **only when just the old name is set**, and choose the level on purpose:
-  - **Debug** (`logger.Infof`) when the old name can be injected by the Okteto platform (older platforms only send the old name — a user-facing warning would be noise the user cannot fix).
+  - **Debug** (`logger.Debugf`) when the old name can be injected by the Okteto platform (older platforms only send the old name — a user-facing warning would be noise the user cannot fix).
   - **User-facing warning** (`Warning`) when only the user sets the var.
 
-### Platform variables are alias-aware
+### Platform variables
 
-Platform variables are exported to the env in `cmd/context/use.go` `exportPlatformVariablesToEnv`, skipping any var that already exists locally. Because the new name takes precedence, a plain same-name check is not enough: a local `OLD=zstd` would be overridden by a platform `NEW=gzip`. Aliases are therefore resolved through `buildkit.EnvVarAlias()`:
-
-- If a local env var exists with **either** name of a pair, **neither** platform value is written (the "overridden by a local environment variable" warning is kept, and only shown when the values differ).
-- Names exported earlier in the same call are not treated as local; duplicate platform entries → first wins.
-
-Manifest commands inherit the parent env (`cmd/utils/executor/executor.go`), which already contains the platform values. When the command env sets one name of a pair (e.g. a remote `--var OLD=zstd`, installer variables or `$OKTETO_ENV`), `withAliases` also sets the other name with the same value (like the platform does), so the inherited alias cannot take precedence.
-
-When adding a new alias pair whose values can come from platform variables, register it in `EnvVarAlias()` so both places pick it up.
+Newer platforms send both names with the same value, older ones only the old name. Platform variables are exported only when a var with the **same name** does not exist locally, so a local old name does not override a platform-sent new name. To override a platform value locally, use the new name.
 
 ### Examples
 

@@ -91,20 +91,6 @@ var compressionEnvVars = []compressionEnvVar{
 	{name: BuildForceCompressionEnvVar, deprecatedName: AlphaBuildForceCompressionEnvVar, attr: "force-compression"},
 }
 
-// EnvVarAlias returns the other name of an env var that has a deprecated alias
-// (the deprecated name for a current one and vice versa), or "" if it has no alias
-func EnvVarAlias(name string) string {
-	for _, v := range compressionEnvVars {
-		switch name {
-		case v.name:
-			return v.deprecatedName
-		case v.deprecatedName:
-			return v.name
-		}
-	}
-	return ""
-}
-
 // SolveOptBuilder is a builder for SolveOpt
 type SolveOptBuilder struct {
 	logger        *io.Controller
@@ -376,7 +362,7 @@ func (b *SolveOptBuilder) getCompressionEnv(v compressionEnvVar) string {
 	value := os.Getenv(v.deprecatedName)
 	if value != "" {
 		// Logged at debug level: older Okteto platforms only send the deprecated name
-		b.logger.Logger().Infof("%s is deprecated, please use %s instead", v.deprecatedName, v.name)
+		b.logger.Logger().Debugf("%s is deprecated, please use %s instead", v.deprecatedName, v.name)
 	}
 	return value
 }
