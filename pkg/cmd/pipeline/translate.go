@@ -381,7 +381,9 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"
 	cmap.Data[nameField] = data.Name
 	cmap.Data[statusField] = data.Status
-	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
+	if len(data.Manifest) > 0 {
+		cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
+	}
 	cmap.Data[iconField] = data.Icon
 	cmap.Data[actionNameField] = actionName
 	if data.Repository != "" {
