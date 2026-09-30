@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -117,6 +118,174 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 			} else {
 				require.EqualValues(t, initialSecrets, tt.buildOptions.Secrets)
 			}
+		})
+	}
+}
+
+// compressionEnvVarNames are all the env vars read by imageExportAttrs, cleared before each test case
+var compressionEnvVarNames = []string{
+	BuildCompressionEnvVar,
+	BuildCompressionLevelEnvVar,
+	BuildForceCompressionEnvVar,
+	AlphaBuildCompressionEnvVar,
+	AlphaBuildCompressionLevelEnvVar,
+	AlphaBuildForceCompressionEnvVar,
+	OciMediaTypesEnvVar,
+}
+
+func TestImageExportAttrs(t *testing.T) {
+	tests := []struct {
+		envs     map[string]string
+		expected map[string]string
+		name     string
+	}{
+		{
+			name: "no compression env vars",
+			envs: map[string]string{},
+			expected: map[string]string{
+				"name":           "registry.okteto.dev/ns/app:1.0",
+				"push":           "true",
+				"oci-mediatypes": "true",
+			},
+		},
+		{
+			name: "only new env vars",
+			envs: map[string]string{
+				BuildCompressionEnvVar:      "zstd",
+				BuildCompressionLevelEnvVar: "3",
+				BuildForceCompressionEnvVar: "true",
+			},
+			expected: map[string]string{
+				"name":              "registry.okteto.dev/ns/app:1.0",
+				"push":              "true",
+				"oci-mediatypes":    "true",
+				"compression":       "zstd",
+				"compression-level": "3",
+				"force-compression": "true",
+			},
+		},
+		{
+			name: "only deprecated alpha env vars",
+			envs: map[string]string{
+				AlphaBuildCompressionEnvVar:      "zstd",
+				AlphaBuildCompressionLevelEnvVar: "3",
+				AlphaBuildForceCompressionEnvVar: "true",
+			},
+			expected: map[string]string{
+				"name":              "registry.okteto.dev/ns/app:1.0",
+				"push":              "true",
+				"oci-mediatypes":    "true",
+				"compression":       "zstd",
+				"compression-level": "3",
+				"force-compression": "true",
+			},
+		},
+		{
+			name: "new and alpha env vars with the same value",
+			envs: map[string]string{
+				BuildCompressionEnvVar:           "zstd",
+				BuildCompressionLevelEnvVar:      "3",
+				BuildForceCompressionEnvVar:      "true",
+				AlphaBuildCompressionEnvVar:      "zstd",
+				AlphaBuildCompressionLevelEnvVar: "3",
+				AlphaBuildForceCompressionEnvVar: "true",
+			},
+			expected: map[string]string{
+				"name":              "registry.okteto.dev/ns/app:1.0",
+				"push":              "true",
+				"oci-mediatypes":    "true",
+				"compression":       "zstd",
+				"compression-level": "3",
+				"force-compression": "true",
+			},
+		},
+		{
+			name: "new and alpha env vars with different values, new wins",
+			envs: map[string]string{
+				BuildCompressionEnvVar:           "zstd",
+				BuildCompressionLevelEnvVar:      "3",
+				BuildForceCompressionEnvVar:      "true",
+				AlphaBuildCompressionEnvVar:      "gzip",
+				AlphaBuildCompressionLevelEnvVar: "9",
+				AlphaBuildForceCompressionEnvVar: "false",
+			},
+			expected: map[string]string{
+				"name":              "registry.okteto.dev/ns/app:1.0",
+				"push":              "true",
+				"oci-mediatypes":    "true",
+				"compression":       "zstd",
+				"compression-level": "3",
+				"force-compression": "true",
+			},
+		},
+		{
+			name: "empty new env var falls back to alpha",
+			envs: map[string]string{
+				BuildCompressionEnvVar:      "",
+				AlphaBuildCompressionEnvVar: "zstd",
+			},
+			expected: map[string]string{
+				"name":           "registry.okteto.dev/ns/app:1.0",
+				"push":           "true",
+				"oci-mediatypes": "true",
+				"compression":    "zstd",
+			},
+		},
+		{
+			name: "each pair resolved independently",
+			envs: map[string]string{
+				BuildCompressionEnvVar:           "zstd",
+				AlphaBuildCompressionLevelEnvVar: "5",
+			},
+			expected: map[string]string{
+				"name":              "registry.okteto.dev/ns/app:1.0",
+				"push":              "true",
+				"oci-mediatypes":    "true",
+				"compression":       "zstd",
+				"compression-level": "5",
+			},
+		},
+		{
+			name: "invalid values are passed as-is",
+			envs: map[string]string{
+				BuildCompressionEnvVar:           "brotli",
+				BuildCompressionLevelEnvVar:      "high",
+				AlphaBuildForceCompressionEnvVar: "maybe",
+			},
+			expected: map[string]string{
+				"name":              "registry.okteto.dev/ns/app:1.0",
+				"push":              "true",
+				"oci-mediatypes":    "true",
+				"compression":       "brotli",
+				"compression-level": "high",
+				"force-compression": "maybe",
+			},
+		},
+		{
+			name: "oci media types disabled",
+			envs: map[string]string{
+				OciMediaTypesEnvVar:    "false",
+				BuildCompressionEnvVar: "gzip",
+			},
+			expected: map[string]string{
+				"name":           "registry.okteto.dev/ns/app:1.0",
+				"push":           "true",
+				"oci-mediatypes": "false",
+				"compression":    "gzip",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, name := range compressionEnvVarNames {
+				t.Setenv(name, "")
+			}
+			for k, v := range tt.envs {
+				t.Setenv(k, v)
+			}
+			b := &SolveOptBuilder{logger: io.NewIOController()}
+
+			require.Equal(t, tt.expected, b.imageExportAttrs("registry.okteto.dev/ns/app:1.0"))
 		})
 	}
 }

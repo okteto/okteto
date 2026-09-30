@@ -187,6 +187,47 @@ During initial rollout this read `LoadBooleanOrDefault(..., false)`. The default
 
 ---
 
+## Renaming a Flag — Deprecated Aliases
+
+When an env var is renamed (e.g. an `OKTETO_ALPHA_*` feature is promoted), keep the old name working as a deprecated alias. Never break the old name in the same release.
+
+### Rules
+
+- **New name wins when non-empty**; otherwise fall back to the deprecated name; otherwise use the default (or omit the setting).
+- An empty new name (`NEW=""`) does **not** mask a non-empty deprecated name.
+- Define both constants; mark the old one with a Go `Deprecated:` paragraph so linters flag new usages:
+
+```go
+// BuildCompressionEnvVar sets the compression type of the exported image layers.
+BuildCompressionEnvVar = "OKTETO_BUILD_COMPRESSION"
+
+// AlphaBuildCompressionEnvVar is the legacy name of BuildCompressionEnvVar.
+//
+// Deprecated: use BuildCompressionEnvVar instead.
+AlphaBuildCompressionEnvVar = "OKTETO_ALPHA_BUILD_COMPRESSION"
+```
+
+- Log the deprecation **only when just the old name is set**, and choose the level on purpose:
+  - **Debug** (`logger.Debugf`) when the old name can be injected by the Okteto platform (older platforms only send the old name — a user-facing warning would be noise the user cannot fix).
+  - **User-facing warning** (`Warning`) when only the user sets the var.
+
+### Platform variables
+
+Newer platforms send both names with the same value, older ones only the old name. Platform variables are exported only when a var with the **same name** does not exist locally, so a local old name does not override a platform-sent new name. To override a platform value locally, use the new name.
+
+### Examples
+
+- `OKTETO_CLI_IMAGE` ← `OKTETO_BIN` / `OKTETO_REMOTE_CLI_IMAGE` in `pkg/config/image.go` (`GetCliImage`, tests in `image_test.go`). User-set only, so it warns.
+- Build compression in `pkg/build/buildkit/opt.go` (table `compressionEnvVars`, helper `getCompressionEnv`). Platform-sent, so it logs at debug level:
+
+| New                              | Deprecated alias                       | BuildKit attr       |
+| -------------------------------- | -------------------------------------- | ------------------- |
+| `OKTETO_BUILD_COMPRESSION`       | `OKTETO_ALPHA_BUILD_COMPRESSION`       | `compression`       |
+| `OKTETO_BUILD_COMPRESSION_LEVEL` | `OKTETO_ALPHA_BUILD_COMPRESSION_LEVEL` | `compression-level` |
+| `OKTETO_BUILD_FORCE_COMPRESSION` | `OKTETO_ALPHA_BUILD_FORCE_COMPRESSION` | `force-compression` |
+
+---
+
 ## Checklist When Adding a Feature Flag
 
 - [ ] Constant defined with `OKTETO_` prefix at package level
