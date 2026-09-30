@@ -16,7 +16,6 @@ package destroy
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 
@@ -53,15 +52,9 @@ func (ld *localDestroyCommand) Destroy(ctx context.Context, opts *Options) error
 			exit <- nil
 			return
 		}
+		// The platform environment is added by the destroy runner itself
 		vars := opts.Variables
 
-		for k, v := range deployable.GetPlatformEnvironment(ctx) {
-			vars = append(vars, fmt.Sprintf("%s=%s", k, v))
-			// Always mask cloud credentials from execution environment
-			if v != "" {
-				oktetoLog.AddMaskedWord(v)
-			}
-		}
 		params := deployable.DestroyParameters{
 			Name:         opts.Name,
 			Namespace:    opts.Namespace,

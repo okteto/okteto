@@ -836,6 +836,60 @@ func TestGetExecutionEnv(t *testing.T) {
 	}
 }
 
+func TestGetExecutionFiles(t *testing.T) {
+	ctx := context.Background()
+
+	testCases := []struct {
+		name      string
+		client    *fakeGraphQLClient
+		expected  []types.ExecutionFile
+		expectErr bool
+	}{
+		{
+			name: "happy path",
+			client: &fakeGraphQLClient{
+				queryResult: &getExecutionFilesQuery{
+					ExecutionFiles: []executionFileQuery{
+						{EnvVar: "PLATFORM_TOKEN_FILE", Content: "jwt"},
+					},
+				},
+			},
+			expected: []types.ExecutionFile{
+				{EnvVar: "PLATFORM_TOKEN_FILE", Content: "jwt"},
+			},
+		},
+		{
+			name: "does not fail on incompatible schema",
+			client: &fakeGraphQLClient{
+				err: errors.New("Cannot query field \"executionFiles\" on type \"Query\""),
+			},
+			expected: []types.ExecutionFile{},
+		},
+		{
+			name: "fails on error",
+			client: &fakeGraphQLClient{
+				err: errors.New("this is my error"),
+			},
+			expected:  []types.ExecutionFile{},
+			expectErr: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.client,
+			}
+			result, err := uc.GetExecutionFiles(ctx)
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestGetKnownHostsConfig(t *testing.T) {
 	ctx := context.Background()
 
