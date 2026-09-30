@@ -30,6 +30,14 @@ type User struct {
 }
 
 // KnownHostsConfig contains the SSH known hosts configuration
+// ExecutionFile is a file the platform asks the cli to write before running
+// the deploy, destroy and test commands. The path of the written file is
+// exposed to the commands in the env var named EnvVar.
+type ExecutionFile struct {
+	EnvVar  string
+	Content string
+}
+
 type KnownHostsConfig struct {
 	Content string
 	Enabled bool
