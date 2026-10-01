@@ -271,6 +271,56 @@ func Test_translateVariables(t *testing.T) {
 
 	}
 }
+
+func Test_updateCmapKeepsManifestWhenNotProvided(t *testing.T) {
+	encodedManifest := base64.StdEncoding.EncodeToString([]byte("name: test"))
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TranslatePipelineName("test"),
+			Namespace: "test",
+			Labels:    map[string]string{},
+		},
+		Data: map[string]string{
+			statusField: DeployedStatus,
+			yamlField:   encodedManifest,
+		},
+	}
+
+	err := updateCmap(cmap, &CfgData{
+		Name:      "test",
+		Namespace: "test",
+		Status:    DestroyingStatus,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, encodedManifest, cmap.Data[yamlField])
+	require.Equal(t, DestroyingStatus, cmap.Data[statusField])
+}
+
+func Test_updateCmapOverwritesManifestWhenProvided(t *testing.T) {
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TranslatePipelineName("test"),
+			Namespace: "test",
+			Labels:    map[string]string{},
+		},
+		Data: map[string]string{
+			statusField: DeployedStatus,
+			yamlField:   base64.StdEncoding.EncodeToString([]byte("name: old")),
+		},
+	}
+
+	err := updateCmap(cmap, &CfgData{
+		Name:      "test",
+		Namespace: "test",
+		Status:    ProgressingStatus,
+		Manifest:  []byte("name: new"),
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, base64.StdEncoding.EncodeToString([]byte("name: new")), cmap.Data[yamlField])
+}
+
 func Test_AddPhaseDuration(t *testing.T) {
 	ctx := context.Background()
 	name := "test"

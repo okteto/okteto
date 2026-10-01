@@ -15,6 +15,7 @@ package destroy
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"testing"
@@ -345,6 +346,59 @@ func TestDestroyWithErrorOnCommands(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
+}
+
+func TestDestroyWithErrorOnCommandsKeepsManifestInConfigMap(t *testing.T) {
+	ctx := context.Background()
+	encodedManifest := base64.StdEncoding.EncodeToString([]byte("name: test-app"))
+	existingCfg := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName(fakeManifest.Name),
+			Namespace: "namespace",
+			Labels: map[string]string{
+				model.GitDeployLabel: "true",
+			},
+		},
+		Data: map[string]string{
+			"status": pipeline.DeployedStatus,
+			"yaml":   encodedManifest,
+		},
+	}
+	k8sClientProvider := test.NewFakeK8sProvider(existingCfg)
+	fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+	require.NoError(t, err)
+
+	dc := &destroyCommand{
+		ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+		nsDestroyer:       &fakeDestroyer{},
+		secrets:           &fakeSecretHandler{},
+		k8sClientProvider: k8sClientProvider,
+		executor: &fakeExecutor{
+			err: assert.AnError,
+		},
+		buildCtrlProvider: fakeBuildCtrlProvider{
+			buildCtrl: buildCtrl{
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{},
+					build:   nil,
+				},
+			},
+		},
+	}
+
+	err = dc.destroy(ctx, &Options{
+		Name:      fakeManifest.Name,
+		Namespace: "namespace",
+		Manifest:  fakeManifest,
+	})
+
+	require.Error(t, err)
+
+	cfg, err := fakeClient.CoreV1().ConfigMaps("namespace").Get(ctx, pipeline.TranslatePipelineName(fakeManifest.Name), metav1.GetOptions{})
+
+	require.NoError(t, err)
+	require.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
+	require.Equal(t, encodedManifest, cfg.Data["yaml"])
 }
 
 func TestDestroyWithErrorOnCommandsForcingDestroy(t *testing.T) {
