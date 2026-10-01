@@ -31,7 +31,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shurcooL/graphql v0.0.0-20240915155400-7ee5256398cf
-	github.com/sirupsen/logrus v1.10.1
+	github.com/sirupsen/logrus v1.10.2
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
@@ -118,7 +118,7 @@ require (
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.10
 	github.com/src-d/go-oniguruma v1.1.0 // indirect
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tonistiigi/fsutil v0.0.0-20260819142231-83cac42c1c52
@@ -240,7 +240,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
