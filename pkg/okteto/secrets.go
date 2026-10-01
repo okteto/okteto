@@ -67,6 +67,10 @@ type getExecutionEnvQuery struct {
 	ExecutionEnv []variablesQuery `graphql:"executionEnv"`
 }
 
+type getExecutionFilesQuery struct {
+	ExecutionFiles []executionFileQuery `graphql:"executionFiles"`
+}
+
 type getKnownHostsConfigQuery struct {
 	KnownHostsConfig knownHostsConfigQuery `graphql:"knownHostsConfig"`
 }
@@ -109,6 +113,11 @@ type metadataQuery struct {
 type variablesQuery struct {
 	Name  graphql.String
 	Value graphql.String
+}
+
+type executionFileQuery struct {
+	EnvVar  graphql.String `graphql:"envVar"`
+	Content graphql.String
 }
 
 type metadataQueryItem struct {
@@ -394,6 +403,28 @@ func (c *userClient) GetExecutionEnv(ctx context.Context) (map[string]string, er
 
 	for _, envVar := range queryStruct.ExecutionEnv {
 		result[string(envVar.Name)] = string(envVar.Value)
+	}
+	return result, nil
+}
+
+// GetExecutionFiles returns the files to be written before running the deploy,
+// destroy and test commands. Older backends without the query return no files.
+func (c *userClient) GetExecutionFiles(ctx context.Context) ([]types.ExecutionFile, error) {
+	var queryStruct getExecutionFilesQuery
+	err := query(ctx, &queryStruct, nil, c.client)
+	if err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"executionFiles\" on type \"Query\"") {
+			return []types.ExecutionFile{}, nil
+		}
+		return []types.ExecutionFile{}, err
+	}
+
+	result := make([]types.ExecutionFile, 0, len(queryStruct.ExecutionFiles))
+	for _, f := range queryStruct.ExecutionFiles {
+		result = append(result, types.ExecutionFile{
+			EnvVar:  string(f.EnvVar),
+			Content: string(f.Content),
+		})
 	}
 	return result, nil
 }
