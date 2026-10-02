@@ -481,6 +481,18 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				continue
 			}
 
+			// Native sidecars can restart independently once the pod is running.
+			if pod.Status.Phase != apiv1.PodRunning {
+				for _, status := range pod.Status.InitContainerStatuses {
+					if terminated := status.State.Terminated; terminated != nil && terminated.ExitCode != 0 {
+						return fmt.Errorf("init container %s failed: %s (exit code %d): %s", status.Name, terminated.Reason, terminated.ExitCode, terminated.Message)
+					}
+					if waiting := status.State.Waiting; waiting != nil && waiting.Reason == "CrashLoopBackOff" {
+						return fmt.Errorf("init container %s failed: %s: %s", status.Name, waiting.Reason, waiting.Message)
+					}
+				}
+			}
+
 			oktetoLog.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
 				if !up.Dev.IsHybridModeEnabled() {
