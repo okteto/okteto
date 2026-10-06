@@ -76,6 +76,7 @@ func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.O
 	if err != nil {
 		return err
 	}
+	ob.ioCtrl.Logger().Infof("building %d services in parallel, at most %d at the same time", len(svcs), ob.buildStrategy.maxConcurrency())
 	pool := runner.NewWorkerPool(ctx, ob.buildStrategy.maxConcurrency())
 
 	buildErr := ob.buildStrategy.Build(ctx, svcs, inBatchDependencies(options.Manifest.Build, svcs), parallelBuildFn(pool, mux, buildOne))
