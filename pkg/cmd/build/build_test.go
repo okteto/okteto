@@ -15,6 +15,7 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -22,10 +23,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/build/buildkit"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -968,4 +972,25 @@ func Test_shouldUseInClusterConnector(t *testing.T) {
 			require.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+type fakeBuildkitConnector struct{}
+
+func (fakeBuildkitConnector) Start(context.Context) error            { return nil }
+func (fakeBuildkitConnector) WaitUntilIsReady(context.Context) error { return nil }
+func (fakeBuildkitConnector) Stop()                                  {}
+func (fakeBuildkitConnector) GetBuildkitClient(context.Context) (*client.Client, error) {
+	return nil, assert.AnError
+}
+func (fakeBuildkitConnector) GetType() string { return "fake" }
+
+func TestBuildWithOktetoResetsMetadataOnFailure(t *testing.T) {
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), fakeBuildkitConnector{})
+	ob.metadata = &buildkit.BuildMetadata{ConnectionType: "previous-build", BuildContextSize: 42}
+
+	err := ob.buildWithOkteto(context.Background(), &types.BuildOptions{File: filepath.Join(t.TempDir(), "missing.Dockerfile")}, io.NewIOController(), nil)
+
+	require.Error(t, err)
+	require.Equal(t, &buildkit.BuildMetadata{}, ob.GetMetadata())
 }

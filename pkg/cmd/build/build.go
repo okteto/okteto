@@ -195,6 +195,8 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 }
 
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run buildkit.SolveBuildFn) error {
+	// Reset metadata so a failed build never reports the metadata of the previous build
+	ob.metadata = &buildkit.BuildMetadata{}
 	oktetoLog.Infof("building your image using %s connector", ob.connector.GetType())
 
 	repoURL := ""
