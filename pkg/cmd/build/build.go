@@ -95,6 +95,11 @@ func (ob *OktetoBuilder) SetSolveFn(fn buildkit.SolveBuildFn) {
 	ob.solveFn = fn
 }
 
+// UsesDefaultSolveFn reports whether ob runs its solves with SolveBuild
+func UsesDefaultSolveFn(ob *OktetoBuilder) bool {
+	return ob.solveFn == nil
+}
+
 func (ob *OktetoBuilder) solveBuildFn() buildkit.SolveBuildFn {
 	if ob.solveFn == nil {
 		return SolveBuild

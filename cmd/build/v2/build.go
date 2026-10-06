@@ -289,8 +289,13 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	return options.Manifest.ExpandEnvVars()
 }
 
-// buildServices builds the services that are not cached, one after another as today
+// buildServices builds the services that are not cached: at the same time when the
+// parallel strategy is enabled and there is more than one, one after another otherwise
 func (ob *OktetoBuilder) buildServices(ctx context.Context, svcs []*buildTypes.BuildInfo, options *types.BuildOptions) error {
+	runner, isOktetoRunner := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
+	if isOktetoRunner && len(svcs) > 1 && ob.buildStrategy.maxConcurrency() > 1 {
+		return ob.buildInParallel(ctx, runner, svcs, inBatchDependencies(options.Manifest.Build, svcs), options)
+	}
 	return sequentialBuildStrategy{}.Build(ctx, svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		if options.EnableStages {
 			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc.Name()))
