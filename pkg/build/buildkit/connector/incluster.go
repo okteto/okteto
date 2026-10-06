@@ -91,6 +91,14 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 	return ic, nil
 }
 
+// NewSibling creates a new in-cluster connector with its own session. Like any new
+// in-cluster connector it asks the backend for the least loaded BuildKit pod (or waits
+// in the queue), so it may land on a different pod than ic. It reuses ic's Okteto
+// context and reports connection metrics to the same tracker.
+func (ic *InClusterConnector) NewSibling(ctx context.Context, ioCtrl *io.Controller) (*InClusterConnector, error) {
+	return NewInClusterConnector(ctx, ic.okCtx, ioCtrl, ic.metrics.tracker)
+}
+
 // Start establishes the connection to the buildkit pod.
 // It always verifies the connection by checking if the client can return info.
 // If the existing pod IP is no longer valid, it requests a new one.

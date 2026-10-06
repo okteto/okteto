@@ -150,6 +150,14 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	return pf, nil
 }
 
+// NewSibling creates a new port forwarder with its own session. Like any new port
+// forwarder it asks the backend for the least loaded BuildKit pod (or waits in the
+// queue), so it may land on a different pod than pf. It reuses pf's Okteto context and
+// reports connection metrics to the same tracker.
+func (pf *PortForwarder) NewSibling(ctx context.Context, ioCtrl *io.Controller) (*PortForwarder, error) {
+	return NewPortForwarder(ctx, pf.okCtx, ioCtrl, pf.metrics.tracker)
+}
+
 // buildkitPort is the port where buildkit listens inside the pod
 const buildkitPort = 1234
 
