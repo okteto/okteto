@@ -15,6 +15,7 @@ package v2
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -187,4 +188,40 @@ func TestParallelBuildStrategyReportsBuildsInFlight(t *testing.T) {
 	_, sawTwo := seen.Load(2)
 	require.True(t, sawOne)
 	require.True(t, sawTwo)
+}
+
+// startOrder returns the services in the order they started
+func (l *eventLog) startOrder() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return slices.Clone(l.events)
+}
+
+func buildOneAtATime(t *testing.T, names []string, deps map[string][]string) []string {
+	t.Helper()
+	log := &eventLog{}
+	err := parallelBuildStrategy{maxParallel: 1}.Build(context.Background(), buildTypes.NewBuildInfos("manifest", "ns", "repo", names), deps, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+		log.add(svc.Name())
+		return nil
+	})
+	require.NoError(t, err)
+	return log.startOrder()
+}
+
+func TestParallelBuildStrategyStartsServicesWithDependentsFirst(t *testing.T) {
+	order := buildOneAtATime(t, []string{"web", "worker", "base", "api"}, map[string][]string{"api": {"base"}})
+
+	require.Equal(t, []string{"base", "web", "worker", "api"}, order)
+}
+
+func TestParallelBuildStrategyPrioritizesTheLongestChain(t *testing.T) {
+	order := buildOneAtATime(t, []string{"x", "a", "b", "c"}, map[string][]string{"b": {"a"}, "c": {"b"}})
+
+	require.Equal(t, []string{"a", "b", "x", "c"}, order)
+}
+
+func TestParallelBuildStrategyKeepsOrderOfIndependentServices(t *testing.T) {
+	order := buildOneAtATime(t, []string{"a", "b", "c"}, nil)
+
+	require.Equal(t, []string{"a", "b", "c"}, order)
 }

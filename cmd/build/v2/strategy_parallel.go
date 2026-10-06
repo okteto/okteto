@@ -15,16 +15,17 @@ package v2
 
 import (
 	"context"
-	"sync/atomic"
+	"slices"
 
 	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 // parallelBuildStrategy builds independent services at the same time, at most
-// maxParallel at once. A service starts as soon as the services it depends on are built
-// and a slot is free. The first error cancels the other builds and is returned.
+// maxParallel at once. A service is ready once the services it depends on are built.
+// When there are more ready services than free slots, the service that unblocks the
+// longest chain of dependents goes first, then the one that comes first in svcs (the
+// dependency order). The first error cancels the other builds and is returned.
 type parallelBuildStrategy struct {
 	maxParallel int
 }
@@ -34,35 +35,68 @@ func (s parallelBuildStrategy) maxConcurrency() int {
 	return s.maxParallel
 }
 
+// buildResult reports that the build of a service ended
+type buildResult struct {
+	name string
+	ok   bool
+}
+
 // Build builds svcs respecting deps. It returns the first build error, or the parent
 // context error if it was cancelled.
 func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.BuildInfo, deps map[string][]string, build buildServiceFn) error {
-	done := make(map[string]chan struct{}, len(svcs))
+	byName := make(map[string]*buildTypes.BuildInfo, len(svcs))
 	for _, svc := range svcs {
-		done[svc.Name()] = make(chan struct{})
+		byName[svc.Name()] = svc
 	}
-	slots := semaphore.NewWeighted(int64(s.maxParallel))
-	var inFlight atomic.Int32
+	dependents := map[string][]string{}
+	remaining := make(map[string]int, len(svcs))
+	for _, svc := range svcs {
+		for _, dep := range deps[svc.Name()] {
+			if _, ok := byName[dep]; ok {
+				dependents[dep] = append(dependents[dep], svc.Name())
+				remaining[svc.Name()]++
+			}
+		}
+	}
+	priority := buildPriorities(svcs, dependents)
+
+	var ready []string
+	for _, svc := range svcs {
+		if remaining[svc.Name()] == 0 {
+			ready = append(ready, svc.Name())
+		}
+	}
 
 	eg, egCtx := errgroup.WithContext(ctx)
-	for _, svc := range svcs {
-		eg.Go(func() error {
-			if !waitForDependencies(egCtx, deps[svc.Name()], done) {
-				return nil
-			}
-			if err := slots.Acquire(egCtx, 1); err != nil {
-				return nil
-			}
-			defer slots.Release(1)
-			n := int(inFlight.Add(1))
-			defer inFlight.Add(-1)
-
-			if err := build(egCtx, svc, n); err != nil {
+	results := make(chan buildResult)
+	running := 0
+	for {
+		for running < s.maxParallel && len(ready) > 0 && egCtx.Err() == nil {
+			slices.SortStableFunc(ready, func(a, b string) int { return priority[a] - priority[b] })
+			name := ready[0]
+			ready = ready[1:]
+			running++
+			inFlight := running
+			eg.Go(func() error {
+				err := build(egCtx, byName[name], inFlight)
+				results <- buildResult{name: name, ok: err == nil}
 				return err
+			})
+		}
+		if running == 0 {
+			break
+		}
+		result := <-results
+		running--
+		if !result.ok {
+			continue
+		}
+		for _, dependent := range dependents[result.name] {
+			remaining[dependent]--
+			if remaining[dependent] == 0 {
+				ready = append(ready, dependent)
 			}
-			close(done[svc.Name()])
-			return nil
-		})
+		}
 	}
 	if err := eg.Wait(); err != nil {
 		return err
@@ -70,19 +104,33 @@ func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.Bui
 	return ctx.Err()
 }
 
-// waitForDependencies waits until every dependency is built. It returns false when ctx is
-// done first, meaning the service must not be built.
-func waitForDependencies(ctx context.Context, deps []string, done map[string]chan struct{}) bool {
-	for _, dep := range deps {
-		depDone, ok := done[dep]
-		if !ok {
-			continue
+// buildPriorities ranks svcs for the order in which ready services take free slots:
+// lower goes first. Services that unblock a longer chain of dependents go first; ties keep
+// the order of svcs.
+func buildPriorities(svcs []*buildTypes.BuildInfo, dependents map[string][]string) map[string]int {
+	depth := map[string]int{}
+	var chainLength func(name string) int
+	chainLength = func(name string) int {
+		if d, ok := depth[name]; ok {
+			return d
 		}
-		select {
-		case <-depDone:
-		case <-ctx.Done():
-			return false
+		longest := 0
+		for _, dependent := range dependents[name] {
+			longest = max(longest, 1+chainLength(dependent))
 		}
+		depth[name] = longest
+		return longest
 	}
-	return ctx.Err() == nil
+
+	order := make([]string, 0, len(svcs))
+	for _, svc := range svcs {
+		order = append(order, svc.Name())
+	}
+	slices.SortStableFunc(order, func(a, b string) int { return chainLength(b) - chainLength(a) })
+
+	priority := make(map[string]int, len(order))
+	for i, name := range order {
+		priority[name] = i
+	}
+	return priority
 }
