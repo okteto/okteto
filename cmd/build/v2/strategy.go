@@ -19,10 +19,12 @@ import (
 	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 )
 
-// buildServiceFn builds a single service
-type buildServiceFn func(ctx context.Context, svc *buildTypes.BuildInfo) error
+// buildServiceFn builds a single service. inFlight is the number of builds running at
+// that moment, including this one.
+type buildServiceFn func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) error
 
-// buildStrategy decides how the services that are not cached are built
+// buildStrategy decides how the services that are not cached are built. deps lists, for
+// each service, the services of svcs it depends on.
 type buildStrategy interface {
-	Build(ctx context.Context, svcs []*buildTypes.BuildInfo, build buildServiceFn) error
+	Build(ctx context.Context, svcs []*buildTypes.BuildInfo, deps map[string][]string, build buildServiceFn) error
 }

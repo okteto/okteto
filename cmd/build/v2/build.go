@@ -279,10 +279,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		ob.ioCtrl.Logger().Infof("Images not cached: %v", notCachedSvcs)
 	}
 
-	err = ob.buildStrategy.Build(ctx, notCachedSvcs, func(ctx context.Context, svc *buildTypes.BuildInfo) error {
-		return ob.buildService(ctx, svc, options)
-	})
-	if err != nil {
+	if err := ob.buildServices(ctx, notCachedSvcs, options); err != nil {
 		return err
 	}
 
@@ -292,19 +289,26 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	return options.Manifest.ExpandEnvVars()
 }
 
-// buildService builds a single service that is not cached, records its build metadata
-// and publishes its OKTETO_BUILD_<SVC>_* env vars for the services that depend on it
-func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildTypes.BuildInfo, options *types.BuildOptions) error {
-	if options.EnableStages {
-		ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild.Name()))
-	}
+// buildServices builds the services that are not cached, one after another as today
+func (ob *OktetoBuilder) buildServices(ctx context.Context, svcs []*buildTypes.BuildInfo, options *types.BuildOptions) error {
+	return sequentialBuildStrategy{}.Build(ctx, svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
+		if options.EnableStages {
+			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc.Name()))
+		}
+		return ob.buildService(ctx, svc, options, ob.Builder)
+	})
+}
+
+// buildService builds a single service that is not cached with runner, records its build
+// metadata and publishes its OKTETO_BUILD_<SVC>_* env vars for the services that depend on it
+func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildTypes.BuildInfo, options *types.BuildOptions, runner basic.Builder) error {
 	buildSvcInfo := options.Manifest.Build[svcToBuild.Name()]
 	if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
 		return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
 	}
 
 	buildDurationStart := time.Now()
-	imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
+	imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options, runner)
 
 	buildDuration := time.Since(buildDurationStart)
 
@@ -313,7 +317,7 @@ func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildType
 	connectionType := ""
 	buildkitDuration := time.Duration(0)
 	contextTransferDuration := time.Duration(0)
-	buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
+	buildkitRunner, ok := runner.BuildRunner.(*buildCmd.OktetoBuilder)
 	if ok {
 		buildkitMetadata := buildkitRunner.GetMetadata()
 		if buildkitMetadata != nil {
@@ -342,12 +346,12 @@ func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildType
 // buildServiceImages builds the images for the given service.
 // if service has volumes to include but is not okteto, an error is returned.
 // Returned image reference includes the digest
-func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svc *buildTypes.BuildInfo, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svc *buildTypes.BuildInfo, options *types.BuildOptions, runner basic.Builder) (string, error) {
 	buildSvcInfo := manifest.Build[svc.Name()]
 
 	switch {
 	case serviceHasDockerfile(buildSvcInfo):
-		return bc.buildSvcFromDockerfile(ctx, manifest, svc, options)
+		return bc.buildSvcFromDockerfile(ctx, manifest, svc, options, runner)
 
 	default:
 		bc.ioCtrl.Logger().Info(fmt.Sprintf("could not build service %s, due to not having Dockerfile defined or volumes to include", svc.Name()))
@@ -355,7 +359,7 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 	return "", nil
 }
 
-func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcInfo *buildTypes.BuildInfo, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcInfo *buildTypes.BuildInfo, options *types.BuildOptions, runner basic.Builder) (string, error) {
 	bc.ioCtrl.Logger().Info(fmt.Sprintf("Building service '%s' from Dockerfile", svcInfo.Name()))
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcInfo.Name()], isStackManifest)
@@ -377,7 +381,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 
 	buildOptions := buildCmd.OptsFromBuildInfo(manifest, svcInfo.Name(), buildSvcInfo, options, bc.Registry, bc.oktetoContext)
 
-	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
+	if err := runner.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	var imageTagWithDigest string
