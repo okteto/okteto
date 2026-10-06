@@ -23,6 +23,7 @@ import (
 	"github.com/a8m/envsubst/parse"
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model/utils"
 )
 
@@ -71,7 +72,12 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 
 // ExpandVars sets dependencies values if values fits with list params
 func (d *Dependency) ExpandVars(variables []string) error {
-	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
+	return d.ExpandVarsFrom(os.Environ(), variables)
+}
+
+// ExpandVarsFrom sets dependencies values expanding them with environ and the variables
+func (d *Dependency) ExpandVarsFrom(environ, variables []string) error {
+	parser := parse.New("string", append(append([]string{}, environ...), variables...), &parse.Restrictions{})
 
 	expandedBranch, err := parser.Parse(d.Branch)
 	if err != nil {
@@ -185,6 +191,16 @@ func (md ManifestSection) Validate() error {
 		names = append(names, name)
 	}
 	sort.Strings(names)
+
+	// every dependency is deployed as the pipeline of its sanitized name
+	pipelineNames := map[string]string{}
+	for _, name := range names {
+		pipelineName := format.ResourceK8sMetaString(name)
+		if other, ok := pipelineNames[pipelineName]; ok {
+			return fmt.Errorf("manifest validation failed: dependencies '%s' and '%s' resolve to the same name '%s'", other, name, pipelineName)
+		}
+		pipelineNames[pipelineName] = name
+	}
 
 	for _, name := range names {
 		dep := md[name]

@@ -346,3 +346,24 @@ func Test_ManifestSection_Validate_Cycle(t *testing.T) {
 
 	require.EqualError(t, err, "manifest validation failed: cyclic dependency found between dependencies a, b and c")
 }
+
+func Test_ExpandVarsFrom_UsesTheGivenEnviron(t *testing.T) {
+	t.Setenv("DEPS_TEST_BRANCH", "from-process")
+	dependency := &Dependency{Branch: "${DEPS_TEST_BRANCH}"}
+
+	err := dependency.ExpandVarsFrom([]string{"DEPS_TEST_BRANCH=from-snapshot"}, nil)
+
+	require.NoError(t, err)
+	require.Equal(t, "from-snapshot", dependency.Branch)
+}
+
+func Test_ManifestSection_Validate_NamesResolvingToTheSamePipeline(t *testing.T) {
+	deps := ManifestSection{
+		"my.api": &Dependency{Repository: "https://github.com/okteto/api"},
+		"my-api": &Dependency{Repository: "https://github.com/okteto/other-api"},
+	}
+
+	err := deps.Validate()
+
+	require.EqualError(t, err, "manifest validation failed: dependencies 'my-api' and 'my.api' resolve to the same name 'my-api'")
+}

@@ -30,14 +30,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-func dependencyConfigMap(t *testing.T, name, namespace string, envs map[string]string) *apiv1.ConfigMap {
+func dependencyConfigMap(t *testing.T, name string, envs map[string]string) *apiv1.ConfigMap {
 	t.Helper()
 	encoded, err := json.Marshal(envs)
 	require.NoError(t, err)
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pipeline.TranslatePipelineName(name),
-			Namespace: namespace,
+			Namespace: "test",
 		},
 		Data: map[string]string{
 			constants.OktetoDependencyEnvsKey: base64.StdEncoding.EncodeToString(encoded),
@@ -60,7 +60,7 @@ func setTestOktetoContext() {
 
 func TestConfigMapHandlerGetDependencyVariableEnvVars(t *testing.T) {
 	setTestOktetoContext()
-	cmap := dependencyConfigMap(t, "my-db", "test", map[string]string{"PASSWORD": "secret"})
+	cmap := dependencyConfigMap(t, "my-db", map[string]string{"PASSWORD": "secret"})
 	handler := newDefaultConfigMapHandler(test.NewFakeK8sProvider(cmap), nil)
 
 	envs, err := handler.GetDependencyVariableEnvVars(context.Background(), "my-db", "test")
@@ -87,7 +87,7 @@ func TestConfigMapHandlerGetDependencyVariableEnvVarsWithoutEnvs(t *testing.T) {
 
 func TestConfigMapHandlerGetDependencyVariableEnvVarsSanitizesName(t *testing.T) {
 	setTestOktetoContext()
-	cmap := dependencyConfigMap(t, "My.DB_x", "test", map[string]string{"PASSWORD": "secret"})
+	cmap := dependencyConfigMap(t, "My.DB_x", map[string]string{"PASSWORD": "secret"})
 	handler := newDefaultConfigMapHandler(test.NewFakeK8sProvider(cmap), nil)
 
 	envs, err := handler.GetDependencyVariableEnvVars(context.Background(), "My.DB_x", "test")

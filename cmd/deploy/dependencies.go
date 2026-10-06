@@ -17,12 +17,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/deps"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/validator"
 )
 
 var (
@@ -60,6 +67,7 @@ type dependencyScheduler struct {
 	done             chan struct{}
 	mainReadyErr     error
 	err              error
+	failed           []string
 	stopOnce         sync.Once
 	mainReadyOnce    sync.Once
 	startOnce        sync.Once
@@ -89,6 +97,28 @@ func (s *dependencyScheduler) Start(ctx context.Context) {
 func (s *dependencyScheduler) WaitUntilMainReady() error {
 	<-s.mainReady
 	return s.mainReadyErr
+}
+
+// MainPredecessors returns the sorted names of the dependencies the main deploy waits for
+func (s *dependencyScheduler) MainPredecessors() []string {
+	names := make([]string, 0, len(s.mainPredecessors))
+	for name := range s.mainPredecessors {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// Failed blocks until every started dependency has finished and returns the sorted names of the ones that failed
+func (s *dependencyScheduler) Failed() []string {
+	<-s.done
+	return s.failed
+}
+
+// OverlapsMainDeploy returns true when some dependencies can run at the same time as the main deploy:
+// the ones the main deploy doesn't wait for
+func (s *dependencyScheduler) OverlapsMainDeploy() bool {
+	return len(s.section) > len(s.mainPredecessors)
 }
 
 // Stop prevents new dependencies from starting. Running dependencies are allowed to finish.
@@ -191,6 +221,11 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 		}
 	}
 
+	for _, name := range names {
+		if failures[name] != nil {
+			s.failed = append(s.failed, name)
+		}
+	}
 	notStarted := notStartedDependencies(names, started)
 	switch {
 	case cancelled:
@@ -279,4 +314,97 @@ func sortedDependencyNames(section deps.ManifestSection) []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// pipelineDependencyRunner deploys a dependency as a remote pipeline and waits for it to finish
+type pipelineDependencyRunner struct {
+	pipeline         pipelineCMD.DeployerInterface
+	healthChecked    map[string]bool
+	prefixed         map[string]bool
+	parentWorkflowID string
+	namespace        string
+	variables        []string
+	// environ is the environment when the dependencies start. Variables are expanded with it so that
+	// the env vars exported later by the main deploy don't change the result depending on timing
+	environ  []string
+	timeout  time.Duration
+	redeploy bool
+}
+
+func newPipelineDependencyRunner(pipeline pipelineCMD.DeployerInterface, section deps.ManifestSection, opts *Options, namespace, parentWorkflowID string) *pipelineDependencyRunner {
+	return &pipelineDependencyRunner{
+		pipeline:         pipeline,
+		healthChecked:    healthCheckedDependencies(section, opts.Wait),
+		parentWorkflowID: parentWorkflowID,
+		namespace:        namespace,
+		variables:        opts.Variables,
+		timeout:          opts.Timeout,
+		redeploy:         opts.Dependencies,
+		environ:          os.Environ(),
+		prefixed:         prefixedDependencies(section),
+	}
+}
+
+// Run validates and expands the variables of the dependency and deploys it.
+// It works on a copy of the dependency because the manifest is shared by the dependencies running in parallel
+func (r *pipelineDependencyRunner) Run(ctx context.Context, name string, dep *deps.Dependency) error {
+	// prefixed dependencies are announced by their own output, under their own stage
+	if !r.prefixed[name] {
+		oktetoLog.Information("Deploying dependency '%s'", name)
+	}
+	d := *dep
+	d.Variables = append(env.Environment{}, dep.Variables...)
+	if err := validator.CheckReservedVarName(d.Variables); err != nil {
+		return err
+	}
+	d.Variables = append(d.Variables, env.Var{
+		Name:  "OKTETO_ORIGIN",
+		Value: "okteto-deploy",
+	})
+	if err := d.ExpandVarsFrom(r.environ, r.variables); err != nil {
+		return fmt.Errorf("could not expand variables in dependencies: %w", err)
+	}
+
+	return r.pipeline.ExecuteDeployPipeline(ctx, &pipelineCMD.DeployOptions{
+		Name:               name,
+		Repository:         d.Repository,
+		Branch:             d.Branch,
+		File:               d.ManifestPath,
+		Variables:          model.SerializeEnvironmentVars(d.Variables),
+		Wait:               true,
+		SkipResourcesCheck: !r.healthChecked[name],
+		PrefixLogs:         r.prefixed[name],
+		Timeout:            d.GetTimeout(r.timeout),
+		SkipIfExists:       !r.redeploy,
+		Namespace:          r.namespace,
+		IsDependency:       true,
+		ParentWorkflowID:   r.parentWorkflowID,
+	})
+}
+
+// prefixedDependencies returns the dependencies whose logs are prefixed with their name: all of them when
+// there are several, because they run in parallel. A single dependency keeps the current output (spinner and
+// no prefix) unless it runs at the same time as the main deploy, because the main deploy doesn't wait for it
+func prefixedDependencies(section deps.ManifestSection) map[string]bool {
+	prefixed := map[string]bool{}
+	mainPredecessors := mainDeployPredecessors(section)
+	for name := range section {
+		prefixed[name] = len(section) > 1 || !mainPredecessors[name]
+	}
+	return prefixed
+}
+
+// healthCheckedDependencies returns the dependencies that must have their resources running to succeed:
+// the predecessors of the main deploy or of another dependency, and all of them with --wait
+func healthCheckedDependencies(section deps.ManifestSection, waitFlag bool) map[string]bool {
+	healthChecked := mainDeployPredecessors(section)
+	for name, dep := range section {
+		if waitFlag {
+			healthChecked[name] = true
+		}
+		for _, predecessor := range dep.DependsOn {
+			healthChecked[predecessor] = true
+		}
+	}
+	return healthChecked
 }
