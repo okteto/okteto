@@ -30,7 +30,20 @@ import (
 
 type buildWriter struct{}
 
+// statusDisplay shows the status of one solve until ch is closed. Errors sent to
+// commandFail replace the BuildKit error returned by the solve.
+type statusDisplay func(ch chan *client.SolveStatus, commandFail chan<- error) error
+
+// SolveBuild runs a build and shows its progress in the given output mode
 func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, ioCtrl *io.Controller, metadata *buildkit.BuildMetadata) error {
+	return solve(ctx, c, opt, progress, metadata, func(ch chan *client.SolveStatus, commandFail chan<- error) error {
+		return showBuildStatus(ch, commandFail, progress, ioCtrl)
+	})
+}
+
+// solve runs the build, applies the Okteto log rules to its status, tracks the build
+// context transfer into metadata and hands every status to display
+func solve(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string, metadata *buildkit.BuildMetadata, display statusDisplay) error {
 	logFilterRules := []LogRule{
 		{
 			condition:   BuildKitMissingCacheCondition,
@@ -45,8 +58,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	logFilter := NewBuildKitLogsFilter(logFilterRules, errorRules)
 	contextTracker := newContextSyncTracker()
 	ch := make(chan *client.SolveStatus)
-	ttyChannel := make(chan *client.SolveStatus)
-	plainChannel := make(chan *client.SolveStatus)
+	displayChannel := make(chan *client.SolveStatus)
 	commandFailChannel := make(chan error, 1)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -70,10 +82,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 						metadata.BuildContextSize = contextTracker.SyncedSize()
 						metadata.ContextTransferDuration = contextTracker.Duration()
 					}
-					plainChannel <- ss
-					if progress == oktetoLog.TTYFormat {
-						ttyChannel <- ss
-					}
+					displayChannel <- ss
 					if err := logFilter.GetError(ss); err != nil {
 						commandFailChannel <- err
 					}
@@ -83,10 +92,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 
 			}
 			if done {
-				close(plainChannel)
-				if progress == oktetoLog.TTYFormat {
-					close(ttyChannel)
-				}
+				close(displayChannel)
 				break
 			}
 		}
@@ -94,66 +100,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	})
 
 	eg.Go(func() error {
-
-		w := &buildWriter{}
-		switch progress {
-		case oktetoLog.TTYFormat:
-			go func() {
-				// We use the plain channel to store the logs into a buffer and then show them in the UI
-				d, err := progressui.NewDisplay(w, progressui.PlainMode)
-				if err != nil {
-					// If an error occurs while attempting to create the tty display,
-					// fallback to using plain mode on stdout (in contrast to stderr).
-					d, err = progressui.NewDisplay(w, progressui.PlainMode)
-					if err != nil {
-						oktetoLog.Infof("could not display build status: %s", err)
-						return
-					}
-				}
-				// not using shared context to not disrupt display but let is finish reporting errors
-				if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
-					oktetoLog.Infof("could not display build status: %s", err)
-				}
-			}()
-			// not using shared context to not disrupt display but let it finish reporting errors
-			// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
-			d, err := progressui.NewDisplay(os.Stdout, progressui.TtyMode)
-			if err != nil {
-				// If an error occurs while attempting to create the tty display,
-				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
-				if err != nil {
-					oktetoLog.Infof("could not display build status: %s", err)
-					return err
-				}
-			}
-			// not using shared context to not disrupt display but let is finish reporting errors
-			if _, err := d.UpdateFrom(context.TODO(), ttyChannel); err != nil {
-				oktetoLog.Infof("could not display build status: %s", err)
-			}
-			return err
-		case DeployOutputModeOnBuild, DestroyOutputModeOnBuild, TestOutputModeOnBuild:
-			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: progress})
-			commandFailChannel <- err
-			return err
-		default:
-			// not using shared context to not disrupt display but let it finish reporting errors
-			d, err := progressui.NewDisplay(ioCtrl.Out(), progressui.PlainMode)
-			if err != nil {
-				// If an error occurs while attempting to create the tty display,
-				// fallback to using plain mode on stdout (in contrast to stderr).
-				d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
-				if err != nil {
-					oktetoLog.Infof("could not display build status: %s", err)
-					return err
-				}
-			}
-			// not using shared context to not disrupt display but let is finish reporting errors
-			if _, err := d.UpdateFrom(context.TODO(), plainChannel); err != nil {
-				oktetoLog.Infof("could not display build status: %s", err)
-			}
-			return err
-		}
+		return display(displayChannel, commandFailChannel)
 	})
 
 	err := eg.Wait()
@@ -170,6 +117,85 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		}
 	}
 	return nil
+}
+
+// showBuildStatus shows the status of a single build: a live tty display whose plain
+// output also goes to the Okteto log buffer, the deploy/destroy/test displayer, or plain
+// output through ioCtrl
+func showBuildStatus(ch chan *client.SolveStatus, commandFail chan<- error, progress string, ioCtrl *io.Controller) error {
+	switch progress {
+	case oktetoLog.TTYFormat:
+		plainChannel := make(chan *client.SolveStatus)
+		ttyChannel := make(chan *client.SolveStatus)
+		go func() {
+			for ss := range ch {
+				plainChannel <- ss
+				ttyChannel <- ss
+			}
+			close(plainChannel)
+			close(ttyChannel)
+		}()
+		go showInLogBuffer(plainChannel)
+
+		// not using shared context to not disrupt display but let it finish reporting errors
+		// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
+		d, err := progressui.NewDisplay(os.Stdout, progressui.TtyMode)
+		if err != nil {
+			// If an error occurs while attempting to create the tty display,
+			// fallback to using plain mode on stdout (in contrast to stderr).
+			d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+			if err != nil {
+				oktetoLog.Infof("could not display build status: %s", err)
+				return err
+			}
+		}
+		// not using shared context to not disrupt display but let is finish reporting errors
+		if _, err := d.UpdateFrom(context.TODO(), ttyChannel); err != nil {
+			oktetoLog.Infof("could not display build status: %s", err)
+		}
+		return err
+	case DeployOutputModeOnBuild, DestroyOutputModeOnBuild, TestOutputModeOnBuild:
+		err := deployDisplayer(context.TODO(), ch, &types.BuildOptions{OutputMode: progress})
+		commandFail <- err
+		return err
+	default:
+		// not using shared context to not disrupt display but let it finish reporting errors
+		d, err := progressui.NewDisplay(ioCtrl.Out(), progressui.PlainMode)
+		if err != nil {
+			// If an error occurs while attempting to create the tty display,
+			// fallback to using plain mode on stdout (in contrast to stderr).
+			d, err = progressui.NewDisplay(os.Stdout, progressui.PlainMode)
+			if err != nil {
+				oktetoLog.Infof("could not display build status: %s", err)
+				return err
+			}
+		}
+		// not using shared context to not disrupt display but let is finish reporting errors
+		if _, err := d.UpdateFrom(context.TODO(), ch); err != nil {
+			oktetoLog.Infof("could not display build status: %s", err)
+		}
+		return err
+	}
+}
+
+// showInLogBuffer writes the plain output of a build into the Okteto log buffer
+func showInLogBuffer(ch chan *client.SolveStatus) {
+	w := &buildWriter{}
+	// We use the plain channel to store the logs into a buffer and then show them in the UI
+	d, err := progressui.NewDisplay(w, progressui.PlainMode)
+	if err != nil {
+		// If an error occurs while attempting to create the tty display,
+		// fallback to using plain mode on stdout (in contrast to stderr).
+		d, err = progressui.NewDisplay(w, progressui.PlainMode)
+		if err != nil {
+			oktetoLog.Infof("could not display build status: %s", err)
+			return
+		}
+	}
+	// not using shared context to not disrupt display but let is finish reporting errors
+	if _, err := d.UpdateFrom(context.TODO(), ch); err != nil {
+		oktetoLog.Infof("could not display build status: %s", err)
+	}
 }
 
 func (*buildWriter) Write(p []byte) (int, error) {

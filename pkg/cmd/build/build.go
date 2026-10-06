@@ -75,6 +75,8 @@ type OktetoBuilder struct {
 	metadata      *buildkit.BuildMetadata
 	logger        *io.Controller
 	connector     BuildkitConnector
+	// solveFn runs each solve; nil means SolveBuild
+	solveFn buildkit.SolveBuildFn
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
@@ -85,6 +87,19 @@ func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
 // This allows the connector to be reused across multiple build operations.
 func (ob *OktetoBuilder) GetConnector() BuildkitConnector {
 	return ob.connector
+}
+
+// SetSolveFn sets the function that runs the solves of the next builds. It is used to
+// route the output of concurrent builds to a shared display.
+func (ob *OktetoBuilder) SetSolveFn(fn buildkit.SolveBuildFn) {
+	ob.solveFn = fn
+}
+
+func (ob *OktetoBuilder) solveBuildFn() buildkit.SolveBuildFn {
+	if ob.solveFn == nil {
+		return SolveBuild
+	}
+	return ob.solveFn
 }
 
 // connectorFactory creates an independent BuildKit connector: its own session, its own
@@ -193,7 +208,7 @@ func (ob *OktetoBuilder) GetBuilder() string {
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 
-	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, SolveBuild)
+	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, ob.solveBuildFn())
 }
 
 func setOutputMode(outputMode string) string {

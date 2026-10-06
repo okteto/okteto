@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -1012,4 +1013,21 @@ func TestConnectorFactoryForIngressIsNil(t *testing.T) {
 	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.IngressConnector{})
 
 	require.Nil(t, ob.connectorFactory())
+}
+
+func TestSolveBuildFnDefaultsToSolveBuild(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), fakeBuildkitConnector{})
+
+	require.Equal(t, reflect.ValueOf(SolveBuild).Pointer(), reflect.ValueOf(ob.solveBuildFn()).Pointer())
+}
+
+func TestSetSolveFnReplacesSolveFunction(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), fakeBuildkitConnector{})
+	custom := func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *buildkit.BuildMetadata) error {
+		return nil
+	}
+
+	ob.SetSolveFn(custom)
+
+	require.Equal(t, reflect.ValueOf(custom).Pointer(), reflect.ValueOf(ob.solveBuildFn()).Pointer())
 }
