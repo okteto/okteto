@@ -22,6 +22,7 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/cmd/build/basic"
+	"github.com/okteto/okteto/cmd/build/v2/smartbuild"
 	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/build"
@@ -29,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -311,4 +313,29 @@ func TestParallelBuildFnHandsWorkersOutInPreparationOrder(t *testing.T) {
 	require.NoError(t, <-doneB)
 
 	require.Equal(t, []string{"a", "b"}, order)
+}
+
+// recordingRepo is a git repository that records when the smart build hashes are computed
+type recordingRepo struct {
+	fakeConfigRepo
+	log *eventLog
+}
+
+func (r recordingRepo) GetLatestDirSHA(dir string) (string, error) {
+	r.log.add("hash")
+	return "sha", nil
+}
+
+func TestBuildInParallelComputesBuildHashesBeforeTheBatch(t *testing.T) {
+	ob := newParallelTestBuilder(t)
+	log := &eventLog{}
+	ob.smartBuildCtrl = smartbuild.NewSmartBuildCtrl(recordingRepo{log: log}, ob.Registry, afero.NewMemMapFs(), ob.ioCtrl, fakeWorkingDirGetter{}, smartbuild.NewConfig(), newImageTagger(ob.Config, nil), registry.NewImageCtrl(&fakeImageConfig{}), ob.serviceEnvVarsHandler, "test-namespace", "test-registry.com")
+
+	err := ob.buildInParallel(context.Background(), newTestRunner(parallelTestConnector{}), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"}), parallelTestOptions(), func(_ context.Context, svc *buildTypes.BuildInfo, _ basic.Builder) error {
+		log.add("build " + svc.Name())
+		return nil
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"hash", "hash"}, log.startOrder()[:2])
 }

@@ -21,6 +21,7 @@ import (
 	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
 	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -66,6 +67,10 @@ func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.O
 	}
 	defer conn.Stop()
 
+	// Smart builds may warn through the builder's output while computing a hash: compute
+	// them all before the shared display starts. Builds read them from the hasher's cache.
+	ob.computeBuildHashes(svcs, options.Manifest)
+
 	if options.EnableStages {
 		ob.ioCtrl.SetStage("Building services")
 	}
@@ -88,6 +93,17 @@ func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.O
 	}
 	pool.Close()
 	return buildErr
+}
+
+// computeBuildHashes computes the smart build hash of each service, as building it would
+func (ob *OktetoBuilder) computeBuildHashes(svcs []*buildTypes.BuildInfo, manifest *model.Manifest) {
+	if !ob.smartBuildCtrl.IsEnabled() {
+		return
+	}
+	isStackManifest := manifest.Type == model.StackType
+	for _, svc := range svcs {
+		ob.smartBuildCtrl.GetBuildHash(ob.getBuildInfoWithoutVolumeMounts(manifest.Build[svc.Name()], isStackManifest), svc.Name())
+	}
 }
 
 // connectBuildKit connects conn and waits until BuildKit is ready
