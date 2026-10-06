@@ -188,6 +188,11 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		solveTime = time.Since(startSolverTime)
 		r.metadata.build.BuildkitDuration = solveTime
 		if err != nil {
+			if ctx.Err() != nil {
+				// The build was cancelled (interrupted, or another build of a parallel batch
+				// failed): it is not a transient BuildKit error, don't retry it
+				return err
+			}
 			if IsRetryable(err) {
 				r.connector.Stop()
 				r.logger.Logger().Infof("retrying operation: %s", err)

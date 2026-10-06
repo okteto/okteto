@@ -239,3 +239,16 @@ func TestParallelBuildStrategyStartsNothingAfterAFailure(t *testing.T) {
 	require.ErrorIs(t, err, assert.AnError)
 	require.Equal(t, []string{"a"}, log.startOrder())
 }
+
+func TestParallelBuildStrategyReportsInterruptionInsteadOfCancelledBuilds(t *testing.T) {
+	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"a", "b"})
+	ctx, interrupt := context.WithCancel(context.Background())
+	defer interrupt()
+
+	err := parallelBuildStrategy{maxParallel: 4}.Build(ctx, svcs, nil, func(context.Context, *buildTypes.BuildInfo, int) error {
+		interrupt()
+		return assert.AnError
+	})
+
+	require.ErrorIs(t, err, context.Canceled)
+}

@@ -102,10 +102,12 @@ func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.Bui
 			}
 		}
 	}
-	if err := eg.Wait(); err != nil {
-		return err
+	err := eg.Wait()
+	if ctx.Err() != nil {
+		// The command was interrupted: report that, not the cancelled builds' errors
+		return ctx.Err()
 	}
-	return ctx.Err()
+	return err
 }
 
 // buildPriorities ranks svcs for the order in which ready services take free slots:
