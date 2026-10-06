@@ -64,7 +64,7 @@ func NewCommandStateless(c *okteto.Client, ioCtrl *io.Controller) *Command {
 }
 
 // Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller, at wakeAnalyticsTracker) *cobra.Command {
+func Namespace(ctx context.Context, ioCtrl *io.Controller, at wakeAnalyticsTracker) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace",
@@ -78,7 +78,7 @@ func Namespace(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controll
 	cmd.AddCommand(Use(ctx, ioCtrl))
 	cmd.AddCommand(List(ctx, ioCtrl))
 	cmd.AddCommand(Create(ctx, ioCtrl))
-	cmd.AddCommand(Delete(ctx, k8sLogger, ioCtrl))
+	cmd.AddCommand(Delete(ctx, ioCtrl))
 	cmd.AddCommand(Sleep(ctx, ioCtrl))
 	cmd.AddCommand(Wake(ctx, ioCtrl, at))
 	return cmd
