@@ -1565,3 +1565,131 @@ func Test_resolveIsRedeploy_FallbackToConfigmap(t *testing.T) {
 		})
 	}
 }
+
+// newComposeManifestWithServiceAccount returns a manifest whose compose service "api" has a build section and
+// references the given ServiceAccount, with the given deploy commands
+func newComposeManifestWithServiceAccount(serviceAccount string, commands []model.DeployCommand) *model.Manifest {
+	return &model.Manifest{
+		Name: "movies",
+		Build: build.ManifestBuild{
+			"api": &build.Info{Context: ".", Dockerfile: "Dockerfile"},
+		},
+		Deploy: &model.DeployInfo{
+			Commands: commands,
+			ComposeSection: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{{File: "docker-compose.yml"}},
+				Stack: &model.Stack{
+					Services: map[string]*model.Service{
+						"api": {Image: "okteto/api", ServiceAccount: serviceAccount},
+					},
+				},
+			},
+		},
+	}
+}
+
+func newServiceAccountTestCommand(t *testing.T, manifest *model.Manifest, builder *fakeV2Builder, deployer *fakeDeployer, k8sObjects ...runtime.Object) *Command {
+	t.Helper()
+	previousStore := okteto.CurrentStore
+	t.Cleanup(func() { okteto.CurrentStore = previousStore })
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {Namespace: "test", Cfg: &api.Config{}},
+		},
+		CurrentContext: "test",
+	}
+	fakeK8sClientProvider := test.NewFakeK8sProvider(k8sObjects...)
+	return &Command{
+		AnalyticsTracker: &fakeTracker{},
+		GetManifest: func(_ string, _ afero.Fs) (*model.Manifest, error) {
+			return manifest, nil
+		},
+		K8sClientProvider: fakeK8sClientProvider,
+		Fs:                afero.NewMemMapFs(),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		GetDeployer:       deployer.Get,
+		Builder:           builder,
+		IoCtrl:            io.NewIOController(),
+	}
+}
+
+func TestDeployFailsBeforeBuildWhenServiceAccountIsMissing(t *testing.T) {
+	builder := &fakeV2Builder{}
+	deployer := &fakeDeployer{}
+	c := newServiceAccountTestCommand(t, newComposeManifestWithServiceAccount("missing-sa", nil), builder, deployer)
+	opts := &Options{Name: "movies", Namespace: "test"}
+
+	err := c.Run(context.Background(), opts)
+
+	require.ErrorContains(t, err, "ServiceAccount 'missing-sa' used by service 'api' (x-okteto-service-account) doesn't exist in namespace 'test'")
+	builder.AssertNotCalled(t, "Build", mock.Anything, mock.Anything)
+	deployer.AssertNotCalled(t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	require.NoError(t, err)
+	cfg, err := configmaps.Get(context.Background(), pipeline.TranslatePipelineName(opts.Name), "test", fakeClient)
+	require.NoError(t, err)
+	require.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
+}
+
+func TestDeployChecksServiceAccountAfterCommands(t *testing.T) {
+	builder := &fakeV2Builder{}
+	builder.On("Build", mock.Anything, mock.Anything).Return(nil)
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	// the deployer is faked, so the commands don't run: the ServiceAccount is still missing in the compose stage
+	commands := []model.DeployCommand{{Name: "noop", Command: "echo"}}
+	c := newServiceAccountTestCommand(t, newComposeManifestWithServiceAccount("missing-sa", commands), builder, deployer)
+	opts := &Options{Name: "movies", Namespace: "test"}
+
+	err := c.Run(context.Background(), opts)
+
+	require.ErrorContains(t, err, "ServiceAccount 'missing-sa' used by service 'api' (x-okteto-service-account) doesn't exist in namespace 'test'")
+	builder.AssertCalled(t, "Build", mock.Anything, mock.Anything)
+	deployer.AssertCalled(t, "Deploy", mock.Anything, mock.Anything)
+}
+
+func Test_validateServiceAccountsBeforeBuild(t *testing.T) {
+	withoutCommands := &model.Manifest{Deploy: &model.DeployInfo{}}
+	withCommands := &model.Manifest{Deploy: &model.DeployInfo{Commands: []model.DeployCommand{{Name: "ls", Command: "ls"}}}}
+
+	require.True(t, validateServiceAccountsBeforeBuild(withoutCommands))
+	require.False(t, validateServiceAccountsBeforeBuild(withCommands))
+}
+
+func TestDeployChecksExistingServiceAccountOnceBeforeBuild(t *testing.T) {
+	builder := &fakeV2Builder{}
+	builder.On("Build", mock.Anything, mock.Anything).Return(nil)
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	sa := &apiv1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "api-sa", Namespace: "test"}}
+	c := newServiceAccountTestCommand(t, newComposeManifestWithServiceAccount("api-sa", nil), builder, deployer, sa)
+
+	// the deploy may fail later in the compose stage (endpoints, workloads...): this test only cares about the check
+	_ = c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	builder.AssertCalled(t, "Build", mock.Anything, mock.Anything)
+	deployer.AssertCalled(t, "Deploy", mock.Anything, mock.Anything)
+	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, countServiceAccountGets(fakeClient.(*fake.Clientset)))
+}
+
+func countServiceAccountGets(client *fake.Clientset) int {
+	count := 0
+	for _, action := range client.Actions() {
+		if action.GetVerb() == "get" && action.GetResource().Resource == "serviceaccounts" {
+			count++
+		}
+	}
+	return count
+}
+
+func Test_hasComposeStack(t *testing.T) {
+	require.False(t, hasComposeStack(&model.Manifest{}))
+	require.False(t, hasComposeStack(&model.Manifest{Deploy: &model.DeployInfo{}}))
+	require.False(t, hasComposeStack(&model.Manifest{Deploy: &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{}}}))
+	require.True(t, hasComposeStack(&model.Manifest{Deploy: &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{Stack: &model.Stack{}}}}))
+}
