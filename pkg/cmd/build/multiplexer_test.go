@@ -146,13 +146,25 @@ func TestMultiplexerPlainPrefixesEveryLine(t *testing.T) {
 	}
 }
 
-func TestMultiplexerPlainWritesMessagesImmediately(t *testing.T) {
+func TestMultiplexerPlainHoldsMessagesUntilClose(t *testing.T) {
 	m, out := newTestMultiplexer(t, "plain", []string{"api"})
 
-	m.IO("api").Out().Println("Building 'Dockerfile'")
+	m.IO("api").Out().Println("Image 'api' successfully pushed")
 
-	require.Contains(t, readOutput(t, out), "Building 'Dockerfile'")
+	require.NotContains(t, readOutput(t, out), "successfully pushed")
 	closeWithin(t, m)
+}
+
+func TestMultiplexerPlainShowsMessagesAfterProgress(t *testing.T) {
+	m, out := newTestMultiplexer(t, "plain", []string{"api", "web"})
+
+	m.IO("api").Out().Println("Image 'api' successfully pushed")
+	display(t, m, "api", completedStatus("api-1", "RUN go build"))
+	display(t, m, "web", completedStatus("web-1", "RUN npm ci"))
+	closeWithin(t, m)
+
+	output := readOutput(t, out)
+	require.Greater(t, strings.Index(output, "Image 'api' successfully pushed"), strings.Index(output, "[web] #1 RUN npm ci"))
 }
 
 func TestMultiplexerFinishIsIdempotent(t *testing.T) {

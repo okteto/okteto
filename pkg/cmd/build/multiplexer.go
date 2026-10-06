@@ -32,9 +32,10 @@ import (
 
 // Multiplexer shows the progress of several builds running at the same time as one
 // output, the way docker buildx bake does. In tty mode every build feeds one live display
-// where its steps are prefixed with its service name; messages printed by the builds are
-// held until the display ends. In any other mode each build prints plain lines prefixed
-// with its service name and tagged with its own stage.
+// where its steps are prefixed with its service name. In any other mode each build prints
+// plain lines prefixed with its service name and tagged with its own stage. In both, the
+// messages printed by the builds (pushed images, warnings) are held and shown together at
+// the end.
 type Multiplexer struct {
 	out      *os.File
 	printer  progresswriter.Writer
@@ -44,7 +45,10 @@ type Multiplexer struct {
 }
 
 type muxService struct {
+	// ioCtrl prints the messages of the builds (pushed images, warnings), held until Close
 	ioCtrl *io.Controller
+	// progressIO prints the plain progress lines as they come; nil in tty mode
+	progressIO *io.Controller
 	// writer feeds the shared tty display; nil in plain mode
 	writer   progresswriter.Writer
 	name     string
@@ -77,10 +81,11 @@ func newMultiplexer(ioCtrl *io.Controller, progress string, services []string, o
 		out:      out,
 		progress: progress,
 		services: make(map[string]*muxService, len(services)),
+		pending:  &lockedWriter{w: &bytes.Buffer{}},
 	}
 	tty := progress == oktetoLog.TTYFormat && len(services) > 0
 	var mw *progresswriter.MultiWriter
-	var sink stdio.Writer = &lockedWriter{w: out}
+	progressSink := &lockedWriter{w: out}
 	if tty {
 		ioCtrl.Out().Println(fmt.Sprintf("Building %d services in parallel: %s", len(services), strings.Join(services, ", ")))
 		printer, err := newPrinter(out, displayMode)
@@ -89,17 +94,18 @@ func newMultiplexer(ioCtrl *io.Controller, progress string, services []string, o
 		}
 		m.printer = printer
 		mw = progresswriter.NewMultiWriter(printer)
-		m.pending = &lockedWriter{w: &bytes.Buffer{}}
-		sink = m.pending
 	}
 	for _, svc := range services {
+		stage := fmt.Sprintf("Building service %s", svc)
 		s := &muxService{
 			name:   svc,
 			tty:    tty,
-			ioCtrl: ioCtrl.WithOutput(sink, fmt.Sprintf("Building service %s", svc)),
+			ioCtrl: ioCtrl.WithOutput(m.pending, stage),
 		}
 		if tty {
 			s.writer = mw.WithPrefix(svc, true)
+		} else {
+			s.progressIO = ioCtrl.WithOutput(progressSink, stage)
 		}
 		m.services[svc] = s
 	}
@@ -137,19 +143,20 @@ func (m *Multiplexer) Finish(svc string) {
 }
 
 // Close finishes every service, waits for the shared display to end and then prints the
-// messages the builds wrote while it was running. Call it once all builds are over.
+// messages the builds wrote while they were running. Call it once all builds are over.
 func (m *Multiplexer) Close() error {
 	for _, s := range m.services {
 		s.finish()
 	}
-	if m.printer == nil {
-		return nil
+	var displayErr error
+	if m.printer != nil {
+		<-m.printer.Done()
+		displayErr = m.printer.Err()
 	}
-	<-m.printer.Done()
 	if _, err := m.out.Write(m.pending.w.(*bytes.Buffer).Bytes()); err != nil {
 		return err
 	}
-	return m.printer.Err()
+	return displayErr
 }
 
 // display shows the status of one solve of the service
@@ -178,7 +185,7 @@ func (s *muxService) display(ch chan *client.SolveStatus, _ chan<- error) error 
 
 // showPlain prints the status as plain lines prefixed with the service name
 func (s *muxService) showPlain(ch chan *client.SolveStatus) error {
-	w := &prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: s.ioCtrl.Out()}
+	w := &prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: s.progressIO.Out()}
 	d, err := progressui.NewDisplay(w, progressui.PlainMode)
 	if err != nil {
 		oktetoLog.Infof("could not display build status: %s", err)
