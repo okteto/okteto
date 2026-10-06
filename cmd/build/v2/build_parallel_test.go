@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/moby/buildkit/client"
@@ -175,4 +176,99 @@ func TestBuildServiceImagesWarnsThroughRunnerOutput(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Contains(t, out.String(), `secret "token" uses env var "OKTETO_TEST_UNSET_SECRET" which is not set`)
+}
+
+// startErrConnector is a connector whose Start fails with err, or with the context error
+// when ctx is done
+type startErrConnector struct {
+	parallelTestConnector
+	err error
+}
+
+func (c startErrConnector) Start(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return c.err
+}
+
+// builtServices records the runner each service was built with
+type builtServices struct {
+	runners sync.Map
+}
+
+func (b *builtServices) build(_ context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error {
+	b.runners.Store(svc.Name(), runner)
+	return nil
+}
+
+func (b *builtServices) runner(t *testing.T, svc string) basic.Builder {
+	t.Helper()
+	runner, ok := b.runners.Load(svc)
+	require.True(t, ok, "service %s was not built", svc)
+	return runner.(basic.Builder)
+}
+
+func newParallelTestBuilder(t *testing.T) *OktetoBuilder {
+	t.Helper()
+	registry := newFakeRegistry()
+	ob := NewFakeBuilder(test.NewFakeOktetoBuilder(registry), registry, fakeConfig{isOkteto: true})
+	ob.buildStrategy = parallelBuildStrategy{maxParallel: 4}
+	return ob
+}
+
+func newTestRunner(conn buildCmd.BuildkitConnector) *buildCmd.OktetoBuilder {
+	return buildCmd.NewOktetoBuilder(&okteto.ContextStateless{Store: okteto.GetContextStore()}, afero.NewMemMapFs(), io.NewIOController(), conn)
+}
+
+func parallelTestOptions() *types.BuildOptions {
+	return &types.BuildOptions{
+		OutputMode: "plain",
+		Manifest:   &model.Manifest{Build: build.ManifestBuild{"a": &build.Info{}, "b": &build.Info{}}},
+	}
+}
+
+func TestBuildInParallelBuildsEveryServiceWithItsOwnOutput(t *testing.T) {
+	ob := newParallelTestBuilder(t)
+	built := &builtServices{}
+
+	err := ob.buildInParallel(context.Background(), newTestRunner(parallelTestConnector{}), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"}), parallelTestOptions(), built.build)
+
+	require.NoError(t, err)
+	require.NotSame(t, ob.ioCtrl, built.runner(t, "a").IoCtrl)
+	require.NotSame(t, ob.ioCtrl, built.runner(t, "b").IoCtrl)
+}
+
+func TestBuildInParallelReturnsBuildError(t *testing.T) {
+	ob := newParallelTestBuilder(t)
+
+	err := ob.buildInParallel(context.Background(), newTestRunner(parallelTestConnector{}), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"}), parallelTestOptions(), func(context.Context, *buildTypes.BuildInfo, basic.Builder) error {
+		return assert.AnError
+	})
+
+	require.ErrorIs(t, err, assert.AnError)
+}
+
+func TestBuildInParallelFallsBackToSequentialWhenBuildKitIsNotReady(t *testing.T) {
+	ob := newParallelTestBuilder(t)
+	built := &builtServices{}
+
+	err := ob.buildInParallel(context.Background(), newTestRunner(startErrConnector{err: assert.AnError}), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"}), parallelTestOptions(), built.build)
+
+	require.NoError(t, err)
+	require.Same(t, ob.ioCtrl, built.runner(t, "a").IoCtrl)
+	require.Same(t, ob.ioCtrl, built.runner(t, "b").IoCtrl)
+}
+
+func TestBuildInParallelReturnsCancellationWhileConnecting(t *testing.T) {
+	ob := newParallelTestBuilder(t)
+	built := &builtServices{}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := ob.buildInParallel(ctx, newTestRunner(startErrConnector{}), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"}), parallelTestOptions(), built.build)
+
+	require.ErrorIs(t, err, context.Canceled)
+	_, builtA := built.runners.Load("a")
+	require.False(t, builtA)
 }

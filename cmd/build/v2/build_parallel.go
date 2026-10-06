@@ -46,19 +46,28 @@ func inBatchDependencies(manifest build.ManifestBuild, svcs []*buildTypes.BuildI
 	return deps
 }
 
+// buildOneFn builds a single service with the given runner
+type buildOneFn func(ctx context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error
+
 // buildInParallel builds svcs at the same time on a pool of workers, each with its own
-// BuildKit connector, showing their output through one multiplexer
-func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.OktetoBuilder, svcs []*buildTypes.BuildInfo, deps map[string][]string, options *types.BuildOptions) error {
+// BuildKit connector, showing their output through one multiplexer. When BuildKit can't
+// be reached before the batch starts, it builds them one after another as before, so the
+// connection status and retries are shown as usual.
+func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.OktetoBuilder, svcs []*buildTypes.BuildInfo, options *types.BuildOptions, buildOne buildOneFn) error {
 	conn := runner.GetConnector()
-	// Connect worker 0 before the shared display starts, so its queue status shows as
-	// usual. A failure here is retried and reported by the build itself.
-	if err := conn.Start(ctx); err != nil {
-		ob.ioCtrl.Logger().Infof("could not connect to BuildKit before the parallel builds: %s", err)
-	} else if err := conn.WaitUntilIsReady(ctx); err != nil {
-		ob.ioCtrl.Logger().Infof("BuildKit not ready before the parallel builds: %s", err)
+	// Connect worker 0 before the shared display starts, so its queue status shows as usual
+	if err := connectBuildKit(ctx, conn); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		ob.ioCtrl.Logger().Infof("could not connect to BuildKit before the parallel builds, building one after another: %s", err)
+		return ob.buildSequentially(ctx, svcs, options, buildOne)
 	}
 	defer conn.Stop()
 
+	if options.EnableStages {
+		ob.ioCtrl.SetStage("Building services")
+	}
 	names := make([]string, 0, len(svcs))
 	for _, svc := range svcs {
 		names = append(names, svc.Name())
@@ -69,29 +78,38 @@ func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.O
 	}
 	pool := runner.NewWorkerPool(ctx, ob.buildStrategy.maxConcurrency())
 
-	if options.EnableStages {
-		ob.ioCtrl.SetStage("Building services")
-	}
-	buildOne := func(ctx context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error {
-		return ob.buildService(ctx, svc, options, runner)
-	}
-	buildErr := ob.buildStrategy.Build(ctx, svcs, deps, parallelBuildFn(pool, mux, buildOne))
+	buildErr := ob.buildStrategy.Build(ctx, svcs, inBatchDependencies(options.Manifest.Build, svcs), parallelBuildFn(pool, mux, buildOne))
 
-	muxErr := mux.Close()
+	if err := mux.Close(); err != nil {
+		// The images are built: a display problem must not fail the command
+		ob.ioCtrl.Logger().Infof("could not display the build output: %s", err)
+	}
 	pool.Close()
-	if buildErr != nil {
-		return buildErr
+	return buildErr
+}
+
+// connectBuildKit connects conn and waits until BuildKit is ready
+func connectBuildKit(ctx context.Context, conn buildCmd.BuildkitConnector) error {
+	if err := conn.Start(ctx); err != nil {
+		return err
 	}
-	if muxErr != nil {
-		return fmt.Errorf("could not display the build output: %w", muxErr)
-	}
-	return nil
+	return conn.WaitUntilIsReady(ctx)
+}
+
+// buildSequentially builds svcs one after another with the builder's runner and output
+func (ob *OktetoBuilder) buildSequentially(ctx context.Context, svcs []*buildTypes.BuildInfo, options *types.BuildOptions, buildOne buildOneFn) error {
+	return sequentialBuildStrategy{}.Build(ctx, svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
+		if options.EnableStages {
+			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc.Name()))
+		}
+		return buildOne(ctx, svc, ob.Builder)
+	})
 }
 
 // parallelBuildFn returns the build function of a parallel batch: it takes a worker from
 // pool, routes its output to the service's display in mux, builds the service with
 // buildOne and gives the worker back reset to its defaults
-func parallelBuildFn(pool *buildCmd.WorkerPool, mux *buildCmd.Multiplexer, buildOne func(ctx context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error) buildServiceFn {
+func parallelBuildFn(pool *buildCmd.WorkerPool, mux *buildCmd.Multiplexer, buildOne buildOneFn) buildServiceFn {
 	return func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) error {
 		w, err := pool.Acquire(ctx, inFlight)
 		if err != nil {

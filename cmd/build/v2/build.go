@@ -293,16 +293,14 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 // buildServices builds the services that are not cached: at the same time when the
 // parallel strategy is enabled and there is more than one, one after another otherwise
 func (ob *OktetoBuilder) buildServices(ctx context.Context, svcs []*buildTypes.BuildInfo, options *types.BuildOptions) error {
+	buildOne := func(ctx context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error {
+		return ob.buildService(ctx, svc, options, runner)
+	}
 	runner, isOktetoRunner := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
 	if isOktetoRunner && len(svcs) > 1 && ob.buildStrategy.maxConcurrency() > 1 {
-		return ob.buildInParallel(ctx, runner, svcs, inBatchDependencies(options.Manifest.Build, svcs), options)
+		return ob.buildInParallel(ctx, runner, svcs, options, buildOne)
 	}
-	return sequentialBuildStrategy{}.Build(ctx, svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
-		if options.EnableStages {
-			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc.Name()))
-		}
-		return ob.buildService(ctx, svc, options, ob.Builder)
-	})
+	return ob.buildSequentially(ctx, svcs, options, buildOne)
 }
 
 // buildService builds a single service that is not cached with runner, records its build
