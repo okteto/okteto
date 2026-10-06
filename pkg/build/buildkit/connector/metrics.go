@@ -14,6 +14,8 @@
 package connector
 
 import (
+	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -93,6 +95,20 @@ func (m *ConnectorMetrics) TrackSuccess() {
 
 // TrackFailure sends a failure event to analytics
 func (m *ConnectorMetrics) TrackFailure() {
+	m.track(false)
+}
+
+// ErrConnectorNotNeeded is the cancellation cause used when a connector is stopped because
+// it is no longer needed, e.g. a pool closing an extra connector still waiting in the
+// BuildKit queue. It is not a connection failure.
+var ErrConnectorNotNeeded = errors.New("buildkit connector no longer needed")
+
+// TrackFailureUnlessNotNeeded sends a failure event to analytics unless ctx was cancelled
+// with ErrConnectorNotNeeded
+func (m *ConnectorMetrics) TrackFailureUnlessNotNeeded(ctx context.Context) {
+	if errors.Is(context.Cause(ctx), ErrConnectorNotNeeded) {
+		return
+	}
 	m.track(false)
 }
 

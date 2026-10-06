@@ -16,6 +16,8 @@ package build
 import (
 	"context"
 	"sync"
+
+	"github.com/okteto/okteto/pkg/build/buildkit/connector"
 )
 
 // WorkerPool hands out builders that can run builds concurrently. Each worker runs one
@@ -26,7 +28,7 @@ type WorkerPool struct {
 	ctx     context.Context
 	base    *OktetoBuilder
 	newConn connectorFactory
-	cancel  context.CancelFunc
+	cancel  context.CancelCauseFunc
 
 	// available holds the idle workers. Its capacity is size, so sends never block.
 	available chan *OktetoBuilder
@@ -49,7 +51,7 @@ func (ob *OktetoBuilder) NewWorkerPool(ctx context.Context, size int) *WorkerPoo
 
 func newWorkerPool(ctx context.Context, base *OktetoBuilder, size int, newConn connectorFactory) *WorkerPool {
 	size = max(size, 1)
-	poolCtx, cancel := context.WithCancel(ctx)
+	poolCtx, cancel := context.WithCancelCause(ctx)
 	p := &WorkerPool{
 		ctx:       poolCtx,
 		cancel:    cancel,
@@ -88,7 +90,8 @@ func (p *WorkerPool) Release(w *OktetoBuilder) {
 // every extra worker. It must be called once all builds have finished. It never stops
 // the builder's own connector, which belongs to the caller.
 func (p *WorkerPool) Close() {
-	p.cancel()
+	// Extra connectors still connecting are not failures: they are just no longer needed
+	p.cancel(connector.ErrConnectorNotNeeded)
 	p.wg.Wait()
 
 	p.mu.Lock()

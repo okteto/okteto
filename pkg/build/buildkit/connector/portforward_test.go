@@ -518,6 +518,18 @@ func TestPortForwarder_Start_TracksContextCancelledWhileWaitingForAssignedPod(t 
 	require.Equal(t, []string{"failure: ContextCancelledWhileWaitingForPortForward"}, tracker.outcomes())
 }
 
+func TestPortForwarder_Start_DoesNotTrackFailureWhenConnectorIsNoLongerNeeded(t *testing.T) {
+	api := &fakeBuildkitAPI{pods: []string{"buildkit-1"}}
+	pf, _, tracker := newPortForwarderWithFakes(api, nil, nil)
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrConnectorNotNeeded)
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(ctx) })
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Empty(t, tracker.outcomes(), "a connector that is no longer needed must not report a failure")
+}
+
 func TestConnectFailureReason(t *testing.T) {
 	tests := []struct {
 		err      error

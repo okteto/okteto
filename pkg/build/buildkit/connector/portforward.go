@@ -207,7 +207,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		return nil
 	}
 	if ctx.Err() != nil || !errors.Is(err, errPortForwardCreation) {
-		pf.trackConnectFailure(connectFailureReason(err))
+		pf.trackConnectFailure(ctx, connectFailureReason(err))
 		return err
 	}
 	// The pod assigned to the session might be gone, e.g. removed by the BuildKit autoscaler
@@ -215,7 +215,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	// after each build, so the session can safely continue on another pod. Other port forward
 	// failures (e.g. an expired kubetoken) get the same single retry.
 	// The failure is tracked with its own reason, as the build can still succeed on the new pod.
-	pf.trackConnectFailure("AssignedPodUnreachable")
+	pf.trackConnectFailure(ctx, "AssignedPodUnreachable")
 	pf.ioCtrl.Logger().Infof("could not reach buildkit pod %s, requesting a new one", pf.podName)
 	retryErr := pf.connectToNewPod(ctx)
 	var userErr oktetoErrors.UserError
@@ -237,7 +237,7 @@ func (pf *PortForwarder) connectToNewPod(ctx context.Context) error {
 	}
 	pf.podName = podName
 	if err := pf.connect(ctx); err != nil {
-		pf.trackConnectFailure(connectFailureReason(err))
+		pf.trackConnectFailure(ctx, connectFailureReason(err))
 		return err
 	}
 	return nil
@@ -259,10 +259,11 @@ func (pf *PortForwarder) connect(ctx context.Context) error {
 	return nil
 }
 
-// trackConnectFailure sends a port forward failure event to analytics with the given reason
-func (pf *PortForwarder) trackConnectFailure(reason string) {
+// trackConnectFailure sends a port forward failure event to analytics with the given
+// reason, unless the connector is no longer needed
+func (pf *PortForwarder) trackConnectFailure(ctx context.Context, reason string) {
 	pf.metrics.SetErrReason(reason)
-	pf.metrics.TrackFailure()
+	pf.metrics.TrackFailureUnlessNotNeeded(ctx)
 }
 
 // connectFailureReason returns the analytics reason of a failed port forward connection
@@ -350,7 +351,7 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 			}
 		case <-ctx.Done():
 			pf.metrics.SetErrReason("ContextCancelledWhileWaitingForBuildkitPod")
-			pf.metrics.TrackFailure()
+			pf.metrics.TrackFailureUnlessNotNeeded(ctx)
 			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}

@@ -212,7 +212,7 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 			}
 		case <-ctx.Done():
 			ic.metrics.SetErrReason("ContextCancelled")
-			ic.metrics.TrackFailure()
+			ic.metrics.TrackFailureUnlessNotNeeded(ctx)
 			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}

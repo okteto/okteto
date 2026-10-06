@@ -14,6 +14,7 @@
 package connector
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -130,4 +131,45 @@ func TestConnectorMetrics_SetErrReason(t *testing.T) {
 	require.Equal(t, "QueueTimeout", m.errReason)
 	m.SetErrReason("PortForwardCreation")
 	require.Equal(t, "PortForwardCreation", m.errReason)
+}
+
+// countingConnectionTracker counts the connection events it receives
+type countingConnectionTracker struct {
+	events []*analytics.BuildkitConnectorMetadata
+}
+
+func (c *countingConnectionTracker) TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata) {
+	c.events = append(c.events, m)
+}
+
+func TestTrackFailureUnlessNotNeededSkipsConnectorsNoLongerNeeded(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrConnectorNotNeeded)
+
+	m.TrackFailureUnlessNotNeeded(ctx)
+
+	require.Empty(t, tracker.events)
+}
+
+func TestTrackFailureUnlessNotNeededTracksOtherCancellations(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	m.TrackFailureUnlessNotNeeded(ctx)
+
+	require.Len(t, tracker.events, 1)
+	require.False(t, tracker.events[0].Success)
+}
+
+func TestTrackFailureUnlessNotNeededTracksFailuresWithLiveContext(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+
+	m.TrackFailureUnlessNotNeeded(context.Background())
+
+	require.Len(t, tracker.events, 1)
 }

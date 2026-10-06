@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/build/buildkit/connector"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,9 @@ import (
 type poolFakeConnector struct {
 	unblock  chan struct{}
 	startErr error
-	stops    atomic.Int32
+	// cause is the context cancellation cause seen by Start
+	cause error
+	stops atomic.Int32
 }
 
 func connectedConnector() *poolFakeConnector {
@@ -49,6 +52,7 @@ func (f *poolFakeConnector) Start(ctx context.Context) error {
 	case <-f.unblock:
 		return f.startErr
 	case <-ctx.Done():
+		f.cause = context.Cause(ctx)
 		return ctx.Err()
 	}
 }
@@ -270,4 +274,18 @@ func TestWorkerPoolConcurrentUse(t *testing.T) {
 		require.NoError(t, err)
 	}
 	require.LessOrEqual(t, factory.calls.Load(), int32(3))
+}
+
+func TestWorkerPoolCloseCancelsPendingExtraAsNotNeeded(t *testing.T) {
+	stuck := stuckConnector()
+	factory := &fakeConnectorFactory{conns: []*poolFakeConnector{stuck}}
+	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
+
+	_, err := p.Acquire(context.Background(), false)
+	require.NoError(t, err)
+	_, err = p.Acquire(shortContext(t), true)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	p.Close()
+
+	require.ErrorIs(t, stuck.cause, connector.ErrConnectorNotNeeded)
 }
