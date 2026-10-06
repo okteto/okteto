@@ -18,16 +18,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
-
-	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
