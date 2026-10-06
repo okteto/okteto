@@ -935,13 +935,13 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Depl
 	if !options.InsidePipeline {
 		options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, s, options.ServicesToDeploy, c)
 	}
-	return validateServiceAccounts(ctx, s, options.ServicesToDeploy, c)
+	return nil
 }
 
-// validateServiceAccounts checks that the ServiceAccounts referenced via x-okteto-service-account by the services
-// to deploy exist in the namespace, so a missing one fails before anything is applied instead of leaving the
-// workloads unable to create pods
-func validateServiceAccounts(ctx context.Context, s *model.Stack, servicesToDeploy []string, c kubernetes.Interface) error {
+// ValidateServiceAccounts checks that the ServiceAccounts referenced via x-okteto-service-account by the services
+// to deploy exist in the namespace, so a missing one fails before deploying instead of leaving the workloads unable
+// to create pods. The namespace is explicit because the stack's Namespace may not be set yet when this runs
+func ValidateServiceAccounts(ctx context.Context, s *model.Stack, namespace string, servicesToDeploy []string, c kubernetes.Interface) error {
 	svcNames := slices.Sorted(slices.Values(servicesToDeploy))
 
 	checked := map[string]bool{}
@@ -953,7 +953,7 @@ func validateServiceAccounts(ctx context.Context, s *model.Stack, servicesToDepl
 		}
 		exists, ok := checked[sa]
 		if !ok {
-			_, err := c.CoreV1().ServiceAccounts(s.Namespace).Get(ctx, sa, metav1.GetOptions{})
+			_, err := c.CoreV1().ServiceAccounts(namespace).Get(ctx, sa, metav1.GetOptions{})
 			switch {
 			case err == nil:
 				exists = true
@@ -977,9 +977,9 @@ func validateServiceAccounts(ctx context.Context, s *model.Stack, servicesToDepl
 	case 0:
 		return nil
 	case 1:
-		return fmt.Errorf("%s (x-okteto-service-account) doesn't exist in namespace '%s'. Create it before deploying, or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount", missing[0], s.Namespace)
+		return fmt.Errorf("%s (x-okteto-service-account) doesn't exist in namespace '%s'. Create it before deploying, or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount", missing[0], namespace)
 	default:
-		return fmt.Errorf("the following ServiceAccounts set with x-okteto-service-account don't exist in namespace '%s':\n  - %s\nCreate them before deploying, or remove 'x-okteto-service-account' from those services to use the namespace's default ServiceAccount", s.Namespace, strings.Join(missing, "\n  - "))
+		return fmt.Errorf("the following ServiceAccounts set with x-okteto-service-account don't exist in namespace '%s':\n  - %s\nCreate them before deploying, or remove 'x-okteto-service-account' from those services to use the namespace's default ServiceAccount", namespace, strings.Join(missing, "\n  - "))
 	}
 }
 

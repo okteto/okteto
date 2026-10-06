@@ -489,6 +489,16 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		return nil
 	}
 
+	if hasComposeStack(deployOptions.Manifest) && validateServiceAccountsBeforeBuild(deployOptions.Manifest) {
+		composeStack := deployOptions.Manifest.Deploy.ComposeSection.Stack
+		if err := stack.ValidateServiceAccounts(ctx, composeStack, okteto.GetContext().Namespace, deployOptions.StackServicesToDeploy, c); err != nil {
+			if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
+				return errStatus
+			}
+			return err
+		}
+	}
+
 	if err := buildImages(ctx, dc.Builder, dc.CfgMapHandler, deployOptions); err != nil {
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
@@ -920,6 +930,18 @@ func (dc *Command) cleanUp(ctx context.Context, err error) {
 	}
 }
 
+// hasComposeStack reports whether the manifest deploys a compose stack
+func hasComposeStack(m *model.Manifest) bool {
+	return m.Deploy != nil && m.Deploy.ComposeSection != nil && m.Deploy.ComposeSection.Stack != nil
+}
+
+// validateServiceAccountsBeforeBuild reports whether the compose ServiceAccounts can be checked before building
+// images. When the manifest has deploy commands they run after the build and may create them, so the check waits
+// until right before the compose stage
+func validateServiceAccountsBeforeBuild(m *model.Manifest) bool {
+	return len(m.Deploy.Commands) == 0
+}
+
 // deployStack deploys the compose defined in the Okteto manifest
 func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
@@ -941,6 +963,14 @@ func (dc *Command) deployStack(ctx context.Context, opts *Options) error {
 	c, cfg, err := dc.K8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, dc.K8sLogger)
 	if err != nil {
 		return err
+	}
+
+	// when the ServiceAccounts couldn't be checked before building images, check them now that the deploy commands,
+	// which may create them, have run and before anything in the compose is applied
+	if !validateServiceAccountsBeforeBuild(opts.Manifest) {
+		if err := stack.ValidateServiceAccounts(ctx, composeSectionInfo.Stack, composeSectionInfo.Stack.Namespace, opts.StackServicesToDeploy, c); err != nil {
+			return err
+		}
 	}
 
 	divertDriver := divert.NewNoop()
