@@ -80,8 +80,11 @@ func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.Bui
 			ready = ready[1:]
 			running++
 			inFlight := running
+			// Prepared here, in priority order, so resources like workers are reserved in
+			// that order too
+			run := build(egCtx, byName[name], inFlight)
 			eg.Go(func() error {
-				err := build(egCtx, byName[name], inFlight)
+				err := run()
 				results <- buildResult{name: name, ok: err == nil}
 				return err
 			})

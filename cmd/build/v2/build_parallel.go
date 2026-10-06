@@ -100,28 +100,35 @@ func connectBuildKit(ctx context.Context, conn buildCmd.BuildkitConnector) error
 
 // buildSequentially builds svcs one after another with the builder's runner and output
 func (ob *OktetoBuilder) buildSequentially(ctx context.Context, svcs []*buildTypes.BuildInfo, options *types.BuildOptions, buildOne buildOneFn) error {
-	return sequentialBuildStrategy{}.Build(ctx, svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
-		if options.EnableStages {
-			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc.Name()))
+	return sequentialBuildStrategy{}.Build(ctx, svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) func() error {
+		return func() error {
+			if options.EnableStages {
+				ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svc.Name()))
+			}
+			return buildOne(ctx, svc, ob.Builder)
 		}
-		return buildOne(ctx, svc, ob.Builder)
 	})
 }
 
-// parallelBuildFn returns the build function of a parallel batch: it takes a worker from
-// pool, routes its output to the service's display in mux, builds the service with
-// buildOne and gives the worker back reset to its defaults
+// parallelBuildFn returns the build function of a parallel batch: when a service is
+// prepared it reserves a worker from pool, so workers are handed out in the order the
+// strategy starts services; the build waits for that worker, routes its output to the
+// service's display in mux, builds the service with buildOne and gives the worker back
+// reset to its defaults
 func parallelBuildFn(pool *buildCmd.WorkerPool, mux *buildCmd.Multiplexer, buildOne buildOneFn) buildServiceFn {
-	return func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) error {
-		w, err := pool.Acquire(ctx, inFlight)
-		if err != nil {
-			return err
-		}
-		defer pool.Release(w)
-		defer mux.Finish(svc.Name())
-		w.SetSolveFn(mux.SolveFn(svc.Name()))
-		defer w.SetSolveFn(nil)
+	return func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) func() error {
+		ticket := pool.Reserve(inFlight)
+		return func() error {
+			w, err := ticket.Wait(ctx)
+			if err != nil {
+				return err
+			}
+			defer pool.Release(w)
+			defer mux.Finish(svc.Name())
+			w.SetSolveFn(mux.SolveFn(svc.Name()))
+			defer w.SetSolveFn(nil)
 
-		return buildOne(ctx, svc, basic.Builder{BuildRunner: w, IoCtrl: mux.IO(svc.Name())})
+			return buildOne(ctx, svc, basic.Builder{BuildRunner: w, IoCtrl: mux.IO(svc.Name())})
+		}
 	}
 }

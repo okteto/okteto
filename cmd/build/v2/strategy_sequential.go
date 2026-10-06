@@ -26,7 +26,7 @@ type sequentialBuildStrategy struct{}
 // Build builds every service in order and returns the first error
 func (sequentialBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.BuildInfo, _ map[string][]string, build buildServiceFn) error {
 	for _, svc := range svcs {
-		if err := build(ctx, svc, 1); err != nil {
+		if err := build(ctx, svc, 1)(); err != nil {
 			return err
 		}
 	}

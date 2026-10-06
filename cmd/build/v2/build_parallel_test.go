@@ -102,7 +102,7 @@ func TestParallelBuildFnBuildsWithServiceOutput(t *testing.T) {
 		return nil
 	})
 
-	err := buildFn(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"api"})[0], 1)
+	err := buildFn(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"api"})[0], 1)()
 
 	require.NoError(t, err)
 	require.Same(t, mux.IO("api"), got.IoCtrl)
@@ -116,7 +116,7 @@ func TestParallelBuildFnResetsWorker(t *testing.T) {
 		return nil
 	})
 
-	err := buildFn(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"api"})[0], 1)
+	err := buildFn(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"api"})[0], 1)()
 	require.NoError(t, err)
 	w, err := pool.Acquire(context.Background(), 1)
 
@@ -131,7 +131,7 @@ func TestParallelBuildFnReturnsBuildError(t *testing.T) {
 		return assert.AnError
 	})
 
-	err := buildFn(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"api"})[0], 1)
+	err := buildFn(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"api"})[0], 1)()
 
 	require.ErrorIs(t, err, assert.AnError)
 }
@@ -288,4 +288,27 @@ func TestBuildInParallelReturnsCancellationWhileConnecting(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	_, builtA := built.runners.Load("a")
 	require.False(t, builtA)
+}
+
+func TestParallelBuildFnHandsWorkersOutInPreparationOrder(t *testing.T) {
+	_, pool, mux := newParallelTestBatch(t, []string{"a", "b"})
+	var order []string
+	var mu sync.Mutex
+	buildFn := parallelBuildFn(pool, mux, func(_ context.Context, svc *buildTypes.BuildInfo, _ basic.Builder) error {
+		mu.Lock()
+		defer mu.Unlock()
+		order = append(order, svc.Name())
+		return nil
+	})
+	svcs := buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"})
+	runA := buildFn(context.Background(), svcs[0], 1)
+	runB := buildFn(context.Background(), svcs[1], 2)
+
+	// b starts waiting first, but a was prepared first: the only worker goes to a
+	doneB := make(chan error, 1)
+	go func() { doneB <- runB() }()
+	require.NoError(t, runA())
+	require.NoError(t, <-doneB)
+
+	require.Equal(t, []string{"a", "b"}, order)
 }

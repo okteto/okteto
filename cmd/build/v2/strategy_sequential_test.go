@@ -26,10 +26,10 @@ func TestSequentialBuildStrategyBuildsInOrder(t *testing.T) {
 	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"a", "b", "c"})
 	var built []string
 
-	err := sequentialBuildStrategy{}.Build(context.Background(), svcs, nil, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := sequentialBuildStrategy{}.Build(context.Background(), svcs, nil, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		built = append(built, svc.Name())
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"a", "b", "c"}, built)
@@ -40,10 +40,10 @@ func TestSequentialBuildStrategyStopsAtFirstError(t *testing.T) {
 	errs := map[string]error{"b": assert.AnError}
 	var built []string
 
-	err := sequentialBuildStrategy{}.Build(context.Background(), svcs, nil, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := sequentialBuildStrategy{}.Build(context.Background(), svcs, nil, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		built = append(built, svc.Name())
 		return errs[svc.Name()]
-	})
+	}))
 
 	require.ErrorIs(t, err, assert.AnError)
 	require.Equal(t, []string{"a", "b"}, built)
@@ -52,10 +52,10 @@ func TestSequentialBuildStrategyStopsAtFirstError(t *testing.T) {
 func TestSequentialBuildStrategyWithoutServices(t *testing.T) {
 	called := false
 
-	err := sequentialBuildStrategy{}.Build(context.Background(), nil, nil, func(context.Context, *buildTypes.BuildInfo, int) error {
+	err := sequentialBuildStrategy{}.Build(context.Background(), nil, nil, runNow(func(context.Context, *buildTypes.BuildInfo, int) error {
 		called = true
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	require.False(t, called)
@@ -65,11 +65,19 @@ func TestSequentialBuildStrategyRunsOneAtATime(t *testing.T) {
 	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"a", "b"})
 	var inFlight []int
 
-	err := sequentialBuildStrategy{}.Build(context.Background(), svcs, nil, func(_ context.Context, _ *buildTypes.BuildInfo, n int) error {
+	err := sequentialBuildStrategy{}.Build(context.Background(), svcs, nil, runNow(func(_ context.Context, _ *buildTypes.BuildInfo, n int) error {
 		inFlight = append(inFlight, n)
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	require.Equal(t, []int{1, 1}, inFlight)
+}
+
+// runNow adapts a function that builds a service to buildServiceFn, doing nothing when
+// the build is prepared
+func runNow(build func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) error) buildServiceFn {
+	return func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) func() error {
+		return func() error { return build(ctx, svc, inFlight) }
+	}
 }

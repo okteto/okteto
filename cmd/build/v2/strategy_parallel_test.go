@@ -81,12 +81,12 @@ func TestParallelBuildStrategyWaitsForDependencies(t *testing.T) {
 	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"a", "b"})
 	log := &eventLog{}
 
-	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, map[string][]string{"b": {"a"}}, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, map[string][]string{"b": {"a"}}, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		log.add("start " + svc.Name())
 		time.Sleep(10 * time.Millisecond)
 		log.add("end " + svc.Name())
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	require.Less(t, log.index("end a"), log.index("start b"))
@@ -96,11 +96,11 @@ func TestParallelBuildStrategyRespectsMaxParallel(t *testing.T) {
 	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"a", "b", "c", "d", "e", "f"})
 	tracker := &maxTracker{}
 
-	err := parallelBuildStrategy{maxParallel: 2}.Build(context.Background(), svcs, nil, func(context.Context, *buildTypes.BuildInfo, int) error {
+	err := parallelBuildStrategy{maxParallel: 2}.Build(context.Background(), svcs, nil, runNow(func(context.Context, *buildTypes.BuildInfo, int) error {
 		defer tracker.start()()
 		time.Sleep(20 * time.Millisecond)
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	require.Equal(t, int32(2), tracker.max.Load())
@@ -111,12 +111,12 @@ func TestParallelBuildStrategyStartsNextWhenASlotIsFree(t *testing.T) {
 	durations := map[string]time.Duration{"slow": 300 * time.Millisecond, "a": 10 * time.Millisecond, "b": 10 * time.Millisecond}
 	log := &eventLog{}
 
-	err := parallelBuildStrategy{maxParallel: 2}.Build(context.Background(), svcs, nil, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := parallelBuildStrategy{maxParallel: 2}.Build(context.Background(), svcs, nil, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		log.add("start " + svc.Name())
 		time.Sleep(durations[svc.Name()])
 		log.add("end " + svc.Name())
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	require.Less(t, log.index("start a"), log.index("end slow"))
@@ -128,10 +128,10 @@ func TestParallelBuildStrategyFailFastSkipsDependents(t *testing.T) {
 	errs := map[string]error{"a": assert.AnError}
 	log := &eventLog{}
 
-	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, map[string][]string{"b": {"a"}}, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, map[string][]string{"b": {"a"}}, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		log.add("start " + svc.Name())
 		return errs[svc.Name()]
-	})
+	}))
 
 	require.ErrorIs(t, err, assert.AnError)
 	require.Equal(t, -1, log.index("start b"))
@@ -144,12 +144,12 @@ func TestParallelBuildStrategyCancelsRunningBuildsOnFailure(t *testing.T) {
 	delays := map[string]time.Duration{"a": 20 * time.Millisecond}
 	var cancelled atomic.Bool
 
-	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, nil, func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, nil, runNow(func(ctx context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		time.Sleep(delays[svc.Name()])
 		<-doneOrNever(ctx, failsRightAway[svc.Name()])
 		cancelled.Store(ctx.Err() != nil)
 		return errs[svc.Name()]
-	})
+	}))
 
 	require.ErrorIs(t, err, assert.AnError)
 	require.True(t, cancelled.Load())
@@ -161,10 +161,10 @@ func TestParallelBuildStrategyReturnsParentCancellation(t *testing.T) {
 	cancel()
 	var calls atomic.Int32
 
-	err := parallelBuildStrategy{maxParallel: 4}.Build(ctx, svcs, nil, func(context.Context, *buildTypes.BuildInfo, int) error {
+	err := parallelBuildStrategy{maxParallel: 4}.Build(ctx, svcs, nil, runNow(func(context.Context, *buildTypes.BuildInfo, int) error {
 		calls.Add(1)
 		return nil
-	})
+	}))
 
 	require.ErrorIs(t, err, context.Canceled)
 	require.Equal(t, int32(0), calls.Load())
@@ -176,12 +176,12 @@ func TestParallelBuildStrategyReportsBuildsInFlight(t *testing.T) {
 	started.Add(2)
 	var seen sync.Map
 
-	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, nil, func(_ context.Context, _ *buildTypes.BuildInfo, inFlight int) error {
+	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, nil, runNow(func(_ context.Context, _ *buildTypes.BuildInfo, inFlight int) error {
 		seen.Store(inFlight, true)
 		started.Done()
 		started.Wait()
 		return nil
-	})
+	}))
 
 	require.NoError(t, err)
 	_, sawOne := seen.Load(1)
@@ -200,10 +200,10 @@ func (l *eventLog) startOrder() []string {
 func buildOneAtATime(t *testing.T, names []string, deps map[string][]string) []string {
 	t.Helper()
 	log := &eventLog{}
-	err := parallelBuildStrategy{maxParallel: 1}.Build(context.Background(), buildTypes.NewBuildInfos("manifest", "ns", "repo", names), deps, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := parallelBuildStrategy{maxParallel: 1}.Build(context.Background(), buildTypes.NewBuildInfos("manifest", "ns", "repo", names), deps, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		log.add(svc.Name())
 		return nil
-	})
+	}))
 	require.NoError(t, err)
 	return log.startOrder()
 }
@@ -231,10 +231,10 @@ func TestParallelBuildStrategyStartsNothingAfterAFailure(t *testing.T) {
 	errs := map[string]error{"a": assert.AnError}
 	log := &eventLog{}
 
-	err := parallelBuildStrategy{maxParallel: 1}.Build(context.Background(), svcs, nil, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+	err := parallelBuildStrategy{maxParallel: 1}.Build(context.Background(), svcs, nil, runNow(func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
 		log.add(svc.Name())
 		return errs[svc.Name()]
-	})
+	}))
 
 	require.ErrorIs(t, err, assert.AnError)
 	require.Equal(t, []string{"a"}, log.startOrder())
@@ -245,10 +245,23 @@ func TestParallelBuildStrategyReportsInterruptionInsteadOfCancelledBuilds(t *tes
 	ctx, interrupt := context.WithCancel(context.Background())
 	defer interrupt()
 
-	err := parallelBuildStrategy{maxParallel: 4}.Build(ctx, svcs, nil, func(context.Context, *buildTypes.BuildInfo, int) error {
+	err := parallelBuildStrategy{maxParallel: 4}.Build(ctx, svcs, nil, runNow(func(context.Context, *buildTypes.BuildInfo, int) error {
 		interrupt()
 		return assert.AnError
-	})
+	}))
 
 	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestParallelBuildStrategyPreparesServicesInPriorityOrder(t *testing.T) {
+	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"web", "worker", "base", "api"})
+	var prepared []string
+
+	err := parallelBuildStrategy{maxParallel: 4}.Build(context.Background(), svcs, map[string][]string{"api": {"base"}}, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) func() error {
+		prepared = append(prepared, svc.Name())
+		return func() error { return nil }
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"base", "web", "worker", "api"}, prepared)
 }

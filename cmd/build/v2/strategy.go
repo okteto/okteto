@@ -33,9 +33,11 @@ const (
 	defaultMaxParallelBuilds = 4
 )
 
-// buildServiceFn builds a single service. inFlight is the number of builds running at
-// that moment, including this one.
-type buildServiceFn func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) error
+// buildServiceFn prepares the build of a single service and returns the function that
+// runs it. Strategies prepare services one at a time, in the order they start them, and
+// may run the returned functions at the same time. inFlight is the number of builds
+// running at that moment, including this one.
+type buildServiceFn func(ctx context.Context, svc *buildTypes.BuildInfo, inFlight int) func() error
 
 // buildStrategy decides how the services that are not cached are built. deps lists, for
 // each service, the services of svcs it depends on.
