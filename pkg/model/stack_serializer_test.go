@@ -3023,3 +3023,48 @@ func Test_validateIdentityToken(t *testing.T) {
 		})
 	}
 }
+
+func Test_expandRangePorts(t *testing.T) {
+	tests := []struct {
+		name     string
+		ports    []PortRaw
+		expected []PortRaw
+	}{
+		{
+			name: "single port",
+			ports: []PortRaw{
+				{ContainerPort: 8080, Protocol: apiv1.ProtocolTCP},
+			},
+			expected: []PortRaw{
+				{ContainerPort: 8080, Protocol: apiv1.ProtocolTCP},
+			},
+		},
+		{
+			name: "port range without host map",
+			ports: []PortRaw{
+				{ContainerFrom: 5000, ContainerTo: 5002, Protocol: apiv1.ProtocolUDP},
+			},
+			expected: []PortRaw{
+				{ContainerPort: 5000, Protocol: apiv1.ProtocolUDP},
+				{ContainerPort: 5001, Protocol: apiv1.ProtocolUDP},
+				{ContainerPort: 5002, Protocol: apiv1.ProtocolUDP},
+			},
+		},
+		{
+			name: "port range with host map",
+			ports: []PortRaw{
+				{ContainerFrom: 5000, ContainerTo: 5002, HostFrom: 6000, HostTo: 6002, Protocol: apiv1.ProtocolUDP},
+			},
+			expected: []PortRaw{
+				{ContainerPort: 5000, Protocol: apiv1.ProtocolUDP},
+				{ContainerPort: 5001, Protocol: apiv1.ProtocolUDP},
+				{ContainerPort: 5002, Protocol: apiv1.ProtocolUDP},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, expandRangePorts(tt.ports))
+		})
+	}
+}

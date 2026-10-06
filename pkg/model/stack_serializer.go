@@ -759,9 +759,9 @@ func expandRangePorts(ports []PortRaw) []PortRaw {
 			aux := 0
 			for portStart+int32(aux) != portFinish+1 {
 				if p.HostFrom != 0 {
-					newPortList = append(newPortList, PortRaw{ContainerPort: p.ContainerFrom + int32(aux)})
+					newPortList = append(newPortList, PortRaw{ContainerPort: p.ContainerFrom + int32(aux), Protocol: p.Protocol})
 				} else {
-					newPortList = append(newPortList, PortRaw{ContainerPort: p.ContainerFrom + int32(aux), HostPort: 0})
+					newPortList = append(newPortList, PortRaw{ContainerPort: p.ContainerFrom + int32(aux), HostPort: 0, Protocol: p.Protocol})
 				}
 				if portStart > portFinish {
 					aux--
