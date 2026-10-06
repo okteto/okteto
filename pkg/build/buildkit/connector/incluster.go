@@ -271,3 +271,13 @@ func (ic *InClusterConnector) GetType() string {
 func (ic *InClusterConnector) Stop() {
 
 }
+
+// UseOutput makes the connector print its queue status through ioCtrl and returns the
+// controller it used before
+func (ic *InClusterConnector) UseOutput(ioCtrl *io.Controller) *io.Controller {
+	ic.mu.Lock()
+	defer ic.mu.Unlock()
+	previous := ic.ioCtrl
+	ic.ioCtrl = ioCtrl
+	return previous
+}

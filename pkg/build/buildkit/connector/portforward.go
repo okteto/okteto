@@ -560,3 +560,14 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 	pf.buildkitClient = c
 	return c, nil
 }
+
+// UseOutput makes the port forwarder print its queue and readiness status through ioCtrl
+// and returns the controller it used before
+func (pf *PortForwarder) UseOutput(ioCtrl *io.Controller) *io.Controller {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+	previous := pf.ioCtrl
+	pf.ioCtrl = ioCtrl
+	pf.waiter.logger = ioCtrl
+	return previous
+}

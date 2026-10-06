@@ -79,3 +79,12 @@ func (i *IngressConnector) GetType() string {
 func (i *IngressConnector) Stop() {
 	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
 }
+
+// UseOutput makes the connector print its readiness status through ioCtrl and returns
+// the controller it used before
+func (i *IngressConnector) UseOutput(ioCtrl *io.Controller) *io.Controller {
+	previous := i.waiter.logger
+	i.waiter.logger = ioCtrl
+	i.buildkitClientFactory.logger = ioCtrl
+	return previous
+}

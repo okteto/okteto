@@ -15,80 +15,136 @@ package build
 
 import (
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/okteto/okteto/pkg/build/buildkit/connector"
+	"github.com/okteto/okteto/pkg/log/io"
 )
 
 // WorkerPool hands out builders that can run builds concurrently. Each worker runs one
 // build at a time on its own BuildKit connector. Worker 0 is the builder itself; extra
-// workers are new builders created lazily, in the background, when the caller asks for
-// more. Every worker has its own build metadata.
+// workers are new builders created lazily, in the background, when the demand grows.
+// Every worker has its own build metadata. Workers are handed out in the order they were
+// reserved.
 type WorkerPool struct {
 	ctx     context.Context
 	base    *OktetoBuilder
 	newConn connectorFactory
 	cancel  context.CancelCauseFunc
+	// restoreBaseOutput gives the builder's connector back its output on Close
+	restoreBaseOutput func()
 
-	// available holds the idle workers. Its capacity is size, so sends never block.
-	available chan *OktetoBuilder
-
-	extras []BuildkitConnector
-	wg     sync.WaitGroup
-	mu     sync.Mutex
-	size   int
+	// idle holds the free workers and waiting the reservations still without a worker
+	idle    []*OktetoBuilder
+	waiting []*WorkerTicket
+	extras  []BuildkitConnector
+	wg      sync.WaitGroup
+	mu      sync.Mutex
+	size    int
 	// total counts the workers created or being created. Failed extras keep their slot
 	// so a broken backend is not asked again for new sessions.
 	total int
 }
 
-// NewWorkerPool returns a pool of at most size workers. Worker 0 is ob itself and its
-// connector is never stopped by the pool. Extra workers get their own connector (a new session for
-// port-forward and in-cluster, a new client for ingress) and share ob's connector only
-// when its type is unknown.
-func (ob *OktetoBuilder) NewWorkerPool(ctx context.Context, size int) *WorkerPool {
-	return newWorkerPool(ctx, ob, size, ob.connectorFactory())
+// WorkerTicket is the reservation of a worker of a WorkerPool
+type WorkerTicket struct {
+	pool   *WorkerPool
+	worker chan *OktetoBuilder
 }
 
-func newWorkerPool(ctx context.Context, base *OktetoBuilder, size int, newConn connectorFactory) *WorkerPool {
-	size = max(size, 1)
-	poolCtx, cancel := context.WithCancelCause(ctx)
-	p := &WorkerPool{
-		ctx:       poolCtx,
-		cancel:    cancel,
-		base:      base,
-		newConn:   newConn,
-		size:      size,
-		total:     1,
-		available: make(chan *OktetoBuilder, size),
+// outputUser is implemented by connectors that can change where they print, e.g. their
+// queue and readiness spinners
+type outputUser interface {
+	UseOutput(ioCtrl *io.Controller) *io.Controller
+}
+
+// NewWorkerPool returns a pool of at most size workers. Worker 0 is ob itself and its
+// connector is never stopped by the pool; until Close, it prints nothing, so its spinners
+// don't draw over the output of the batch. Extra workers get their own connector (a new
+// session for port-forward and in-cluster, a new client for ingress). When ob's connector
+// can't open more connections the pool has a single worker: a connector is never shared
+// by builds running at the same time.
+func (ob *OktetoBuilder) NewWorkerPool(ctx context.Context, size int) *WorkerPool {
+	p := newWorkerPool(ctx, ob, size, ob.connectorFactory())
+	if conn, ok := ob.connector.(outputUser); ok {
+		previous := conn.UseOutput(ob.logger.WithQuietOutput())
+		p.restoreBaseOutput = func() { conn.UseOutput(previous) }
 	}
-	p.available <- base
 	return p
 }
 
-// Acquire returns an idle worker, waiting until one is available or ctx is done.
-// demand is the number of builds that want a worker right now, including the caller.
-// While the pool has fewer workers than demand (and than its size), it starts creating
-// an extra worker in the background, which becomes available once its connector is
-// connected. Acquire never waits for that extra worker specifically.
-func (p *WorkerPool) Acquire(ctx context.Context, demand int) (*OktetoBuilder, error) {
-	p.grow(demand)
+func newWorkerPool(ctx context.Context, base *OktetoBuilder, size int, newConn connectorFactory) *WorkerPool {
+	if newConn == nil {
+		size = 1
+	}
+	poolCtx, cancel := context.WithCancelCause(ctx)
+	return &WorkerPool{
+		ctx:     poolCtx,
+		cancel:  cancel,
+		base:    base,
+		newConn: newConn,
+		size:    max(size, 1),
+		total:   1,
+		idle:    []*OktetoBuilder{base},
+	}
+}
+
+// Reserve reserves a worker without waiting for it. demand is the number of builds that
+// want a worker right now, including this one: while the pool has fewer workers than
+// demand (and than its size), it creates the missing ones in the background. They become
+// available once their connector is connected.
+func (p *WorkerPool) Reserve(demand int) *WorkerTicket {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.growLocked(demand)
+
+	t := &WorkerTicket{pool: p, worker: make(chan *OktetoBuilder, 1)}
+	if len(p.idle) > 0 && len(p.waiting) == 0 {
+		t.worker <- p.idle[0]
+		p.idle = p.idle[1:]
+		return t
+	}
+	p.waiting = append(p.waiting, t)
+	return t
+}
+
+// Wait returns the reserved worker, waiting until one is free or ctx is done
+func (t *WorkerTicket) Wait(ctx context.Context) (*OktetoBuilder, error) {
 	select {
-	case w := <-p.available:
+	case w := <-t.worker:
 		return w, nil
 	case <-ctx.Done():
+		p := t.pool
+		p.mu.Lock()
+		if i := slices.Index(p.waiting, t); i >= 0 {
+			p.waiting = slices.Delete(p.waiting, i, i+1)
+			p.mu.Unlock()
+			return nil, ctx.Err()
+		}
+		p.mu.Unlock()
+		// A worker was handed to this ticket at the same time: give it back
+		p.Release(<-t.worker)
 		return nil, ctx.Err()
 	}
 }
 
-// Release returns a worker to the pool once its build has finished
-func (p *WorkerPool) Release(w *OktetoBuilder) {
-	p.available <- w
+// Acquire reserves a worker and waits for it. See Reserve.
+func (p *WorkerPool) Acquire(ctx context.Context, demand int) (*OktetoBuilder, error) {
+	return p.Reserve(demand).Wait(ctx)
 }
 
-// Close cancels the extra workers that are still connecting and stops the connectors of
-// every extra worker. It must be called once all builds have finished. It never stops
-// the builder's own connector, which belongs to the caller.
+// Release returns a worker to the pool once its build has finished
+func (p *WorkerPool) Release(w *OktetoBuilder) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.handOutLocked(w)
+}
+
+// Close cancels the extra workers that are still connecting, stops the connectors of
+// every extra worker and gives the builder's connector back its output. It must be
+// called once all builds have finished. It never stops the builder's own connector,
+// which belongs to the caller.
 func (p *WorkerPool) Close() {
 	// Extra connectors still connecting are not failures: they are just no longer needed
 	p.cancel(connector.ErrConnectorNotNeeded)
@@ -100,25 +156,31 @@ func (p *WorkerPool) Close() {
 		conn.Stop()
 	}
 	p.extras = nil
+	if p.restoreBaseOutput != nil {
+		p.restoreBaseOutput()
+		p.restoreBaseOutput = nil
+	}
 }
 
-// grow reserves a slot for a new worker when demand exceeds the workers created so far,
-// and creates it: right away when the connector is shared, in the background when it
-// needs its own connector
-func (p *WorkerPool) grow(demand int) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.total >= min(demand, p.size) || p.ctx.Err() != nil {
+// handOutLocked gives w to the oldest reservation waiting for a worker, or keeps it idle
+func (p *WorkerPool) handOutLocked(w *OktetoBuilder) {
+	if len(p.waiting) > 0 {
+		t := p.waiting[0]
+		p.waiting = p.waiting[1:]
+		t.worker <- w
 		return
 	}
-	p.total++
+	p.idle = append(p.idle, w)
+}
 
-	if p.newConn == nil {
-		p.available <- p.newWorker(p.base.connector)
-		return
+// growLocked starts creating workers in the background until the pool has as many as
+// demand, or its size
+func (p *WorkerPool) growLocked(demand int) {
+	for p.total < min(demand, p.size) && p.ctx.Err() == nil {
+		p.total++
+		p.wg.Add(1)
+		go p.addExtraWorker()
 	}
-	p.wg.Add(1)
-	go p.addExtraWorker()
 }
 
 // addExtraWorker opens a new connector and makes it available as a worker. A failure is
@@ -136,11 +198,14 @@ func (p *WorkerPool) addExtraWorker() {
 	p.extras = append(p.extras, conn)
 	p.mu.Unlock()
 
+	if p.ctx.Err() != nil {
+		return
+	}
 	if err := conn.Start(p.ctx); err != nil {
 		p.base.logger.Logger().Infof("could not start an extra BuildKit connector: %s", err)
 		return
 	}
-	p.available <- p.newWorker(conn)
+	p.Release(p.newWorker(conn))
 }
 
 // newWorker returns a builder that shares the base builder's context, filesystem and
