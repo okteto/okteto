@@ -132,3 +132,22 @@ func TestParallelBuildFnReturnsBuildError(t *testing.T) {
 
 	require.ErrorIs(t, err, assert.AnError)
 }
+
+func TestBuildServiceRecordsCancelledBuilds(t *testing.T) {
+	dir, err := createDockerfile(t)
+	require.NoError(t, err)
+	registry := newFakeRegistry()
+	bc := NewFakeBuilder(test.NewFakeOktetoBuilder(registry, assert.AnError), registry, fakeConfig{isOkteto: true})
+	manifest := &model.Manifest{
+		Name:  "test",
+		Build: build.ManifestBuild{"a": &build.Info{Context: dir, Dockerfile: filepath.Join(dir, "Dockerfile"), Image: "okteto/a:test"}},
+	}
+	svc := buildTypes.NewBuildInfos("test", "ns", "repo", []string{"a"})[0]
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = bc.buildService(ctx, svc, &types.BuildOptions{Manifest: manifest}, bc.Builder)
+
+	require.Error(t, err)
+	require.Equal(t, "cancelled", svc.Metadata().ErrorReason)
+}

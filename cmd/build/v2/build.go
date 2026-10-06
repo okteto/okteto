@@ -341,6 +341,10 @@ func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildType
 
 	if err != nil {
 		svcToBuild.Metadata().ErrorReason = err.Error()
+		if ctx.Err() != nil {
+			// Cancelled because another build failed or the command was interrupted
+			svcToBuild.Metadata().ErrorReason = "cancelled"
+		}
 		return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 	}
 
