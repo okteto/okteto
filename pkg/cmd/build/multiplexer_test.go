@@ -14,6 +14,7 @@
 package build
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -174,4 +175,46 @@ func TestMultiplexerTTYPrefixesLogBuffer(t *testing.T) {
 	closeWithin(t, m)
 
 	require.Contains(t, oktetoLog.GetOutputBuffer().String(), "[api] #1 RUN go build")
+}
+
+func TestPrefixWriterJoinsPartialWrites(t *testing.T) {
+	var out bytes.Buffer
+	w := &prefixWriter{prefix: "[api] ", out: &out}
+
+	_, err := w.Write([]byte("#3 text"))
+	require.NoError(t, err)
+	_, err = w.Write([]byte("\n"))
+	require.NoError(t, err)
+
+	require.Equal(t, "[api] #3 text\n", out.String())
+}
+
+func TestPrefixWriterSkipsEmptyLines(t *testing.T) {
+	var out bytes.Buffer
+	w := &prefixWriter{prefix: "[api] ", out: &out}
+
+	_, err := w.Write([]byte("#1 DONE 0.0s\n\n"))
+
+	require.NoError(t, err)
+	require.Equal(t, "[api] #1 DONE 0.0s\n", out.String())
+}
+
+func TestPrefixWriterFlushWritesIncompleteLine(t *testing.T) {
+	var out bytes.Buffer
+	w := &prefixWriter{prefix: "[api] ", out: &out}
+
+	_, err := w.Write([]byte("#3 partial"))
+	require.NoError(t, err)
+	require.NoError(t, w.flush())
+
+	require.Equal(t, "[api] #3 partial\n", out.String())
+}
+
+func TestPrefixWriterReportsBytesWritten(t *testing.T) {
+	w := &prefixWriter{prefix: "[api] ", out: &bytes.Buffer{}}
+
+	n, err := w.Write([]byte("#3 text"))
+
+	require.NoError(t, err)
+	require.Equal(t, len("#3 text"), n)
 }

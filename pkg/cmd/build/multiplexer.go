@@ -161,7 +161,11 @@ func (s *muxService) display(ch chan *client.SolveStatus, _ chan<- error) error 
 	bufferDone := make(chan struct{})
 	go func() {
 		defer close(bufferDone)
-		showInLogBuffer(buffer, &prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: &buildWriter{}})
+		w := &prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: &buildWriter{}}
+		showInLogBuffer(buffer, w)
+		if err := w.flush(); err != nil {
+			oktetoLog.Infof("could not write build status to the log buffer: %s", err)
+		}
 	}()
 	for ss := range ch {
 		buffer <- ss
@@ -174,7 +178,8 @@ func (s *muxService) display(ch chan *client.SolveStatus, _ chan<- error) error 
 
 // showPlain prints the status as plain lines prefixed with the service name
 func (s *muxService) showPlain(ch chan *client.SolveStatus) error {
-	d, err := progressui.NewDisplay(&prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: s.ioCtrl.Out()}, progressui.PlainMode)
+	w := &prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: s.ioCtrl.Out()}
+	d, err := progressui.NewDisplay(w, progressui.PlainMode)
 	if err != nil {
 		oktetoLog.Infof("could not display build status: %s", err)
 		return err
@@ -183,7 +188,7 @@ func (s *muxService) showPlain(ch chan *client.SolveStatus) error {
 	if _, err := d.UpdateFrom(context.TODO(), ch); err != nil {
 		oktetoLog.Infof("could not display build status: %s", err)
 	}
-	return nil
+	return w.flush()
 }
 
 // send forwards a status to the shared display unless the service is finished
@@ -220,17 +225,41 @@ func copyStatus(ss *client.SolveStatus) *client.SolveStatus {
 	return &cp
 }
 
-// prefixWriter writes every line it receives prefixed
+// prefixWriter writes every complete line it receives prefixed, skipping empty lines.
+// BuildKit's plain display may write a line in several calls (text, then its new line),
+// so incomplete lines are kept until they end or flush is called.
 type prefixWriter struct {
-	out    stdio.Writer
-	prefix string
+	out     stdio.Writer
+	prefix  string
+	pending []byte
 }
 
 func (p *prefixWriter) Write(b []byte) (int, error) {
-	for _, line := range strings.Split(strings.TrimRight(string(b), "\n"), "\n") {
-		if _, err := p.out.Write([]byte(p.prefix + line + "\n")); err != nil {
+	p.pending = append(p.pending, b...)
+	for {
+		i := bytes.IndexByte(p.pending, '\n')
+		if i < 0 {
+			return len(b), nil
+		}
+		line := p.pending[:i]
+		p.pending = p.pending[i+1:]
+		if err := p.writeLine(line); err != nil {
 			return 0, err
 		}
 	}
-	return len(b), nil
+}
+
+// flush writes the incomplete line, if any
+func (p *prefixWriter) flush() error {
+	line := p.pending
+	p.pending = nil
+	return p.writeLine(line)
+}
+
+func (p *prefixWriter) writeLine(line []byte) error {
+	if len(bytes.TrimSpace(line)) == 0 {
+		return nil
+	}
+	_, err := p.out.Write([]byte(p.prefix + string(line) + "\n"))
+	return err
 }
