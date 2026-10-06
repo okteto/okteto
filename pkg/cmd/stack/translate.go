@@ -159,6 +159,7 @@ func translateDeployment(svcName string, s *model.Stack, divert Divert) *appsv1.
 		TerminationGracePeriodSeconds: ptr.To(svc.StopGracePeriod),
 		NodeSelector:                  svc.NodeSelector,
 		EnableServiceLinks:            svc.EnableServiceLinks,
+		ServiceAccountName:            svc.ServiceAccount,
 		Containers: []apiv1.Container{
 			{
 				Name:            svcName,
@@ -245,6 +246,7 @@ func translateStatefulSet(svcName string, s *model.Stack, divert Divert) *appsv1
 		Affinity:                      translateAffinity(svc),
 		NodeSelector:                  svc.NodeSelector,
 		EnableServiceLinks:            svc.EnableServiceLinks,
+		ServiceAccountName:            svc.ServiceAccount,
 		Volumes:                       translateVolumes(svc),
 		Containers: []apiv1.Container{
 			{
@@ -307,6 +309,7 @@ func translateJob(svcName string, s *model.Stack, divert Divert) *batchv1.Job {
 		Affinity:                      translateAffinity(svc),
 		NodeSelector:                  svc.NodeSelector,
 		EnableServiceLinks:            svc.EnableServiceLinks,
+		ServiceAccountName:            svc.ServiceAccount,
 		Containers: []apiv1.Container{
 			{
 				Name:            svcName,

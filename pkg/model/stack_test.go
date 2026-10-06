@@ -988,6 +988,64 @@ func TestStack_MergeEnableServiceLinks(t *testing.T) {
 	}
 }
 
+func TestStack_MergeServiceAccount(t *testing.T) {
+	tests := []struct {
+		stack      *Stack
+		otherStack *Stack
+		name       string
+		expected   string
+	}{
+		{
+			name: "override sets service account when base has none",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto"},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {ServiceAccount: "override-sa"},
+				},
+			},
+			expected: "override-sa",
+		},
+		{
+			name: "override replaces existing service account",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto", ServiceAccount: "base-sa"},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {ServiceAccount: "override-sa"},
+				},
+			},
+			expected: "override-sa",
+		},
+		{
+			name: "override without service account keeps base value",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto", ServiceAccount: "base-sa"},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto-dev"},
+				},
+			},
+			expected: "base-sa",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.stack.Merge(tt.otherStack)
+			require.Equal(t, tt.expected, result.Services["app"].ServiceAccount)
+		})
+	}
+}
+
 func TestStack_ResourcesIsDefault(t *testing.T) {
 	tests := []struct {
 		resources *StackResources

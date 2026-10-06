@@ -3023,3 +3023,55 @@ func Test_validateIdentityToken(t *testing.T) {
 		})
 	}
 }
+
+func Test_ServiceAccountUnmarshalling_NotSet(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Empty(t, s.Services["app"].ServiceAccount)
+}
+
+func Test_ServiceAccountUnmarshalling_Valid(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-service-account: my-service-account
+  worker:
+    image: okteto/vote:1`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Equal(t, "my-service-account", s.Services["app"].ServiceAccount)
+	require.Empty(t, s.Services["worker"].ServiceAccount)
+	require.Empty(t, s.Warnings.NotSupportedFields)
+}
+
+func Test_ServiceAccountUnmarshalling_ExpandsEnvVars(t *testing.T) {
+	t.Setenv("SA_NAME", "expanded-sa")
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-service-account: ${SA_NAME}`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Equal(t, "expanded-sa", s.Services["app"].ServiceAccount)
+}
+
+func Test_ServiceAccountUnmarshalling_Invalid(t *testing.T) {
+	tests := []struct {
+		name           string
+		serviceAccount string
+	}{
+		{name: "uppercase", serviceAccount: "MyServiceAccount"},
+		{name: "underscore", serviceAccount: "my_service_account"},
+		{name: "leading dash", serviceAccount: "-my-sa"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest := fmt.Sprintf("services:\n  app:\n    image: okteto/vote:1\n    x-okteto-service-account: %s", tt.serviceAccount)
+			_, err := ReadStack([]byte(manifest), true)
+			require.ErrorContains(t, err, fmt.Sprintf("invalid 'x-okteto-service-account' %q for service 'app'", tt.serviceAccount))
+		})
+	}
+}

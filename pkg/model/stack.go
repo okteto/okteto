@@ -101,6 +101,7 @@ type Service struct {
 	Resources          *StackResources       `yaml:"resources,omitempty"` // For okteto stack only
 	NodeSelector       Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	EnableServiceLinks *bool                 `json:"x-enable-service-links,omitempty" yaml:"x-enable-service-links,omitempty"`
+	ServiceAccount     string                `json:"x-okteto-service-account,omitempty" yaml:"x-okteto-service-account,omitempty"`
 	User               *StackSecurityContext `yaml:"user,omitempty"`
 	DependsOn          DependsOn             `yaml:"depends_on,omitempty"`
 	Build              *build.Info           `yaml:"build,omitempty"`
@@ -794,6 +795,9 @@ func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
 		}
 		if svc.EnableServiceLinks != nil {
 			resultSvc.EnableServiceLinks = svc.EnableServiceLinks
+		}
+		if svc.ServiceAccount != "" {
+			resultSvc.ServiceAccount = svc.ServiceAccount
 		}
 		if svc.IdentityToken != nil {
 			resultSvc.IdentityToken = svc.IdentityToken

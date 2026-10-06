@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -96,6 +97,7 @@ type ServiceRaw struct {
 	Annotations              Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	NodeSelector             Selector               `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	EnableServiceLinks       *bool                  `json:"x-enable-service-links,omitempty" yaml:"x-enable-service-links,omitempty"`
+	ServiceAccount           string                 `json:"x-okteto-service-account,omitempty" yaml:"x-okteto-service-account,omitempty"`
 	ReadOnly                 *WarningType           `yaml:"read_only,omitempty"`
 	PullPolicy               *WarningType           `yaml:"pull_policy,omitempty"`
 	ContainerName            *WarningType           `yaml:"container_name,omitempty"`
@@ -441,6 +443,13 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	svc.NodeSelector = serviceRaw.NodeSelector
 
 	svc.EnableServiceLinks = serviceRaw.EnableServiceLinks
+
+	if serviceRaw.ServiceAccount != "" {
+		if errs := validation.IsDNS1123Subdomain(serviceRaw.ServiceAccount); len(errs) > 0 {
+			return nil, fmt.Errorf("invalid 'x-okteto-service-account' %q for service '%s': %s", serviceRaw.ServiceAccount, svcName, strings.Join(errs, "; "))
+		}
+		svc.ServiceAccount = serviceRaw.ServiceAccount
+	}
 
 	if serviceRaw.IdentityToken != nil {
 		if err := validateIdentityToken(serviceRaw.IdentityToken); err != nil {
