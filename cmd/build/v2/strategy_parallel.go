@@ -29,6 +29,11 @@ type parallelBuildStrategy struct {
 	maxParallel int
 }
 
+// maxConcurrency returns the maximum number of builds running at the same time
+func (s parallelBuildStrategy) maxConcurrency() int {
+	return s.maxParallel
+}
+
 // Build builds svcs respecting deps. It returns the first build error, or the parent
 // context error if it was cancelled.
 func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.BuildInfo, deps map[string][]string, build buildServiceFn) error {

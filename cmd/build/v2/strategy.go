@@ -17,6 +17,20 @@ import (
 	"context"
 
 	buildTypes "github.com/okteto/okteto/cmd/build/v2/types"
+	"github.com/okteto/okteto/pkg/env"
+)
+
+const (
+	// ParallelBuildStrategyEnvVar enables building independent services at the same time.
+	// Default false while the parallel strategy is validated; false keeps the sequential
+	// builds of previous versions.
+	ParallelBuildStrategyEnvVar = "OKTETO_BUILD_STRATEGY_PARALLEL"
+
+	// MaxParallelBuildsEnvVar is the maximum number of builds running at the same time.
+	// Values lower than 2 build sequentially.
+	MaxParallelBuildsEnvVar = "OKTETO_BUILD_MAX_PARALLEL"
+
+	defaultMaxParallelBuilds = 4
 )
 
 // buildServiceFn builds a single service. inFlight is the number of builds running at
@@ -27,4 +41,18 @@ type buildServiceFn func(ctx context.Context, svc *buildTypes.BuildInfo, inFligh
 // each service, the services of svcs it depends on.
 type buildStrategy interface {
 	Build(ctx context.Context, svcs []*buildTypes.BuildInfo, deps map[string][]string, build buildServiceFn) error
+	// maxConcurrency is the maximum number of builds the strategy runs at the same time
+	maxConcurrency() int
+}
+
+// newBuildStrategy returns the build strategy configured through the environment
+func newBuildStrategy() buildStrategy {
+	if !env.LoadBooleanOrDefault(ParallelBuildStrategyEnvVar, false) {
+		return sequentialBuildStrategy{}
+	}
+	maxParallel := env.LoadIntOrDefault(MaxParallelBuildsEnvVar, defaultMaxParallelBuilds)
+	if maxParallel <= 1 {
+		return sequentialBuildStrategy{}
+	}
+	return parallelBuildStrategy{maxParallel: maxParallel}
 }

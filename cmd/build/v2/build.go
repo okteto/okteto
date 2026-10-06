@@ -123,7 +123,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
-		buildStrategy:         sequentialBuildStrategy{},
+		buildStrategy:         newBuildStrategy(),
 	}
 
 	return ob
@@ -179,7 +179,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish,
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
-		buildStrategy:         sequentialBuildStrategy{},
+		buildStrategy:         newBuildStrategy(),
 	}
 }
 

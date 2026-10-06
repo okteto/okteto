@@ -32,3 +32,8 @@ func (sequentialBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.Bui
 	}
 	return nil
 }
+
+// maxConcurrency returns 1: builds run one after another
+func (sequentialBuildStrategy) maxConcurrency() int {
+	return 1
+}
