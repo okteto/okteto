@@ -16,12 +16,16 @@ package connector
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -250,7 +254,233 @@ func TestPortForwarder_HandlePortForwardError_StaleAttemptDoesNotLeakIntoNewChan
 
 	require.Len(t, staleAttemptChan, 1, "error should land in the failed attempt's channel")
 	require.Empty(t, pf.errChan, "new attempt's channel must not receive stale errors")
-	require.Empty(t, pf.podName, "pod should be released so the retry can be reassigned")
+}
+
+func TestPortForwarder_HandlePortForwardError_StaleAttemptKeepsNewConnection(t *testing.T) {
+	pf := &PortForwarder{
+		stopChan:  make(chan struct{}, 1),
+		readyChan: make(chan struct{}, 1),
+		errChan:   make(chan error, 1),
+		podName:   "buildkit-0",
+		localPort: 8080,
+		ioCtrl:    io.NewIOController(),
+	}
+	staleAttemptChan := pf.errChan
+
+	// a retry connects to another pod, replacing the connection channels
+	pf.stopChan = make(chan struct{}, 1)
+	pf.errChan = make(chan error, 1)
+	pf.podName = "buildkit-1"
+	pf.isActive = true
+
+	// the old attempt's forwarder fails late, after the retry is already connected
+	pf.handlePortForwardError(errors.New("lost connection to pod"), staleAttemptChan)
+
+	require.Equal(t, "buildkit-1", pf.podName, "new attempt's pod must be kept")
+	require.True(t, pf.isActive, "new attempt's connection must be kept")
+	require.False(t, isClosed(pf.stopChan), "new attempt's forwarder must not be stopped")
+}
+
+func TestPortForwarder_HandlePortForwardError_CurrentAttemptReleasesPod(t *testing.T) {
+	pf := &PortForwarder{
+		stopChan:  make(chan struct{}, 1),
+		readyChan: make(chan struct{}, 1),
+		errChan:   make(chan error, 1),
+		podName:   "buildkit-0",
+		localPort: 8080,
+		ioCtrl:    io.NewIOController(),
+		isActive:  true,
+	}
+
+	// the connection drops after the port forward was ready
+	pf.handlePortForwardError(errors.New("lost connection to pod"), pf.errChan)
+
+	require.Empty(t, pf.podName, "pod should be released so the next start is reassigned")
+	require.False(t, pf.isActive)
+	require.True(t, isClosed(pf.stopChan), "stopChan should be closed to terminate the forwarder")
+}
+
+// isClosed reports whether ch is closed, without blocking
+func isClosed(ch chan struct{}) bool {
+	select {
+	case _, ok := <-ch:
+		return !ok
+	default:
+		return false
+	}
+}
+
+// fakeBuildkitAPI assigns the given pods in order, one per request, or fails with err
+type fakeBuildkitAPI struct {
+	err   error
+	pods  []string
+	calls int
+}
+
+func (f *fakeBuildkitAPI) GetLeastLoadedBuildKitPod(context.Context, string) (*types.BuildKitPodResponse, error) {
+	f.calls++
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.calls > len(f.pods) {
+		return nil, fmt.Errorf("unexpected pod request #%d", f.calls)
+	}
+	return &types.BuildKitPodResponse{PodName: f.pods[f.calls-1]}, nil
+}
+
+// fakePortForward simulates the port forward to each pod: it fails synchronously with syncErr
+// when set, becomes ready for the pods in reachable and fails asynchronously with forwardErr
+// for the rest, like ForwardPorts does
+type fakePortForward struct {
+	pf         *PortForwarder
+	reachable  map[string]bool
+	syncErr    error
+	forwardErr error
+	failures   sync.WaitGroup
+}
+
+func (f *fakePortForward) start() error {
+	if f.syncErr != nil {
+		return f.syncErr
+	}
+	f.pf.stopChan = make(chan struct{}, 1)
+	f.pf.readyChan = make(chan struct{}, 1)
+	f.pf.errChan = make(chan error, 1)
+	if f.reachable[f.pf.podName] {
+		f.pf.readyChan <- struct{}{}
+		return nil
+	}
+	errChan := f.pf.errChan
+	f.failures.Add(1)
+	go func() {
+		defer f.failures.Done()
+		f.pf.handlePortForwardError(f.forwardErr, errChan)
+	}()
+	return nil
+}
+
+// recordingConnectionTracker keeps the analytics events sent by the connector
+type recordingConnectionTracker struct {
+	events []*analytics.BuildkitConnectorMetadata
+}
+
+func (r *recordingConnectionTracker) TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata) {
+	r.events = append(r.events, m)
+}
+
+// outcomes returns each tracked event as "success" or "failure: <reason>"
+func (r *recordingConnectionTracker) outcomes() []string {
+	outcomes := make([]string, 0, len(r.events))
+	for _, e := range r.events {
+		if e.Success {
+			outcomes = append(outcomes, "success")
+			continue
+		}
+		outcomes = append(outcomes, "failure: "+e.ErrReason)
+	}
+	return outcomes
+}
+
+// newPortForwarderWithFakes returns a port forwarder whose session is already assigned to buildkit-0
+func newPortForwarderWithFakes(api *fakeBuildkitAPI, reachable map[string]bool, forwardErr error) (*PortForwarder, *fakePortForward, *recordingConnectionTracker) {
+	tracker := &recordingConnectionTracker{}
+	pf := &PortForwarder{
+		oktetoClient: &client.FakeOktetoClient{BuildkitClient: api},
+		podName:      "buildkit-0",
+		localPort:    8080,
+		maxWaitTime:  time.Minute,
+		ioCtrl:       io.NewIOController(),
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", tracker),
+	}
+	fake := &fakePortForward{pf: pf, reachable: reachable, forwardErr: forwardErr}
+	pf.portForward = fake.start
+	return pf, fake, tracker
+}
+
+func TestPortForwarder_Start_ReassignsPodWhenAssignedPodIsGone(t *testing.T) {
+	api := &fakeBuildkitAPI{pods: []string{"buildkit-1"}}
+	pf, fake, tracker := newPortForwarderWithFakes(api, map[string]bool{"buildkit-1": true}, errors.New(`pods "buildkit-0" not found`))
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(context.Background()) })
+	fake.failures.Wait()
+
+	require.NoError(t, err)
+	require.Equal(t, 1, api.calls, "a new pod should be requested once")
+	require.Equal(t, "buildkit-1", pf.podName)
+	require.True(t, pf.isActive, "the failure of the gone pod must not stop the new connection")
+	require.Equal(t, []string{"failure: AssignedPodUnreachable", "success"}, tracker.outcomes(),
+		"a recovered failure must not be reported as a port forward creation failure")
+}
+
+func TestPortForwarder_Start_ReusesAssignedPod(t *testing.T) {
+	api := &fakeBuildkitAPI{}
+	pf, _, tracker := newPortForwarderWithFakes(api, map[string]bool{"buildkit-0": true}, nil)
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(context.Background()) })
+
+	require.NoError(t, err)
+	require.Zero(t, api.calls, "the assigned pod should be reused")
+	require.Equal(t, "buildkit-0", pf.podName)
+	require.True(t, pf.isActive)
+	require.Empty(t, tracker.outcomes())
+}
+
+func TestPortForwarder_Start_FailsWhenReassignedPodIsAlsoUnreachable(t *testing.T) {
+	api := &fakeBuildkitAPI{pods: []string{"buildkit-1"}}
+	pf, fake, tracker := newPortForwarderWithFakes(api, nil, errors.New("connection refused"))
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(context.Background()) })
+	fake.failures.Wait()
+
+	require.EqualError(t, err, "port forward creation to BuildKit has failed")
+	require.Equal(t, 1, api.calls, "a new pod should be requested only once")
+	require.Empty(t, pf.podName, "pod should be released so the next start is reassigned")
+	require.False(t, pf.isActive)
+	require.Equal(t, []string{"failure: AssignedPodUnreachable", "success", "failure: PortForwardCreation"}, tracker.outcomes())
+}
+
+func TestPortForwarder_Start_KeepsPortForwardErrorWhenNoNewPodCanBeAssigned(t *testing.T) {
+	api := &fakeBuildkitAPI{err: errors.New("dial tcp: lookup okteto.example.com: no such host")}
+	pf, fake, tracker := newPortForwarderWithFakes(api, nil, errors.New(`pods "buildkit-0" not found`))
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(context.Background()) })
+	fake.failures.Wait()
+
+	require.EqualError(t, err, "port forward creation to BuildKit has failed", "the raw backend error must only go to the logs")
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	require.Contains(t, userErr.Hint, "--log-level=info")
+	require.Equal(t, 1, api.calls)
+	require.Empty(t, pf.podName, "pod should be released so the next start is reassigned")
+	require.Equal(t, []string{"failure: AssignedPodUnreachable", "failure: BackendInternalError"}, tracker.outcomes())
+}
+
+func TestPortForwarder_Start_DoesNotReassignPodWhenContextIsCancelled(t *testing.T) {
+	api := &fakeBuildkitAPI{pods: []string{"buildkit-1"}}
+	pf, fake, tracker := newPortForwarderWithFakes(api, map[string]bool{"buildkit-1": true}, nil)
+	fake.syncErr = errors.New("failed to create SPDY round tripper")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(ctx) })
+
+	require.EqualError(t, err, "port forward creation to BuildKit has failed")
+	require.Zero(t, api.calls, "a cancelled command must not request a new pod")
+	require.Equal(t, "buildkit-0", pf.podName)
+	require.Equal(t, []string{"failure: PortForwardCreation"}, tracker.outcomes())
+}
+
+func TestPortForwarder_Start_DoesNotReassignPodOnLocalPortConflict(t *testing.T) {
+	api := &fakeBuildkitAPI{}
+	pf, fake, tracker := newPortForwarderWithFakes(api, nil, errors.New("unable to listen on any of the requested ports"))
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(context.Background()) })
+	fake.failures.Wait()
+
+	require.EqualError(t, err, "port 8080 is already in use")
+	require.Zero(t, api.calls, "another pod does not solve a local port conflict")
+	require.Equal(t, "buildkit-0", pf.podName)
+	require.Equal(t, []string{"failure: PortForwardCreation"}, tracker.outcomes())
 }
 
 func TestPortForwarder_GetWaiter(t *testing.T) {

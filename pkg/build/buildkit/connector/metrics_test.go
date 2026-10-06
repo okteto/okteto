@@ -62,11 +62,13 @@ func TestNewConnectorMetrics_NilTrackerUsesNoop(t *testing.T) {
 func TestConnectorMetrics_StartTracking(t *testing.T) {
 	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "test-session", fakeConnectionTracker{})
 	m.maxQueuePosition = 5
+	m.errReason = "PortForwardCreation"
 
 	m.StartTracking()
 
 	require.Equal(t, 0, m.maxQueuePosition)
 	require.Equal(t, "", m.lastQueueReason)
+	require.Empty(t, m.errReason, "a new attempt must not report the previous attempt's error")
 	require.False(t, m.StartTime.IsZero())
 }
 
