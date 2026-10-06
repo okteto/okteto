@@ -14,6 +14,7 @@
 package io
 
 import (
+	"bytes"
 	"io"
 	"log/slog"
 	"os"
@@ -116,4 +117,60 @@ func TestWithQuietOutputIsSafeForConcurrentSpinners(t *testing.T) {
 	wg.Wait()
 
 	require.Nil(t, quiet.Out().spinner)
+}
+
+func TestWithOutputWritesToGivenWriter(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("plain")
+	var out bytes.Buffer
+
+	child := ioCtrl.WithOutput(&out, "Building service api")
+	child.Out().Println("hello")
+
+	require.Equal(t, "hello\n", out.String())
+}
+
+func TestWithOutputTagsStage(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("json")
+	var out bytes.Buffer
+
+	child := ioCtrl.WithOutput(&out, "Building service api")
+	child.Out().Println("hello")
+
+	require.Contains(t, out.String(), `"stage":"Building service api"`)
+}
+
+func TestWithOutputLeavesParentStage(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("json")
+	ioCtrl.SetStage("Building services")
+	t.Cleanup(func() { ioCtrl.SetStage("") })
+	var parentOut, childOut bytes.Buffer
+	ioCtrl.out.out = &parentOut
+
+	ioCtrl.WithOutput(&childOut, "Building service api")
+	ioCtrl.Out().Println("hello")
+
+	require.Contains(t, parentOut.String(), `"stage":"Building services"`)
+}
+
+func TestWithOutputKeepsParentFormat(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("plain")
+
+	child := ioCtrl.WithOutput(&bytes.Buffer{}, "Building service api")
+
+	_, isPlain := child.Out().formatter.(*plainFormatter)
+	require.True(t, isPlain)
+}
+
+func TestWithOutputSharesLoggerAndNeverDrawsSpinner(t *testing.T) {
+	ioCtrl := NewIOController()
+
+	child := ioCtrl.WithOutput(&bytes.Buffer{}, "Building service api")
+	_, isNoSpinner := child.Out().Spinner("waiting").(*noSpinner)
+
+	require.Same(t, ioCtrl.Logger(), child.Logger())
+	require.True(t, isNoSpinner)
 }

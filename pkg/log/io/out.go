@@ -30,9 +30,9 @@ type OutputController struct {
 
 	spinner OktetoSpinner
 
-	// quiet controllers discard their output and never keep spinner state, so several
-	// goroutines can share them safely
-	quiet bool
+	// staticSpinners prints spinners once as a message and never keeps spinner state, so
+	// several goroutines can share the controller
+	staticSpinners bool
 }
 
 // newOutputController returns a new logger that writes to stdout
@@ -156,9 +156,21 @@ func (oc *OutputController) SetStage(stage string) {
 	}
 }
 
+// formatName returns the output format of the controller
+func (oc *OutputController) formatName() string {
+	switch oc.formatter.(type) {
+	case *plainFormatter:
+		return "plain"
+	case *jsonFormatter:
+		return "json"
+	default:
+		return "tty"
+	}
+}
+
 // Spinner returns a spinner
 func (oc *OutputController) Spinner(msg string) OktetoSpinner {
-	if oc.quiet {
+	if oc.staticSpinners {
 		return newNoSpinner(msg, oc)
 	}
 	if oc.spinner != nil {

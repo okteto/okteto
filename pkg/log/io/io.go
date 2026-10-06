@@ -77,7 +77,23 @@ func (ioc *Controller) SetStage(stage string) {
 func (ioc *Controller) WithQuietOutput() *Controller {
 	out := newOutputController(io.Discard)
 	out.SetOutputFormat("plain")
-	out.quiet = true
+	out.staticSpinners = true
+	return &Controller{
+		in:           ioc.in,
+		out:          out,
+		oktetoLogger: ioc.oktetoLogger,
+	}
+}
+
+// WithOutput returns a controller that shares the input and the logger of ioc and
+// formats its output like ioc, but writes it to w tagged with its own stage (JSON
+// output). Its spinners never draw: they print their message once. It is used to give
+// each concurrent build its own output without changing the stage of ioc.
+func (ioc *Controller) WithOutput(w io.Writer, stage string) *Controller {
+	out := newOutputController(w)
+	out.SetOutputFormat(ioc.out.formatName())
+	out.SetStage(stage)
+	out.staticSpinners = true
 	return &Controller{
 		in:           ioc.in,
 		out:          out,
