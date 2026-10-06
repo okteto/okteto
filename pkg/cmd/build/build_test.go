@@ -1009,10 +1009,10 @@ func TestConnectorFactoryForInClusterConnector(t *testing.T) {
 	require.NotNil(t, ob.connectorFactory())
 }
 
-func TestConnectorFactoryForIngressIsNil(t *testing.T) {
+func TestConnectorFactoryForIngress(t *testing.T) {
 	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.IngressConnector{})
 
-	require.Nil(t, ob.connectorFactory())
+	require.NotNil(t, ob.connectorFactory())
 }
 
 func TestSolveBuildFnDefaultsToSolveBuild(t *testing.T) {

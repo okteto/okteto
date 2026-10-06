@@ -112,8 +112,8 @@ func (ob *OktetoBuilder) solveBuildFn() buildkit.SolveBuildFn {
 type connectorFactory func(ctx context.Context) (BuildkitConnector, error)
 
 // connectorFactory returns how to open extra connectors for concurrent builds. It returns
-// nil when the connector can't open independent sessions (ingress), meaning concurrent
-// builds must share it. Extra connectors never print to the terminal.
+// nil when the connector type is unknown, meaning concurrent builds must share it. Extra
+// connectors never print to the terminal.
 func (ob *OktetoBuilder) connectorFactory() connectorFactory {
 	quietIO := ob.logger.WithQuietOutput()
 	switch conn := ob.connector.(type) {
@@ -133,6 +133,10 @@ func (ob *OktetoBuilder) connectorFactory() connectorFactory {
 				return nil, err
 			}
 			return sibling, nil
+		}
+	case *connector.IngressConnector:
+		return func(context.Context) (BuildkitConnector, error) {
+			return conn.NewSibling(quietIO), nil
 		}
 	default:
 		return nil

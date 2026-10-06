@@ -43,8 +43,9 @@ type WorkerPool struct {
 }
 
 // NewWorkerPool returns a pool of at most size workers. Worker 0 is ob itself and its
-// connector is never stopped by the pool. Extra workers get their own connector when ob's connector
-// supports it (port-forward, in-cluster) and share ob's connector otherwise (ingress).
+// connector is never stopped by the pool. Extra workers get their own connector (a new session for
+// port-forward and in-cluster, a new client for ingress) and share ob's connector only
+// when its type is unknown.
 func (ob *OktetoBuilder) NewWorkerPool(ctx context.Context, size int) *WorkerPool {
 	return newWorkerPool(ctx, ob, size, ob.connectorFactory())
 }
