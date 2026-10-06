@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -235,6 +236,20 @@ const composeTemplateWithIdentityToken = `services:
     x-okteto-identity-token:
       audience: sts.amazonaws.com
       mount_path: /var/run/okteto/identity
+`
+
+const composeServiceAccountName = "e2e-compose-sa"
+
+const composeTemplateWithServiceAccount = `services:
+  app:
+    image: nginx:latest
+    ports:
+      - 80
+    x-okteto-service-account: e2e-compose-sa
+  worker:
+    image: nginx:latest
+    ports:
+      - 80
 `
 
 // TestDeployPipelineFromCompose tests the following scenario:
@@ -916,4 +931,80 @@ func findIdentityTokenVolumeMount(t *testing.T, mounts []corev1.VolumeMount) cor
 	}
 	require.FailNow(t, "identity token volume mount not found", "expected a volume mount named %q on the service container", identityTokenVolumeName)
 	return corev1.VolumeMount{}
+}
+
+// TestDeployComposeWithServiceAccount tests the following scenario (DEV-1489):
+//   - A ServiceAccount is created in the test namespace.
+//   - A compose file is deployed (waiting for pods to be running) where one service declares
+//     x-okteto-service-account and another one does not.
+//   - The service with the directive runs its pods under that ServiceAccount, both in the
+//     Deployment pod template and in the running pod.
+//   - The service without the directive keeps running under the namespace "default" ServiceAccount.
+func TestDeployComposeWithServiceAccount(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	require.NoError(t, os.WriteFile(composePath, []byte(composeTemplateWithServiceAccount), 0600))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+		OktetoHome: dir,
+	}))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	// The ServiceAccount must exist before deploying, otherwise the pods can't be created.
+	_, err = c.CoreV1().ServiceAccounts(testNamespace).Create(context.Background(), &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: composeServiceAccountName},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		LogOutput:  "info",
+		Wait:       true,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+	require.Equal(t, composeServiceAccountName, appDeployment.Spec.Template.Spec.ServiceAccountName)
+
+	appPods, err := integration.GetPodsBySelector(context.Background(), testNamespace, "stack.okteto.com/service=app", c)
+	require.NoError(t, err)
+	require.NotEmpty(t, appPods.Items)
+	for _, pod := range appPods.Items {
+		require.Equal(t, composeServiceAccountName, pod.Spec.ServiceAccountName)
+	}
+
+	workerDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "worker", c)
+	require.NoError(t, err)
+	require.Empty(t, workerDeployment.Spec.Template.Spec.ServiceAccountName)
+
+	workerPods, err := integration.GetPodsBySelector(context.Background(), testNamespace, "stack.okteto.com/service=worker", c)
+	require.NoError(t, err)
+	require.NotEmpty(t, workerPods.Items)
+	for _, pod := range workerPods.Items {
+		require.Equal(t, "default", pod.Spec.ServiceAccountName)
+	}
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
