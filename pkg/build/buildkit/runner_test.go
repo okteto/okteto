@@ -604,3 +604,22 @@ func TestRunnerRunDoesNotRetryCancelledBuilds(t *testing.T) {
 	require.Equal(t, 1, solves)
 	require.NotContains(t, out.String(), "Retrying")
 }
+
+func TestRunnerRunReturnsSolveOptionsError(t *testing.T) {
+	r := &Runner{
+		connector: &fakeBuildkitConnector{
+			waiter:        &fakeBuildkitWaiter{},
+			clientFactory: &fakeBuildkitClientFactory{},
+		},
+		registry:               &fakeRegistryImageChecker{},
+		metadata:               &runnerMetadata{},
+		logger:                 io.NewIOController(),
+		okCtx:                  &fakeOktetoContext{},
+		fs:                     afero.NewMemMapFs(),
+		solveOptBuilderFactory: newFakeSolveOptBuilderFactory(nil, assert.AnError),
+	}
+
+	err := r.Run(context.Background(), &types.BuildOptions{}, "")
+
+	require.ErrorIs(t, err, assert.AnError)
+}
