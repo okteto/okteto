@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_WakeNamespace(t *testing.T) {
@@ -39,10 +38,9 @@ func Test_WakeNamespace(t *testing.T) {
 		},
 	}
 	var tests = []struct {
-		err           error
-		fakeOkClient  *client.FakeOktetoClient
-		fakeK8sClient *fake.Clientset
-		name          string
+		err          error
+		fakeOkClient *client.FakeOktetoClient
+		name         string
 		// toWakeNs the namespace to wake
 		toWakeNs                        string
 		initialNamespacesAtOktetoClient []types.Namespace
@@ -57,7 +55,6 @@ func Test_WakeNamespace(t *testing.T) {
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
-			fakeK8sClient: fake.NewSimpleClientset(),
 			expectTracked: true,
 		},
 		{
@@ -69,7 +66,6 @@ func Test_WakeNamespace(t *testing.T) {
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
-			fakeK8sClient: fake.NewSimpleClientset(),
 			expectTracked: true,
 		},
 		{
@@ -81,7 +77,6 @@ func Test_WakeNamespace(t *testing.T) {
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
-			fakeK8sClient: fake.NewSimpleClientset(),
 			err:           errFailedWakeNamespace,
 			expectTracked: false,
 		},
@@ -103,7 +98,7 @@ func Test_WakeNamespace(t *testing.T) {
 				CurrentContext: "test-context",
 			}
 			tracker := &fakeWakeAnalyticsTracker{}
-			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
+			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, usr)
 			err := nsFakeCommand.ExecuteWakeNamespace(ctx, tt.toWakeNs, tracker)
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err)

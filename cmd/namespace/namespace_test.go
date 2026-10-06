@@ -20,12 +20,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type fakeWakeAnalyticsTracker struct {
@@ -34,22 +29,6 @@ type fakeWakeAnalyticsTracker struct {
 
 func (f *fakeWakeAnalyticsTracker) TrackWakeTriggered(_ context.Context, m analytics.WakeTriggeredMetadata) {
 	f.calls = append(f.calls, m)
-}
-
-type fakeK8sProvider struct {
-	k8sClient kubernetes.Interface
-}
-
-func (p *fakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return p.k8sClient, nil, nil
-}
-
-func (f *fakeK8sProvider) ProvideWithLogger(c *clientcmdapi.Config, _ *io.K8sLogger) (kubernetes.Interface, *rest.Config, error) {
-	return f.Provide(c)
-}
-
-func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
-	return nil, nil
 }
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.Command {
@@ -61,12 +40,9 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contex
 	return cmd
 }
 
-func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User) *Command {
+func NewFakeNamespaceCommand(okClient *client.FakeOktetoClient, user *types.User) *Command {
 	return &Command{
 		okClient: okClient,
 		ctxCmd:   newFakeContextCommand(okClient, user),
-		k8sClientProvider: &fakeK8sProvider{
-			k8sClient: k8sClient,
-		},
 	}
 }

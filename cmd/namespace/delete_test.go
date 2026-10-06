@@ -27,7 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -66,14 +65,16 @@ func (f *fakeDeleteNamespaceClient) Get(ctx context.Context, namespace string) (
 	return r.ns, r.err
 }
 
-// blockingStreamClient never finishes streaming logs until its context is canceled
+// blockingStreamClient simulates a stalled logs stream: like the real stream client, it ignores
+// the context cancellation and only returns when release is closed
 type blockingStreamClient struct {
 	*client.FakeStreamClient
+	release chan struct{}
 }
 
-func (*blockingStreamClient) DestroyAllLogs(ctx context.Context, _ string, _ time.Duration) error {
-	<-ctx.Done()
-	return ctx.Err()
+func (c *blockingStreamClient) DestroyAllLogs(_ context.Context, _ string, _ time.Duration) error {
+	<-c.release
+	return nil
 }
 
 var namespaceDeletedResponse = fakeGetResponse{err: oktetoErrors.ErrNamespaceNotFound}
@@ -92,6 +93,10 @@ func newFakeDeleteNamespaceClient(responses ...fakeGetResponse) *fakeDeleteNames
 
 func setupDeleteTest(t *testing.T, nsClient types.NamespaceInterface, streamResponse *client.FakeStreamResponse) (*Command, *client.FakeOktetoClient) {
 	t.Helper()
+	previousPollInterval := pollInterval
+	pollInterval = time.Millisecond
+	t.Cleanup(func() { pollInterval = previousPollInterval })
+
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts: map[string]*okteto.Context{
 			"test-context": {
@@ -112,7 +117,7 @@ func setupDeleteTest(t *testing.T, nsClient types.NamespaceInterface, streamResp
 		StreamClient:    client.NewFakeStreamClient(streamResponse),
 		KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 	}
-	return NewFakeNamespaceCommand(fakeOkClient, fake.NewSimpleClientset(), usr), fakeOkClient
+	return NewFakeNamespaceCommand(fakeOkClient, usr), fakeOkClient
 }
 
 func Test_deleteNamespace(t *testing.T) {
@@ -239,7 +244,7 @@ func Test_deleteNamespace_Timeout(t *testing.T) {
 	err := nsFakeCommand.ExecuteDeleteNamespace(context.Background(), &DeleteOptions{
 		Namespace: currentNamespace,
 		Wait:      true,
-		Timeout:   1500 * time.Millisecond,
+		Timeout:   50 * time.Millisecond,
 	})
 
 	require.ErrorIs(t, err, errDeleteNamespaceTimeout)
@@ -264,7 +269,9 @@ func Test_deleteNamespace_LogsNeverFinish(t *testing.T) {
 
 	nsClient := newFakeDeleteNamespaceClient(namespaceDeletedResponse)
 	nsFakeCommand, fakeOkClient := setupDeleteTest(t, nsClient, &client.FakeStreamResponse{})
-	fakeOkClient.StreamClient = &blockingStreamClient{}
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	fakeOkClient.StreamClient = &blockingStreamClient{release: release}
 
 	err := nsFakeCommand.ExecuteDeleteNamespace(context.Background(), &DeleteOptions{
 		Namespace: currentNamespace,

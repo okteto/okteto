@@ -40,8 +40,13 @@ const (
 	namespaceStatusDeleteFailed = "DeleteFailed"
 )
 
-// logsGracePeriod is the maximum time to wait for the deletion logs once the wait has finished
-var logsGracePeriod = 10 * time.Second
+var (
+	// pollInterval is the interval between checks of the namespace status while waiting for its deletion
+	pollInterval = 1 * time.Second
+
+	// logsGracePeriod is the maximum time to wait for the deletion logs once the wait has finished
+	logsGracePeriod = 10 * time.Second
+)
 
 // DeleteOptions represents the options that namespace delete has
 type DeleteOptions struct {
@@ -175,16 +180,16 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, timeout ti
 			wg.Wait()
 			close(logsDone)
 		}()
-		// wait until streaming logs have finished, but don't block forever if the stream never ends
+		// wait until streaming logs have finished, but don't block forever if the stream never ends.
+		// We don't wait for the logs goroutine after cancelling it because the stream request is not bound
+		// to the context, so a stalled read would block until the next server event
 		select {
 		case <-logsDone:
 		case <-time.After(logsGracePeriod):
 			oktetoLog.Infof("delete namespace logs didn't finish after %s, stop streaming", logsGracePeriod)
 			logsCtxCancel()
-			<-logsDone
 		case <-stop:
 			logsCtxCancel()
-			<-logsDone
 			oktetoLog.Infof("CTRL+C received, exit")
 			return oktetoErrors.ErrIntSig
 		}
@@ -197,7 +202,7 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, timeout ti
 // the user access to the namespace is removed while the namespace is terminating, so the user would get a
 // forbidden error before the namespace is actually deleted (e.g. while waiting for finalizers)
 func (nc *Command) waitForNamespaceDeleted(ctx context.Context, namespace string, timeout time.Duration) error {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 	to := time.NewTimer(timeout)
 	defer to.Stop()

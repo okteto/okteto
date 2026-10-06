@@ -32,10 +32,9 @@ type wakeAnalyticsTracker interface {
 
 // Command has all the namespaces subcommands
 type Command struct {
-	ctxCmd            *contextCMD.Command
-	okClient          types.OktetoInterface
-	k8sClientProvider okteto.K8sClientProviderWithLogger
-	ioCtrl            *io.Controller
+	ctxCmd   *contextCMD.Command
+	okClient types.OktetoInterface
+	ioCtrl   *io.Controller
 }
 
 // NewCommand creates a namespace command for use in further operations
@@ -46,20 +45,18 @@ func NewCommand(ioCtrl *io.Controller) (*Command, error) {
 	}
 
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
-		okClient:          c,
-		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
-		ioCtrl:            ioCtrl,
+		ctxCmd:   contextCMD.NewContextCommand(),
+		okClient: c,
+		ioCtrl:   ioCtrl,
 	}, nil
 }
 
 // NewCommandStateless creates a namespace command for use in further operations
 func NewCommandStateless(c *okteto.Client, ioCtrl *io.Controller) *Command {
 	return &Command{
-		ctxCmd:            contextCMD.NewContextCommand(),
-		okClient:          c,
-		k8sClientProvider: okteto.NewK8sClientProviderWithLogger(nil),
-		ioCtrl:            ioCtrl,
+		ctxCmd:   contextCMD.NewContextCommand(),
+		okClient: c,
+		ioCtrl:   ioCtrl,
 	}
 }
 
