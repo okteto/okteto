@@ -218,6 +218,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registryIface oktet
 			},
 		},
 		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(ioCtrl, registryIface),
+		buildStrategy:         sequentialBuildStrategy{},
 	}
 }
 

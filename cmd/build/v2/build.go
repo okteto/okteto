@@ -80,6 +80,8 @@ type OktetoBuilder struct {
 	k8sLogger *io.K8sLogger
 
 	onBuildFinish []OnBuildFinish
+
+	buildStrategy buildStrategy
 }
 
 type OnBuildFinish func(ctx context.Context, meta *analytics.ImageBuildMetadata)
@@ -121,6 +123,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
+		buildStrategy:         sequentialBuildStrategy{},
 	}
 
 	return ob
@@ -176,6 +179,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish,
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
+		buildStrategy:         sequentialBuildStrategy{},
 	}
 }
 
@@ -275,54 +279,64 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		ob.ioCtrl.Logger().Infof("Images not cached: %v", notCachedSvcs)
 	}
 
-	for _, svcToBuild := range notCachedSvcs {
-		if options.EnableStages {
-			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild.Name()))
-		}
-		buildSvcInfo := options.Manifest.Build[svcToBuild.Name()]
-		if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
-			return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
-		}
-
-		buildDurationStart := time.Now()
-		imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
-
-		buildDuration := time.Since(buildDurationStart)
-
-		waitForBuildkitAvailable := time.Duration(0)
-		buildContextSize := int64(0)
-		connectionType := ""
-		buildkitDuration := time.Duration(0)
-		contextTransferDuration := time.Duration(0)
-		buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
-		if ok {
-			buildkitMetadata := buildkitRunner.GetMetadata()
-			if buildkitMetadata != nil {
-				waitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
-				buildContextSize = buildkitMetadata.BuildContextSize
-				connectionType = buildkitMetadata.ConnectionType
-				buildkitDuration = buildkitMetadata.BuildkitDuration
-				contextTransferDuration = buildkitMetadata.ContextTransferDuration
-			}
-		}
-		svcToBuild.SetBuildDuration(buildDuration, waitForBuildkitAvailable, err == nil)
-		svcToBuild.Metadata().BuildContextSize = buildContextSize
-		svcToBuild.Metadata().ConnectionType = connectionType
-		svcToBuild.Metadata().BuildkitDuration = buildkitDuration
-		svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
-
-		if err != nil {
-			svcToBuild.Metadata().ErrorReason = err.Error()
-			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
-		}
-
-		ob.serviceEnvVarsHandler.SetServiceEnvVars(svcToBuild.Name(), imageTag)
+	err = ob.buildStrategy.Build(ctx, notCachedSvcs, func(ctx context.Context, svc *buildTypes.BuildInfo) error {
+		return ob.buildService(ctx, svc, options)
+	})
+	if err != nil {
+		return err
 	}
 
 	if options.EnableStages {
 		ob.ioCtrl.SetStage("")
 	}
 	return options.Manifest.ExpandEnvVars()
+}
+
+// buildService builds a single service that is not cached, records its build metadata
+// and publishes its OKTETO_BUILD_<SVC>_* env vars for the services that depend on it
+func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildTypes.BuildInfo, options *types.BuildOptions) error {
+	if options.EnableStages {
+		ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild.Name()))
+	}
+	buildSvcInfo := options.Manifest.Build[svcToBuild.Name()]
+	if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
+		return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
+	}
+
+	buildDurationStart := time.Now()
+	imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
+
+	buildDuration := time.Since(buildDurationStart)
+
+	waitForBuildkitAvailable := time.Duration(0)
+	buildContextSize := int64(0)
+	connectionType := ""
+	buildkitDuration := time.Duration(0)
+	contextTransferDuration := time.Duration(0)
+	buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
+	if ok {
+		buildkitMetadata := buildkitRunner.GetMetadata()
+		if buildkitMetadata != nil {
+			waitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
+			buildContextSize = buildkitMetadata.BuildContextSize
+			connectionType = buildkitMetadata.ConnectionType
+			buildkitDuration = buildkitMetadata.BuildkitDuration
+			contextTransferDuration = buildkitMetadata.ContextTransferDuration
+		}
+	}
+	svcToBuild.SetBuildDuration(buildDuration, waitForBuildkitAvailable, err == nil)
+	svcToBuild.Metadata().BuildContextSize = buildContextSize
+	svcToBuild.Metadata().ConnectionType = connectionType
+	svcToBuild.Metadata().BuildkitDuration = buildkitDuration
+	svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
+
+	if err != nil {
+		svcToBuild.Metadata().ErrorReason = err.Error()
+		return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
+	}
+
+	ob.serviceEnvVarsHandler.SetServiceEnvVars(svcToBuild.Name(), imageTag)
+	return nil
 }
 
 // buildServiceImages builds the images for the given service.
