@@ -225,3 +225,17 @@ func TestParallelBuildStrategyKeepsOrderOfIndependentServices(t *testing.T) {
 
 	require.Equal(t, []string{"a", "b", "c"}, order)
 }
+
+func TestParallelBuildStrategyStartsNothingAfterAFailure(t *testing.T) {
+	svcs := buildTypes.NewBuildInfos("manifest", "ns", "repo", []string{"a", "b", "c"})
+	errs := map[string]error{"a": assert.AnError}
+	log := &eventLog{}
+
+	err := parallelBuildStrategy{maxParallel: 1}.Build(context.Background(), svcs, nil, func(_ context.Context, svc *buildTypes.BuildInfo, _ int) error {
+		log.add(svc.Name())
+		return errs[svc.Name()]
+	})
+
+	require.ErrorIs(t, err, assert.AnError)
+	require.Equal(t, []string{"a"}, log.startOrder())
+}

@@ -70,8 +70,11 @@ func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.Bui
 	eg, egCtx := errgroup.WithContext(ctx)
 	results := make(chan buildResult)
 	running := 0
+	// failed stops launching builds as soon as one fails, without waiting for errgroup to
+	// cancel egCtx, which only happens once the failed build's goroutine returns
+	failed := false
 	for {
-		for running < s.maxParallel && len(ready) > 0 && egCtx.Err() == nil {
+		for running < s.maxParallel && len(ready) > 0 && !failed && egCtx.Err() == nil {
 			slices.SortStableFunc(ready, func(a, b string) int { return priority[a] - priority[b] })
 			name := ready[0]
 			ready = ready[1:]
@@ -89,6 +92,7 @@ func (s parallelBuildStrategy) Build(ctx context.Context, svcs []*buildTypes.Bui
 		result := <-results
 		running--
 		if !result.ok {
+			failed = true
 			continue
 		}
 		for _, dependent := range dependents[result.name] {
