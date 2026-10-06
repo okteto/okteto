@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -933,7 +935,52 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Depl
 	if !options.InsidePipeline {
 		options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, s, options.ServicesToDeploy, c)
 	}
-	return nil
+	return validateServiceAccounts(ctx, s, options.ServicesToDeploy, c)
+}
+
+// validateServiceAccounts checks that the ServiceAccounts referenced via x-okteto-service-account by the services
+// to deploy exist in the namespace, so a missing one fails before anything is applied instead of leaving the
+// workloads unable to create pods
+func validateServiceAccounts(ctx context.Context, s *model.Stack, servicesToDeploy []string, c kubernetes.Interface) error {
+	svcNames := slices.Sorted(slices.Values(servicesToDeploy))
+
+	checked := map[string]bool{}
+	missing := []string{}
+	for _, svcName := range svcNames {
+		sa := s.Services[svcName].ServiceAccount
+		if sa == "" {
+			continue
+		}
+		exists, ok := checked[sa]
+		if !ok {
+			_, err := c.CoreV1().ServiceAccounts(s.Namespace).Get(ctx, sa, metav1.GetOptions{})
+			switch {
+			case err == nil:
+				exists = true
+			// check the API status reason instead of oktetoErrors.IsNotFound: a false positive from matching the
+			// error text would block a deploy that works
+			case k8sErrors.IsNotFound(err):
+				exists = false
+			default:
+				// e.g. the user can't get ServiceAccounts: don't block a deploy that might work
+				oktetoLog.Warning("Could not verify that ServiceAccount '%s' used by service '%s' exists: %s", sa, svcName, err)
+				exists = true
+			}
+			checked[sa] = exists
+		}
+		if !exists {
+			missing = append(missing, fmt.Sprintf("ServiceAccount '%s' used by service '%s'", sa, svcName))
+		}
+	}
+
+	switch len(missing) {
+	case 0:
+		return nil
+	case 1:
+		return fmt.Errorf("%s (x-okteto-service-account) doesn't exist in namespace '%s'. Create it before deploying, or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount", missing[0], s.Namespace)
+	default:
+		return fmt.Errorf("the following ServiceAccounts set with x-okteto-service-account don't exist in namespace '%s':\n  - %s\nCreate them before deploying, or remove 'x-okteto-service-account' from those services to use the namespace's default ServiceAccount", s.Namespace, strings.Join(missing, "\n  - "))
+	}
 }
 
 // ValidateDefinedServices checks that the services to deploy are in the compose file

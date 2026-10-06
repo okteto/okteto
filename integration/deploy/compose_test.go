@@ -252,6 +252,14 @@ const composeTemplateWithServiceAccount = `services:
       - 80
 `
 
+const composeTemplateWithMissingServiceAccount = `services:
+  app:
+    image: nginx:latest
+    ports:
+      - 80
+    x-okteto-service-account: e2e-missing-sa
+`
+
 // TestDeployPipelineFromCompose tests the following scenario:
 // - Deploying a pipeline manifest locally from a compose file
 // - The endpoints generated are accessible
@@ -1007,4 +1015,50 @@ func TestDeployComposeWithServiceAccount(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestDeployComposeWithMissingServiceAccount tests the following scenario (DEV-1490):
+//   - A compose file is deployed (without --wait) where a service declares x-okteto-service-account
+//     with a ServiceAccount that doesn't exist in the namespace.
+//   - The deploy fails before applying any workload, with an error naming the missing ServiceAccount.
+//   - No Deployment is created for the service.
+func TestDeployComposeWithMissingServiceAccount(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	require.NoError(t, os.WriteFile(composePath, []byte(composeTemplateWithMissingServiceAccount), 0600))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	// the deploy is expected to fail, so clean up even if an assertion below fails
+	t.Cleanup(func() {
+		require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	})
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+		OktetoHome: dir,
+	}))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		LogOutput:  "info",
+	}
+	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+	require.Error(t, err)
+	require.Contains(t, output, fmt.Sprintf("ServiceAccount 'e2e-missing-sa' used by service 'app' (x-okteto-service-account) doesn't exist in namespace '%s'", testNamespace))
+
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.Truef(t, k8sErrors.IsNotFound(err), "expected no 'app' Deployment, got: %v", err)
 }
