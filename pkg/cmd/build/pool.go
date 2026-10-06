@@ -66,13 +66,12 @@ func newWorkerPool(ctx context.Context, base *OktetoBuilder, size int, newConn c
 }
 
 // Acquire returns an idle worker, waiting until one is available or ctx is done.
-// When wantMore is true and the pool is below its size, it also starts creating an
-// extra worker in the background, which becomes available once its connector is
+// demand is the number of builds that want a worker right now, including the caller.
+// While the pool has fewer workers than demand (and than its size), it starts creating
+// an extra worker in the background, which becomes available once its connector is
 // connected. Acquire never waits for that extra worker specifically.
-func (p *WorkerPool) Acquire(ctx context.Context, wantMore bool) (*OktetoBuilder, error) {
-	if wantMore {
-		p.grow()
-	}
+func (p *WorkerPool) Acquire(ctx context.Context, demand int) (*OktetoBuilder, error) {
+	p.grow(demand)
 	select {
 	case w := <-p.available:
 		return w, nil
@@ -102,12 +101,13 @@ func (p *WorkerPool) Close() {
 	p.extras = nil
 }
 
-// grow reserves a slot for a new worker and creates it: right away when the connector
-// is shared, in the background when it needs its own connector
-func (p *WorkerPool) grow() {
+// grow reserves a slot for a new worker when demand exceeds the workers created so far,
+// and creates it: right away when the connector is shared, in the background when it
+// needs its own connector
+func (p *WorkerPool) grow(demand int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.total >= p.size || p.ctx.Err() != nil {
+	if p.total >= min(demand, p.size) || p.ctx.Err() != nil {
 		return
 	}
 	p.total++

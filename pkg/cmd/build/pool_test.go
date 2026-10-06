@@ -95,7 +95,7 @@ func TestWorkerPoolFirstWorkerUsesBuilderConnector(t *testing.T) {
 	p := newWorkerPool(context.Background(), ob, 4, nil)
 	defer p.Close()
 
-	w, err := p.Acquire(context.Background(), false)
+	w, err := p.Acquire(context.Background(), 1)
 
 	require.NoError(t, err)
 	require.Same(t, ob, w)
@@ -107,10 +107,10 @@ func TestWorkerPoolDoesNotGrowWithoutDemand(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
 	defer p.Close()
 
-	w, err := p.Acquire(context.Background(), false)
+	w, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
 	p.Release(w)
-	_, err = p.Acquire(context.Background(), false)
+	_, err = p.Acquire(context.Background(), 1)
 
 	require.NoError(t, err)
 	require.Equal(t, int32(0), factory.calls.Load())
@@ -122,9 +122,9 @@ func TestWorkerPoolGrowsWithExtraConnector(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
 	defer p.Close()
 
-	_, err := p.Acquire(context.Background(), false)
+	_, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	w, err := p.Acquire(context.Background(), true)
+	w, err := p.Acquire(context.Background(), 4)
 
 	require.NoError(t, err)
 	require.Same(t, extra, w.connector)
@@ -135,11 +135,11 @@ func TestWorkerPoolNeverExceedsSize(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 2, factory.create)
 	defer p.Close()
 
-	_, err := p.Acquire(context.Background(), false)
+	_, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	_, err = p.Acquire(context.Background(), true)
+	_, err = p.Acquire(context.Background(), 4)
 	require.NoError(t, err)
-	_, err = p.Acquire(shortContext(t), true)
+	_, err = p.Acquire(shortContext(t), 4)
 
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.Equal(t, int32(1), factory.calls.Load())
@@ -151,10 +151,10 @@ func TestWorkerPoolStuckExtraDoesNotBlockReleasedWorker(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(base), 4, factory.create)
 	defer p.Close()
 
-	w0, err := p.Acquire(context.Background(), false)
+	w0, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
 	p.Release(w0)
-	w, err := p.Acquire(context.Background(), true)
+	w, err := p.Acquire(context.Background(), 4)
 
 	require.NoError(t, err)
 	require.Same(t, base, w.connector)
@@ -166,12 +166,12 @@ func TestWorkerPoolFailedExtraIsNotAnError(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(base), 4, factory.create)
 	defer p.Close()
 
-	w0, err := p.Acquire(context.Background(), false)
+	w0, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	_, err = p.Acquire(shortContext(t), true)
+	_, err = p.Acquire(shortContext(t), 4)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	p.Release(w0)
-	w, err := p.Acquire(context.Background(), true)
+	w, err := p.Acquire(context.Background(), 4)
 
 	require.NoError(t, err)
 	require.Same(t, base, w.connector)
@@ -183,9 +183,9 @@ func TestWorkerPoolFailedStartIsStoppedOnClose(t *testing.T) {
 	factory := &fakeConnectorFactory{conns: []*poolFakeConnector{extra}}
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
 
-	_, err := p.Acquire(context.Background(), false)
+	_, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	_, err = p.Acquire(shortContext(t), true)
+	_, err = p.Acquire(shortContext(t), 4)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	p.Close()
 
@@ -198,9 +198,9 @@ func TestWorkerPoolCloseStopsExtrasButNotBuilderConnector(t *testing.T) {
 	factory := &fakeConnectorFactory{conns: []*poolFakeConnector{extra}}
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(base), 4, factory.create)
 
-	w0, err := p.Acquire(context.Background(), false)
+	w0, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	w1, err := p.Acquire(context.Background(), true)
+	w1, err := p.Acquire(context.Background(), 4)
 	require.NoError(t, err)
 	p.Release(w0)
 	p.Release(w1)
@@ -215,9 +215,9 @@ func TestWorkerPoolCloseStopsPendingExtra(t *testing.T) {
 	factory := &fakeConnectorFactory{conns: []*poolFakeConnector{stuck}}
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
 
-	_, err := p.Acquire(context.Background(), false)
+	_, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	_, err = p.Acquire(shortContext(t), true)
+	_, err = p.Acquire(shortContext(t), 4)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	p.Close()
 
@@ -229,9 +229,9 @@ func TestWorkerPoolSharesConnectorWithoutFactory(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(base), 4, nil)
 	defer p.Close()
 
-	w0, err := p.Acquire(context.Background(), false)
+	w0, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	w1, err := p.Acquire(context.Background(), true)
+	w1, err := p.Acquire(context.Background(), 4)
 
 	require.NoError(t, err)
 	require.Same(t, base, w1.connector)
@@ -241,12 +241,12 @@ func TestWorkerPoolSharesConnectorWithoutFactory(t *testing.T) {
 func TestWorkerPoolAcquireReturnsContextError(t *testing.T) {
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 1, nil)
 	defer p.Close()
-	_, err := p.Acquire(context.Background(), false)
+	_, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err = p.Acquire(ctx, false)
+	_, err = p.Acquire(ctx, 1)
 
 	require.ErrorIs(t, err, context.Canceled)
 }
@@ -262,7 +262,7 @@ func TestWorkerPoolConcurrentUse(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			w, err := p.Acquire(context.Background(), true)
+			w, err := p.Acquire(context.Background(), 4)
 			errs <- err
 			p.Release(w)
 		}()
@@ -281,11 +281,26 @@ func TestWorkerPoolCloseCancelsPendingExtraAsNotNeeded(t *testing.T) {
 	factory := &fakeConnectorFactory{conns: []*poolFakeConnector{stuck}}
 	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
 
-	_, err := p.Acquire(context.Background(), false)
+	_, err := p.Acquire(context.Background(), 1)
 	require.NoError(t, err)
-	_, err = p.Acquire(shortContext(t), true)
+	_, err = p.Acquire(shortContext(t), 4)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	p.Close()
 
 	require.ErrorIs(t, stuck.cause, connector.ErrConnectorNotNeeded)
+}
+
+func TestWorkerPoolGrowsOnlyUpToDemand(t *testing.T) {
+	factory := &fakeConnectorFactory{conns: []*poolFakeConnector{connectedConnector(), connectedConnector()}}
+	p := newWorkerPool(context.Background(), newPoolTestBuilder(connectedConnector()), 4, factory.create)
+	defer p.Close()
+
+	_, err := p.Acquire(context.Background(), 1)
+	require.NoError(t, err)
+	_, err = p.Acquire(context.Background(), 2)
+	require.NoError(t, err)
+	_, err = p.Acquire(shortContext(t), 2)
+
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Equal(t, int32(1), factory.calls.Load())
 }
