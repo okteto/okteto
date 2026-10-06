@@ -14,10 +14,13 @@
 package log
 
 import (
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_GetContextResource(t *testing.T) {
@@ -103,4 +106,23 @@ func TestSetOutputFormat(t *testing.T) {
 			assert.Equal(t, tt.hasSpinnerSupport, log.spinner.spinnerSupport)
 		})
 	}
+}
+
+func TestAddToBufferIsSafeForConcurrentWriters(t *testing.T) {
+	Init(logrus.WarnLevel)
+	// Lines are only buffered while a stage is set
+	SetStage("Building services")
+	t.Cleanup(func() { SetStage("") })
+
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			AddToBuffer(InfoLevel, "%s", "line")
+		}()
+	}
+	wg.Wait()
+
+	require.Equal(t, 20, strings.Count(GetOutputBuffer().String(), "line"))
 }

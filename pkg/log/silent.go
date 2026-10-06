@@ -176,7 +176,7 @@ func (*SilentWriter) IsInteractive() bool {
 // AddToBuffer logs into the buffer but does not print anything
 func (*SilentWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.buf.Write([]byte(msg))
+	writeToBuffer(msg)
 }
 
 // Write logs into the buffer but does not print anything
