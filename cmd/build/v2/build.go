@@ -114,7 +114,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, registryCtrl, config.fs, ioCtrl, wdCtrl, smartBuildConfig, tagger, imageCtrl, serviceEnvVarsHandler, okCtx.GetNamespace(), okCtx.GetRegistryURL())
 
 	ob := &OktetoBuilder{
-		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl, ShowBuildMessage: true},
 		Registry:              registryCtrl,
 		Config:                config,
 		ioCtrl:                ioCtrl,
@@ -171,7 +171,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish,
 	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl, wdCtrl, smartBuildConfig, tagger, imageCtrl, serviceEnvVarsHandler, okCtx.GetNamespace(), okCtx.GetRegistryURL())
 
 	return &OktetoBuilder{
-		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl, ShowBuildMessage: true},
 		Registry:              reg,
 		Config:                config,
 		ioCtrl:                ioCtrl,

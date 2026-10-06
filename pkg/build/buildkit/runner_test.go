@@ -14,6 +14,7 @@
 package buildkit
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -546,4 +547,28 @@ func TestCheckIfImageIsPushed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunnerRunDoesNotShowBuildMessage(t *testing.T) {
+	var out bytes.Buffer
+	r := &Runner{
+		connector: &fakeBuildkitConnector{
+			waiter:        &fakeBuildkitWaiter{},
+			clientFactory: &fakeBuildkitClientFactory{},
+		},
+		registry: &fakeRegistryImageChecker{},
+		solveBuild: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
+			return nil
+		},
+		metadata:               &runnerMetadata{},
+		logger:                 io.NewIOController().WithOutput(&out, ""),
+		okCtx:                  &fakeOktetoContext{},
+		fs:                     afero.NewMemMapFs(),
+		solveOptBuilderFactory: newFakeSolveOptBuilderFactory(&client.SolveOpt{}, nil),
+	}
+
+	err := r.Run(context.Background(), &types.BuildOptions{File: "api/Dockerfile"}, "")
+
+	require.NoError(t, err)
+	require.NotContains(t, out.String(), "Building '")
 }

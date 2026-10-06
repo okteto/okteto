@@ -107,6 +107,7 @@ func TestParallelBuildFnBuildsWithServiceOutput(t *testing.T) {
 	require.NoError(t, err)
 	require.Same(t, mux.IO("api"), got.IoCtrl)
 	require.IsType(t, &buildCmd.OktetoBuilder{}, got.BuildRunner)
+	require.False(t, got.ShowBuildMessage)
 }
 
 func TestParallelBuildFnResetsWorker(t *testing.T) {
