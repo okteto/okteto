@@ -78,8 +78,10 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 	response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 	if err != nil {
 
-		ic.metrics.SetErrReason("BackendInternalError")
-		ic.metrics.TrackFailure()
+		if !ic.metrics.TrackCancelledRequest(ctx) {
+			ic.metrics.SetErrReason("BackendInternalError")
+			ic.metrics.TrackFailure()
+		}
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 	}
 
@@ -172,8 +174,10 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 
 		response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 		if err != nil {
-			ic.metrics.SetErrReason("BackendInternalError")
-			ic.metrics.TrackFailure()
+			if !ic.metrics.TrackCancelledRequest(ctx) {
+				ic.metrics.SetErrReason("BackendInternalError")
+				ic.metrics.TrackFailure()
+			}
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 

@@ -134,12 +134,14 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	// We need to call it once in order to check if the buildkit pod endpoint is available
 	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 	if err != nil {
-		if errors.Is(err, okteto.ErrIncompatibleBackend) {
-			pf.metrics.SetErrReason("IncompatibleBackend")
-		} else {
-			pf.metrics.SetErrReason("BackendInternalError")
+		if !pf.metrics.TrackCancelledRequest(ctx) {
+			if errors.Is(err, okteto.ErrIncompatibleBackend) {
+				pf.metrics.SetErrReason("IncompatibleBackend")
+			} else {
+				pf.metrics.SetErrReason("BackendInternalError")
+			}
+			pf.metrics.TrackFailure()
 		}
-		pf.metrics.TrackFailure()
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 	}
 
@@ -307,12 +309,14 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 
 		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 		if err != nil {
-			if errors.Is(err, okteto.ErrIncompatibleBackend) {
-				pf.metrics.SetErrReason("IncompatibleBackend")
-			} else {
-				pf.metrics.SetErrReason("BackendInternalError")
+			if !pf.metrics.TrackCancelledRequest(ctx) {
+				if errors.Is(err, okteto.ErrIncompatibleBackend) {
+					pf.metrics.SetErrReason("IncompatibleBackend")
+				} else {
+					pf.metrics.SetErrReason("BackendInternalError")
+				}
+				pf.metrics.TrackFailure()
 			}
-			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 
