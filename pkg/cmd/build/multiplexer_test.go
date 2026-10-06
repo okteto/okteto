@@ -230,3 +230,32 @@ func TestPrefixWriterReportsBytesWritten(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len("#3 text"), n)
 }
+
+func useLogFormat(t *testing.T, format string) {
+	t.Helper()
+	previous := oktetoLog.GetOutputFormat()
+	oktetoLog.SetOutputFormat(format)
+	t.Cleanup(func() { oktetoLog.SetOutputFormat(previous) })
+}
+
+func TestBuildOutputModeUsesLogFormatWhenNoneIsRequested(t *testing.T) {
+	useLogFormat(t, oktetoLog.JSONFormat)
+
+	require.Equal(t, oktetoLog.JSONFormat, buildOutputMode(""))
+}
+
+func TestBuildOutputModeKeepsTheRequestedMode(t *testing.T) {
+	useLogFormat(t, oktetoLog.JSONFormat)
+
+	require.Equal(t, oktetoLog.PlainFormat, buildOutputMode(oktetoLog.PlainFormat))
+}
+
+func TestNewMultiplexerFollowsTheLogFormat(t *testing.T) {
+	useLogFormat(t, oktetoLog.JSONFormat)
+
+	m, err := NewMultiplexer(io.NewIOController(), "", []string{"api"})
+
+	require.NoError(t, err)
+	require.Nil(t, m.printer)
+	closeWithin(t, m)
+}

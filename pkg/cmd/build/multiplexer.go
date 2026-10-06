@@ -69,11 +69,12 @@ func (l *lockedWriter) Write(p []byte) (int, error) {
 	return l.w.Write(p)
 }
 
-// NewMultiplexer prepares the output for building services concurrently. Every service
+// NewMultiplexer prepares the output for building services concurrently. progress is
+// resolved like the progress mode of each build (see OptsFromBuildInfo). Every service
 // that may build must be listed up front, before any build starts: the shared display
 // ends once all of them are finished.
 func NewMultiplexer(ioCtrl *io.Controller, progress string, services []string) (*Multiplexer, error) {
-	return newMultiplexer(ioCtrl, setOutputMode(progress), services, os.Stdout, progressui.TtyMode)
+	return newMultiplexer(ioCtrl, buildOutputMode(progress), services, os.Stdout, progressui.TtyMode)
 }
 
 func newMultiplexer(ioCtrl *io.Controller, progress string, services []string, out *os.File, displayMode progressui.DisplayMode) (*Multiplexer, error) {

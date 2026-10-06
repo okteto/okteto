@@ -220,6 +220,15 @@ func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptio
 	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, ob.solveBuildFn())
 }
 
+// buildOutputMode returns the progress mode of a build of the manifest: the requested one,
+// or the format of the logs when none was requested
+func buildOutputMode(requested string) string {
+	if requested == "" {
+		requested = oktetoLog.GetOutputFormat()
+	}
+	return setOutputMode(requested)
+}
+
 func setOutputMode(outputMode string) string {
 	if outputMode != "" {
 		return outputMode
@@ -448,11 +457,11 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 		}
 	}
 
-	outputMode := oktetoLog.GetOutputFormat()
-	if o != nil && o.OutputMode != "" {
-		outputMode = o.OutputMode
+	requestedMode := ""
+	if o != nil {
+		requestedMode = o.OutputMode
 	}
-	opts.OutputMode = setOutputMode(outputMode)
+	opts.OutputMode = buildOutputMode(requestedMode)
 
 	return opts
 }
