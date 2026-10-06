@@ -169,6 +169,31 @@ type ServiceRaw struct {
 	CapDropSneakCase         []apiv1.Capability     `yaml:"cap_drop,omitempty"`
 	CapAdd                   []apiv1.Capability     `yaml:"capAdd,omitempty"`
 	Public                   bool                   `yaml:"public,omitempty"`
+
+	// serviceAccountSet records whether the x-okteto-service-account key is present, even when its value is
+	// empty or null (e.g. an unset ${SA_NAME}), which ServiceAccount alone can't tell apart from an omitted key
+	serviceAccountSet bool
+}
+
+// serviceAccountExtension is the compose service extension that sets the pod ServiceAccount
+const serviceAccountExtension = "x-okteto-service-account"
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (serviceRaw *ServiceRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type serviceRawAlias ServiceRaw // prevent recursion
+	var raw serviceRawAlias
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	var keys map[string]interface{}
+	if err := unmarshal(&keys); err != nil {
+		return err
+	}
+	_, raw.serviceAccountSet = keys[serviceAccountExtension]
+
+	*serviceRaw = ServiceRaw(raw)
+	return nil
 }
 
 type DeployInfoRaw struct {
@@ -444,9 +469,9 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 
 	svc.EnableServiceLinks = serviceRaw.EnableServiceLinks
 
-	if serviceRaw.ServiceAccount != "" {
-		if errs := validation.IsDNS1123Subdomain(serviceRaw.ServiceAccount); len(errs) > 0 {
-			return nil, fmt.Errorf("invalid 'x-okteto-service-account' %q for service '%s': %s", serviceRaw.ServiceAccount, svcName, strings.Join(errs, "; "))
+	if serviceRaw.serviceAccountSet || serviceRaw.ServiceAccount != "" {
+		if err := validateServiceAccount(serviceRaw.ServiceAccount); err != nil {
+			return nil, fmt.Errorf("invalid '%s' for service '%s': %w", serviceAccountExtension, svcName, err)
 		}
 		svc.ServiceAccount = serviceRaw.ServiceAccount
 	}
@@ -1695,6 +1720,16 @@ func validateIdentityToken(token *ServiceIdentityToken) error {
 	}
 	if token.ExpirationSeconds != nil && int64(*token.ExpirationSeconds) < minIdentityTokenExpirationSeconds {
 		return fmt.Errorf("'expiration_seconds' must be at least %d seconds", minIdentityTokenExpirationSeconds)
+	}
+	return nil
+}
+
+func validateServiceAccount(name string) error {
+	if name == "" {
+		return fmt.Errorf("value can't be empty; if it comes from an environment variable, make sure the variable is set")
+	}
+	if errs := validation.IsDNS1123Subdomain(name); len(errs) > 0 {
+		return fmt.Errorf("%q is not a valid ServiceAccount name: %s", name, strings.Join(errs, "; "))
 	}
 	return nil
 }
