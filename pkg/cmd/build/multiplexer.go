@@ -161,7 +161,7 @@ func (s *muxService) display(ch chan *client.SolveStatus, _ chan<- error) error 
 	bufferDone := make(chan struct{})
 	go func() {
 		defer close(bufferDone)
-		showInLogBuffer(buffer)
+		showInLogBuffer(buffer, &prefixWriter{prefix: fmt.Sprintf("[%s] ", s.name), out: &buildWriter{}})
 	}()
 	for ss := range ch {
 		buffer <- ss

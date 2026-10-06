@@ -15,6 +15,7 @@ package build
 
 import (
 	"context"
+	stdio "io"
 	"os"
 	"strings"
 
@@ -130,7 +131,7 @@ func showBuildStatus(ch chan *client.SolveStatus, commandFail chan<- error, prog
 			close(plainChannel)
 			close(ttyChannel)
 		}()
-		go showInLogBuffer(plainChannel)
+		go showInLogBuffer(plainChannel, &buildWriter{})
 
 		// not using shared context to not disrupt display but let it finish reporting errors
 		// We need to wait until the tty channel is closed to avoid writing to stdout while the tty is being used
@@ -173,9 +174,8 @@ func showBuildStatus(ch chan *client.SolveStatus, commandFail chan<- error, prog
 	}
 }
 
-// showInLogBuffer writes the plain output of a build into the Okteto log buffer
-func showInLogBuffer(ch chan *client.SolveStatus) {
-	w := &buildWriter{}
+// showInLogBuffer writes the plain output of a build into the Okteto log buffer through w
+func showInLogBuffer(ch chan *client.SolveStatus, w stdio.Writer) {
 	// We use the plain channel to store the logs into a buffer and then show them in the UI
 	d, err := progressui.NewDisplay(w, progressui.PlainMode)
 	if err != nil {

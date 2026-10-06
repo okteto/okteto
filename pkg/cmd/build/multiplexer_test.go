@@ -22,8 +22,10 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	digest "github.com/opencontainers/go-digest"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -159,4 +161,17 @@ func TestMultiplexerFinishIsIdempotent(t *testing.T) {
 	m.Finish("api")
 
 	closeWithin(t, m)
+}
+
+func TestMultiplexerTTYPrefixesLogBuffer(t *testing.T) {
+	oktetoLog.Init(logrus.WarnLevel)
+	// Lines are only buffered while a stage is set
+	oktetoLog.SetStage("Building services")
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+	m, _ := newTestMultiplexer(t, "tty", []string{"api"})
+
+	display(t, m, "api", completedStatus("api-1", "RUN go build"))
+	closeWithin(t, m)
+
+	require.Contains(t, oktetoLog.GetOutputBuffer().String(), "[api] #1 RUN go build")
 }
