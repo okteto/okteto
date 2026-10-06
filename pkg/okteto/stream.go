@@ -50,39 +50,50 @@ type destroyAllLogFormat struct {
 
 // PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
+	return c.PipelineLogsTo(ctx, name, namespace, actionName, timeout, printPipelineLogLine)
+}
+
+// PipelineLogsTo retrieves logs from the pipeline provided and passes every line to printLine, returns error
+func (c *streamClient) PipelineLogsTo(ctx context.Context, name, namespace, actionName string, timeout time.Duration, printLine func(line string)) error {
 	streamURL := fmt.Sprintf(gitDeployUrlTemplate, GetContext().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerPipelineLogLine, timeout)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), pipelineLogLineHandler(printLine), timeout)
 }
 
-// handlerPipelineLog prints a line with the Message unmarshalled from line
-// returns true when stream has to stop
-func handlerPipelineLogLine(line string) bool {
-	pipelineLogList := []pipelineLogFormat{}
-	if err := json.Unmarshal([]byte(line), &pipelineLogList); err != nil {
-		// if not slice, try to unmarshall to log format
-		pLog := pipelineLogFormat{}
-		if err := json.Unmarshal([]byte(line), &pLog); err != nil {
-			oktetoLog.Infof("error unmarshalling pipelineLog: %v", err)
+func printPipelineLogLine(line string) {
+	oktetoLog.Println(line)
+}
+
+// pipelineLogLineHandler returns a handler that passes the Message unmarshalled from each line to printLine.
+// The handler returns true when the stream has to stop
+func pipelineLogLineHandler(printLine func(line string)) func(line string) bool {
+	return func(line string) bool {
+		pipelineLogList := []pipelineLogFormat{}
+		if err := json.Unmarshal([]byte(line), &pipelineLogList); err != nil {
+			// if not slice, try to unmarshall to log format
+			pLog := pipelineLogFormat{}
+			if err := json.Unmarshal([]byte(line), &pLog); err != nil {
+				oktetoLog.Infof("error unmarshalling pipelineLog: %v", err)
+			}
+			// stop when the event log is in stage done and message is EOF
+			if pLog.Stage == "done" && pLog.Message == "EOF" {
+				return true
+			}
+			printLine(pLog.Message)
+			return false
 		}
-		// stop when the event log is in stage done and message is EOF
-		if pLog.Stage == "done" && pLog.Message == "EOF" {
-			return true
+		for _, pLog := range pipelineLogList {
+			// stop when the event log is in stage done and message is EOF
+			if pLog.Stage == "done" && pLog.Message == "EOF" {
+				return true
+			}
+			printLine(pLog.Message)
 		}
-		oktetoLog.Println(pLog.Message)
 		return false
 	}
-	for _, pLog := range pipelineLogList {
-		// stop when the event log is in stage done and message is EOF
-		if pLog.Stage == "done" && pLog.Message == "EOF" {
-			return true
-		}
-		oktetoLog.Println(pLog.Message)
-	}
-	return false
 }
 
 // DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error

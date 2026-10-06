@@ -87,9 +87,12 @@ type DeployOptions struct {
 	IsDependency         bool
 	// SkipResourcesCheck returns as soon as the pipeline finishes, without waiting for its resources to be running
 	SkipResourcesCheck bool
-	DependenciesIsSet  bool
-	WorkflowID         string
-	ParentWorkflowID   string
+	// PrefixLogs prints every message and log line as "[Name] line", without spinner, so that
+	// pipelines deployed in parallel can be told apart
+	PrefixLogs        bool
+	DependenciesIsSet bool
+	WorkflowID        string
+	ParentWorkflowID  string
 }
 
 func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
@@ -154,6 +157,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	if err := opts.setDefaults(); err != nil {
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
+	out := newDeployOutput(opts)
 
 	c, _, err := pc.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
@@ -181,37 +185,37 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 	if !opts.RedeployDependencies && opts.SkipIfExists && exists {
 		if cfg.Data["status"] == pipeline.DeployedStatus {
-			oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
+			out.Success(fmt.Sprintf("Skipping repository '%s' because it's already deployed", opts.Name))
 			return nil
 		}
 
 		if !opts.Wait && cfg.Data["status"] == pipeline.ProgressingStatus {
-			oktetoLog.Success("Repository '%s' already scheduled for deployment", opts.Name)
+			out.Success(fmt.Sprintf("Repository '%s' already scheduled for deployment", opts.Name))
 			return nil
 		}
 
 		canStreamPrevLogs := cfg.Data["actionLock"] != "" && cfg.Data["actionName"] != "cli"
 
 		if opts.Wait && canStreamPrevLogs {
-			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-			oktetoLog.StartSpinner()
-			defer oktetoLog.StopSpinner()
+			out.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			out.StartSpinner()
+			defer out.StopSpinner()
 
 			existingAction := &types.Action{
 				ID:   cfg.Data["actionLock"],
 				Name: cfg.Data["actionName"],
 			}
-			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout, opts.SkipResourcesCheck); err != nil {
+			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout, opts.SkipResourcesCheck, out); err != nil {
 				return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 			}
-			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
 			return nil
 		}
 
 		if opts.Wait && !canStreamPrevLogs && cfg.Data["status"] == pipeline.ProgressingStatus {
-			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-			oktetoLog.StartSpinner()
-			defer oktetoLog.StopSpinner()
+			out.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			out.StartSpinner()
+			defer out.StopSpinner()
 
 			ticker := time.NewTicker(1 * time.Second)
 			err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
@@ -222,7 +226,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 				return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
 			}
 
-			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
 			return nil
 		}
 	}
@@ -252,25 +256,25 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		})
 	}
 
-	resp, err := pc.deployPipeline(ctx, opts)
+	resp, err := pc.deployPipeline(ctx, opts, out)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline '%s': %w", opts.Name, err)
 	}
 
 	if !opts.Wait {
-		oktetoLog.Success("Repository '%s' scheduled for deployment", opts.Name)
+		out.Success(fmt.Sprintf("Repository '%s' scheduled for deployment", opts.Name))
 		return nil
 	}
 
-	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", opts.Name))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+	out.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", opts.Name))
+	out.StartSpinner()
+	defer out.StopSpinner()
 
-	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout, opts.SkipResourcesCheck); err != nil {
+	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout, opts.SkipResourcesCheck, out); err != nil {
 		return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 	}
 
-	oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+	out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
 	return nil
 }
 
@@ -293,10 +297,10 @@ func shouldRedeployDependencies(opts *DeployOptions) bool {
 	return true
 }
 
-func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
-	oktetoLog.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out deployOutput) (*types.GitDeployResponse, error) {
+	out.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
+	out.StartSpinner()
+	defer out.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -332,16 +336,16 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 	return resp, nil
 }
 
-func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
+func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration, out deployOutput) error {
 	// wait to Action be progressing
 	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
 		return err
 	}
 
-	return pc.okClient.Stream().PipelineLogs(ctx, name, namespace, actionName, timeout)
+	return pc.okClient.Stream().PipelineLogsTo(ctx, name, namespace, actionName, timeout, out.Println)
 }
 
-func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, skipResourcesCheck bool) error {
+func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, skipResourcesCheck bool, out deployOutput) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -359,9 +363,9 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 			exit <- err
 			return
 		}
-		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout, out)
 		if err != nil {
-			oktetoLog.Warning("pipeline logs cannot be streamed due to connectivity issues")
+			out.Warning("pipeline logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("pipeline logs cannot be streamed due to connectivity issues: %v", err)
 		}
 	}(&wg)
@@ -379,7 +383,7 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 			return
 		}
 
-		oktetoLog.Spinner("Waiting for containers to be healthy...")
+		out.Spinner("Waiting for containers to be healthy...")
 		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, namespace, timeout)
 	}(&wg)
 
