@@ -14,6 +14,7 @@
 package io
 
 import (
+	"io"
 	"os"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -68,4 +69,17 @@ func (ioc *Controller) SetStage(stage string) {
 	ioc.oktetoLogger.SetStage(stage)
 	ioc.out.SetStage(stage)
 	oktetoLog.SetStage(stage)
+}
+
+// WithQuietOutput returns a controller that shares the input and the logger of ioc but
+// discards everything written through Out(), spinners included. It is used for
+// background work that must not draw on the terminal while builds are running.
+func (ioc *Controller) WithQuietOutput() *Controller {
+	out := newOutputController(io.Discard)
+	out.SetOutputFormat("plain")
+	return &Controller{
+		in:           ioc.in,
+		out:          out,
+		oktetoLogger: ioc.oktetoLogger,
+	}
 }

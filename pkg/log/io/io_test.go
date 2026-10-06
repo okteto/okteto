@@ -14,6 +14,7 @@
 package io
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"testing"
@@ -72,4 +73,27 @@ func TestStage(t *testing.T) {
 	l.SetOutputFormat("json")
 	l.SetStage("test")
 	assert.Equal(t, "test", l.oktetoLogger.logrusFormatter.(*logrusJSONFormatter).stage)
+}
+
+func TestWithQuietOutputSharesLogger(t *testing.T) {
+	ioCtrl := NewIOController()
+
+	quiet := ioCtrl.WithQuietOutput()
+
+	require.Same(t, ioCtrl.Logger(), quiet.Logger())
+	require.Same(t, ioCtrl.In(), quiet.In())
+}
+
+func TestWithQuietOutputDiscardsOutput(t *testing.T) {
+	quiet := NewIOController().WithQuietOutput()
+
+	require.Equal(t, io.Discard, quiet.Out().out)
+}
+
+func TestWithQuietOutputNeverDrawsSpinner(t *testing.T) {
+	quiet := NewIOController().WithQuietOutput()
+
+	_, isNoSpinner := quiet.Out().Spinner("Waiting for the Okteto Build service").(*noSpinner)
+
+	require.True(t, isNoSpinner)
 }
