@@ -18,11 +18,14 @@ import (
 	"encoding/base64"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // fakeURLParser defines an interface for parsing URLs
@@ -260,4 +263,42 @@ func TestBuildkitClientFactory_GetBuildkitClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOsFileWriterWritesNewFile(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "ca.crt")
+
+	err := (&osFileWriter{}).WriteFile(filename, []byte("cert"), readWritePermission)
+
+	require.NoError(t, err)
+	content, err := os.ReadFile(filename)
+	require.NoError(t, err)
+	require.Equal(t, []byte("cert"), content)
+}
+
+func TestOsFileWriterSkipsIdenticalContent(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "ca.crt")
+	require.NoError(t, os.WriteFile(filename, []byte("cert"), readWritePermission))
+	past := time.Now().Add(-time.Hour).Truncate(time.Second)
+	require.NoError(t, os.Chtimes(filename, past, past))
+
+	err := (&osFileWriter{}).WriteFile(filename, []byte("cert"), readWritePermission)
+
+	require.NoError(t, err)
+	info, err := os.Stat(filename)
+	require.NoError(t, err)
+	// An unchanged modification time proves the file was not rewritten
+	require.True(t, info.ModTime().Equal(past))
+}
+
+func TestOsFileWriterOverwritesDifferentContent(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "ca.crt")
+	require.NoError(t, os.WriteFile(filename, []byte("old"), readWritePermission))
+
+	err := (&osFileWriter{}).WriteFile(filename, []byte("new"), readWritePermission)
+
+	require.NoError(t, err)
+	content, err := os.ReadFile(filename)
+	require.NoError(t, err)
+	require.Equal(t, []byte("new"), content)
 }
