@@ -87,6 +87,38 @@ func (ob *OktetoBuilder) GetConnector() BuildkitConnector {
 	return ob.connector
 }
 
+// connectorFactory creates an independent BuildKit connector: its own session, its own
+// queue slot and, potentially, its own BuildKit pod
+type connectorFactory func(ctx context.Context) (BuildkitConnector, error)
+
+// connectorFactory returns how to open extra connectors for concurrent builds. It returns
+// nil when the connector can't open independent sessions (ingress), meaning concurrent
+// builds must share it. Extra connectors never print to the terminal.
+func (ob *OktetoBuilder) connectorFactory() connectorFactory {
+	quietIO := ob.logger.WithQuietOutput()
+	switch conn := ob.connector.(type) {
+	case *connector.PortForwarder:
+		return func(ctx context.Context) (BuildkitConnector, error) {
+			sibling, err := conn.NewSibling(ctx, quietIO)
+			if err != nil {
+				// Return an untyped nil: a nil *PortForwarder would be a non-nil interface
+				return nil, err
+			}
+			return sibling, nil
+		}
+	case *connector.InClusterConnector:
+		return func(ctx context.Context) (BuildkitConnector, error) {
+			sibling, err := conn.NewSibling(ctx, quietIO)
+			if err != nil {
+				return nil, err
+			}
+			return sibling, nil
+		}
+	default:
+		return nil
+	}
+}
+
 // OktetoRegistryInterface checks if an image is at the registry
 type OktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)

@@ -26,6 +26,7 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/build/buildkit"
+	"github.com/okteto/okteto/pkg/build/buildkit/connector"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -993,4 +994,22 @@ func TestBuildWithOktetoResetsMetadataOnFailure(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, &buildkit.BuildMetadata{}, ob.GetMetadata())
+}
+
+func TestConnectorFactoryForPortForwarder(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.PortForwarder{})
+
+	require.NotNil(t, ob.connectorFactory())
+}
+
+func TestConnectorFactoryForInClusterConnector(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.InClusterConnector{})
+
+	require.NotNil(t, ob.connectorFactory())
+}
+
+func TestConnectorFactoryForIngressIsNil(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.IngressConnector{})
+
+	require.Nil(t, ob.connectorFactory())
 }
