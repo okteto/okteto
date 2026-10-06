@@ -1031,3 +1031,19 @@ func TestSetSolveFnReplacesSolveFunction(t *testing.T) {
 
 	require.Equal(t, reflect.ValueOf(custom).Pointer(), reflect.ValueOf(ob.solveBuildFn()).Pointer())
 }
+
+func TestRelayStatusForwardsUntilSolveClosesChannel(t *testing.T) {
+	ch := make(chan *client.SolveStatus, 2)
+	displayCh := make(chan *client.SolveStatus, 2)
+	ch <- &client.SolveStatus{}
+	ch <- &client.SolveStatus{}
+	close(ch)
+
+	relayStatus(ch, displayCh, make(chan error, 1), NewBuildKitLogsFilter(nil, nil), newContextSyncTracker(), &buildkit.BuildMetadata{}, "plain")
+
+	forwarded := 0
+	for range displayCh {
+		forwarded++
+	}
+	require.Equal(t, 2, forwarded)
+}

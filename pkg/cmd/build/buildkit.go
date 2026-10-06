@@ -69,33 +69,7 @@ func solve(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress
 	})
 
 	eg.Go(func() error {
-		done := false
-		for {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case ss, ok := <-ch:
-				if ok {
-					logFilter.Run(ss, progress)
-					contextTracker.Update(ss)
-					if metadata != nil {
-						metadata.BuildContextSize = contextTracker.SyncedSize()
-						metadata.ContextTransferDuration = contextTracker.Duration()
-					}
-					displayChannel <- ss
-					if err := logFilter.GetError(ss); err != nil {
-						commandFailChannel <- err
-					}
-				} else {
-					done = true
-				}
-
-			}
-			if done {
-				close(displayChannel)
-				break
-			}
-		}
+		relayStatus(ch, displayChannel, commandFailChannel, logFilter, contextTracker, metadata, progress)
 		return nil
 	})
 
@@ -117,6 +91,27 @@ func solve(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress
 		}
 	}
 	return nil
+}
+
+// relayStatus applies the Okteto log rules to every status of a solve, tracks the build
+// context transfer into metadata and forwards each status to displayCh. It drains ch
+// until the solve closes it (BuildKit closes it when Solve returns, also when the solve is
+// cancelled) and then closes displayCh, so the display always ends. Returning early on
+// cancellation would block BuildKit's status sender and hang the build.
+func relayStatus(ch <-chan *client.SolveStatus, displayCh chan<- *client.SolveStatus, commandFail chan<- error, logFilter *BuildkitLogsFilter, contextTracker *contextSyncTracker, metadata *buildkit.BuildMetadata, progress string) {
+	defer close(displayCh)
+	for ss := range ch {
+		logFilter.Run(ss, progress)
+		contextTracker.Update(ss)
+		if metadata != nil {
+			metadata.BuildContextSize = contextTracker.SyncedSize()
+			metadata.ContextTransferDuration = contextTracker.Duration()
+		}
+		displayCh <- ss
+		if err := logFilter.GetError(ss); err != nil {
+			commandFail <- err
+		}
+	}
 }
 
 // showBuildStatus shows the status of a single build: a live tty display whose plain
