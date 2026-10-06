@@ -37,7 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildWithDependsOnParallelStrategyFallsBack(t *testing.T) {
+func TestBuildWithParallelStrategyAndNonOktetoRunnerBuildsSequentially(t *testing.T) {
 	dir, err := createDockerfile(t)
 	require.NoError(t, err)
 	registry := newFakeRegistry()
@@ -338,4 +338,53 @@ func TestBuildInParallelComputesBuildHashesBeforeTheBatch(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"hash", "hash"}, log.startOrder()[:2])
+}
+
+// recordingStrategy is a parallel strategy that records how it is called and builds nothing
+type recordingStrategy struct {
+	deps  map[string][]string
+	names []string
+	max   int
+}
+
+func (s *recordingStrategy) Build(_ context.Context, svcs []*buildTypes.BuildInfo, deps map[string][]string, _ buildServiceFn) error {
+	for _, svc := range svcs {
+		s.names = append(s.names, svc.Name())
+	}
+	s.deps = deps
+	return nil
+}
+
+func (s *recordingStrategy) maxConcurrency() int { return s.max }
+
+func buildServicesWith(t *testing.T, strategy *recordingStrategy, names []string) {
+	t.Helper()
+	ob := newParallelTestBuilder(t)
+	ob.Builder.BuildRunner = newTestRunner(parallelTestConnector{})
+	ob.buildStrategy = strategy
+	options := &types.BuildOptions{
+		OutputMode: "plain",
+		Manifest:   &model.Manifest{Build: build.ManifestBuild{"a": &build.Info{}, "b": &build.Info{DependsOn: []string{"a"}}}},
+	}
+
+	err := ob.buildServices(context.Background(), buildTypes.NewBuildInfos("m", "ns", "repo", names), options)
+
+	require.NoError(t, err)
+}
+
+func TestBuildServicesRunsTheParallelStrategyWithTheBatchDependencies(t *testing.T) {
+	strategy := &recordingStrategy{max: 4}
+
+	buildServicesWith(t, strategy, []string{"a", "b"})
+
+	require.Equal(t, []string{"a", "b"}, strategy.names)
+	require.Equal(t, map[string][]string{"b": {"a"}}, strategy.deps)
+}
+
+func TestBuildServicesBuildsASingleServiceSequentially(t *testing.T) {
+	strategy := &recordingStrategy{max: 4}
+
+	buildServicesWith(t, strategy, []string{"a"})
+
+	require.Empty(t, strategy.names)
 }
