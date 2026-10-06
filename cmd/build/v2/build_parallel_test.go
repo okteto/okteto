@@ -14,6 +14,7 @@
 package v2
 
 import (
+	"bytes"
 	"context"
 	"path/filepath"
 	"testing"
@@ -150,4 +151,28 @@ func TestBuildServiceRecordsCancelledBuilds(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, "cancelled", svc.Metadata().ErrorReason)
+}
+
+func TestBuildServiceImagesWarnsThroughRunnerOutput(t *testing.T) {
+	dir, err := createDockerfile(t)
+	require.NoError(t, err)
+	t.Setenv("OKTETO_TEST_UNSET_SECRET", "")
+	registry := newFakeRegistry()
+	bc := NewFakeBuilder(test.NewFakeOktetoBuilder(registry), registry, fakeConfig{isOkteto: true})
+	manifest := &model.Manifest{
+		Name: "test",
+		Build: build.ManifestBuild{"a": &build.Info{
+			Context:    dir,
+			Dockerfile: filepath.Join(dir, "Dockerfile"),
+			Image:      "okteto/a:test",
+			Secrets:    build.Secrets{"token": build.Secret{Env: "OKTETO_TEST_UNSET_SECRET"}},
+		}},
+	}
+	var out bytes.Buffer
+	runner := basic.Builder{BuildRunner: bc.Builder.BuildRunner, IoCtrl: bc.ioCtrl.WithOutput(&out, "Building service a")}
+
+	_, err = bc.buildServiceImages(context.Background(), manifest, buildTypes.NewBuildInfos("test", "ns", "repo", []string{"a"})[0], &types.BuildOptions{}, runner)
+
+	require.NoError(t, err)
+	require.Contains(t, out.String(), `secret "token" uses env var "OKTETO_TEST_UNSET_SECRET" which is not set`)
 }

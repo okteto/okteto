@@ -552,7 +552,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx)
+			result := OptsFromBuildInfo(manifest, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, oktetoLog.Warning)
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -749,7 +749,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 				contextTest = tt.optionalContext
 			}
 
-			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, tt.getWd)
+			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, tt.getWd, oktetoLog.Warning)
 			warningErr := strings.TrimSuffix(buf.String(), "\n")
 
 			if warningErr != "" && tt.expectedError == "" {

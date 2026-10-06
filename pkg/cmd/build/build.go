@@ -335,7 +335,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface, warn func(format string, args ...any)) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -361,7 +361,7 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 
 	file := b.Dockerfile
 	if b.Context != "" && b.Dockerfile != "" {
-		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName, os.Getwd)
+		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName, os.Getwd, warn)
 	}
 
 	args := []build.Arg{}
@@ -440,7 +440,7 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 	for id, secret := range b.Secrets {
 		if secret.Env != "" {
 			if os.Getenv(secret.Env) == "" {
-				oktetoLog.Warning("secret %q uses env var %q which is not set: the build secret will be empty and the build may fail", id, secret.Env)
+				warn("secret %q uses env var %q which is not set: the build secret will be empty and the build may fail", id, secret.Env)
 			}
 			opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,env=%s", id, secret.Env))
 		} else {
@@ -468,7 +468,7 @@ func OptsFromBuildInfoForRemoteDeploy(b *build.Info, o *types.BuildOptions) *typ
 	return opts
 }
 
-func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd func() (string, error)) string {
+func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd func() (string, error), warn func(format string, args ...any)) string {
 	if filepath.IsAbs(dockerfile) {
 		return dockerfile
 	}
@@ -477,7 +477,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 
 	joinPath := filepath.Join(context, dockerfile)
 	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
-		oktetoLog.Warning(warningDockerfilePath, svcName, dockerfile, context)
+		warn(warningDockerfilePath, svcName, dockerfile, context)
 		return dockerfile
 	}
 
@@ -491,7 +491,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	if joinPath != filepath.Join(wd, filepath.Clean(dockerfile)) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
-		oktetoLog.Warning(doubleDockerfileWarning, svcName, context, dockerfile)
+		warn(doubleDockerfileWarning, svcName, context, dockerfile)
 	}
 
 	return joinPath

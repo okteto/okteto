@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -388,7 +389,12 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcInfo.Name(), err)
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfo(manifest, svcInfo.Name(), buildSvcInfo, options, bc.Registry, bc.oktetoContext)
+	// Builds with their own output (parallel builds) print their warnings there
+	warn := oktetoLog.Warning
+	if runner.IoCtrl != bc.ioCtrl {
+		warn = runner.IoCtrl.Out().Warning
+	}
+	buildOptions := buildCmd.OptsFromBuildInfo(manifest, svcInfo.Name(), buildSvcInfo, options, bc.Registry, bc.oktetoContext, warn)
 
 	if err := runner.Build(ctx, buildOptions); err != nil {
 		return "", err
