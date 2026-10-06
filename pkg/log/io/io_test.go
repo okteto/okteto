@@ -17,6 +17,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -96,4 +97,23 @@ func TestWithQuietOutputNeverDrawsSpinner(t *testing.T) {
 	_, isNoSpinner := quiet.Out().Spinner("Waiting for the Okteto Build service").(*noSpinner)
 
 	require.True(t, isNoSpinner)
+}
+
+func TestWithQuietOutputIsSafeForConcurrentSpinners(t *testing.T) {
+	quiet := NewIOController().WithQuietOutput()
+
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sp := quiet.Out().Spinner("Waiting for BuildKit service to be ready...")
+			sp.Start()
+			quiet.Out().Println("message")
+			sp.Stop()
+		}()
+	}
+	wg.Wait()
+
+	require.Nil(t, quiet.Out().spinner)
 }

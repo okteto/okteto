@@ -29,6 +29,10 @@ type OutputController struct {
 	decorator decorator
 
 	spinner OktetoSpinner
+
+	// quiet controllers discard their output and never keep spinner state, so several
+	// goroutines can share them safely
+	quiet bool
 }
 
 // newOutputController returns a new logger that writes to stdout
@@ -154,6 +158,9 @@ func (oc *OutputController) SetStage(stage string) {
 
 // Spinner returns a spinner
 func (oc *OutputController) Spinner(msg string) OktetoSpinner {
+	if oc.quiet {
+		return newNoSpinner(msg, oc)
+	}
 	if oc.spinner != nil {
 		if oc.spinner.getMessage() == msg {
 			return oc.spinner

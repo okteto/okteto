@@ -77,6 +77,7 @@ func (ioc *Controller) SetStage(stage string) {
 func (ioc *Controller) WithQuietOutput() *Controller {
 	out := newOutputController(io.Discard)
 	out.SetOutputFormat("plain")
+	out.quiet = true
 	return &Controller{
 		in:           ioc.in,
 		out:          out,
