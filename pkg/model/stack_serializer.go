@@ -97,7 +97,7 @@ type ServiceRaw struct {
 	Annotations              Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	NodeSelector             Selector               `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	EnableServiceLinks       *bool                  `json:"x-enable-service-links,omitempty" yaml:"x-enable-service-links,omitempty"`
-	ServiceAccount           string                 `json:"x-okteto-service-account,omitempty" yaml:"x-okteto-service-account,omitempty"`
+	ServiceAccount           *string                `json:"x-okteto-service-account,omitempty" yaml:"x-okteto-service-account,omitempty"`
 	ReadOnly                 *WarningType           `yaml:"read_only,omitempty"`
 	PullPolicy               *WarningType           `yaml:"pull_policy,omitempty"`
 	ContainerName            *WarningType           `yaml:"container_name,omitempty"`
@@ -169,32 +169,10 @@ type ServiceRaw struct {
 	CapDropSneakCase         []apiv1.Capability     `yaml:"cap_drop,omitempty"`
 	CapAdd                   []apiv1.Capability     `yaml:"capAdd,omitempty"`
 	Public                   bool                   `yaml:"public,omitempty"`
-
-	// serviceAccountSet records whether the x-okteto-service-account key is present, even when its value is
-	// empty or null (e.g. an unset ${SA_NAME}), which ServiceAccount alone can't tell apart from an omitted key
-	serviceAccountSet bool
 }
 
 // serviceAccountExtension is the compose service extension that sets the pod ServiceAccount
 const serviceAccountExtension = "x-okteto-service-account"
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (serviceRaw *ServiceRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type serviceRawAlias ServiceRaw // prevent recursion
-	var raw serviceRawAlias
-	if err := unmarshal(&raw); err != nil {
-		return err
-	}
-
-	var keys map[string]interface{}
-	if err := unmarshal(&keys); err != nil {
-		return err
-	}
-	_, raw.serviceAccountSet = keys[serviceAccountExtension]
-
-	*serviceRaw = ServiceRaw(raw)
-	return nil
-}
 
 type DeployInfoRaw struct {
 	Replicas      *int32            `yaml:"replicas,omitempty"`
@@ -469,11 +447,13 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 
 	svc.EnableServiceLinks = serviceRaw.EnableServiceLinks
 
-	if serviceRaw.serviceAccountSet || serviceRaw.ServiceAccount != "" {
-		if err := validateServiceAccount(serviceRaw.ServiceAccount); err != nil {
+	// an unset env var reaches here as "" (ExpandStackEnvs writes it as an empty string), so a nil value means the
+	// field was omitted and an empty one is rejected instead of silently using the namespace default ServiceAccount
+	if serviceRaw.ServiceAccount != nil {
+		if err := validateServiceAccount(*serviceRaw.ServiceAccount); err != nil {
 			return nil, fmt.Errorf("invalid '%s' for service '%s': %w", serviceAccountExtension, svcName, err)
 		}
-		svc.ServiceAccount = serviceRaw.ServiceAccount
+		svc.ServiceAccount = *serviceRaw.ServiceAccount
 	}
 
 	if serviceRaw.IdentityToken != nil {
@@ -1726,7 +1706,7 @@ func validateIdentityToken(token *ServiceIdentityToken) error {
 
 func validateServiceAccount(name string) error {
 	if name == "" {
-		return fmt.Errorf("value can't be empty; if it comes from an environment variable, make sure the variable is set")
+		return fmt.Errorf("value can't be empty (an unset environment variable expands to an empty value)")
 	}
 	if errs := validation.IsDNS1123Subdomain(name); len(errs) > 0 {
 		return fmt.Errorf("%q is not a valid ServiceAccount name: %s", name, strings.Join(errs, "; "))

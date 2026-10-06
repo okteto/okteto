@@ -3076,8 +3076,8 @@ func Test_ServiceAccountUnmarshalling_Invalid(t *testing.T) {
 	}
 }
 
-// Test_ServiceAccountUnmarshalling_Empty ensures a present but empty x-okteto-service-account (e.g. an unset
-// ${SA_NAME}) fails instead of silently falling back to the namespace "default" ServiceAccount.
+// Test_ServiceAccountUnmarshalling_Empty ensures an empty x-okteto-service-account (e.g. an unset ${SA_NAME}) fails
+// instead of silently falling back to the namespace "default" ServiceAccount.
 func Test_ServiceAccountUnmarshalling_Empty(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -3086,7 +3086,6 @@ func Test_ServiceAccountUnmarshalling_Empty(t *testing.T) {
 		{name: "unset env var", value: "${OKTETO_TEST_UNSET_SA_NAME}"},
 		{name: "quoted unset env var", value: `"${OKTETO_TEST_UNSET_SA_NAME}"`},
 		{name: "unset env var with empty default", value: "${OKTETO_TEST_UNSET_SA_NAME:-}"},
-		{name: "no value", value: ""},
 		{name: "empty string", value: `""`},
 	}
 	for _, tt := range tests {
@@ -3148,4 +3147,50 @@ func Test_expandRangePorts(t *testing.T) {
 			require.Equal(t, tt.expected, expandRangePorts(tt.ports))
 		})
 	}
+}
+
+// Test_ServiceAccountUnmarshalling_BareKeyIsOmitted documents that a key with no value is an explicit null, which
+// is treated as if the field were omitted
+func Test_ServiceAccountUnmarshalling_BareKeyIsOmitted(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    x-okteto-service-account:`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Empty(t, s.Services["app"].ServiceAccount)
+}
+
+// Test_ServiceAccountUnmarshalling_MergeKeyOverride is a regression test: services that use a YAML merge key and
+// override one of the anchor's keys must keep loading, including when the anchor sets x-okteto-service-account
+func Test_ServiceAccountUnmarshalling_MergeKeyOverride(t *testing.T) {
+	manifest := `x-defaults: &defaults
+  image: okteto/vote:1
+  x-okteto-service-account: base-sa
+services:
+  app:
+    <<: *defaults
+    image: okteto/vote:2
+  worker:
+    <<: *defaults
+    x-okteto-service-account: worker-sa`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Equal(t, "okteto/vote:2", s.Services["app"].Image)
+	require.Equal(t, "base-sa", s.Services["app"].ServiceAccount)
+	require.Equal(t, "worker-sa", s.Services["worker"].ServiceAccount)
+}
+
+// Test_MergeKeyOverrideWithoutServiceAccount is a regression test for compose files that don't use
+// x-okteto-service-account at all but override a key from a merge key
+func Test_MergeKeyOverrideWithoutServiceAccount(t *testing.T) {
+	manifest := `x-defaults: &defaults
+  image: okteto/vote:1
+services:
+  api:
+    <<: *defaults
+    image: okteto/vote:2`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	require.Equal(t, "okteto/vote:2", s.Services["api"].Image)
 }
