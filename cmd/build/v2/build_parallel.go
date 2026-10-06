@@ -50,9 +50,7 @@ func inBatchDependencies(manifest build.ManifestBuild, svcs []*buildTypes.BuildI
 type buildOneFn func(ctx context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error
 
 // buildInParallel builds svcs at the same time on a pool of workers, each with its own
-// BuildKit connector, showing their output through one multiplexer. When BuildKit can't
-// be reached before the batch starts, it builds them one after another as before, so the
-// connection status and retries are shown as usual.
+// BuildKit connector, showing their output through one multiplexer
 func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.OktetoBuilder, svcs []*buildTypes.BuildInfo, options *types.BuildOptions, buildOne buildOneFn) error {
 	conn := runner.GetConnector()
 	// Connect worker 0 before the shared display starts, so its queue status shows as usual
@@ -60,8 +58,11 @@ func (ob *OktetoBuilder) buildInParallel(ctx context.Context, runner *buildCmd.O
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		ob.ioCtrl.Logger().Infof("could not connect to BuildKit before the parallel builds, building one after another: %s", err)
-		return ob.buildSequentially(ctx, svcs, options, buildOne)
+		// Report it like a sequential build does: as the failure of the first service
+		first := svcs[0]
+		first.SetBuildDuration(0, 0, false)
+		first.Metadata().ErrorReason = err.Error()
+		return fmt.Errorf("error building service '%s': %w", first.Name(), err)
 	}
 	defer conn.Stop()
 

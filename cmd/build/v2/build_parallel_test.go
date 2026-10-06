@@ -250,15 +250,31 @@ func TestBuildInParallelReturnsBuildError(t *testing.T) {
 	require.ErrorIs(t, err, assert.AnError)
 }
 
-func TestBuildInParallelFallsBackToSequentialWhenBuildKitIsNotReady(t *testing.T) {
+// countingStartConnector is a connector whose Start always fails and counts its calls
+type countingStartConnector struct {
+	parallelTestConnector
+	starts *int
+}
+
+func (c countingStartConnector) Start(context.Context) error {
+	*c.starts++
+	return assert.AnError
+}
+
+func TestBuildInParallelReturnsTheConnectionError(t *testing.T) {
 	ob := newParallelTestBuilder(t)
 	built := &builtServices{}
+	starts := 0
+	svcs := buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"})
 
-	err := ob.buildInParallel(context.Background(), newTestRunner(startErrConnector{err: assert.AnError}), buildTypes.NewBuildInfos("m", "ns", "repo", []string{"a", "b"}), parallelTestOptions(), built.build)
+	err := ob.buildInParallel(context.Background(), newTestRunner(countingStartConnector{starts: &starts}), svcs, parallelTestOptions(), built.build)
 
-	require.NoError(t, err)
-	require.Same(t, ob.ioCtrl, built.runner(t, "a").IoCtrl)
-	require.Same(t, ob.ioCtrl, built.runner(t, "b").IoCtrl)
+	require.ErrorIs(t, err, assert.AnError)
+	require.ErrorContains(t, err, "error building service 'a'")
+	require.Equal(t, 1, starts)
+	require.Equal(t, assert.AnError.Error(), svcs[0].Metadata().ErrorReason)
+	_, builtA := built.runners.Load("a")
+	require.False(t, builtA)
 }
 
 func TestBuildInParallelReturnsCancellationWhileConnecting(t *testing.T) {
