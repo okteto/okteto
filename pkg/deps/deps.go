@@ -16,6 +16,8 @@ package deps
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/a8m/envsubst/parse"
@@ -35,6 +37,28 @@ type Dependency struct {
 	Variables    env.Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Timeout      time.Duration   `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Wait         bool            `json:"wait,omitempty" yaml:"wait,omitempty"`
+	DependsOn    DependsOn       `json:"depends_on,omitempty" yaml:"depends_on,omitempty"`
+}
+
+// DependsOn represents the dependencies that need to be deployed successfully before
+type DependsOn []string
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (d *DependsOn) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*d = DependsOn{rawString}
+		return nil
+	}
+
+	var rawStringList []string
+	err = unmarshal(&rawStringList)
+	if err == nil {
+		*d = rawStringList
+		return nil
+	}
+	return err
 }
 
 // GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not
@@ -113,6 +137,9 @@ func (md *ManifestSection) UnmarshalYAML(unmarshal func(interface{}) error) erro
 				return err
 			}
 			name := utils.TranslateURLToName(r.String())
+			if _, ok := rawMd[name]; ok {
+				return fmt.Errorf("dependency '%s' is defined more than once", name)
+			}
 			rawMd[name] = &Dependency{
 				Repository: r.String(),
 			}
@@ -149,6 +176,46 @@ func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	*d = Dependency(dependencyRaw)
 
 	return nil
+}
+
+// Validate validates the execution graph defined by the depends_on fields
+func (md ManifestSection) Validate() error {
+	names := make([]string, 0, len(md))
+	for name := range md {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		dep := md[name]
+		if dep == nil {
+			return fmt.Errorf("manifest validation failed: dependency '%s' is not defined correctly", name)
+		}
+		for _, predecessor := range dep.DependsOn {
+			if predecessor == name {
+				return fmt.Errorf("manifest validation failed: dependency '%s' cannot depend on itself", name)
+			}
+			if _, ok := md[predecessor]; !ok {
+				return fmt.Errorf("manifest validation failed: dependency '%s' depends on '%s', which is not defined in the dependencies section", name, predecessor)
+			}
+		}
+	}
+
+	cycle := utils.GetDependentCyclic(md.toGraph())
+	if len(cycle) > 1 {
+		sort.Strings(cycle)
+		depsInCycle := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
+		return fmt.Errorf("manifest validation failed: cyclic dependency found between dependencies %s", depsInCycle)
+	}
+	return nil
+}
+
+func (md ManifestSection) toGraph() utils.Graph {
+	g := utils.Graph{}
+	for name, dep := range md {
+		g[name] = dep.DependsOn
+	}
+	return g
 }
 
 func (md ManifestSection) IsEmpty() bool {

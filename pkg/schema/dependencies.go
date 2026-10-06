@@ -56,6 +56,22 @@ func (dependencies) JSONSchema() *jsonschema.Schema {
 		Pattern:     "^[0-9]+(h|m|s)$",
 	})
 
+	extendedProps.Set("depends_on", &jsonschema.Schema{
+		Title:       "depends_on",
+		Description: "Dependencies that must be deployed successfully before this one starts",
+		OneOf: []*jsonschema.Schema{
+			{
+				Type: &jsonschema.Type{Types: []string{"string"}},
+			},
+			{
+				Type: &jsonschema.Type{Types: []string{"array"}},
+				Items: &jsonschema.Schema{
+					Type: &jsonschema.Type{Types: []string{"string"}},
+				},
+			},
+		},
+	})
+
 	return &jsonschema.Schema{
 		OneOf: []*jsonschema.Schema{
 			{
