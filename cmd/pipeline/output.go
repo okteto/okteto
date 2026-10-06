@@ -33,23 +33,32 @@ type deployOutput interface {
 
 func newDeployOutput(opts *DeployOptions) deployOutput {
 	if opts.PrefixLogs {
-		return &prefixedDeployOutput{prefix: opts.Name, printer: globalLinePrinter()}
+		return &prefixedDeployOutput{
+			prefix:  opts.Name,
+			stage:   DependencyStage(opts.Name),
+			printer: globalLinePrinter(),
+		}
 	}
 	return globalDeployOutput{}
 }
 
-// linePrinter prints a single line keeping its log level
+// DependencyStage is the log stage of the messages of a dependency
+func DependencyStage(name string) string {
+	return fmt.Sprintf("Deploying dependency %s", name)
+}
+
+// linePrinter prints a single line keeping its log level, recorded under the given stage
 type linePrinter struct {
-	println func(line string)
-	success func(line string)
-	warning func(line string)
+	println func(stage, line string)
+	success func(stage, line string)
+	warning func(stage, line string)
 }
 
 func globalLinePrinter() linePrinter {
 	return linePrinter{
-		println: func(line string) { oktetoLog.Println(line) },
-		success: func(line string) { oktetoLog.Success("%s", line) },
-		warning: func(line string) { oktetoLog.Warning("%s", line) },
+		println: oktetoLog.PrintlnWithStage,
+		success: oktetoLog.SuccessWithStage,
+		warning: oktetoLog.WarningWithStage,
 	}
 }
 
@@ -67,11 +76,13 @@ func (globalDeployOutput) Println(line string) { oktetoLog.Println(line) }
 // It is global because it guards a process-wide resource: the global logger
 var prefixedOutputMu sync.Mutex
 
-// prefixedDeployOutput prints every message and log line as "[prefix] line", without spinner.
-// It is used when several pipelines are deployed in parallel and their output is interleaved
+// prefixedDeployOutput prints every message and log line as "[prefix] line", without spinner, recorded
+// under its own stage. It is used when pipelines are deployed in parallel and their output is interleaved:
+// the global stage belongs to the main deploy
 type prefixedDeployOutput struct {
 	printer linePrinter
 	prefix  string
+	stage   string
 }
 
 // Spinner prints the message once: a spinner can't represent several pipelines at the same time
@@ -85,10 +96,10 @@ func (o *prefixedDeployOutput) Println(line string) {
 }
 
 // print prefixes every line of msg and prints them together, so lines from other pipelines can't get in between
-func (o *prefixedDeployOutput) print(printFn func(line string), msg string) {
+func (o *prefixedDeployOutput) print(printFn func(stage, line string), msg string) {
 	prefixedOutputMu.Lock()
 	defer prefixedOutputMu.Unlock()
 	for _, line := range strings.Split(strings.TrimRight(msg, "\r\n"), "\n") {
-		printFn(fmt.Sprintf("[%s] %s", o.prefix, strings.TrimRight(line, "\r")))
+		printFn(o.stage, fmt.Sprintf("[%s] %s", o.prefix, strings.TrimRight(line, "\r")))
 	}
 }

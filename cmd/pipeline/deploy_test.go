@@ -1067,3 +1067,50 @@ func TestExecuteDeployPipeline_AnalyticsFallbackWhenEnvUnset(t *testing.T) {
 	require.Empty(t, tracker.captured.ParentWorkflowID)
 	require.Equal(t, "git_url", tracker.captured.DeployType)
 }
+
+func existingDeployConfigMap(status string) *apiv1.ConfigMap {
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName("test"),
+			Namespace: "test",
+		},
+		Data: map[string]string{"status": status},
+	}
+}
+
+func waitForExistingDeployWith(t *testing.T, status string, resources map[string]string, skipResourcesCheck bool) error {
+	t.Helper()
+	previous := existingDeployPollInterval
+	existingDeployPollInterval = 10 * time.Millisecond
+	t.Cleanup(func() { existingDeployPollInterval = previous })
+	pc := newWaitTestCommand(resources, existingDeployConfigMap(status))
+	c, _, err := pc.k8sClientProvider.Provide(nil)
+	require.NoError(t, err)
+	opts := &DeployOptions{Name: "test", Namespace: "test", Timeout: 2 * time.Second, SkipResourcesCheck: skipResourcesCheck}
+
+	return pc.waitForExistingDeploy(context.Background(), c, pipeline.TranslatePipelineName("test"), opts)
+}
+
+func TestWaitForExistingDeployFailsWhenThePipelineFails(t *testing.T) {
+	err := waitForExistingDeployWith(t, pipeline.ErrorStatus, map[string]string{"svc": okteto.RunningStatus}, false)
+
+	require.EqualError(t, err, "repository 'test' failed to deploy")
+}
+
+func TestWaitForExistingDeployChecksResources(t *testing.T) {
+	err := waitForExistingDeployWith(t, pipeline.DeployedStatus, map[string]string{"svc": okteto.ErrorStatus}, false)
+
+	require.ErrorContains(t, err, "repository 'test' deployed with errors")
+}
+
+func TestWaitForExistingDeploySkipResourcesCheck(t *testing.T) {
+	err := waitForExistingDeployWith(t, pipeline.DeployedStatus, map[string]string{"svc": okteto.ErrorStatus}, true)
+
+	require.NoError(t, err)
+}
+
+func TestWaitForExistingDeployTimesOut(t *testing.T) {
+	err := waitForExistingDeployWith(t, pipeline.ProgressingStatus, map[string]string{"svc": okteto.RunningStatus}, true)
+
+	require.EqualError(t, err, "timed out waiting for repository 'test' to be deployed")
+}

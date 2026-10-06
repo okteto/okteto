@@ -43,6 +43,7 @@ import (
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -50,6 +51,12 @@ const (
 )
 
 var (
+	// logsDrainTimeout is how long the logs stream can take to reach the end once the deploy has finished
+	logsDrainTimeout = 10 * time.Second
+
+	// existingDeployPollInterval is how often the status of a deploy already in progress is checked
+	existingDeployPollInterval = 1 * time.Second
+
 	errUnableToReuseParams = errors.New("development environment not found: unable to use --reuse-params option")
 )
 
@@ -217,13 +224,8 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 			out.StartSpinner()
 			defer out.StopSpinner()
 
-			ticker := time.NewTicker(1 * time.Second)
-			err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
-			if err != nil {
-				if errors.Is(err, oktetoErrors.ErrTimeout) {
-					return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
-				}
-				return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
+			if err := pc.waitForExistingDeploy(ctx, c, cfgName, opts); err != nil {
+				return err
 			}
 
 			out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
@@ -278,6 +280,52 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	return nil
 }
 
+// waitForExistingDeploy waits for a deploy of the pipeline that is already in progress and whose logs can't be
+// streamed: until its configmap is deployed (and its resources running, unless SkipResourcesCheck) or failed
+func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Interface, cfgName string, opts *DeployOptions) error {
+	// the health check runs with this context too, so a Ctrl+C stops the whole wait
+	sigCtx, stopNotify := signal.NotifyContext(ctx, os.Interrupt)
+	defer stopNotify()
+	interrupted := func(err error) error {
+		if sigCtx.Err() != nil && ctx.Err() == nil {
+			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+			return oktetoErrors.ErrIntSig
+		}
+		return err
+	}
+
+	timeout := time.NewTimer(opts.Timeout)
+	defer timeout.Stop()
+	ticker := time.NewTicker(existingDeployPollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-sigCtx.Done():
+			return interrupted(sigCtx.Err())
+		case <-timeout.C:
+			return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
+		case <-ticker.C:
+			cfg, err := configmaps.Get(sigCtx, cfgName, opts.Namespace, c)
+			if err != nil {
+				if oktetoErrors.IsNotFound(err) {
+					err = oktetoErrors.ErrNotFound
+				}
+				return interrupted(fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err))
+			}
+			switch cfg.Data["status"] {
+			case pipeline.DeployedStatus:
+				if opts.SkipResourcesCheck {
+					return nil
+				}
+				return interrupted(pc.waitForResourcesToBeRunning(sigCtx, opts.Name, opts.Namespace, opts.Timeout))
+			case pipeline.ErrorStatus:
+				return fmt.Errorf("repository '%s' failed to deploy", opts.Name)
+			}
+		}
+	}
+}
+
 // shouldRedeployDependencies determines if the pipeline should redeploy dependencies
 // default behavior is set by cluster config, but can be overridden by the user using the flag --dependencies
 func shouldRedeployDependencies(opts *DeployOptions) bool {
@@ -304,6 +352,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out 
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	defer signal.Stop(stop)
 	exit := make(chan error, 1)
 
 	var resp *types.GitDeployResponse
@@ -351,27 +400,34 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	exit := make(chan error, 1)
+	// os/signal panics when it sends to a closed channel, so the channel is unregistered and never closed
+	defer signal.Stop(stop)
+
+	// both goroutines can report an error, so there is room for both
+	exit := make(chan error, 2)
+	streamDone := make(chan struct{})
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+	go func() {
 		defer wg.Done()
+		defer close(streamDone)
 		if err := pc.okClient.Pipeline().WaitForActionProgressing(waitCtx, name, namespace, action.Name, timeout); err != nil {
 			oktetoLog.Infof("waiting for action to progress failed: %v", err)
 			exit <- err
 			return
 		}
 		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout, out)
-		if err != nil {
+		// the stream is cancelled on purpose once the deploy has finished
+		if err != nil && waitCtx.Err() == nil {
 			out.Warning("pipeline logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("pipeline logs cannot be streamed due to connectivity issues: %v", err)
 		}
-	}(&wg)
+	}()
 
 	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+	go func() {
 		defer wg.Done()
 		err := pc.waitToBeDeployed(waitCtx, name, namespace, action, timeout)
 		if err != nil {
@@ -385,17 +441,10 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 
 		out.Spinner("Waiting for containers to be healthy...")
 		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, namespace, timeout)
-	}(&wg)
-
-	go func(wg *sync.WaitGroup) {
-		wg.Wait()
-		close(stop)
-		close(exit)
-	}(&wg)
+	}()
 
 	select {
 	case <-stop:
-		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
@@ -405,6 +454,18 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		}
 	}
 
+	// the deploy has finished: give the logs stream time to reach the end of the logs before cancelling it,
+	// so that the last lines are not lost
+	select {
+	case <-streamDone:
+	case <-time.After(logsDrainTimeout):
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		return oktetoErrors.ErrIntSig
+	}
+	// no goroutine outlives the wait: they write into the deploy output, which is read once the wait returns
+	ctxCancel()
+	wg.Wait()
 	return nil
 }
 
@@ -419,6 +480,8 @@ func (pc *Command) waitForResourcesToBeRunning(ctx context.Context, name, namesp
 
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-to.C:
 			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
 		case <-ticker.C:

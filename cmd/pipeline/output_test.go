@@ -22,19 +22,23 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
 
 type safeLineRecorder struct {
-	lines []string
-	mu    sync.Mutex
+	lines  []string
+	stages []string
+	mu     sync.Mutex
 }
 
-func (r *safeLineRecorder) record(level string) func(line string) {
-	return func(line string) {
+func (r *safeLineRecorder) record(level string) func(stage, line string) {
+	return func(stage, line string) {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.lines = append(r.lines, level+line)
+		r.stages = append(r.stages, stage)
 	}
 }
 
@@ -58,6 +62,17 @@ func TestNewDeployOutputPrefixed(t *testing.T) {
 
 	require.IsType(t, &prefixedDeployOutput{}, out)
 	require.Equal(t, "database", out.(*prefixedDeployOutput).prefix)
+	require.Equal(t, "Deploying dependency database", out.(*prefixedDeployOutput).stage)
+}
+
+func TestPrefixedDeployOutputRecordsItsOwnStage(t *testing.T) {
+	recorder := &safeLineRecorder{}
+	out := &prefixedDeployOutput{prefix: "database", stage: "Deploying dependency database", printer: recorder.printer()}
+
+	out.Println("creating tables")
+	out.Success("done")
+
+	require.Equal(t, []string{"Deploying dependency database", "Deploying dependency database"}, recorder.stages)
 }
 
 func TestPrefixedDeployOutputPrintln(t *testing.T) {
@@ -159,4 +174,55 @@ func TestStreamPipelineLogsUsesTheDeployOutput(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"[database] creating tables", "[database] done"}, recorder.lines)
+}
+
+// slowStreamClient prints its lines after a delay, unless the stream is cancelled before
+type slowStreamClient struct {
+	*client.FakeStreamClient
+	lines []string
+	delay time.Duration
+}
+
+func (c *slowStreamClient) PipelineLogsTo(ctx context.Context, _, _, _ string, _ time.Duration, printLine func(line string)) error {
+	select {
+	case <-time.After(c.delay):
+		for _, line := range c.lines {
+			printLine(line)
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func newSlowStreamCommand(stream *slowStreamClient) *Command {
+	pc := newWaitTestCommand(map[string]string{"svc": okteto.RunningStatus})
+	pc.okClient.(*client.FakeOktetoClient).StreamClient = stream
+	return pc
+}
+
+func TestWaitUntilRunningKeepsTheLastLogLines(t *testing.T) {
+	recorder := &safeLineRecorder{}
+	out := &prefixedDeployOutput{prefix: "db", printer: recorder.printer()}
+	pc := newSlowStreamCommand(&slowStreamClient{lines: []string{"last line"}, delay: 100 * time.Millisecond})
+
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, out)
+
+	require.NoError(t, err)
+	require.Contains(t, recorder.lines, "[db] last line")
+}
+
+func TestWaitUntilRunningDoesNotWarnWhenTheStreamIsCancelled(t *testing.T) {
+	previous := logsDrainTimeout
+	logsDrainTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { logsDrainTimeout = previous })
+	recorder := &safeLineRecorder{}
+	out := &prefixedDeployOutput{prefix: "db", printer: recorder.printer()}
+	// the stream never reaches the end: it is cancelled after the drain timeout
+	pc := newSlowStreamCommand(&slowStreamClient{delay: time.Hour})
+
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, out)
+
+	require.NoError(t, err)
+	require.Empty(t, recorder.lines)
 }
