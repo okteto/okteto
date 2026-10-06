@@ -47,6 +47,12 @@ type OktetoWriter interface {
 	IsInteractive() bool
 	AddToBuffer(level, format string, a ...interface{})
 
+	// PrintlnWithStage, SuccessWithStage and WarningWithStage record the message under stage instead of
+	// the current stage of the logger. They are used by dependencies deployed in parallel with the main deploy
+	PrintlnWithStage(stage, msg string)
+	SuccessWithStage(stage, msg string)
+	WarningWithStage(stage, msg string)
+
 	Write(p []byte) (n int, err error)
 }
 
