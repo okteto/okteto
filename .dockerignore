@@ -30,7 +30,6 @@
 /.vscode/
 /.codecov.yml
 /.copyright-header.tmpl
-/.deepsource.toml
 /.DEREK.yml
 /.editorconfig
 /.gitignore

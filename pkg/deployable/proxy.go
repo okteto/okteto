@@ -112,7 +112,6 @@ func NewProxy(kubeconfig KubeConfigHandler, portGetter PortGetterFunc) (*Proxy, 
 		TLSConfig: &tls.Config{
 			Certificates: []tls.Certificate{cert},
 
-			// Recommended security configuration by DeepSource
 			MinVersion: tls.VersionTLS12,
 			MaxVersion: tls.VersionTLS13,
 		},
