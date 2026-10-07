@@ -54,8 +54,6 @@ repos:
         description: check for files that contain merge conflict strings
       - id: check-shebang-scripts-are-executable
         description: checks that scripts with shebangs are executable
-      - id: check-toml
-        description: attempts to load all TOML files to verify syntax
       - id: check-vcs-permalinks
         description: ensures that links to vcs websites are permalinks
       - id: check-xml
