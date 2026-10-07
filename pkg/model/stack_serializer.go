@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -96,6 +97,7 @@ type ServiceRaw struct {
 	Annotations              Annotations            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	NodeSelector             Selector               `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	EnableServiceLinks       *bool                  `json:"x-enable-service-links,omitempty" yaml:"x-enable-service-links,omitempty"`
+	ServiceAccount           *string                `json:"x-okteto-service-account,omitempty" yaml:"x-okteto-service-account,omitempty"`
 	ReadOnly                 *WarningType           `yaml:"read_only,omitempty"`
 	PullPolicy               *WarningType           `yaml:"pull_policy,omitempty"`
 	ContainerName            *WarningType           `yaml:"container_name,omitempty"`
@@ -168,6 +170,9 @@ type ServiceRaw struct {
 	CapAdd                   []apiv1.Capability     `yaml:"capAdd,omitempty"`
 	Public                   bool                   `yaml:"public,omitempty"`
 }
+
+// serviceAccountExtension is the compose service extension that sets the pod ServiceAccount
+const serviceAccountExtension = "x-okteto-service-account"
 
 type DeployInfoRaw struct {
 	Replicas      *int32            `yaml:"replicas,omitempty"`
@@ -441,6 +446,15 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	svc.NodeSelector = serviceRaw.NodeSelector
 
 	svc.EnableServiceLinks = serviceRaw.EnableServiceLinks
+
+	// an unset env var reaches here as "" (ExpandStackEnvs writes it as an empty string), so a nil value means the
+	// field was omitted and an empty one is rejected instead of silently using the namespace default ServiceAccount
+	if serviceRaw.ServiceAccount != nil {
+		if err := validateServiceAccount(*serviceRaw.ServiceAccount); err != nil {
+			return nil, fmt.Errorf("invalid '%s' for service '%s': %w", serviceAccountExtension, svcName, err)
+		}
+		svc.ServiceAccount = *serviceRaw.ServiceAccount
+	}
 
 	if serviceRaw.IdentityToken != nil {
 		if err := validateIdentityToken(serviceRaw.IdentityToken); err != nil {
@@ -1686,6 +1700,16 @@ func validateIdentityToken(token *ServiceIdentityToken) error {
 	}
 	if token.ExpirationSeconds != nil && int64(*token.ExpirationSeconds) < minIdentityTokenExpirationSeconds {
 		return fmt.Errorf("'expiration_seconds' must be at least %d seconds", minIdentityTokenExpirationSeconds)
+	}
+	return nil
+}
+
+func validateServiceAccount(name string) error {
+	if name == "" {
+		return fmt.Errorf("value can't be empty (an unset environment variable expands to an empty value)")
+	}
+	if errs := validation.IsDNS1123Subdomain(name); len(errs) > 0 {
+		return fmt.Errorf("%q is not a valid ServiceAccount name: %s", name, strings.Join(errs, "; "))
 	}
 	return nil
 }

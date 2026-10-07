@@ -2375,3 +2375,90 @@ func Test_translateJob_enableServiceLinks(t *testing.T) {
 		})
 	}
 }
+
+func Test_translateDeployment_serviceAccount(t *testing.T) {
+	tests := []struct {
+		name           string
+		serviceAccount string
+	}{
+		{name: "unset", serviceAccount: ""},
+		{name: "set", serviceAccount: "my-sa"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image:          "image",
+						Replicas:       1,
+						ServiceAccount: tt.serviceAccount,
+					},
+				},
+			}
+
+			result := translateDeployment("svcName", s, nil)
+
+			require.Equal(t, tt.serviceAccount, result.Spec.Template.Spec.ServiceAccountName)
+		})
+	}
+}
+
+func Test_translateStatefulSet_serviceAccount(t *testing.T) {
+	tests := []struct {
+		name           string
+		serviceAccount string
+	}{
+		{name: "unset", serviceAccount: ""},
+		{name: "set", serviceAccount: "my-sa"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image:          "image",
+						Replicas:       1,
+						ServiceAccount: tt.serviceAccount,
+					},
+				},
+			}
+
+			result := translateStatefulSet("svcName", s, nil)
+
+			require.Equal(t, tt.serviceAccount, result.Spec.Template.Spec.ServiceAccountName)
+		})
+	}
+}
+
+func Test_translateJob_serviceAccount(t *testing.T) {
+	tests := []struct {
+		name           string
+		serviceAccount string
+	}{
+		{name: "unset", serviceAccount: ""},
+		{name: "set", serviceAccount: "my-sa"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image:          "image",
+						Replicas:       1,
+						RestartPolicy:  apiv1.RestartPolicyNever,
+						BackOffLimit:   5,
+						ServiceAccount: tt.serviceAccount,
+					},
+				},
+			}
+			require.True(t, s.Services["svcName"].IsJob())
+
+			result := translateJob("svcName", s, nil)
+
+			require.Equal(t, tt.serviceAccount, result.Spec.Template.Spec.ServiceAccountName)
+		})
+	}
+}
