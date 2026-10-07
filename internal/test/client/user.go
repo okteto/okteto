@@ -24,6 +24,10 @@ import (
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
 	errGetPlatformVariables error
+	ExecutionEnv            map[string]string
+	ExecutionFiles          []types.ExecutionFile
+	ErrExecutionEnv         error
+	ErrExecutionFiles       error
 	userCtx                 *types.UserContext
 	platformVariables       []env.Var
 	err                     []error
@@ -80,8 +84,21 @@ func (*FakeUserClient) GetRegistryCredentials(_ context.Context, _ string) (dock
 	return dockertypes.AuthConfig{}, nil
 }
 
-func (*FakeUserClient) GetExecutionEnv(_ context.Context) (map[string]string, error) {
-	return map[string]string{}, nil
+func (c *FakeUserClient) GetExecutionEnv(_ context.Context) (map[string]string, error) {
+	if c.ErrExecutionEnv != nil {
+		return map[string]string{}, c.ErrExecutionEnv
+	}
+	if c.ExecutionEnv == nil {
+		return map[string]string{}, nil
+	}
+	return c.ExecutionEnv, nil
+}
+
+func (c *FakeUserClient) GetExecutionFiles(_ context.Context) ([]types.ExecutionFile, error) {
+	if c.ErrExecutionFiles != nil {
+		return []types.ExecutionFile{}, c.ErrExecutionFiles
+	}
+	return c.ExecutionFiles, nil
 }
 
 func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (types.KnownHostsConfig, error) {

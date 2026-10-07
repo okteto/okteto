@@ -270,13 +270,9 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		// Set OKTETO_DOMAIN=okteto-subdomain env variable
 		fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
 	)
-	for k, v := range GetPlatformEnvironment(ctx) {
-		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
-		// Always mask cloud credentials from execution environment
-		if strings.TrimSpace(v) != "" {
-			oktetoLog.AddMaskedWord(v)
-		}
-	}
+	platformVars, cleanupPlatformEnv := GetPlatformEnvironment(ctx)
+	defer cleanupPlatformEnv()
+	params.Variables = append(params.Variables, platformVars...)
 
 	// Setup helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
@@ -435,20 +431,6 @@ func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 			oktetoLog.Infof("error removing okteto env file dir: %s", err)
 		}
 	}, nil
-}
-
-func GetPlatformEnvironment(ctx context.Context) map[string]string {
-	c, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil
-	}
-
-	env, err := c.User().GetExecutionEnv(ctx)
-	if err != nil {
-		oktetoLog.Debugf("failed to get platform environment: %s", err)
-		return map[string]string{}
-	}
-	return env
 }
 
 // setupHelmVersion configures the helm binary based on OKTETO_HELM_4_ENABLED environment variable.
