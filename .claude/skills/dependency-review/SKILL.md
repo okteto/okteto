@@ -69,9 +69,15 @@ GitHub (in manual mode, say why):
 
 ### Step 2: Skip commits already reviewed
 
-Every report starts with the marker `<!-- dependency-review sha=<sha> -->`.
-Stop if a PR comment already carries the marker for the current head commit. In
-a dry run, report the result and continue.
+A report starts with the marker `<!-- dependency-review sha=<sha> -->` when its
+outcome is final for that commit. Stop if a PR comment already carries the
+marker for the current head commit. In a dry run, report the result and
+continue.
+
+Leave the marker out when the outcome may change without a new commit, so a
+later run can review the same commit again: the "Could not run" report, and a
+"Not approved" report whose only reason is a CI check still pending, a command
+that could not run, or a step that failed to publish.
 
 ```bash
 gh api --paginate repos/okteto/okteto/issues/<n>/comments --jq '.[].body' \
@@ -86,14 +92,17 @@ If `git rev-parse --is-shallow-repository` prints `true`, run
 ```bash
 okteto ctx show
 git fetch origin "+refs/heads/<base>:refs/remotes/origin/<base>" \
-  "+refs/heads/<head>:refs/remotes/origin/<head>"
-git checkout -B <head> origin/<head>
+  "+refs/pull/<n>/head:refs/remotes/origin/pr-<n>"
+git checkout --detach origin/pr-<n>
 git rev-parse HEAD
 ```
 
 If `okteto ctx show` fails (no context or token), stop and publish (Step 8) the
 short "Could not run" report from section 5 instead of the full one. It has no
 marker, so a later run can still review this commit.
+
+`refs/pull/<n>/head` works for pull requests from forks too, and the detached
+checkout leaves no local branch behind (Step 8 pushes with `HEAD:<head>`).
 
 `git rev-parse HEAD` must equal `<sha>`. If it differs, Renovate pushed in
 between: in automatic mode stop without commenting (the new push triggers its
@@ -165,27 +174,39 @@ Approve only when **all** of these hold:
   finished by then, do not approve and give that as the reason in the report.
 - No check on `<sha>` has failed. CircleCI reports commit statuses and GitHub
   Actions reports check runs, so read both. When a check has several runs,
-  only the most recent one counts (e.g. a cancelled `run-e2e / trigger`
-  followed by a successful one):
+  only the most recent one counts, i.e. the highest `id` across all pages (e.g.
+  a cancelled `run-e2e / trigger` followed by a successful one). The combined
+  status already keeps only the latest status per context:
 
   ```bash
   gh api --paginate "repos/okteto/okteto/commits/<sha>/check-runs?per_page=100" \
-    --jq '[.check_runs[]] | group_by(.name) | map(max_by(.started_at)) | .[] | [.name, .status, .conclusion] | @tsv'
+    --jq '.check_runs[] | [.id, .name, .status, (.conclusion // "-")] | @tsv' \
+    | sort -t "$(printf '\t')" -k2,2 -k1,1n \
+    | awk -F '\t' '{latest[$2] = $0} END {for (n in latest) print latest[n]}'
   gh api repos/okteto/okteto/commits/<sha>/status \
     --jq '.statuses[] | [.context, .state] | @tsv'
   ```
 
-  A check run concluded `failure`, `timed_out`, `cancelled`, or
-  `action_required`, or a status in `failure` or `error`, blocks approval.
-  Pending, skipped, and neutral results do not: the e2e jobs (`e2e-*`, started
-  by the `run-e2e` label) take longer than the review, so they block only once
-  they have failed.
+  A completed check run blocks approval unless it concluded `success`,
+  `neutral`, or `skipped` (so `failure`, `timed_out`, `cancelled`,
+  `action_required`, `startup_failure`, and `stale` all block), and a status
+  blocks if it is `failure` or `error`. Check runs still in progress and
+  `pending` statuses do not: the e2e jobs (`e2e-*`, started by the `run-e2e`
+  label) take longer than the review, so they block only once they have
+  failed.
 
 This applies to every run, in automatic and manual mode alike; a manual run
 approves with the `gh` account of whoever runs it.
 
+Before dismissing or publishing anything, read the PR's head commit again
+(`gh api repos/okteto/okteto/pulls/<n> --jq .head.sha`). The review takes many
+minutes, and Renovate may have pushed meanwhile. If it is no longer `<sha>`,
+this run is stale: in automatic mode stop without dismissing or publishing (the
+new push triggers its own run); in manual mode say so and restart from Step 1.
+
 When the decision is not to approve, dismiss earlier approvals made by this
-skill (an `APPROVED` review whose body starts with `Dependency review:`):
+skill (an `APPROVED` review whose body starts with `Dependency review:`). In a
+dry run, only list their IDs for the `Would:` line:
 
 ```bash
 gh api --paginate repos/okteto/okteto/pulls/<n>/reviews \
@@ -216,6 +237,10 @@ gh api repos/okteto/okteto/pulls/<n>/reviews -f event=APPROVE -f commit_id=<sha>
   -f body="Dependency review: <N>/10 at <short-sha>. See the report comment."   # only if Step 7 approves
 git push origin HEAD:<head>                 # only if Step 5 committed tests
 ```
+
+If the approval fails after the comment was posted, edit the comment
+(`gh api -X PATCH repos/okteto/okteto/issues/comments/<comment-id> -F body=@<file>`)
+to drop the marker and give the failure as the reason for not approving.
 
 When Step 5 pushed tests, the push creates a new head commit and the automation
 runs this skill again on it. That run is not stopped by Step 2 (the marker
@@ -302,7 +327,11 @@ still behave.
   silently keeps the old version — flag it as a hard failure. An
   **indirect-only** major bump needs no import change here; judge it through
   the direct dependency that pulls it in (see the usage bullet), not as a hard
-  failure.
+  failure. The rule does not apply to `+incompatible` versions (e.g.
+  `github.com/docker/cli`, imported without `/vN`): a major bump keeps the same
+  import path, so judge it on its release notes. For `gopkg.in/<name>.vN`, the
+  major is part of the module path: a new major shows up as a different module
+  (an add and a removal), not as a bump; grep for the `.vN` path.
 - **Repository usage (make this concrete):** grep the repo for the module's
   **import path** (which for v2+ is `.../vN`, not the bare module path), e.g.
   `grep -rn "<import-path>" --include='*.go' .`. Classify each hit as
@@ -365,10 +394,11 @@ schema check (`check-schema`), and the e2e suites. `go mod tidy` is not checked
 anywhere: Renovate runs it when it updates (`postUpdateOptions: gomodTidy`);
 for other PRs, say it was not verified.
 
-To compare with the base revision, run
-`git checkout origin/<base> -- <go.mod> <go.sum>` for the changed module, run
-the same command again, then restore with
-`git checkout HEAD -- <go.mod> <go.sum>`.
+To compare with the base revision, use the merge base, not the tip of
+`<base>`, which may have moved on (even to the same dependency version):
+`B=$(git merge-base origin/<base> HEAD)`, then
+`git checkout "$B" -- <go.mod> <go.sum>` for the changed module, run the same
+command again, and restore with `git checkout HEAD -- <go.mod> <go.sum>`.
 
 A build or test failure **attributable to the dependency change** forces the
 0-1 band — but first rule out a pre-existing, unrelated, or environment failure
