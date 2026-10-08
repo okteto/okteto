@@ -68,10 +68,10 @@ func setupPostHogContext(t *testing.T, analyticsEnabled bool) func() {
 	currentAnalytics = &Analytics{Enabled: analyticsEnabled, MachineID: "test-machine"}
 	config.VersionString = "test-version"
 	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
+		CurrentContext: "https://okteto.example.com",
 		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {
-				Name:           "https://cloud.okteto.net",
+			"https://okteto.example.com": {
+				Name:           "https://okteto.example.com",
 				UserID:         "user-123",
 				CompanyName:    "ACME Corp",
 				ClusterID:      "cluster-uuid-1234",
@@ -170,7 +170,7 @@ func TestPostHogBackend_TrackImageBuild_HappyPath(t *testing.T) {
 	// Common props
 	require.Equal(t, "ACME Corp", event.Properties["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", event.Properties["cluster_id"])
-	require.Equal(t, "https://cloud.okteto.net", event.Properties["cluster_url"])
+	require.Equal(t, "https://okteto.example.com", event.Properties["cluster_url"])
 	require.Equal(t, "1.2.3", event.Properties["cluster_version"])
 	require.Equal(t, "user-123", event.Properties["user_id"])
 	require.Equal(t, "cli", event.Properties["trigger_source"])
@@ -422,9 +422,9 @@ func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
+		CurrentContext: "https://okteto.example.com",
 		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {Namespace: "my-preview-ns"},
+			"https://okteto.example.com": {Namespace: "my-preview-ns"},
 		},
 	}
 	defer func() { okteto.CurrentStore = prevStore }()
@@ -438,9 +438,9 @@ func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
+		CurrentContext: "https://okteto.example.com",
 		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {Namespace: "regular-ns"},
+			"https://okteto.example.com": {Namespace: "regular-ns"},
 		},
 	}
 	defer func() { okteto.CurrentStore = prevStore }()
@@ -453,9 +453,9 @@ func TestIsWithinPreview_FalseWhenNamespaceEmpty(t *testing.T) {
 	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
 	prevStore := okteto.CurrentStore
 	okteto.CurrentStore = &okteto.ContextStore{
-		CurrentContext: "https://cloud.okteto.net",
+		CurrentContext: "https://okteto.example.com",
 		Contexts: map[string]*okteto.Context{
-			"https://cloud.okteto.net": {Namespace: ""},
+			"https://okteto.example.com": {Namespace: ""},
 		},
 	}
 	defer func() { okteto.CurrentStore = prevStore }()

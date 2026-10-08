@@ -101,10 +101,10 @@ func TestAnalyticsEnabled(t *testing.T) {
 			setup: func() {
 				currentAnalytics = &Analytics{Enabled: false}
 				okteto.CurrentStore = &okteto.ContextStore{
-					CurrentContext: "https://cloud.okteto.net",
+					CurrentContext: "https://okteto.example.com",
 					Contexts: map[string]*okteto.Context{
-						"https://cloud.okteto.net": {
-							Name:      "https://cloud.okteto.net",
+						"https://okteto.example.com": {
+							Name:      "https://okteto.example.com",
 							Analytics: true,
 						},
 					},
@@ -125,10 +125,10 @@ func TestAnalyticsEnabled(t *testing.T) {
 			setup: func() {
 				currentAnalytics = &Analytics{Enabled: true}
 				okteto.CurrentStore = &okteto.ContextStore{
-					CurrentContext: "https://cloud.okteto.net",
+					CurrentContext: "https://okteto.example.com",
 					Contexts: map[string]*okteto.Context{
-						"https://cloud.okteto.net": {
-							Name:      "https://cloud.okteto.net",
+						"https://okteto.example.com": {
+							Name:      "https://okteto.example.com",
 							Analytics: false, // admin disabled
 						},
 					},
@@ -141,10 +141,10 @@ func TestAnalyticsEnabled(t *testing.T) {
 			setup: func() {
 				currentAnalytics = &Analytics{Enabled: true}
 				okteto.CurrentStore = &okteto.ContextStore{
-					CurrentContext: "https://cloud.okteto.net",
+					CurrentContext: "https://okteto.example.com",
 					Contexts: map[string]*okteto.Context{
-						"https://cloud.okteto.net": {
-							Name:      "https://cloud.okteto.net",
+						"https://okteto.example.com": {
+							Name:      "https://okteto.example.com",
 							Analytics: true,
 						},
 					},
