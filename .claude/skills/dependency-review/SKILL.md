@@ -2,8 +2,8 @@
 name: dependency-review
 description: Use when a pull request changes go.mod or go.sum in this repo (the root module or tools/), such as a Renovate dependency bump, and needs a dependency-safety review with a 0-10 score
 compatibility: Requires the okteto CLI with OKTETO_CONTEXT and OKTETO_TOKEN set (tests and the image build run in Okteto, so Go itself is not needed), git, curl, unzip, and gh authenticated with write access to okteto/okteto pull requests and contents
-argument-hint: "[pr-number] [dry-run]"
-triggers: ["user"]
+argument-hint: '[pr-number] [dry-run]'
+triggers: ['user']
 disable-model-invocation: true
 ---
 
@@ -317,9 +317,10 @@ still behave.
 - **Suspicious moves:** call out downgrades of a used dep, pseudo-versions
   pointing at raw commits, and new/modified `replace` directives — each in one
   line.
-- **The buildkit fork:** `replace github.com/moby/buildkit =>
-  github.com/okteto/buildkit <pseudo-version> // <upstream>-okteto<n>` points
-  at Okteto's fork, which carries patches the CLI relies on; Renovate ignores
+- **The buildkit fork:** the `replace` of `github.com/moby/buildkit` with
+  `github.com/okteto/buildkit` (a pseudo-version, commented
+  `<upstream>-okteto<n>`) points at Okteto's fork, which carries patches the
+  CLI relies on; Renovate ignores
   `github.com/moby/buildkit` on purpose. Removing this `replace` is a hard
   failure. Changing its target is a human decision: score it in the 4-5 band
   and say so. A bump of a module that the fork also requires (check the fork's
@@ -348,10 +349,10 @@ still behave.
 Verify each changed module (one whose `go.mod` or `go.sum` the PR changes):
 
 - **Root module:**
-  - `okteto test unit --timeout 30m` runs `make test` (`go test -race
-    -coverprofile ./...`) in the CI image. Packages with tests are compiled
-    and tested; coverage also compiles the packages without tests (they report
-    `coverage: 0.0%`).
+  - `okteto test unit --timeout 30m` runs `make test`
+    (`go test -race -coverprofile ./...`) in the CI image. Packages with tests
+    are compiled and tested; coverage also compiles the packages without tests
+    (they report `coverage: 0.0%`).
   - `okteto build cli` builds the production image from the `Dockerfile`,
     which compiles the CLI with `make build`.
 - **`tools/`:** `okteto build cli` compiles `remote`, `supervisor`, and
@@ -430,6 +431,7 @@ marked as conditional when they do not apply:
 
 ```markdown
 <!-- dependency-review sha=<sha> -->
+
 ### <headline>
 
 <One or two sentences: what is updated, in plain words, and whether anything
@@ -439,17 +441,17 @@ this repo uses changed.>
 - **Checked:** <what was verified, in one line>.
 - **Tests added:** <what they exercise>, commit `<short-sha of the test commit>`.
   A review of that commit follows; Renovate will no longer update this
-  branch.                                        <!-- only if Step 5 pushed tests -->
+  branch. <!-- only if Step 5 pushed tests -->
 - **Needs your attention:** <exactly what to check, and where>.
-                                                 <!-- only if not approved -->
+  <!-- only if not approved -->
 
 Approved at `<short-sha>`. | Not approved: <reason>. Reviewed `<short-sha>`.
 
 <details><summary>Dependencies (<N> direct, <M> indirect)</summary>
 
-| Dependency | Version | Used in | Risk |
-|---|---|---|---|
-| <module> | <old> → <new> | <packages, or "indirect"> | low / medium / high |
+| Dependency | Version       | Used in                   | Risk                |
+| ---------- | ------------- | ------------------------- | ------------------- |
+| <module>   | <old> → <new> | <packages, or "indirect"> | low / medium / high |
 
 </details>
 
@@ -477,12 +479,12 @@ Approved at `<short-sha>`. | Not approved: <reason>. Reviewed `<short-sha>`.
 
 Headlines:
 
-| Situation | Headline |
-|---|---|
-| Approved | `✅ Safe to merge — <N>/10` |
+| Situation                       | Headline                           |
+| ------------------------------- | ---------------------------------- |
+| Approved                        | `✅ Safe to merge — <N>/10`        |
 | Not approved, score 4 or higher | `⚠️ Needs a human review — <N>/10` |
-| Score 0-3 | `❌ Breaks this repo — <N>/10` |
-| Stopped in Step 3 | `⛔ Could not run` |
+| Score 0-3                       | `❌ Breaks this repo — <N>/10`     |
+| Stopped in Step 3               | `⛔ Could not run`                 |
 
 Table rows: one per direct dependency. Indirect dependencies that move, appear,
 or disappear only because a bumped direct dependency requires them go in that
