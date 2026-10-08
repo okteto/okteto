@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	ioutil "io"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -31,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -39,7 +39,6 @@ import (
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 )
 
 // getUserFacingQueueMessage returns the user-facing message for queue waiting
@@ -291,16 +290,15 @@ func (pf *PortForwarder) establishPortForward() error {
 		Name(pf.podName).
 		SubResource("portforward").URL()
 
-	transport, upgrader, err := spdy.RoundTripperFor(pf.restConfig)
+	dialer, err := forward.NewDialer(pf.restConfig, url)
 	if err != nil {
 		pf.metrics.SetErrReason("PortForwardCreation")
-		return fmt.Errorf("failed to create SPDY round tripper: %w", err)
+		return fmt.Errorf("failed to create port forward dialer: %w", err)
 	}
 
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url)
 	ports := []string{fmt.Sprintf("%d:%d", pf.localPort, buildkitPort)}
 
-	forwarder, err := portforward.NewOnAddresses(
+	forwarder, err := portforward.NewOnAddressesForStreaming(
 		dialer,
 		[]string{"127.0.0.1"},
 		ports,
