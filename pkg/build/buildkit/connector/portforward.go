@@ -87,6 +87,8 @@ type PortForwarder struct {
 	mu             sync.Mutex
 	buildkitClient *client.Client
 	waiter         *Waiter
+	// portForward starts the port forward to podName, reporting through the connection channels
+	portForward func() error
 
 	// Metrics collector for analytics
 	metrics *ConnectorMetrics
@@ -128,6 +130,7 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		localPort:    port,
 		metrics:      NewConnectorMetrics(analytics.ConnectorTypePortForward, sessionID, tracker),
 	}
+	pf.portForward = pf.establishPortForward
 
 	// We need to call it once in order to check if the buildkit pod endpoint is available
 	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
@@ -151,20 +154,24 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 // buildkitPort is the port where buildkit listens inside the pod
 const buildkitPort = 1234
 
+// errPortForwardCreation is the user-facing cause of any port forward failure other than a local port conflict
+var errPortForwardCreation = errors.New("port forward creation to BuildKit has failed")
+
 // newPortForwardCreationUserError returns the user-facing error for a port forward
 // failure. It deliberately hides the raw cause, which must have been written to the
 // logs by the caller, so the console shows an intuitive message instead of a low-level
 // kubernetes connection error.
 func newPortForwardCreationUserError() oktetoErrors.UserError {
 	return oktetoErrors.UserError{
-		E:    errors.New("port forward creation to BuildKit has failed"),
+		E:    errPortForwardCreation,
 		Hint: "Run the command again with the '--log-level=info' flag to get more information about the failure",
 	}
 }
 
 // Start establishes the port forward connection to the buildkit pod.
 // If already active, it reuses the existing connection.
-// If not active, it gets the least loaded pod and establishes a new connection.
+// If not active, it connects to the pod assigned to the session, or gets the least loaded pod
+// when there is none or the assigned one can no longer be reached.
 func (pf *PortForwarder) Start(ctx context.Context) error {
 	pf.mu.Lock()
 	defer pf.mu.Unlock()
@@ -174,31 +181,71 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	}
 
 	if pf.podName == "" {
-		podName, err := pf.assignBuildkitPod(ctx)
-		if err != nil {
-			// assignBuildkitPod already tracked the failure with specific error reason
-			return fmt.Errorf("failed to assign buildkit pod: %w", err)
-		}
-		pf.podName = podName
-	} else {
-		pf.ioCtrl.Logger().Infof("Connected to BuildKit pod: %s", pf.podName)
+		return pf.connectToNewPod(ctx)
 	}
 
-	if err := pf.establishPortForward(); err != nil {
+	pf.ioCtrl.Logger().Infof("reusing buildkit pod %s assigned to the session", pf.podName)
+	pf.metrics.StartTracking()
+	err := pf.connect(ctx)
+	if err == nil {
+		return nil
+	}
+	if ctx.Err() != nil || !errors.Is(err, errPortForwardCreation) {
+		pf.trackConnectFailure("PortForwardCreation")
+		return err
+	}
+	// The pod assigned to the session might be gone, e.g. removed by the BuildKit autoscaler
+	// in the idle gap between two builds of the same deploy. Images are pushed to the registry
+	// after each build, so the session can safely continue on another pod. Other port forward
+	// failures (e.g. an expired kubetoken) get the same single retry.
+	// The failure is tracked with its own reason, as the build can still succeed on the new pod.
+	pf.trackConnectFailure("AssignedPodUnreachable")
+	pf.ioCtrl.Logger().Infof("could not reach buildkit pod %s, requesting a new one", pf.podName)
+	retryErr := pf.connectToNewPod(ctx)
+	var userErr oktetoErrors.UserError
+	if retryErr == nil || errors.As(retryErr, &userErr) {
+		return retryErr
+	}
+	// Keep the user-facing port forward error instead of a raw one, e.g. when the backend is unreachable
+	pf.ioCtrl.Logger().Infof("could not connect to a new buildkit pod: %s", retryErr)
+	return err
+}
+
+// connectToNewPod gets the least loaded buildkit pod and connects to it
+func (pf *PortForwarder) connectToNewPod(ctx context.Context) error {
+	podName, err := pf.assignBuildkitPod(ctx)
+	if err != nil {
+		// assignBuildkitPod already tracked the failure with specific error reason
+		return fmt.Errorf("failed to assign buildkit pod: %w", err)
+	}
+	pf.podName = podName
+	if err := pf.connect(ctx); err != nil {
+		pf.trackConnectFailure("PortForwardCreation")
+		return err
+	}
+	return nil
+}
+
+// connect establishes the port forward to podName and waits until it is ready.
+// Failures are tracked by the caller, which knows whether they can still be recovered.
+func (pf *PortForwarder) connect(ctx context.Context) error {
+	if err := pf.portForward(); err != nil {
 		pf.ioCtrl.Logger().Infof("failed to establish port forward: %s", err)
-		pf.metrics.SetErrReason("PortForwardCreation")
-		pf.metrics.TrackFailure()
 		return newPortForwardCreationUserError()
 	}
 
 	if err := pf.waitUntilPortForwardIsReady(ctx); err != nil {
 		pf.ioCtrl.Logger().Infof("failed to wait until ready: %s", err)
-		pf.metrics.SetErrReason("PortForwardCreation")
-		pf.metrics.TrackFailure()
 		return err
 	}
 
 	return nil
+}
+
+// trackConnectFailure sends a port forward failure event to analytics with the given reason
+func (pf *PortForwarder) trackConnectFailure(reason string) {
+	pf.metrics.SetErrReason(reason)
+	pf.metrics.TrackFailure()
 }
 
 // assignBuildkitPod gets the least loaded buildkit pod and assigns it to this port forwarder
@@ -344,9 +391,15 @@ func (pf *PortForwarder) handlePortForwardError(err error, errChan chan<- error)
 	// (e.g. the connection dropped after the port forward was ready)
 	errChan <- err
 	pf.mu.Lock()
+	defer pf.mu.Unlock()
+	// Start() may have already replaced the failed attempt with a new one (e.g. on another pod),
+	// whose connection state must not be released
+	if pf.errChan != errChan {
+		pf.ioCtrl.Logger().Infof("ignoring failure of a previous port forward attempt")
+		return
+	}
 	pf.podName = ""
-	pf.mu.Unlock()
-	pf.Stop()
+	pf.stop()
 }
 
 // waitUntilReady waits for the port forward to be ready or context to be cancelled
@@ -384,7 +437,11 @@ func (pf *PortForwarder) GetType() string {
 func (pf *PortForwarder) Stop() {
 	pf.mu.Lock()
 	defer pf.mu.Unlock()
+	pf.stop()
+}
 
+// stop closes the port forward connection. pf.mu must be held by the caller.
+func (pf *PortForwarder) stop() {
 	if pf.stopChan == nil {
 		pf.ioCtrl.Logger().Infof("port forward connection is not active")
 		return
