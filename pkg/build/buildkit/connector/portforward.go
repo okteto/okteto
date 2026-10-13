@@ -212,10 +212,11 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	pf.ioCtrl.Logger().Infof("could not reach buildkit pod %s, requesting a new one", pf.podName)
 	retryErr := pf.connectToNewPod(ctx)
 	var userErr oktetoErrors.UserError
-	if retryErr == nil || errors.As(retryErr, &userErr) {
+	if retryErr == nil || ctx.Err() != nil || errors.As(retryErr, &userErr) {
 		return retryErr
 	}
-	// Keep the user-facing port forward error instead of a raw one, e.g. when the backend is unreachable
+	// Keep the user-facing port forward error instead of a raw one, e.g. when the backend is unreachable.
+	// A cancellation during the retry is returned as is, so callers can still detect it.
 	pf.ioCtrl.Logger().Infof("could not connect to a new buildkit pod: %s", retryErr)
 	return err
 }

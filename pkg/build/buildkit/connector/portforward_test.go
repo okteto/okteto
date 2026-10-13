@@ -310,15 +310,21 @@ func isClosed(ch chan struct{}) bool {
 	}
 }
 
-// fakeBuildkitAPI assigns the given pods in order, one per request, or fails with err
+// fakeBuildkitAPI assigns the given pods in order, one per request, or fails with err.
+// When cancel is set, each request cancels the command and fails with the context error.
 type fakeBuildkitAPI struct {
-	err   error
-	pods  []string
-	calls int
+	err    error
+	cancel context.CancelFunc
+	pods   []string
+	calls  int
 }
 
-func (f *fakeBuildkitAPI) GetLeastLoadedBuildKitPod(context.Context, string) (*types.BuildKitPodResponse, error) {
+func (f *fakeBuildkitAPI) GetLeastLoadedBuildKitPod(ctx context.Context, _ string) (*types.BuildKitPodResponse, error) {
 	f.calls++
+	if f.cancel != nil {
+		f.cancel()
+		return nil, fmt.Errorf("failed to get least loaded buildkit pod: %w", ctx.Err())
+	}
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -456,6 +462,19 @@ func TestPortForwarder_Start_KeepsPortForwardErrorWhenNoNewPodCanBeAssigned(t *t
 	require.Equal(t, 1, api.calls)
 	require.Empty(t, pf.podName, "pod should be released so the next start is reassigned")
 	require.Equal(t, []string{"failure: AssignedPodUnreachable", "failure: BackendInternalError"}, tracker.outcomes())
+}
+
+func TestPortForwarder_Start_KeepsCancellationErrorWhenRetryIsCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	api := &fakeBuildkitAPI{cancel: cancel}
+	pf, fake, _ := newPortForwarderWithFakes(api, nil, errors.New(`pods "buildkit-0" not found`))
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(ctx) })
+	fake.failures.Wait()
+
+	require.ErrorIs(t, err, context.Canceled, "a cancellation during the retry must not be reported as a port forward failure")
+	require.Equal(t, 1, api.calls)
 }
 
 func TestPortForwarder_Start_DoesNotReassignPodWhenContextIsCancelled(t *testing.T) {
