@@ -21,7 +21,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -380,6 +379,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	// show an informational warning per service once
 	serviceWarnings := make(map[string]string)
 	restartsPerSvc := map[string]int{}
+	checkedServiceAccounts := map[string]bool{}
 	for {
 		select {
 		case <-to.C:
@@ -422,6 +422,9 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 							return err
 						}
 						continue
+					}
+					if err := checkServiceAccountExists(ctx, stack, svcName, k8sClient, checkedServiceAccounts); err != nil {
+						return err
 					}
 					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
 					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
@@ -938,49 +941,35 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Depl
 	return nil
 }
 
-// ValidateServiceAccounts checks that the ServiceAccounts referenced via x-okteto-service-account by the services
-// to deploy exist in the namespace, so a missing one fails before deploying instead of leaving the workloads unable
-// to create pods. The namespace is explicit because the stack's Namespace may not be set yet when this runs
-func ValidateServiceAccounts(ctx context.Context, s *model.Stack, namespace string, servicesToDeploy []string, c kubernetes.Interface) error {
-	svcNames := slices.Sorted(slices.Values(servicesToDeploy))
-
-	checked := map[string]bool{}
-	missing := []string{}
-	for _, svcName := range svcNames {
-		sa := s.Services[svcName].ServiceAccount
-		if sa == "" {
-			continue
-		}
-		exists, ok := checked[sa]
-		if !ok {
-			_, err := c.CoreV1().ServiceAccounts(namespace).Get(ctx, sa, metav1.GetOptions{})
-			switch {
-			case err == nil:
-				exists = true
-			// check the API status reason instead of oktetoErrors.IsNotFound: a false positive from matching the
-			// error text would block a deploy that works
-			case k8sErrors.IsNotFound(err):
-				exists = false
-			default:
-				// e.g. the user can't get ServiceAccounts: don't block a deploy that might work
-				oktetoLog.Warning("Could not verify that ServiceAccount '%s' used by service '%s' exists: %s", sa, svcName, err)
-				exists = true
-			}
-			checked[sa] = exists
-		}
-		if !exists {
-			missing = append(missing, fmt.Sprintf("ServiceAccount '%s' used by service '%s'", sa, svcName))
-		}
-	}
-
-	switch len(missing) {
-	case 0:
+// checkServiceAccountExists checks that the ServiceAccount set with x-okteto-service-account for a service exists.
+// It runs right before the service's workload is created, once its depends_on are satisfied, so a ServiceAccount
+// created earlier in the same deploy (by the deploy commands, a dependency or a service it depends on) is found, while
+// a missing one fails with a clear error instead of leaving the workload unable to create pods. ServiceAccounts that exist, or that can't be verified, are recorded in
+// checked so each one is fetched once
+func checkServiceAccountExists(ctx context.Context, stack *model.Stack, svcName string, c kubernetes.Interface, checked map[string]bool) error {
+	sa := stack.Services[svcName].ServiceAccount
+	if sa == "" || checked[sa] {
 		return nil
-	case 1:
-		return fmt.Errorf("%s (x-okteto-service-account) doesn't exist in namespace '%s'. Create it before deploying, or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount", missing[0], namespace)
-	default:
-		return fmt.Errorf("the following ServiceAccounts set with x-okteto-service-account don't exist in namespace '%s':\n  - %s\nCreate them before deploying, or remove 'x-okteto-service-account' from those services to use the namespace's default ServiceAccount", namespace, strings.Join(missing, "\n  - "))
 	}
+
+	_, err := c.CoreV1().ServiceAccounts(stack.Namespace).Get(ctx, sa, metav1.GetOptions{})
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		// check the API status reason instead of oktetoErrors.IsNotFound: a false positive from matching the error
+		// text would block a deploy that works
+		if k8sErrors.IsNotFound(err) {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("ServiceAccount '%s' used by service '%s' doesn't exist in namespace '%s'", sa, svcName, stack.Namespace),
+				Hint: "Create it (for example in your deploy commands), or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount",
+			}
+		}
+		// e.g. the user can't get ServiceAccounts: don't block a deploy that might work
+		oktetoLog.Warning("Could not verify that ServiceAccount '%s' used by service '%s' exists: %s", sa, svcName, err)
+	}
+	checked[sa] = true
+	return nil
 }
 
 // ValidateDefinedServices checks that the services to deploy are in the compose file

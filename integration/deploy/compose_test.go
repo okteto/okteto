@@ -254,9 +254,9 @@ const composeTemplateWithServiceAccount = `services:
 
 const composeTemplateWithMissingServiceAccount = `services:
   app:
-    build: app
+    image: nginx:latest
     ports:
-      - 8080
+      - 80
     x-okteto-service-account: e2e-missing-sa
 `
 
@@ -1018,10 +1018,10 @@ func TestDeployComposeWithServiceAccount(t *testing.T) {
 }
 
 // TestDeployComposeWithMissingServiceAccount tests the following scenario (DEV-1490):
-//   - A compose file is deployed (without --wait) where a service with a build section declares
-//     x-okteto-service-account with a ServiceAccount that doesn't exist in the namespace.
-//   - The deploy fails before building the image or applying any workload, with an error naming the
-//     missing ServiceAccount.
+//   - A compose file is deployed (without --wait) where a service declares x-okteto-service-account
+//     with a ServiceAccount that doesn't exist in the namespace.
+//   - The deploy fails right before the service's workload is created, with an error naming the missing
+//     ServiceAccount and a hint, instead of reporting success while the service can't create pods.
 //   - No Deployment is created for the service.
 func TestDeployComposeWithMissingServiceAccount(t *testing.T) {
 	t.Parallel()
@@ -1031,7 +1031,6 @@ func TestDeployComposeWithMissingServiceAccount(t *testing.T) {
 	dir := t.TempDir()
 	composePath := filepath.Join(dir, "docker-compose.yml")
 	require.NoError(t, os.WriteFile(composePath, []byte(composeTemplateWithMissingServiceAccount), 0600))
-	require.NoError(t, createAppDockerfile(dir))
 
 	testNamespace := integration.GetTestNamespace(t.Name())
 	namespaceOpts := &commands.NamespaceOptions{
@@ -1059,10 +1058,9 @@ func TestDeployComposeWithMissingServiceAccount(t *testing.T) {
 	}
 	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
 	require.Error(t, err)
-	require.Contains(t, output, fmt.Sprintf("ServiceAccount 'e2e-missing-sa' used by service 'app' (x-okteto-service-account) doesn't exist in namespace '%s'", testNamespace))
-	// the check runs before building images: neither the build stage nor BuildKit output should appear
-	require.NotContains(t, output, "Building service app")
-	require.NotContains(t, output, "Building '")
+	require.Contains(t, output, fmt.Sprintf("ServiceAccount 'e2e-missing-sa' used by service 'app' doesn't exist in namespace '%s'", testNamespace))
+	// the hint is only printed when the UserError reaches the CLI entrypoint unwrapped
+	require.Contains(t, output, "remove 'x-okteto-service-account'")
 
 	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.Truef(t, k8sErrors.IsNotFound(err), "expected no 'app' Deployment, got: %v", err)

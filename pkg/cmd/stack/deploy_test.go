@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/pkg/build"
 	"github.com/okteto/okteto/pkg/divert"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
@@ -1065,8 +1067,9 @@ func TestShouldUseHTTPRouteError(t *testing.T) {
 	}
 }
 
-func newServiceAccount(name, namespace string) *apiv1.ServiceAccount {
-	return &apiv1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+// newServiceAccount returns a ServiceAccount in the "ns" namespace used by the stacks in these tests
+func newServiceAccount(name string) *apiv1.ServiceAccount {
+	return &apiv1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns"}}
 }
 
 func countServiceAccountGets(client *fake.Clientset) int {
@@ -1079,118 +1082,218 @@ func countServiceAccountGets(client *fake.Clientset) int {
 	return count
 }
 
-func TestValidateServiceAccounts_Exists(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{"api": {ServiceAccount: "api-sa"}},
-	}
-	client := fake.NewSimpleClientset(newServiceAccount("api-sa", "ns"))
-
-	require.NoError(t, ValidateServiceAccounts(context.Background(), s, "ns", []string{"api"}, client))
+// createServiceAccountWhenDeploymentIsCreated simulates a ServiceAccount created by another service of the same deploy
+func createServiceAccountWhenDeploymentIsCreated(t *testing.T, client *fake.Clientset, deploymentName string, sa *apiv1.ServiceAccount) {
+	t.Helper()
+	client.PrependReactor("create", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		createAction, ok := action.(k8stesting.CreateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		created, ok := createAction.GetObject().(*appsv1.Deployment)
+		if ok && created.Name == deploymentName {
+			require.NoError(t, client.Tracker().Add(sa))
+		}
+		return false, nil, nil
+	})
 }
 
-func TestValidateServiceAccounts_Missing(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{"api": {ServiceAccount: "api-sa"}},
-	}
-	client := fake.NewSimpleClientset()
-
-	err := ValidateServiceAccounts(context.Background(), s, "ns", []string{"api"}, client)
-
-	require.EqualError(t, err, "ServiceAccount 'api-sa' used by service 'api' (x-okteto-service-account) doesn't exist in namespace 'ns'. Create it before deploying, or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount")
+// markJobSucceededAndCreateServiceAccount simulates a compose job that creates a ServiceAccount and completes
+func markJobSucceededAndCreateServiceAccount(t *testing.T, client *fake.Clientset, jobName string, sa *apiv1.ServiceAccount) {
+	t.Helper()
+	client.PrependReactor("create", "jobs", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		createAction, ok := action.(k8stesting.CreateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		created, ok := createAction.GetObject().(*batchv1.Job)
+		if ok && created.Name == jobName {
+			created.Status.Succeeded = *created.Spec.Completions
+			require.NoError(t, client.Tracker().Add(sa))
+		}
+		return false, nil, nil
+	})
 }
 
-func TestValidateServiceAccounts_MultipleMissing(t *testing.T) {
-	s := &model.Stack{
+// deployServicesWithin runs deployServices and fails the test if it doesn't return in time: deployServices doesn't
+// honor options.Timeout while waiting on depends_on, so a regression would otherwise hang the test
+func deployServicesWithin(t *testing.T, timeout time.Duration, s *model.Stack, client *fake.Clientset, options *DeployOptions) error {
+	t.Helper()
+	done := make(chan error, 1)
+	go func() { done <- deployServices(context.Background(), s, client, nil, options, nil) }()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(timeout):
+		require.FailNow(t, "deployServices didn't return in time")
+		return nil
+	}
+}
+
+func newStackWithServiceAccount(serviceAccount string) *model.Stack {
+	return &model.Stack{
+		Name:      "stack",
+		Namespace: "ns",
 		Services: map[string]*model.Service{
-			"worker": {ServiceAccount: "worker-sa"},
-			"api":    {ServiceAccount: "api-sa"},
-			"web":    {ServiceAccount: "web-sa"},
+			"api": {Image: "okteto/api", Replicas: 1, ServiceAccount: serviceAccount},
 		},
 	}
-	client := fake.NewSimpleClientset(newServiceAccount("web-sa", "ns"))
-
-	err := ValidateServiceAccounts(context.Background(), s, "ns", []string{"worker", "web", "api"}, client)
-
-	require.EqualError(t, err, "the following ServiceAccounts set with x-okteto-service-account don't exist in namespace 'ns':\n"+
-		"  - ServiceAccount 'api-sa' used by service 'api'\n"+
-		"  - ServiceAccount 'worker-sa' used by service 'worker'\n"+
-		"Create them before deploying, or remove 'x-okteto-service-account' from those services to use the namespace's default ServiceAccount")
 }
 
-func TestValidateServiceAccounts_SharedAccountCheckedOnce(t *testing.T) {
+func TestCheckServiceAccountExists_Exists(t *testing.T) {
+	client := fake.NewSimpleClientset(newServiceAccount("api-sa"))
+
+	err := checkServiceAccountExists(context.Background(), newStackWithServiceAccount("api-sa"), "api", client, map[string]bool{})
+
+	require.NoError(t, err)
+}
+
+func TestCheckServiceAccountExists_MissingReturnsUserErrorWithHint(t *testing.T) {
+	client := fake.NewSimpleClientset()
+
+	err := checkServiceAccountExists(context.Background(), newStackWithServiceAccount("api-sa"), "api", client, map[string]bool{})
+
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	require.EqualError(t, userErr.E, "ServiceAccount 'api-sa' used by service 'api' doesn't exist in namespace 'ns'")
+	require.Equal(t, "Create it (for example in your deploy commands), or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount", userErr.Hint)
+}
+
+func TestCheckServiceAccountExists_NoServiceAccountNoAPICalls(t *testing.T) {
+	client := fake.NewSimpleClientset()
+
+	err := checkServiceAccountExists(context.Background(), newStackWithServiceAccount(""), "api", client, map[string]bool{})
+
+	require.NoError(t, err)
+	require.Empty(t, client.Actions())
+}
+
+func TestCheckServiceAccountExists_SharedAccountCheckedOnce(t *testing.T) {
 	s := &model.Stack{
+		Namespace: "ns",
 		Services: map[string]*model.Service{
 			"api":    {ServiceAccount: "shared-sa"},
 			"worker": {ServiceAccount: "shared-sa"},
 		},
 	}
-	client := fake.NewSimpleClientset(newServiceAccount("shared-sa", "ns"))
+	client := fake.NewSimpleClientset(newServiceAccount("shared-sa"))
+	checked := map[string]bool{}
 
-	require.NoError(t, ValidateServiceAccounts(context.Background(), s, "ns", []string{"api", "worker"}, client))
+	require.NoError(t, checkServiceAccountExists(context.Background(), s, "api", client, checked))
+	require.NoError(t, checkServiceAccountExists(context.Background(), s, "worker", client, checked))
 	require.Equal(t, 1, countServiceAccountGets(client))
 }
 
-func TestValidateServiceAccounts_SharedMissingAccountReportedPerService(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{
-			"api":    {ServiceAccount: "shared-sa"},
-			"worker": {ServiceAccount: "shared-sa"},
-		},
-	}
-	client := fake.NewSimpleClientset()
-
-	err := ValidateServiceAccounts(context.Background(), s, "ns", []string{"api", "worker"}, client)
-
-	require.ErrorContains(t, err, "ServiceAccount 'shared-sa' used by service 'api'")
-	require.ErrorContains(t, err, "ServiceAccount 'shared-sa' used by service 'worker'")
-	require.Equal(t, 1, countServiceAccountGets(client))
-}
-
-func TestValidateServiceAccounts_NoServiceAccountNoAPICalls(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{"api": {}, "worker": {}},
-	}
-	client := fake.NewSimpleClientset()
-
-	require.NoError(t, ValidateServiceAccounts(context.Background(), s, "ns", []string{"api", "worker"}, client))
-	require.Empty(t, client.Actions())
-}
-
-func TestValidateServiceAccounts_OnlyServicesToDeploy(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{
-			"api":    {},
-			"worker": {ServiceAccount: "missing-sa"},
-		},
-	}
-	client := fake.NewSimpleClientset()
-
-	require.NoError(t, ValidateServiceAccounts(context.Background(), s, "ns", []string{"api"}, client))
-	require.Empty(t, client.Actions())
-}
-
-func TestValidateServiceAccounts_ForbiddenWarnsAndContinues(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{"api": {ServiceAccount: "api-sa"}},
-	}
+func TestCheckServiceAccountExists_ForbiddenWarnsContinuesAndIsNotRetried(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	client.PrependReactor("get", "serviceaccounts", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, k8sErrors.NewForbidden(schema.GroupResource{Resource: "serviceaccounts"}, "api-sa", fmt.Errorf("RBAC: access denied"))
 	})
+	s := newStackWithServiceAccount("api-sa")
+	checked := map[string]bool{}
 
-	require.NoError(t, ValidateServiceAccounts(context.Background(), s, "ns", []string{"api"}, client))
+	require.NoError(t, checkServiceAccountExists(context.Background(), s, "api", client, checked))
+	require.NoError(t, checkServiceAccountExists(context.Background(), s, "api", client, checked))
+	require.Equal(t, 1, countServiceAccountGets(client))
 }
 
-// Test_validateServiceAccounts_ForbiddenWithNotFoundInNameIsNotMissing guards against matching "not found" in the
-// error text: a forbidden error for a ServiceAccount whose name contains "not-found" must not fail the deploy
-func TestValidateServiceAccounts_ForbiddenWithNotFoundInNameIsNotMissing(t *testing.T) {
-	s := &model.Stack{
-		Services: map[string]*model.Service{"api": {ServiceAccount: "not-found-sa"}},
+func TestCheckServiceAccountExists_UnverifiableErrorsWarnAndContinue(t *testing.T) {
+	tests := []struct {
+		err  error
+		name string
+	}{
+		{name: "forbidden", err: k8sErrors.NewForbidden(schema.GroupResource{Resource: "serviceaccounts"}, "api-sa", fmt.Errorf("RBAC: access denied"))},
+		{name: "unauthorized", err: k8sErrors.NewUnauthorized("token expired")},
+		{name: "internal error", err: k8sErrors.NewInternalError(fmt.Errorf("etcd unavailable"))},
+		{name: "plain error", err: fmt.Errorf("connection reset by peer")},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := fake.NewSimpleClientset()
+			client.PrependReactor("get", "serviceaccounts", func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, tt.err
+			})
+
+			err := checkServiceAccountExists(context.Background(), newStackWithServiceAccount("api-sa"), "api", client, map[string]bool{})
+
+			require.NoError(t, err)
+			require.Equal(t, 1, countServiceAccountGets(client))
+		})
+	}
+}
+
+// TestCheckServiceAccountExists_ForbiddenWithNotFoundInNameIsNotMissing guards against matching "not found" in the
+// error text: a forbidden error for a ServiceAccount whose name contains "not-found" must not fail the deploy
+func TestCheckServiceAccountExists_ForbiddenWithNotFoundInNameIsNotMissing(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	client.PrependReactor("get", "serviceaccounts", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, k8sErrors.NewForbidden(schema.GroupResource{Resource: "serviceaccounts"}, "not-found-sa", fmt.Errorf("RBAC: access denied"))
 	})
 
-	require.NoError(t, ValidateServiceAccounts(context.Background(), s, "ns", []string{"api"}, client))
+	err := checkServiceAccountExists(context.Background(), newStackWithServiceAccount("not-found-sa"), "api", client, map[string]bool{})
+
+	require.NoError(t, err)
+}
+
+func TestDeployServices_MissingServiceAccountFailsBeforeDeployingTheService(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	options := &DeployOptions{ServicesToDeploy: []string{"api"}, Timeout: time.Minute}
+
+	err := deployServices(context.Background(), newStackWithServiceAccount("api-sa"), client, nil, options, nil)
+
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	require.ErrorContains(t, err, "ServiceAccount 'api-sa' used by service 'api' doesn't exist in namespace 'ns'")
+	_, err = client.AppsV1().Deployments("ns").Get(context.Background(), "api", metav1.GetOptions{})
+	require.True(t, k8sErrors.IsNotFound(err))
+}
+
+// TestDeployServices_ServiceAccountCreatedEarlierInTheDeployIsFound covers a ServiceAccount that doesn't exist when
+// the compose stage starts but is created by a service deployed before the one using it
+func TestDeployServices_ServiceAccountCreatedEarlierInTheDeployIsFound(t *testing.T) {
+	s := &model.Stack{
+		Name:      "stack",
+		Namespace: "ns",
+		Services: map[string]*model.Service{
+			"creator": {Image: "okteto/creator", Replicas: 1},
+			"api":     {Image: "okteto/api", Replicas: 1, ServiceAccount: "api-sa"},
+		},
+	}
+	client := fake.NewSimpleClientset()
+	createServiceAccountWhenDeploymentIsCreated(t, client, "creator", newServiceAccount("api-sa"))
+	options := &DeployOptions{ServicesToDeploy: []string{"creator", "api"}, Timeout: time.Minute}
+
+	err := deployServices(context.Background(), s, client, nil, options, nil)
+
+	require.NoError(t, err)
+	_, err = client.AppsV1().Deployments("ns").Get(context.Background(), "api", metav1.GetOptions{})
+	require.NoError(t, err)
+}
+
+// TestDeployServices_ServiceAccountCreatedByDependencyJobIsFound covers a compose job that creates the ServiceAccount,
+// with the service using it declaring depends_on service_completed_successfully on that job: the check must wait for
+// the dependency instead of failing up front. The service is listed first to show the order doesn't matter
+func TestDeployServices_ServiceAccountCreatedByDependencyJobIsFound(t *testing.T) {
+	s := &model.Stack{
+		Name:      "stack",
+		Namespace: "ns",
+		Services: map[string]*model.Service{
+			"init": {Image: "bitnami/kubectl", Replicas: 1, RestartPolicy: apiv1.RestartPolicyNever},
+			"api": {
+				Image:          "okteto/api",
+				Replicas:       1,
+				ServiceAccount: "api-sa",
+				DependsOn:      model.DependsOn{"init": model.DependsOnConditionSpec{Condition: model.DependsOnServiceCompleted}},
+			},
+		},
+	}
+	client := fake.NewSimpleClientset()
+	markJobSucceededAndCreateServiceAccount(t, client, "init", newServiceAccount("api-sa"))
+	options := &DeployOptions{ServicesToDeploy: []string{"api", "init"}, Timeout: time.Minute}
+
+	err := deployServicesWithin(t, 10*time.Second, s, client, options)
+
+	require.NoError(t, err)
+	_, err = client.AppsV1().Deployments("ns").Get(context.Background(), "api", metav1.GetOptions{})
+	require.NoError(t, err)
 }
