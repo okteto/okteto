@@ -14,6 +14,7 @@
 package forward
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +22,8 @@ import (
 	"sync"
 	"testing"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -135,4 +138,15 @@ func TestShouldFallbackToSPDY(t *testing.T) {
 			require.Equal(t, tt.expected, shouldFallbackToSPDY(tt.err))
 		})
 	}
+}
+
+func TestShouldFallbackToSPDYLogsTheWebSocketError(t *testing.T) {
+	oktetoLog.Init(logrus.DebugLevel)
+	t.Cleanup(func() { oktetoLog.Init(logrus.WarnLevel) })
+	b := bytes.NewBuffer(nil)
+	oktetoLog.SetOutput(b)
+
+	shouldFallbackToSPDY(&httpstream.UpgradeFailureError{Cause: errors.New("bad handshake")})
+
+	require.Contains(t, b.String(), "falling back to SPDY: unable to upgrade streaming request: bad handshake")
 }

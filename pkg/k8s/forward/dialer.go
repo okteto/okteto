@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -46,6 +47,12 @@ func NewDialer(restConfig *rest.Config, url *url.URL) (httpstream.Dialer, error)
 	return portforward.NewFallbackDialerForStreaming(websocketDialer, spdyDialer, shouldFallbackToSPDY), nil
 }
 
+// shouldFallbackToSPDY logs the WebSocket error before falling back, so issues with proxies
+// that don't support WebSockets can be diagnosed from the okteto log file
 func shouldFallbackToSPDY(err error) bool {
-	return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	if !httpstream.IsUpgradeFailure(err) && !httpstream.IsHTTPSProxyError(err) {
+		return false
+	}
+	oktetoLog.Debugf("port forward over websockets not available, falling back to SPDY: %s", err)
+	return true
 }

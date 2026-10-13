@@ -293,7 +293,7 @@ func (pf *PortForwarder) establishPortForward() error {
 	dialer, err := forward.NewDialer(pf.restConfig, url)
 	if err != nil {
 		pf.metrics.SetErrReason("PortForwardCreation")
-		return fmt.Errorf("failed to create port forward dialer: %w", err)
+		return fmt.Errorf("creating port forward dialer: %w", err)
 	}
 
 	ports := []string{fmt.Sprintf("%d:%d", pf.localPort, buildkitPort)}
