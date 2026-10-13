@@ -330,7 +330,7 @@ func (f *fakeBuildkitAPI) GetLeastLoadedBuildKitPod(context.Context, string) (*t
 
 // fakePortForward simulates the port forward to each pod: it fails synchronously with syncErr
 // when set, becomes ready for the pods in reachable and fails asynchronously with forwardErr
-// for the rest, like ForwardPorts does
+// for the rest, like ForwardPorts does. Without forwardErr, the rest never become ready.
 type fakePortForward struct {
 	pf         *PortForwarder
 	reachable  map[string]bool
@@ -348,6 +348,9 @@ func (f *fakePortForward) start() error {
 	f.pf.errChan = make(chan error, 1)
 	if f.reachable[f.pf.podName] {
 		f.pf.readyChan <- struct{}{}
+		return nil
+	}
+	if f.forwardErr == nil {
 		return nil
 	}
 	errChan := f.pf.errChan
@@ -480,7 +483,55 @@ func TestPortForwarder_Start_DoesNotReassignPodOnLocalPortConflict(t *testing.T)
 	require.EqualError(t, err, "port 8080 is already in use")
 	require.Zero(t, api.calls, "another pod does not solve a local port conflict")
 	require.Equal(t, "buildkit-0", pf.podName)
-	require.Equal(t, []string{"failure: PortForwardCreation"}, tracker.outcomes())
+	require.Equal(t, []string{"failure: LocalPortInUse"}, tracker.outcomes())
+}
+
+func TestPortForwarder_Start_TracksContextCancelledWhileWaitingForAssignedPod(t *testing.T) {
+	api := &fakeBuildkitAPI{pods: []string{"buildkit-1"}}
+	pf, _, tracker := newPortForwarderWithFakes(api, nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := runWithDeadlockGuard(t, func() error { return pf.Start(ctx) })
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Zero(t, api.calls, "a cancelled command must not request a new pod")
+	require.Equal(t, []string{"failure: ContextCancelledWhileWaitingForPortForward"}, tracker.outcomes())
+}
+
+func TestConnectFailureReason(t *testing.T) {
+	tests := []struct {
+		err      error
+		name     string
+		expected string
+	}{
+		{
+			name:     "port forward creation",
+			err:      newPortForwardCreationUserError(),
+			expected: "PortForwardCreation",
+		},
+		{
+			name:     "local port in use",
+			err:      oktetoErrors.UserError{E: localPortInUseError{port: 8080}},
+			expected: "LocalPortInUse",
+		},
+		{
+			name:     "context cancelled",
+			err:      fmt.Errorf("context cancelled while waiting for port forward: %w", context.Canceled),
+			expected: "ContextCancelledWhileWaitingForPortForward",
+		},
+		{
+			name:     "context deadline exceeded",
+			err:      fmt.Errorf("context cancelled while waiting for port forward: %w", context.DeadlineExceeded),
+			expected: "ContextCancelledWhileWaitingForPortForward",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, connectFailureReason(tt.err))
+		})
+	}
 }
 
 func TestPortForwarder_GetWaiter(t *testing.T) {

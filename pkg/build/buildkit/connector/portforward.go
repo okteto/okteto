@@ -157,6 +157,15 @@ const buildkitPort = 1234
 // errPortForwardCreation is the user-facing cause of any port forward failure other than a local port conflict
 var errPortForwardCreation = errors.New("port forward creation to BuildKit has failed")
 
+// localPortInUseError is the cause of a port forward that cannot listen on its local port
+type localPortInUseError struct {
+	port int
+}
+
+func (e localPortInUseError) Error() string {
+	return fmt.Sprintf("port %d is already in use", e.port)
+}
+
 // newPortForwardCreationUserError returns the user-facing error for a port forward
 // failure. It deliberately hides the raw cause, which must have been written to the
 // logs by the caller, so the console shows an intuitive message instead of a low-level
@@ -191,7 +200,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		return nil
 	}
 	if ctx.Err() != nil || !errors.Is(err, errPortForwardCreation) {
-		pf.trackConnectFailure("PortForwardCreation")
+		pf.trackConnectFailure(connectFailureReason(err))
 		return err
 	}
 	// The pod assigned to the session might be gone, e.g. removed by the BuildKit autoscaler
@@ -220,7 +229,7 @@ func (pf *PortForwarder) connectToNewPod(ctx context.Context) error {
 	}
 	pf.podName = podName
 	if err := pf.connect(ctx); err != nil {
-		pf.trackConnectFailure("PortForwardCreation")
+		pf.trackConnectFailure(connectFailureReason(err))
 		return err
 	}
 	return nil
@@ -246,6 +255,19 @@ func (pf *PortForwarder) connect(ctx context.Context) error {
 func (pf *PortForwarder) trackConnectFailure(reason string) {
 	pf.metrics.SetErrReason(reason)
 	pf.metrics.TrackFailure()
+}
+
+// connectFailureReason returns the analytics reason of a failed port forward connection
+func connectFailureReason(err error) string {
+	var portErr localPortInUseError
+	switch {
+	case errors.As(err, &portErr):
+		return "LocalPortInUse"
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return "ContextCancelledWhileWaitingForPortForward"
+	default:
+		return "PortForwardCreation"
+	}
 }
 
 // assignBuildkitPod gets the least loaded buildkit pod and assigns it to this port forwarder
@@ -382,7 +404,7 @@ func (pf *PortForwarder) handlePortForwardError(err error, errChan chan<- error)
 	pf.ioCtrl.Logger().Infof("port forward to buildkit finished with error: %s", err)
 	if containsAddressInUse(err) {
 		errChan <- oktetoErrors.UserError{
-			E:    fmt.Errorf("port %d is already in use", pf.localPort),
+			E:    localPortInUseError{port: pf.localPort},
 			Hint: "Check which process is using the port or free it and try again",
 		}
 		return
@@ -423,7 +445,6 @@ func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error 
 		// Calling Stop() here would self-deadlock: Start() already holds pf.mu and the
 		// mutex is not reentrant. Close stopChan directly to terminate the forwarder.
 		close(pf.stopChan)
-		pf.metrics.SetErrReason("ContextCancelledWhileWaitingForPortForward")
 		return fmt.Errorf("context cancelled while waiting for port forward: %w", ctx.Err())
 	}
 }
