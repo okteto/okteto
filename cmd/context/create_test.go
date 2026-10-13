@@ -164,7 +164,7 @@ func Test_createContext(t *testing.T) {
 							constants.DevLabel: "true",
 						},
 						Annotations: map[string]string{
-							constants.OktetoURLAnnotation: "https://cloud.okteto.com",
+							constants.OktetoURLAnnotation: "https://okteto.example.com",
 						},
 					},
 				},
@@ -245,7 +245,7 @@ func Test_createContext(t *testing.T) {
 			name: "transform k8s to url and there is a context",
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
-					"https://cloud.okteto.com": {
+					"https://okteto.example.com": {
 						Token:    "this is a token",
 						IsOkteto: true,
 					},
@@ -272,7 +272,7 @@ func Test_createContext(t *testing.T) {
 			name: "change to available okteto context",
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
-					"https://cloud.okteto.com": {
+					"https://okteto.example.com": {
 						Token:    "this is a token",
 						IsOkteto: true,
 					},
@@ -280,7 +280,7 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: true,
-				Context:  "cloud.okteto.com",
+				Context:  "okteto.example.com",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
 
@@ -300,7 +300,7 @@ func Test_createContext(t *testing.T) {
 			name: "change to available okteto context",
 			ctxStore: &okteto.ContextStore{
 				Contexts: map[string]*okteto.Context{
-					"https://cloud.okteto.com": {
+					"https://okteto.example.com": {
 						Token:    "this is a token",
 						IsOkteto: true,
 					},
@@ -308,7 +308,7 @@ func Test_createContext(t *testing.T) {
 			},
 			ctxOptions: &Options{
 				IsOkteto: true,
-				Context:  "https://cloud.okteto.com",
+				Context:  "https://okteto.example.com",
 			},
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"okteto_example_com"},

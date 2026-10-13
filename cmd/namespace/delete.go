@@ -15,6 +15,7 @@ package namespace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -30,12 +31,33 @@ import (
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	defaultDeleteTimeout = 5 * time.Minute
+
+	namespaceStatusActive       = "Active"
+	namespaceStatusDeleteFailed = "DeleteFailed"
+)
+
+var (
+	// pollInterval is the interval between checks of the namespace status while waiting for its deletion
+	pollInterval = 1 * time.Second
+
+	// logsGracePeriod is the maximum time to wait for the deletion logs once the wait has finished
+	logsGracePeriod = 10 * time.Second
+)
+
+// DeleteOptions represents the options that namespace delete has
+type DeleteOptions struct {
+	Namespace string
+	Timeout   time.Duration
+	Wait      bool
+}
+
 // Delete deletes a namespace
-func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
+func Delete(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
+	opts := &DeleteOptions{}
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete an Okteto Namespace",
@@ -45,9 +67,9 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller)
 				return err
 			}
 
-			nsToDelete := okteto.GetContext().Namespace
+			opts.Namespace = okteto.GetContext().Namespace
 			if len(args) > 0 {
-				nsToDelete = args[0]
+				opts.Namespace = args[0]
 			}
 
 			if !okteto.IsOkteto() {
@@ -58,15 +80,18 @@ func Delete(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller)
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete, k8sLogger)
+			err = nsCmd.ExecuteDeleteNamespace(ctx, opts)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
 	}
+	cmd.Flags().BoolVarP(&opts.Wait, "wait", "w", true, "wait until the Okteto Namespace is fully deleted from the cluster")
+	cmd.Flags().DurationVarP(&opts.Timeout, "timeout", "t", defaultDeleteTimeout, "the duration to wait for the Okteto Namespace to be deleted. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	return cmd
 }
 
-func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, opts *DeleteOptions) error {
+	namespace := opts.Namespace
 	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -80,11 +105,15 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 		return fmt.Errorf("%w: %w", errFailedDeleteNamespace, err)
 	}
 
-	if err := nc.watchDelete(ctx, namespace, k8sLogger); err != nil {
-		return fmt.Errorf("watching namespace deletion stopped: %w", err)
+	if opts.Wait {
+		if err := nc.watchDelete(ctx, namespace, opts.Timeout); err != nil {
+			return fmt.Errorf("watching namespace deletion stopped: %w", err)
+		}
+		oktetoLog.Success("Namespace '%s' deleted", namespace)
+	} else {
+		oktetoLog.Success("Namespace '%s' scheduled for deletion", namespace)
 	}
 
-	oktetoLog.Success("Namespace '%s' deleted", namespace)
 	if okteto.GetContext().Namespace == namespace {
 		personalNamespace := okteto.GetContext().PersonalNamespace
 		if personalNamespace == "" {
@@ -101,26 +130,26 @@ func (nc *Command) ExecuteDeleteNamespace(ctx context.Context, namespace string,
 	return nil
 }
 
-func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
+func (nc *Command) watchDelete(ctx context.Context, namespace string, timeout time.Duration) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
 	stop := make(chan os.Signal, 1)
-	defer close(stop)
+	signal.Notify(stop, os.Interrupt)
+	defer signal.Stop(stop)
 
 	logsCtx, logsCtxCancel := context.WithCancel(waitCtx)
 	defer logsCtxCancel()
 
-	signal.Notify(stop, os.Interrupt)
+	// exit is not closed because the waiting goroutine might still send to it after CTRL+C
 	exit := make(chan error, 1)
-	defer close(exit)
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace, k8sLogger)
+		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace, timeout)
 	}(&wg)
 
 	wg.Add(1)
@@ -128,7 +157,8 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 		defer wg.Done()
 		connectionTimeout := 5 * time.Minute
 		err := nc.okClient.Stream().DestroyAllLogs(logsCtx, namespace, connectionTimeout)
-		if err != nil {
+		// the logs context is canceled when the wait finishes with an error (e.g. timeout), so we should not display the warning
+		if err != nil && !errors.Is(err, context.Canceled) {
 			oktetoLog.Warning("delete namespace logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("delete namespace logs cannot be streamed due to connectivity issues: %v", err)
 		}
@@ -142,47 +172,66 @@ func (nc *Command) watchDelete(ctx context.Context, namespace string, k8sLogger 
 		oktetoLog.Information("CTRL+C received, cancelling wait and logs streaming but operation will continue in background")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
-		// wait until streaming logs have finished
-		wg.Wait()
+		if err != nil {
+			logsCtxCancel()
+		}
+		logsDone := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(logsDone)
+		}()
+		// wait until streaming logs have finished, but don't block forever if the stream never ends.
+		// We don't wait for the logs goroutine after cancelling it because the stream request is not bound
+		// to the context, so a stalled read would block until the next server event
+		select {
+		case <-logsDone:
+		case <-time.After(logsGracePeriod):
+			oktetoLog.Infof("delete namespace logs didn't finish after %s, stop streaming", logsGracePeriod)
+			logsCtxCancel()
+		case <-stop:
+			logsCtxCancel()
+			oktetoLog.Infof("CTRL+C received, exit")
+			return oktetoErrors.ErrIntSig
+		}
 		return err
 	}
 }
 
-func (nc *Command) waitForNamespaceDeleted(ctx context.Context, namespace string, k8sLogger *io.K8sLogger) error {
-	timeout := 5 * time.Minute
-	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
-
-	// provide k8s
-	c, _, err := nc.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, k8sLogger)
-	if err != nil {
-		return err
-	}
+// waitForNamespaceDeleted polls the Okteto API until the namespace no longer exists in the cluster.
+// The Okteto API is used instead of the user's kubernetes credentials because the role binding granting
+// the user access to the namespace is removed while the namespace is terminating, so the user would get a
+// forbidden error before the namespace is actually deleted (e.g. while waiting for finalizers)
+func (nc *Command) waitForNamespaceDeleted(ctx context.Context, namespace string, timeout time.Duration) error {
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	to := time.NewTimer(timeout)
+	defer to.Stop()
 
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-to.C:
 			return fmt.Errorf("%w: namespace %s, time %s", errDeleteNamespaceTimeout, namespace, timeout.String())
 		case <-ticker.C:
-			ns, err := c.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			ns, err := nc.okClient.Namespaces().Get(ctx, namespace)
 			if err != nil {
-				// not found error is expected when the namespace is deleted.
-				// adding also IsForbidden as in some versions kubernetes returns this status when the namespace is deleted
-				// one or the other we assume the namespace has been deleted
-				if k8sErrors.IsNotFound(err) || k8sErrors.IsForbidden(err) {
+				// not found error is expected when the namespace is deleted
+				if errors.Is(err, oktetoErrors.ErrNamespaceNotFound) {
 					return nil
+				}
+				if oktetoErrors.IsTransient(err) {
+					oktetoLog.Debugf("transient error getting namespace %q status: %v", namespace, err)
+					continue
 				}
 				return err
 			}
 
-			status, ok := ns.Labels[constants.NamespaceStatusLabel]
-			if !ok {
-				// when status label is not present, continue polling the namespace until timeout
-				oktetoLog.Debugf("namespace %q does not have label for status", namespace)
-				continue
-			}
-			if status == "DeleteFailed" {
-				return errFailedDeleteNamespace
+			// If a dev environment fails to be destroyed, the okteto backend sets the namespace status back
+			// to "Active" or "Sleeping" (it sets the status to "Deleting" when starting the namespace deletion)
+			switch ns.Status {
+			case namespaceStatusDeleteFailed, namespaceStatusActive, constants.NamespaceStatusSleeping:
+				return fmt.Errorf("%w: namespace status is %q", errFailedDeleteNamespace, ns.Status)
 			}
 		}
 	}

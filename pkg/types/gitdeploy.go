@@ -28,11 +28,6 @@ type PipelineDeployOptions struct {
 	IsDependency         bool
 }
 
-// SpaceBody top body answer
-type SpaceBody struct {
-	Space Space `json:"space"`
-}
-
 // GitDeployResponse represents
 type GitDeployResponse struct {
 	Action    *Action    `json:"action"`
@@ -45,13 +40,6 @@ type GitDeploy struct {
 	Name       string `json:"name"`
 	Repository string `json:"repository"`
 	Status     string `json:"status"`
-}
-
-// Space represents the contents of an Okteto Cloud space
-type Space struct {
-	GitDeploys   []GitDeploy   `json:"gitDeploys"`
-	Statefulsets []Statefulset `json:"statefulsets"`
-	Deployments  []Deployment  `json:"deployments"`
 }
 
 // Variable represents a pipeline variable
