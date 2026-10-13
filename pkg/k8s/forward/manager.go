@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"runtime"
 	"time"
 
@@ -29,11 +28,10 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
+	"k8s.io/streaming/pkg/httpstream"
 )
 
 // PortForwardManager keeps a list of all the active port forwards
@@ -213,7 +211,7 @@ func (p *PortForwardManager) buildForwarder(namespace, pod string, ports []strin
 		out:       new(bytes.Buffer),
 	}
 
-	pf, err := portforward.NewOnAddresses(
+	pf, err := portforward.NewOnAddressesForStreaming(
 		dialer,
 		[]string{p.iface},
 		ports,
@@ -271,12 +269,7 @@ func (p *PortForwardManager) buildDialer(namespace, pod string) (httpstream.Dial
 		return nil, fmt.Errorf("restConfig is nil")
 	}
 
-	transport, upgrader, err := spdy.RoundTripperFor(p.restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url), nil
+	return NewDialer(p.restConfig, url)
 }
 
 func (p *PortForwardManager) forwardService(ctx context.Context, namespace, service string) {
