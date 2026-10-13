@@ -16,6 +16,7 @@ package buildkit
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -79,8 +80,17 @@ func GetSolveErrorMessage(err error) error {
 	imageFromError := extractImageFromError(err)
 	isOktetoRegistry := hasOktetoRegistryImage(err)
 	isOktetoForkRegistry := !hasOktetoRegistryImage(err) && hasOktetoForkImage(err)
+	registryImage, registryStatus, isRegistryServerErr := getRegistryServerError(err)
 
 	switch {
+	// A registry answering with a 5xx status during a pull or a push is a registry error, not a BuildKit one
+	case isRegistryServerErr:
+		err = oktetoErrors.UserError{
+			E: fmt.Errorf("the registry returned '%s' for the image '%s'", registryStatus, registryImage),
+			Hint: `This is a registry error, not a build error. Please try again later.
+    If it keeps failing for this image, the registry logs show the cause.`,
+		}
+
 	case isBuildkitServiceUnavailable(err):
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
@@ -132,6 +142,11 @@ var (
 	// regexForImageFromFailedToSolveErr is the regex to extract the image from an error message
 	// buildkit solve errors provide the image name between :
 	regexForImageFromFailedToSolveErr = regexp.MustCompile(`: ([a-zA-Z0-9\.\/_-]+(:[a-zA-Z0-9.-]+)?):`)
+
+	// regexForRegistryServerErr is the regex to extract the URL and the status of a registry 5xx response from the
+	// containerd registry client errors, e.g.
+	// "unexpected status from HEAD request to https://<registry>/v2/<name>/manifests/<tag>: 500 Internal Server Error"
+	regexForRegistryServerErr = regexp.MustCompile(`unexpected status from [A-Z]+ request to (\S+): (5\d\d[A-Za-z ]*)`)
 )
 
 func extractImageFromError(err error) string {
@@ -139,6 +154,36 @@ func extractImageFromError(err error) string {
 		return matches[1]
 	}
 	return ""
+}
+
+// getRegistryServerError returns the image and the status of a registry 5xx response in err
+func getRegistryServerError(err error) (string, string, bool) {
+	matches := regexForRegistryServerErr.FindStringSubmatch(err.Error())
+	if len(matches) != 3 {
+		return "", "", false
+	}
+	return imageFromRegistryURL(matches[1]), strings.TrimSpace(matches[2]), true
+}
+
+// imageFromRegistryURL returns the image of a registry API URL: <registry>/<name>:<tag> (or @<digest>) for
+// https://<registry>/v2/<name>/manifests/<reference>, and <registry>/<name> for https://<registry>/v2/<name>/blobs/...
+func imageFromRegistryURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" || !strings.HasPrefix(u.Path, "/v2/") {
+		return rawURL
+	}
+	path := strings.TrimPrefix(u.Path, "/v2/")
+	if i := strings.LastIndex(path, "/manifests/"); i > 0 {
+		name, reference := path[:i], path[i+len("/manifests/"):]
+		if strings.Contains(reference, ":") {
+			return fmt.Sprintf("%s/%s@%s", u.Host, name, reference)
+		}
+		return fmt.Sprintf("%s/%s:%s", u.Host, name, reference)
+	}
+	if i := strings.LastIndex(path, "/blobs/"); i > 0 {
+		return fmt.Sprintf("%s/%s", u.Host, path[:i])
+	}
+	return rawURL
 }
 
 // IsRetryable returns true if err represents a transient registry error
