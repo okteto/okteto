@@ -64,6 +64,7 @@ func (m *ConnectorMetrics) StartTracking() {
 	m.queueWaitDuration = 0
 	m.maxQueuePosition = 0
 	m.lastQueueReason = ""
+	m.errReason = ""
 }
 
 // RecordQueueStatus updates queue metrics from a BuildKit API response
