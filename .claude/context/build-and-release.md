@@ -150,7 +150,7 @@ To fix vulnerabilities in the Docker image (including all bundled binaries and G
 1. Version is set via `VERSION_STRING` environment variable
 2. `make build-all` compiles for all platforms
 3. Checksums generated for each binary
-4. Binaries and checksums published (process not in this repo)
+4. Binaries and checksums published (via `scripts/ci/release.sh`, run by the CircleCI `release-job`)
 5. Docker image built with integrated tools
 
 ## Development Workflow
