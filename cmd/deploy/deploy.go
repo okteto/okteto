@@ -324,7 +324,7 @@ $ okteto deploy --no-build=true`,
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "run the deploy commands using Remote Execution")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the deployment finishes and pods are healthy")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "when using `wait`, the maximum time to wait for the resources of the deployment to be healthy")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "when using --wait, the maximum time to wait for the resources of the deployment to be healthy")
 
 	return cmd
 }
@@ -794,7 +794,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 	parentWorkflowID := uuid.New().String()
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency  '%s'", depName)
+		oktetoLog.Information("Deploying dependency '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
 		if err := validator.CheckReservedVarName(dep.Variables); err != nil {
 			return err

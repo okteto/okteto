@@ -73,16 +73,16 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 		suggest.NewStrReplaceRule("into build.ManifestBuild", "into a 'build' object"),
 		suggest.NewStrReplaceRule("in type build.infoRaw", "the 'build' object"),
 		suggest.NewStrReplaceRule("in type model.devType", "the 'dev' object"),
-		suggest.NewStrReplaceRule("into model.devType", "the 'dev' object"),
+		suggest.NewStrReplaceRule("into model.devType", "into a 'dev' object"),
 		suggest.NewStrReplaceRule("in type model.testCommandAlias", "the 'test commands' object"),
 		suggest.NewStrReplaceRule("into model.testAlias", "into a 'test' object"),
 		suggest.NewStrReplaceRule("in type model.testAlias", "the 'test' object"),
-		suggest.NewStrReplaceRule("into model.deployInfoRaw", "the 'deploy' object"),
+		suggest.NewStrReplaceRule("into model.deployInfoRaw", "into a 'deploy' object"),
 		suggest.NewStrReplaceRule("in type model.deployInfoRaw", "the 'deploy' object"),
-		suggest.NewStrReplaceRule("into model.deployCommand", "the 'deploy' object"),
-		suggest.NewStrReplaceRule("in type model.deployCommand", "the 'deploy' object"),
+		suggest.NewStrReplaceRule("into model.deployCommand", "into a 'commands' item"),
+		suggest.NewStrReplaceRule("in type model.deployCommand", "a 'commands' item"),
 
-		suggest.NewStrReplaceRule("into model.syncRaw", "the 'sync' section"),
+		suggest.NewStrReplaceRule("into model.syncRaw", "into the 'sync' section"),
 		suggest.NewStrReplaceRule("in type model.syncRaw", "the 'sync' section"),
 
 		// yaml types

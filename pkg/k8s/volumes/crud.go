@@ -206,7 +206,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 				return err
 			}
 
-			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeout.String())
+			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeoutDuration.String())
 		}
 
 		if i%10 == logDebounceInterval {

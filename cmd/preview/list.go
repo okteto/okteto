@@ -96,7 +96,7 @@ func List(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "overwrites the current Okteto Namespace")
-	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize Preview Environments using labels (multiple --label flags accepted)")
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "filter Preview Environments by label (multiple --label flags accepted)")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 
 	return cmd

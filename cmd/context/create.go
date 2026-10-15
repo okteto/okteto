@@ -362,7 +362,7 @@ func checkCLIVersion(currentVersion, recommendedVersion, minMajorMinor string) e
 		fmt.Sprintf("%v.%v", recVersion.Major(), recVersion.Minor()),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to recommended cluster version: %v", err)
+		return fmt.Errorf("failed to parse recommended cluster version: %v", err)
 	}
 
 	minV, err := semver.NewVersion(minMajorMinor)

@@ -537,7 +537,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 		}
 
 		if time.Now().After(to) && retries > 10 {
-			return fmt.Errorf("initial file scan not completed after %s, please try again", s.timeout.String())
+			return fmt.Errorf("initial file scan not completed after %s, please try again", timeoutDuration.String())
 		}
 
 		select {

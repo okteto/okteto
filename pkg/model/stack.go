@@ -565,7 +565,7 @@ type errDependsOnItself struct {
 }
 
 func (e *errDependsOnItself) Error() string {
-	return fmt.Sprintf("%s: Service '%s' depends cannot depend of itself.", errDependsOn.Error(), e.service)
+	return fmt.Sprintf("%s: Service '%s' cannot depend on itself.", errDependsOn.Error(), e.service)
 }
 
 func (e *errDependsOnItself) Unwrap() error {
@@ -607,7 +607,7 @@ func (cs ComposeServices) ValidateDependsOn(svcs []string) error {
 	dependencyCycle := utils.GetDependentCyclic(cs.toGraph())
 	if len(dependencyCycle) > 0 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
-		return fmt.Errorf("%w: There was a cyclic dependendecy between %s", errDependsOn, svcsDependents)
+		return fmt.Errorf("%w: There was a cyclic dependency between %s", errDependsOn, svcsDependents)
 	}
 	return nil
 }

@@ -111,7 +111,7 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 
 	// If more than 1 name is found, we print a message to the user know the name that was inferred
 	if len(possibleNames) > 1 {
-		oktetoLog.Warning("found several dev environments candidates to infer the name: %s. Using '%s'", strings.Join(possibleNames, ", "), possibleNames[0])
+		oktetoLog.Warning("found several dev environment candidates to infer the name: %s. Using '%s'", strings.Join(possibleNames, ", "), possibleNames[0])
 	}
 
 	oktetoLog.Infof("inferred name from dev environment '%s'", possibleNames[0])

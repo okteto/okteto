@@ -613,11 +613,11 @@ func GetContextCertificate() (*x509.Certificate, error) {
 				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
 				switch {
 				case hoursSinceInstall <= hoursInADay: // less than 1 day
-					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
+					oktetoLog.Information("Your Okteto installation is using self-signed certificates. Please switch to your own certificates before production use.")
 				case hoursSinceInstall <= hoursInAWeek: // less than 1 week
-					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
+					oktetoLog.Warning("Your Okteto installation has been using self-signed certificates for more than a day. It's important to use your own certificates before production use.")
 				default: // more than 1 week
-					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using self-signed certificates for more than a week. It's important to use your own certificates before production use.")
 				}
 			}
 		})
@@ -661,11 +661,11 @@ func GetContextCertificateStateless(certB64 string) (*x509.Certificate, error) {
 				hoursInAWeek := 168
 				switch {
 				case hoursSinceInstall <= float64(hoursInADay): // less than 1 day
-					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
+					oktetoLog.Information("Your Okteto installation is using self-signed certificates. Please switch to your own certificates before production use.")
 				case hoursSinceInstall <= float64(hoursInAWeek): // less than 1 week
-					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
+					oktetoLog.Warning("Your Okteto installation has been using self-signed certificates for more than a day. It's important to use your own certificates before production use.")
 				default: // more than 1 week
-					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using self-signed certificates for more than a week. It's important to use your own certificates before production use.")
 				}
 			}
 		})

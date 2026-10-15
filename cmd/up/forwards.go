@@ -192,7 +192,7 @@ func addToForwarder(up *upContext) error {
 			if forwardErr != nil {
 				return forwardErr
 			}
-			return fmt.Errorf("could not create local ports after %s", up.Dev.Timeout.Resources.String())
+			return fmt.Errorf("could not create local ports after %s", (10 * time.Second).String())
 		}
 	}
 }

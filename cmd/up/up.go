@@ -674,7 +674,7 @@ func (up *upContext) applyToApps(ctx context.Context) chan error {
 func (up *upContext) setDevContainer(app apps.App) error {
 	devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 	if devContainer == nil {
-		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+		return fmt.Errorf("container '%s' does not exist in application '%s'", up.Dev.Container, up.Dev.Name)
 	}
 
 	up.Dev.Container = devContainer.Name

@@ -574,7 +574,7 @@ func (r *Runner) getContextPath(cwd, manifestPath string) string {
 func (r *Runner) fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	c, err := r.oktetoClientProvider.Provide()
 	if err != nil {
-		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %w", err)
+		return nil, fmt.Errorf("failed to provide okteto client for fetching cluster metadata: %w", err)
 	}
 	uc := c.User()
 

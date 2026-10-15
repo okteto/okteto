@@ -94,7 +94,7 @@ func (k *KubeconfigCMD) execute(okCtx *okteto.Context, kubeconfigPaths []string)
 		return err
 	}
 
-	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okCtx.Namespace, kubeconfigPaths)
+	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okCtx.Namespace, kubeconfigPaths[0])
 	return nil
 }
 

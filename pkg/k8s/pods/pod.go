@@ -252,7 +252,7 @@ func Restart(ctx context.Context, dev *model.Dev, namespace string, c *kubernete
 			if strings.Contains(err.Error(), "not found") {
 				return nil
 			}
-			return fmt.Errorf("error deleting kubernetes service: %w", err)
+			return fmt.Errorf("error deleting kubernetes pod: %w", err)
 		}
 	}
 

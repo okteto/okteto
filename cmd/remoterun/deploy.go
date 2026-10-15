@@ -73,7 +73,7 @@ divert:
   driver: istio
   namespace: ns-1
   service: service-b
-  virtualService: service-b
+  virtualServices: [{name: service-b, namespace: ns-1}]
   hosts:
     - virtualService: service-a
 	  namespace: ns-a

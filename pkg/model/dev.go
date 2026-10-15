@@ -506,7 +506,7 @@ func (dev *Dev) expandEnvFiles() error {
 
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
-			return fmt.Errorf("error parsing env_file %s: %w", filename, err)
+			return fmt.Errorf("error parsing env file %s: %w", filename, err)
 		}
 
 		for _, e := range dev.Environment {

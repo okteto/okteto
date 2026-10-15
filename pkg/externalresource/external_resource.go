@@ -101,7 +101,7 @@ func (er *ExternalResource) SetURLUsingEnvironFile(name string, dynamicEnvs map[
 		}
 
 		if endpoint.Url == "" {
-			return fmt.Errorf("no value associated to the url '%s' of the external resource '%s'.", endpoint.Name, name)
+			return fmt.Errorf("no value associated to the url of the endpoint '%s' of the external resource '%s'.", endpoint.Name, name)
 		}
 	}
 

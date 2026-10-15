@@ -35,7 +35,7 @@ type ErrApplicationNotFound struct {
 }
 
 func (e ErrApplicationNotFound) Error() string {
-	return fmt.Sprintf("the application '%s' referred by your okteto manifest doesn't exist", e.Name)
+	return fmt.Sprintf("the application '%s' referred to by your okteto manifest doesn't exist", e.Name)
 }
 func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, namespace, c)

@@ -121,7 +121,7 @@ func NewOktetoClient(opts ...Option) (*Client, error) {
 	if cfg.Token == "" {
 		okCtx, exists := GetContextStore().Contexts[cfg.CtxName]
 		if !exists {
-			return nil, fmt.Errorf("%s context doesn't exists", cfg.CtxName)
+			return nil, fmt.Errorf("%s context doesn't exist", cfg.CtxName)
 		}
 		cfg.Token = okCtx.Token
 	}
@@ -377,7 +377,7 @@ func translateAPIErr(err error) error {
 	case "internal-server-error":
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
-		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
+		return fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized\\n\"":
 		return fmt.Errorf(oktetoErrors.ErrNotLogged, GetContext().Name)
 	case "non-200 OK status code: 401 Unauthorized body: \"not-authorized: token is expired\\n\"":

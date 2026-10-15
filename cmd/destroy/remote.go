@@ -118,7 +118,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 
 	cwd, err := workdirCtrl.Get()
 	if err != nil {
-		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
+		return fmt.Errorf("failed to resolve working directory for remote destroy: %w", err)
 	}
 
 	ctxPath := cwd
@@ -164,10 +164,10 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			return oktetoErrors.UserError{
-				E: fmt.Errorf("error during development environment deployment: %w", cmdErr.Err),
+				E: fmt.Errorf("error during destroy of the development environment: %w", cmdErr.Err),
 			}
 		}
-		oktetoLog.SetStage("remote deploy")
+		oktetoLog.SetStage("remote destroy")
 		var userErr oktetoErrors.UserError
 		if errors.As(err, &userErr) {
 			return userErr

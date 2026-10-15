@@ -30,7 +30,6 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
-	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -886,7 +885,7 @@ func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error)
 			securityContextLength := 2
 			parts := strings.Split(rawSecurityContext, ":")
 			if len(parts) != securityContextLength {
-				return fmt.Errorf("securityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
+				return fmt.Errorf("user '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
 			}
 			runAsUser, err := strconv.ParseInt(parts[0], 10, 64)
 			if err != nil {
@@ -1043,7 +1042,7 @@ func getPortWithMapping(p *PortRaw, portString string) error {
 	localToContainer := strings.Split(portString, ":")
 	maxLength := 3
 	if len(localToContainer) > maxLength {
-		return fmt.Errorf(forward.MalformedPortForward, portString)
+		return fmt.Errorf("cannot convert '%s' to a port: must be of the form 'hostPort:containerPort'", portString)
 	}
 
 	containerPortString := localToContainer[len(localToContainer)-1]
@@ -1264,7 +1263,7 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 	healthCheckLength := 2
 	if err == nil {
 		if len(rawList) == 0 {
-			return fmt.Errorf("healtcheck.test can not be an empty list")
+			return fmt.Errorf("healthcheck.test can not be an empty list")
 		}
 		switch rawList[0] {
 		case "NONE":
@@ -1274,14 +1273,14 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 			*healthcheckTest = rawList[1:]
 		case "CMD-SHELL":
 			if len(rawList) != healthCheckLength {
-				return fmt.Errorf("'CMD-SHELL' healtcheck.test must have exactly 2 elements")
+				return fmt.Errorf("'CMD-SHELL' healthcheck.test must have exactly 2 elements")
 			}
 			*healthcheckTest, err = shellquote.Split(rawList[1])
 			if err != nil {
 				return err
 			}
 		default:
-			return fmt.Errorf("when 'healtcheck.test' is a list the first item must be either 'NONE', 'CMD' or 'CMD-SHELL'")
+			return fmt.Errorf("when 'healthcheck.test' is a list the first item must be either 'NONE', 'CMD' or 'CMD-SHELL'")
 		}
 		return nil
 	}

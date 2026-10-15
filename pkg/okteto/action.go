@@ -73,7 +73,7 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
-				pipelineName: actionName,
+				pipelineName: pipelineName,
 				timeout:      timeout,
 			}
 		case <-ticker.C:
@@ -108,7 +108,7 @@ func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineN
 		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't progress after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
-				pipelineName: actionName,
+				pipelineName: pipelineName,
 				timeout:      timeout,
 			}
 		case <-ticker.C:

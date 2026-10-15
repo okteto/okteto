@@ -90,7 +90,7 @@ func (up *upContext) activate() error {
 
 	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; up.Dev.Autocreate && (!ok || v != model.OktetoUpCmd) {
 		return oktetoErrors.UserError{
-			E:    fmt.Errorf("app '%s' already exist", up.Dev.Name),
+			E:    fmt.Errorf("app '%s' already exists", up.Dev.Name),
 			Hint: "use a different name in your okteto.yaml, or remove the autocreate property",
 		}
 	}

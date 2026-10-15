@@ -86,7 +86,7 @@ func (deploy) JSONSchema() *jsonschema.Schema {
 	divertProps.Set("driver", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Enum:        []interface{}{"istio"},
-		Description: "The backend for divert. Currently, only 'istio' is supported",
+		Description: "The backend for divert. Supported values are 'nginx' (default) and 'istio'",
 	})
 	divertProps.Set("namespace", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},

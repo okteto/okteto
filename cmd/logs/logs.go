@@ -149,7 +149,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "the path to the Okteto Manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().StringVarP(&options.Context, "context", "c", "", "overwrite the current Okteto Context")
-	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by container name (regular expression)")
+	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by pod name (regular expression)")
 	cmd.Flags().DurationVarP(&options.Since, "since", "s", defaultSinceOptionHoursValue*time.Hour, "return logs newer than a relative duration like 5s, 2m, or 3h")
 	cmd.Flags().Int64Var(&options.Tail, "tail", defaultTailOptionValue, "the number of lines from the end of the logs to show")
 	cmd.Flags().BoolVarP(&options.Timestamps, "timestamps", "t", false, "print timestamps")

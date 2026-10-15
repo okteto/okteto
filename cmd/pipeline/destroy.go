@@ -65,7 +65,7 @@ func destroy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 		Use:   "destroy",
 		Short: "Runs a job in the cluster that clones a repository and executes okteto destroy on it.",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#destroy-1"),
-		Example: `To run the destroy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
+		Example: `To run the destroy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
 okteto pipeline destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags.dependenciesIsSet = cmd.Flags().Changed("dependencies")

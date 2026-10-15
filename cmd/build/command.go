@@ -157,7 +157,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 	cmd.Flags().StringVarP(&options.Target, "target", "", "", "target build stage to build (optional)")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "list of cache source images (optional)")
-	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "image tag for exported cache when build (optional)s")
+	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "image tag for exported cache when building (optional)")
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", string(TTYFormat), "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables (optional)")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret exposed to the build. Formats: id=mysecret,src=/local/secret (file) or id=mysecret,env=MY_ENV_VAR (env var)")

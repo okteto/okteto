@@ -240,7 +240,7 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	devProps.Set("metadata", &jsonschema.Schema{
 		Type:                 &jsonschema.Type{Types: []string{"object"}},
 		Title:                "metadata",
-		Description:          withManifestRefDocLink("The metadata field allows to inject labels and annotations into your development container.", "metadata-object-optional"),
+		Description:          withManifestRefDocLink("The metadata field allows you to inject labels and annotations into your development container.", "metadata-object-optional"),
 		Properties:           metadataProps,
 		AdditionalProperties: jsonschema.FalseSchema,
 	})
@@ -348,7 +348,7 @@ func (dev) JSONSchema() *jsonschema.Schema {
 
 	devProps.Set("probes", &jsonschema.Schema{
 		Title:       "probes",
-		Description: withManifestRefDocLink("Used to enable or disable the Kubernetes probes of your development container. If set to 'true' ", "probes-boolean-optional"),
+		Description: withManifestRefDocLink("Used to enable or disable the Kubernetes probes of your development container. If set to 'true', the liveness, readiness and startup probes are enabled.", "probes-boolean-optional"),
 		OneOf: []*jsonschema.Schema{
 			{
 				Type:    &jsonschema.Type{Types: []string{"boolean"}},
@@ -513,7 +513,7 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	devProps.Set("services", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "services",
-		Description: withManifestRefDocLink("A list of services that you want to put on developer mode along your development container. The services work just like the development container, with one exception: they won't be able to start an interactive session.", "services-object-optional"),
+		Description: withManifestRefDocLink("A list of services that you want to put on development mode alongside your development container. The services work just like the development container, with one exception: they won't be able to start an interactive session.", "services-object-optional"),
 		Items: &jsonschema.Schema{
 			Type:                 &jsonschema.Type{Types: []string{"object"}},
 			Properties:           serviceProps,

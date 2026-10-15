@@ -53,17 +53,17 @@ var (
 )
 
 const (
-	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#build"
+	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
 	buildExample     = `build:
   my-service:
     context: .`
 	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_SHA: image tag sha256"
-	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#deploy"
+	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"
 	deployExample     = `deploy:
   commands:
   - name: Deploy
     command: echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'`
-	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
+	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"
 	devExample     = `dev:
   sample:
     image: okteto/dev:latest
@@ -75,7 +75,7 @@ const (
       - name=$USER
     forward:
       - 8080:80`
-	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies"
+	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional"
 	dependenciesExample     = `dependencies:
   - https://github.com/okteto/sample`
 
@@ -619,7 +619,7 @@ func (m *Manifest) validateDivert() error {
 			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the nginx driver")
 		}
 		if len(m.Deploy.Divert.Hosts) > 0 {
-			return fmt.Errorf("the field 'deploy.divert.host' is not supported with the nginx driver")
+			return fmt.Errorf("the field 'deploy.divert.hosts' is not supported with the nginx driver")
 		}
 	case constants.OktetoDivertIstioDriver:
 		if m.Deploy.Divert.DeprecatedService != "" {

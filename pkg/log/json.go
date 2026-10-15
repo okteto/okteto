@@ -161,7 +161,7 @@ func (w *JSONWriter) Information(format string, args ...interface{}) {
 
 // Question prints a message with the question symbol first, and the text in magenta
 func (*JSONWriter) Question(_ string, _ ...interface{}) error {
-	return fmt.Errorf("can't ask questions on json mode")
+	return fmt.Errorf("can't ask questions in json mode")
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow

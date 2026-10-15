@@ -378,7 +378,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 
 	fakeOktetoClient := &client.FakeOktetoClient{
 		Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-		Users:           client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		Users:           client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")),
 		KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 	}
 
@@ -452,7 +452,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(nil, nil),
-				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")),
 				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
 			expectedAccess: true,
@@ -465,7 +465,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNamespaceNotFound),
-				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")),
 				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
 			expectedAccess: true,
@@ -478,7 +478,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNamespaceNotFound),
-				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")),
 				Preview: client.NewFakePreviewClient(&client.FakePreviewResponse{
 					ErrGetPreview: oktetoErrors.ErrNamespaceNotFound,
 				}),
@@ -493,7 +493,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(nil, nil),
-				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")),
 				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
 			expectedAccess: true,
@@ -506,7 +506,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(nil, nil),
-				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+				Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again")),
 				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			},
 			expectedAccess: false,
@@ -594,7 +594,7 @@ func TestGetUserContext(t *testing.T) {
 			input: input{
 				ns: "test",
 				userErr: []error{
-					fmt.Errorf("unauthorized. Please run 'okteto context url' and try again"),
+					fmt.Errorf("unauthorized. Please run 'okteto context use <url>' and try again"),
 				},
 			},
 			output: output{

@@ -454,7 +454,7 @@ func validateServices(buildSection build.ManifestBuild, svcsToBuild []string) er
 		}
 	}
 	if len(invalid) != 0 {
-		return fmt.Errorf("invalid services names, not found at manifest: %v", invalid)
+		return fmt.Errorf("invalid service names, not found at manifest: %v", invalid)
 	}
 	return nil
 }

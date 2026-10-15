@@ -119,7 +119,7 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 	}
 	if endpointType == "gateway" {
 		if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
-			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoDefaultGatewayTypeEnvVar)
+			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoComposeEndpointsTypeEnvVar)
 		}
 		oktetoLog.Infof("Using HTTPRoute for endpoints with the configured gateway %s/%s (forced by %s=gateway)", metadata.GatewayNamespace, metadata.GatewayName, oktetoComposeEndpointsTypeEnvVar)
 		return true, metadata, nil
@@ -653,7 +653,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	if old.GetLabels()[model.StackNameLabel] != svcK8s.GetLabels()[model.StackNameLabel] {
-		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
+		oktetoLog.Warning("skipping creation of kubernetes service '%s' due to name collision with service in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
 		return nil
 	}
 
@@ -894,7 +894,7 @@ func DisplayVolumeMountWarnings(warnings []string) {
 
 func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	for previousName, newName := range previousToNewNameMap {
-		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
+		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect service discovery.", previousName, newName)
 	}
 }
 

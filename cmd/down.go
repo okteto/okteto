@@ -49,7 +49,7 @@ func Down(at analyticsTrackerInterface, k8sLogsCtrl *io.K8sLogger, fs afero.Fs) 
 
 	cmd := &cobra.Command{
 		Use:   "down [devContainer]",
-		Short: "Deactivate your Development Container, stops the file synchronization service, and restores your previous deployment configuration",
+		Short: "Deactivate your Development Container, stop the file synchronization service, and restore your previous deployment configuration",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/okteto-cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

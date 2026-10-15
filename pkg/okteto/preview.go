@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	ErrLabelsFeatureNotSupported = fmt.Errorf(`Filtering preview environments by label requires a more recent version of Okteto.
+	ErrLabelsFeatureNotSupported = fmt.Errorf(`Using labels with preview environments requires a more recent version of Okteto.
 
     Consider removing the "--label" flag, or please upgrade to the latest version.
 

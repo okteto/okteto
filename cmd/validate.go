@@ -139,7 +139,7 @@ func Validate(fs afero.Fs) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.file, "file", "f", "", "the path to the Okteto Manifest or Dockerfile")
+	cmd.Flags().StringVarP(&options.file, "file", "f", "", "the path to the Okteto Manifest")
 
 	return cmd
 }

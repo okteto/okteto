@@ -170,11 +170,11 @@ func DeleteStateFile(devName, devNamespace string) error {
 func GetState(devName, devNamespace string) (UpState, error) {
 	var result UpState
 	if devNamespace == "" {
-		return Failed, fmt.Errorf("can't update state file, namespace is empty")
+		return Failed, fmt.Errorf("can't read state file, namespace is empty")
 	}
 
 	if devName == "" {
-		return Failed, fmt.Errorf("can't update state file, name is empty")
+		return Failed, fmt.Errorf("can't read state file, name is empty")
 	}
 
 	statePath := filepath.Join(GetAppHome(devNamespace, devName), stateFile)

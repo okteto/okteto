@@ -130,7 +130,7 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("'%s' deploy didn't finish after %s", namespace, timeout.String())
+			return fmt.Errorf("'%s' destroy all didn't finish after %s", namespace, timeout.String())
 		case <-ticker.C:
 			ns, err := c.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 			if err != nil {

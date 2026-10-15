@@ -385,7 +385,7 @@ func (s *OktetoSelector) prepareTemplates() error {
 
 	tpls.help = tpl
 
-	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context <URL>' to add a new cluster context" | oktetoblue }}`)
+	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context use <URL>' to add a new cluster context" | oktetoblue }}`)
 
 	tpl, err = template.New("").Funcs(tpls.FuncMap).Parse(extraInfo)
 	if err != nil {
