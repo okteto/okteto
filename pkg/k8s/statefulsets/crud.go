@@ -113,7 +113,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return sfsList.Items, nil
 }
 
-// Get returns a deployment object by name
+// Get returns a statefulset object by name
 func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	return c.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 }

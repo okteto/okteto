@@ -23,7 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-// DeployPipelineOptions defines the options that can be added to a deploy command
+// DeployPipelineOptions defines the options that can be added to a pipeline deploy command
 type DeployPipelineOptions struct {
 	Workdir     string
 	Namespace   string
@@ -37,7 +37,7 @@ type DeployPipelineOptions struct {
 	Wait        bool
 }
 
-// DestroyPipelineOptions defines the options that can be added to a deploy command
+// DestroyPipelineOptions defines the options that can be added to a pipeline destroy command
 type DestroyPipelineOptions struct {
 	Workdir    string
 	Namespace  string
@@ -46,7 +46,7 @@ type DestroyPipelineOptions struct {
 	Token      string
 }
 
-// RunOktetoDeployPipeline runs an okteto deploy command
+// RunOktetoDeployPipeline runs an okteto pipeline deploy command
 func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOptions) error {
 	cmd := exec.Command(oktetoPath, "pipeline", "deploy")
 	if deployOptions.Workdir != "" {
@@ -98,7 +98,7 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	return nil
 }
 
-// RunOktetoPipelineDestroy runs an okteto destroy command
+// RunOktetoPipelineDestroy runs an okteto pipeline destroy command
 func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipelineOptions) error {
 	log.Printf("okteto destroy %s", oktetoPath)
 	cmd := exec.Command(oktetoPath, "pipeline", "destroy")

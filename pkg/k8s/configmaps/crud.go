@@ -34,7 +34,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 	return cf, nil
 }
 
-// List returns a list of configmap that match labelselector
+// List returns a list of configmaps that match the label selector
 func List(ctx context.Context, namespace, labelSelector string, c kubernetes.Interface) ([]apiv1.ConfigMap, error) {
 	cm, err := c.CoreV1().ConfigMaps(namespace).List(
 		ctx,

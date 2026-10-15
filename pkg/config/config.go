@@ -49,7 +49,7 @@ const (
 	Pulling = "pulling"
 	// StartingSync up preparing syncthing
 	StartingSync = "startingSync"
-	// Synchronizing up is syncthing
+	// Synchronizing up is synchronizing
 	Synchronizing = "synchronizing"
 	// Ready up finished
 	Ready = "ready"
@@ -75,7 +75,7 @@ func GetBinaryName() string {
 	return filepath.Base(GetBinaryFullPath())
 }
 
-// GetBinaryFullPath returns the name of the binary
+// GetBinaryFullPath returns the full path of the binary
 func GetBinaryFullPath() string {
 	return os.Args[0]
 }

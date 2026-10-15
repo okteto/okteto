@@ -41,7 +41,7 @@ type DeployOptions struct {
 	Wait             bool
 }
 
-// DestroyOptions defines the options that can be added to a deploy command
+// DestroyOptions defines the options that can be added to a destroy command
 type DestroyOptions struct {
 	Workdir      string
 	ManifestPath string

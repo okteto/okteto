@@ -42,7 +42,7 @@ type actionStruct struct {
 	Status graphql.String
 }
 
-// GetAction gets a installer job given its name
+// GetAction gets an installer job given its name
 func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) (*types.Action, error) {
 	oktetoLog.Infof("getting action '%s' on %s", name, namespace)
 	queryStruct := getActionQueryStruct{}

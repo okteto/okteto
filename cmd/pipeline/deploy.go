@@ -375,7 +375,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 }
 
 func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
-	// wait to Action be progressing
+	// wait for the Action to be progressing
 	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
 		return err
 	}
@@ -622,7 +622,7 @@ func parseVariablesListFromCfgVariablesString(vEncodedString string) ([]string, 
 	return vListString, nil
 }
 
-// cfgDataToDeployOptions translates configmap labels and data into DeployOptions
+// cfgToDeployOptions translates configmap labels and data into DeployOptions
 func cfgToDeployOptions(cfg *v1.ConfigMap) *DeployOptions {
 	if cfg == nil || cfg.Data == nil {
 		return nil

@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// CommitString is the commit used to build the server
+// CommitString is the commit used to build the clean tool
 var CommitString string
 
 var exceptByParent = map[string]struct{}{

@@ -916,7 +916,7 @@ func (c *ComposeSectionInfo) UnmarshalYAML(unmarshal func(interface{}) error) er
 	return err
 }
 
-// MarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (c *ComposeSectionInfo) MarshalYAML() (interface{}, error) {
 	if len(c.ComposesInfo) == 1 {
 		return c.ComposesInfo[0], nil

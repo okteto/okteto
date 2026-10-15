@@ -284,7 +284,7 @@ func (c *Command) initOktetoContext(ctx context.Context, ctxOptions *Options) er
 		oktetoLog.Infof("error getting cluster info: %v", err)
 	}
 
-	// once we have namespace and user identify we are able to retrieve the dynamic token for the namespace
+	// once we have namespace and user identity we are able to retrieve the dynamic token for the namespace
 	oktetoLog.Debug("updating okteto context token")
 	err = c.kubetokenController.updateOktetoContextToken(userContext)
 	if err != nil {

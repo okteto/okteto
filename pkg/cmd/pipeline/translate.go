@@ -72,7 +72,7 @@ const (
 	// maxLogOutput is the maximum size that we allow to allocate for logs.
 	// Specifically 800kb. The limit on configmaps is 1Mb but we want to leave some
 	// room for the other data stored in there.
-	// Note that the is the limit after encoding the logs to base64 which is how
+	// Note that this is the limit after encoding the logs to base64 which is how
 	// the logs are stored in the configmap.
 	maxLogOutput = 800 << (10 * 1)
 
@@ -85,7 +85,7 @@ const (
 // See: https://stackoverflow.com/a/4715480/1100238
 var maxLogOutputRaw = int(math.Floor(float64(maxLogOutput)*3) / 4)
 
-// CfgData represents the data to be include in a configmap
+// CfgData represents the data to be included in a configmap
 type CfgData struct {
 	Name       string
 	Namespace  string
@@ -279,7 +279,7 @@ func TranslatePipelineName(name string) string {
 	return fmt.Sprintf("%s%s", ConfigmapNamePrefix, format.ResourceK8sMetaString(name))
 }
 
-// UpdateLatestUpBranch adds a new phase to the configmap with the duration in seconds
+// UpdateLatestUpBranch stores the given branch as the dev-branch field of the configmap
 func UpdateLatestUpBranch(ctx context.Context, name, namespace, branch string, c kubernetes.Interface) error {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {
@@ -295,7 +295,7 @@ func UpdateLatestUpBranch(ctx context.Context, name, namespace, branch string, c
 }
 
 func translateOutput(output *bytes.Buffer) []byte {
-	// If the output is larger than the currentMaxLimit for the logs trim it.
+	// If the output is larger than the maxLogOutputRaw for the logs trim it.
 	// We can't really truncate the buffer since we would end up with an invalid json
 	// line for the last line, so we pick lines from the end while the line fits
 	var data []byte
@@ -417,7 +417,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	return nil
 }
 
-// AddDevAnnotations add deploy labels to the deployments/sfs
+// AddDevAnnotations adds dev annotations to the deployments/sfs
 func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) {
 	repo := os.Getenv(model.GithubRepositoryEnvVar)
 	for devName, dev := range manifest.Dev {

@@ -855,7 +855,7 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	err = fs.MkdirAll(oktetoHome, 0700)
 	require.NoError(t, err)
 
-	// Set the Okteto home to facilitate where the dockerfile will be created
+	// Set the Okteto home to control where the dockerfile will be created
 	t.Setenv(constants.OktetoFolderEnvVar, oktetoHome)
 
 	expectedContext, err := filepath.Abs(".")

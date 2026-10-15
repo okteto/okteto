@@ -100,7 +100,7 @@ func (oc *OutputController) Printf(format string, args ...any) {
 	fmt.Fprint(oc.out, string(bytes))
 }
 
-// Infof prints a information message to the user
+// Infof prints an information message to the user
 func (oc *OutputController) Infof(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	msg = oc.decorator.Information(msg)
@@ -172,7 +172,7 @@ func (oc *OutputController) Spinner(msg string) OktetoSpinner {
 	return oc.spinner
 }
 
-// Write logs into the buffer but does not print anything
+// Write formats the message and writes it to the output
 func (oc *OutputController) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	if !strings.HasSuffix(msg, "\n") {

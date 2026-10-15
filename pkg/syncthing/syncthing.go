@@ -450,7 +450,7 @@ func (s *Syncthing) Overwrite(ctx context.Context) error {
 	return nil
 }
 
-// IsAllOverwritten checks if all overwrite operations has been completed
+// IsAllOverwritten checks if all overwrite operations have been completed
 func (s *Syncthing) IsAllOverwritten() bool {
 	for _, folder := range s.Folders {
 		if !folder.Overwritten {
@@ -517,7 +517,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	oktetoLog.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
 	timeoutDuration := s.timeout * 10
-	to := time.Now().Add(timeoutDuration) // 5 minutes
+	to := time.Now().Add(timeoutDuration) // 10 minutes with the default 60s timeout
 
 	for retries := 0; ; retries++ {
 		status, err := s.GetSyncthingStatus(ctx, folder, local)
@@ -837,7 +837,7 @@ func (s *Syncthing) IsLocalRunningOutOfSpace(ctx context.Context) bool {
 	return false
 }
 
-// GetInSynchronizationFile the files syncthing
+// GetInSynchronizationFile returns the largest file syncthing is synchronizing
 func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 	events := []ItemEvent{}
 	params := map[string]string{
@@ -901,7 +901,7 @@ func (s *Syncthing) HardTerminate() error {
 
 		name, err := p.Name()
 		if err != nil {
-			// it's expected go get EOF if the process no longer exists at this point.
+			// it's expected to get EOF if the process no longer exists at this point.
 			if err != io.EOF {
 				oktetoLog.Infof("error getting name for process %d: %s", p.Pid, err.Error())
 			}

@@ -38,7 +38,7 @@ var (
 
 // this is all based on enry's main command https://github.com/src-d/enry
 
-// ProcessDirectory walks a directory and returns a list of guess for the programming language
+// ProcessDirectory walks a directory and returns the best guess for the programming language
 func ProcessDirectory(root string) (string, error) {
 	out := make(map[string][]string)
 	analysisTimeout := false

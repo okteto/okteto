@@ -42,8 +42,8 @@ deploy:
       command: echo "inner var ${INNER_VAR}"`
 )
 
-// TestDeployInDeployRemote test the scenario where an okteto deploy is run inside an okteto deploy in remote
-// image base for the child deploy should be the specified at the child manifest and not the parent
+// TestDeployInDeployRemote tests the scenario where an okteto deploy is run inside an okteto deploy in remote
+// base image for the child deploy should be the one specified at the child manifest and not the parent
 func TestDeployInDeployRemote(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)

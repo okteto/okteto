@@ -56,7 +56,7 @@ func (*TTYWriter) Debugf(format string, args ...interface{}) {
 	}
 }
 
-// Info writes a info-level log
+// Info writes an info-level log
 func (*TTYWriter) Info(args ...interface{}) {
 	log.out.Info(args...)
 	if log.file != nil {
@@ -64,7 +64,7 @@ func (*TTYWriter) Info(args ...interface{}) {
 	}
 }
 
-// Infof writes a info-level log with a format
+// Infof writes an info-level log with a format
 func (*TTYWriter) Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	if log.file != nil {
@@ -72,7 +72,7 @@ func (*TTYWriter) Infof(format string, args ...interface{}) {
 	}
 }
 
-// Error writes a error-level log
+// Error writes an error-level log
 func (*TTYWriter) Error(args ...interface{}) {
 	log.out.Error(args...)
 	if log.file != nil {
@@ -80,7 +80,7 @@ func (*TTYWriter) Error(args ...interface{}) {
 	}
 }
 
-// Errorf writes a error-level log with a format
+// Errorf writes an error-level log with a format
 func (*TTYWriter) Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
@@ -88,7 +88,7 @@ func (*TTYWriter) Errorf(format string, args ...interface{}) {
 	}
 }
 
-// Fatalf writes a error-level log with a format
+// Fatalf writes an error-level log with a format
 func (*TTYWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
@@ -146,7 +146,7 @@ func (w *TTYWriter) Warning(format string, args ...interface{}) {
 	log.spinner.unhold()
 }
 
-// FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
+// FWarning prints a message with the warning symbol first, and the text in yellow into a specific writer
 func (w *TTYWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	log.spinner.hold()
@@ -200,7 +200,7 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 
 }
 
-// FPrintln prints a line with format
+// FPrintln prints a line to the given writer
 func (w *TTYWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	fmt.Fprintln(writer, msg)
@@ -252,7 +252,7 @@ func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 	}
 }
 
-// Write logs into the buffer but does not print anything
+// Write writes to the output without adding to the buffer
 func (w *TTYWriter) Write(p []byte) (n int, err error) {
 	return w.out.Out.Write(p)
 }

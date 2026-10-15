@@ -129,7 +129,7 @@ type SyncFolder struct {
 	RemotePath string `json:"remotePath,omitempty" yaml:"remotePath,omitempty"`
 }
 
-// ExternalVolume represents a external volume in the development container
+// ExternalVolume represents an external volume in the development container
 type ExternalVolume struct {
 	Name      string
 	SubPath   string
@@ -255,7 +255,7 @@ func NewDev() *Dev {
 	}
 }
 
-// loadAbsPaths makes every path used in the dev struct an absolute paths
+// loadAbsPaths makes every path used in the dev struct an absolute path
 func (dev *Dev) loadAbsPaths(devPath string, fs afero.Fs) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
@@ -486,7 +486,7 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
-// expandEnvFiles reads each env file and append all the variables to the environment
+// expandEnvFiles reads each env file and appends all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
 		filename, err := env.ExpandEnv(envFile)
@@ -734,7 +734,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	dev.Secrets = append(dev.Secrets, p)
 }
 
-// LoadForcePull force the dev pods to be recreated and pull the latest version of their image
+// LoadForcePull forces the dev pods to be recreated and pull the latest version of their image
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways

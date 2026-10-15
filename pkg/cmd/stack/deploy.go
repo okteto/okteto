@@ -171,7 +171,7 @@ func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployO
 	return nil
 }
 
-// Deploy deploys a stack
+// deployCompose deploys a stack
 func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	if err := validateServicesToDeploy(ctx, s, options, sd.K8sClient); err != nil {
@@ -833,7 +833,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, servicesToDeplo
 
 	for name, svc := range s.Services {
 		// If there is a subset of services to deploy, and the service is not there, skip it
-		// Otherwise (the services is among the subset to deploy, or there is no subset and everything was deployed),
+		// Otherwise (the service is among the subset to deploy, or there is no subset and everything was deployed),
 		// count it
 		if len(cacheServicesToDeploy) > 0 && !cacheServicesToDeploy[name] {
 			continue
@@ -953,7 +953,7 @@ func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-// AddDependentServicesIfNotPresent adds dependands services to deploy
+// AddDependentServicesIfNotPresent adds dependent services to deploy
 func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
 	initialSvcsToDeploy := svcsToDeploy
 	svcsToDeployWithDependencies := addDependentServices(ctx, s, svcsToDeploy, c)

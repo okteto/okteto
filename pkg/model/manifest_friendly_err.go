@@ -48,7 +48,7 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 
 	for structName, structKeywords := range manifestKeys {
 		for _, keyword := range structKeywords {
-			// example: line 5: field contest not found in type build.buildInfoRaw
+			// example: line 5: field contest not found in type build.infoRaw
 			// (.*?): this excludes everything before the keyword "field"
 			// (\w+): this captures the keyword we want to calculate the levenshtein distance with
 			// (in type|into): this ensures to match all variations of the error message
@@ -110,7 +110,7 @@ func hasLinkToDocs(err error) bool {
 	return strings.Contains(err.Error(), "https://www.okteto.com/docs")
 }
 
-// isYamlError check if the error is related to YAML unmarshalling
+// isYamlError checks if the error is related to YAML unmarshalling
 func isYamlError(err error) bool {
 	if err == nil {
 		return false

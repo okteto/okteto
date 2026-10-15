@@ -158,7 +158,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
-	// executed in the deploy command.
+	// executed in the destroy command.
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
 		var cmdErr buildkit.CommandErr
 		if errors.As(err, &cmdErr) {

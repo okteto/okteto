@@ -19,7 +19,7 @@ import (
 	"os/exec"
 )
 
-// KubectlOptions defines the options that can be added to a build command
+// KubectlOptions defines the options that can be added to a kubectl command
 type KubectlOptions struct {
 	Workdir    string
 	Namespace  string

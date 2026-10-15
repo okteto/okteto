@@ -68,7 +68,7 @@ func Exec(ctx context.Context, c kubernetes.Interface, config *rest.Config, podN
 			delegate: t.MonitorSize(t.GetSize()),
 		}
 
-		// unset p.Err if it was previously set because both stdout and stderr go over p.Out when tty is
+		// unset p.ErrOut if it was previously set because both stdout and stderr go over p.Out when tty is
 		// true
 		p.ErrOut = nil
 	}

@@ -77,7 +77,7 @@ type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the path to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used through the command execution.
 	// This might change its value during execution
 	ManifestPath string
 	Namespace    string
@@ -140,7 +140,7 @@ okteto up api -- echo this is a test
 
 			startOkContextConfig := time.Now()
 			if upOptions.ManifestPath != "" {
-				// if path is absolute, its transformed to rel from root
+				// if path is absolute, it's transformed to rel from root
 				initialCWD, err := os.Getwd()
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -613,7 +613,7 @@ func (up *upContext) activateLoop() {
 	}
 }
 
-// waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
+// waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modified
 func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error {
 	// only for unix because Windows does not support SIGTTIN and SIGTTOU
 	goToBackground := getSendToBackgroundSignals()
@@ -705,7 +705,7 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 
 }
 
-// Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
+// shutdown runs the cancellation sequence and signals ShutdownCompleted when it finishes
 func (up *upContext) shutdown() {
 	if up.isTerm {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
@@ -882,7 +882,7 @@ func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes
 	return nil
 }
 
-// tokenUpgrader updates the token of the config when the token is outdated
+// tokenUpdater updates the token of the config when the token is outdated
 type tokenUpdater interface {
 	UpdateKubeConfigToken() error
 }

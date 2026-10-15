@@ -28,7 +28,7 @@ type PipelineDeployOptions struct {
 	IsDependency         bool
 }
 
-// GitDeployResponse represents
+// GitDeployResponse represents the response of a pipeline deploy or destroy
 type GitDeployResponse struct {
 	Action    *Action    `json:"action"`
 	GitDeploy *GitDeploy `json:"gitDeploy"`

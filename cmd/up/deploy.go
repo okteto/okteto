@@ -61,7 +61,7 @@ type deployParams struct {
 	manifest                       *model.Manifest
 }
 
-// NewDevEnvDeployerManager creates a new DevEnvDeployer
+// NewDevEnvDeployerManager creates a new devEnvDeployerManager
 func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *devEnvDeployerManager {
 	return &devEnvDeployerManager{
 		ioCtrl:            ioCtrl,
@@ -134,7 +134,7 @@ func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params depl
 		err = deployer.Run(ctx, deployOpts)
 		go analyticsMeta.HasRunDeploy()
 		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err, params.ns)
-		// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
+		// only allow oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 			return err
 		}

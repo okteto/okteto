@@ -136,7 +136,7 @@ deploy:
 )
 
 // Test_EndpointsFromOktetoManifest_InferredName tests the following scenario:
-// - Deploying a okteto manifest locally
+// - Deploying an okteto manifest locally
 // - K8s Service manifest has auto-ingress, endpoints are automatically created when kubectl apply
 // - The endpoints declared at the manifest deploy section are accessible and have the inferred name from repo
 func Test_EndpointsFromOktetoManifest_InferredName(t *testing.T) {
@@ -201,7 +201,7 @@ func createEndpointsFromOktetoManifestInferredName(dir string) error {
 }
 
 // Test_EndpointsFromOktetoManifest_Name tests the following scenario:
-// - Deploying a okteto manifest locally
+// - Deploying an okteto manifest locally
 // - K8s Service manifest has auto-ingress, endpoints are automatically created when kubectl apply
 // - The endpoints declared at the manifest deploy section are accessible and have the specified name
 func Test_EndpointsFromOktetoManifest_Name(t *testing.T) {
@@ -260,7 +260,7 @@ func createEndpointsFromOktetoManifestName(dir string) error {
 	return nil
 }
 
-// Test_EndpointsFromStackWithEndpoints_InferredName tests the following scenario:
+// Test_EndpointsFromStackWith_InferredName tests the following scenario:
 // - Deploying a stack manifest locally from a compose file with endpoints section
 // - The endpoints generated are accessible and name is inferred from repo
 func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
@@ -332,7 +332,7 @@ func createStackWithEndpointsInferredNameScenario(dir string) error {
 	return nil
 }
 
-// TestDeployPipelineFromOktetoStacksWithEndpointsName tests the following scenario:
+// Test_EndpointsFromStack_Name tests the following scenario:
 // - Deploying a pipeline manifest locally from a compose file with endpoints section (stack)
 // - The endpoints generated are accessible and name is custom
 func Test_EndpointsFromStack_Name(t *testing.T) {
@@ -403,7 +403,7 @@ func createStackWithEndpointsNameScenario(dir string) error {
 	return nil
 }
 
-// TestDeployPipelineFromCompose tests the following scenario:
+// Test_EndpointsFromStackAndManifest tests the following scenario:
 // - Deploying a compose manifest locally from an okteto manifestv2
 // - The endpoints generated are the ones at the manifest
 func Test_EndpointsFromStackAndManifest(t *testing.T) {
@@ -448,7 +448,7 @@ func Test_EndpointsFromStackAndManifest(t *testing.T) {
 }
 
 // Test_EndpointsFromOktetoManifest_NameOption tests the following scenario:
-// - Deploying a okteto manifest locally
+// - Deploying an okteto manifest locally
 // - K8s Service manifest has auto-ingress, endpoints are automatically created when kubectl apply
 // - The endpoints declared at the manifest deploy section are accessible and have name of deploy option
 func Test_EndpointsFromOktetoManifest_NameOption(t *testing.T) {
@@ -504,9 +504,9 @@ func Test_EndpointsFromOktetoManifest_NameOption(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// Test_EndpointsFromStackWithEndpoints_InferredName tests the following scenario:
+// Test_EndpointsFromStackWith_NameOption tests the following scenario:
 // - Deploying a stack manifest locally from a compose file with endpoints section
-// - The endpoints generated are accessible and name from deploy option
+// - The endpoints generated are accessible and name is taken from deploy option
 func Test_EndpointsFromStackWith_NameOption(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()

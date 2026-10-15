@@ -124,7 +124,7 @@ func (cmd *listPreviewCommand) run(ctx context.Context) error {
 func displayListPreviews(previews []previewOutput, outputFormat string) error {
 	switch outputFormat {
 	case "json":
-		// json marshal return null for empty objects, returning the empty list if no previews are retrieved
+		// json marshal returns null for empty objects, returning the empty list if no previews are retrieved
 		if len(previews) == 0 {
 			fmt.Println(previews)
 			return nil
@@ -165,7 +165,7 @@ func getPreviewDefaultOutput(preview previewOutput) string {
 	return fmt.Sprintf("%s\t%s\t%v\t%v\t%s\t%s\n", preview.Name, preview.Scope, preview.Sleeping, preview.Persistent, preview.Branch, previewLabels)
 }
 
-// getPreviewOutput transforms type.Preview into previewOutput type
+// getPreviewOutput transforms types.Preview into previewOutput type
 func getPreviewOutput(previews []types.Preview) []previewOutput {
 	var previewSlice []previewOutput
 	for _, p := range previews {

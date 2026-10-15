@@ -745,7 +745,7 @@ dev:
 
 	// checking dev d2 state
 
-	// There should be zero replica if Deployment replicas are zero and replicas not specified in manifest
+	// There should be zero replicas if Deployment replicas are zero and replicas not specified in manifest
 	if tr2.DevApp.Replicas() != 0 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}

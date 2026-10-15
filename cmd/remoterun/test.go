@@ -70,7 +70,7 @@ commands:
 			}
 
 			// We need to store the kubeconfig of the current Okteto context locally, so commands
-			// would use the expected
+			// would use the expected cluster
 			kubeconfigPath := getTempKubeConfigFile("test", options.Name)
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err

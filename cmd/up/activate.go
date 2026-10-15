@@ -45,7 +45,7 @@ const (
 	// This was a typo but keeping it to reduce friction with customers that are already using it. It will go away eventually
 	oldEnableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BANCH_ENABLED"
 
-	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BANCH_ENABLED
+	// enableDevBranchTrackingEnvVar enables or disables the dev branch tracking by the env var OKTETO_TRACK_DEV_BRANCH_ENABLED
 	enableDevBranchTrackingEnvVar = "OKTETO_TRACK_DEV_BRANCH_ENABLED"
 
 	// devBranchTrackingIntervalEnvVar sets the tracking interval for branch tracking (if enabled) using OKTETO_TRACK_DEV_BRANCH_INTERVAL
@@ -519,7 +519,7 @@ func getPullingMessage(message, namespace string) string {
 	return strings.Replace(message, toReplace, constants.DevRegistry, 1)
 }
 
-// waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
+// waitUntilAppIsAwaken waits until the app is awake checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
 func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
 	// If it is auto create, we don't need to wait for the app to wake up
 	if up.Dev.Autocreate {
@@ -532,7 +532,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 	}
 
 	appToCheck := app
-	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
+	// If the app is already in dev mode, we need to check the cloned app to see if it is awake
 	if apps.IsDevModeOn(app) {
 		var err error
 		appToCheck, err = app.GetDevClone(ctx, k8sClient)
@@ -556,7 +556,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 	for {
 		select {
 		case <-to.C:
-			// In case of timeout, we just print a warning to avoid the command to fail
+			// In case of timeout, we just print a warning to avoid failing the command
 			oktetoLog.Warning("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
 			return nil
 		case <-ticker.C:

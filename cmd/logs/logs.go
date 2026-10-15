@@ -158,7 +158,7 @@ func Logs(ctx context.Context, k8sLogger *io.K8sLogger, fs afero.Fs) *cobra.Comm
 	return cmd
 }
 
-// GetTempKubeConfigFile returns where the temp kubeConfigFile for deploy should be stored
+// GetTempKubeConfigFile returns where the temp kubeConfigFile for logs should be stored
 func GetTempKubeConfigFile(name string) string {
 	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-logs-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeConfigTemplate)

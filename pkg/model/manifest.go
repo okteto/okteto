@@ -44,11 +44,11 @@ type Archetype string
 var (
 	// StackType represents a stack manifest type
 	StackType Archetype = "compose"
-	// OktetoType represents a okteto manifest type
+	// OktetoType represents an okteto manifest type
 	OktetoType Archetype = "okteto"
-	// OktetoManifestType represents a okteto manifest type
+	// OktetoManifestType represents an okteto manifest type
 	OktetoManifestType Archetype = "manifest"
-	// PipelineType represents a okteto pipeline manifest type
+	// PipelineType represents an okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
 )
 
@@ -264,7 +264,7 @@ func pathExistsAndDir(path string) bool {
 	return info.IsDir()
 }
 
-// GetManifestV2 gets a manifest from a path or search for the files to generate it
+// GetManifestV2 gets a manifest from a path or searches for the files to generate it
 func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -512,7 +512,7 @@ func isEmptyManifestFile(bytes []byte) bool {
 	return false
 }
 
-// Read reads an okteto manifests
+// Read reads an okteto manifest
 func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
 
@@ -558,7 +558,7 @@ func (s *Secret) validate() error {
 	return nil
 }
 
-// SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections
+// SanitizeSvcNames sanitizes service names in 'dev', 'build' and 'global forward' sections
 func (m *Manifest) SanitizeSvcNames() error {
 	sanitizedServicesNames := make(map[string]string)
 	for devKey, dev := range m.Dev {
@@ -935,7 +935,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			}
 		}
 	}
-	// Unmarshal with yamlv2 because we have the marshal with yaml v2
+	// Marshal with yaml v2 because we have the marshal with yaml v2
 	b, err := yaml.Marshal(m)
 	if err != nil {
 		return err
@@ -1196,7 +1196,7 @@ func (m *Manifest) HasDeploySection() bool {
 //     We use GetWorkdirFromManifestPath because it takes care of the case of .okteto directory
 //   - If there is any compose info, we should use the directory where the first compose is located.
 //     We use GetWorkdirFromManifestPath because it takes care of the case of .okteto directory
-//   - If none of the other condition is met, we just use the current directory
+//   - If none of the other conditions is met, we just use the current directory
 func getBuildContextForComposeWithVolumeMounts(m *Manifest) (string, error) {
 	context, err := filepath.Abs(".")
 	if err != nil {
@@ -1289,7 +1289,7 @@ func (m *Manifest) ValidateForCLIOnly() error {
 	return nil
 }
 
-// IsEmpty returns true if the manifest is empty
+// IsEmpty returns true if the divert section is empty
 func (d *DivertDeploy) IsEmpty() bool {
 	return d == nil ||
 		d.Driver == "" &&

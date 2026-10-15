@@ -42,7 +42,7 @@ func TestEnvStepper(t *testing.T) {
 		envvar, err := stepper.Step()
 		require.NoError(t, err)
 
-		// sort first. Order is not guaranteeed
+		// sort first. Order is not guaranteed
 		sort.Strings(envvar)
 		require.Equal(t, keyVal, envvar[i])
 	}

@@ -58,12 +58,12 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	return &StatefulSetApp{sfs: sfs}, nil
 }
 
-// IsDevModeOn returns if a statefulset is in devmode
+// IsDevModeOn returns if an app is in devmode
 func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || app.ObjectMeta().Labels[model.DevCloneLabel] != ""
 }
 
-// GetRunningPodInLoop returns the dev pod for an app and loops until it success
+// GetRunningPodInLoop returns the dev pod for an app and loops until it succeeds
 func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kubernetes.Interface) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
@@ -105,7 +105,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 	}
 }
 
-// GetTranslations fills all the deployments pointed by a development container
+// GetTranslations fills all the deployments pointed to by a development container
 func GetTranslations(ctx context.Context, namespace, manifestName string, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
 		MainDev: dev,

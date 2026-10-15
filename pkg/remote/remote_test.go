@@ -606,7 +606,7 @@ func TestDockerfileWithCache(t *testing.T) {
 	d, err := afero.ReadFile(fs, dockerfileName)
 	require.NoError(t, err)
 
-	// Verify that each cache has a unique ID based on manifest name, test name, and cache index
+	// Verify that each cache has a unique ID based on manifest name, test name, and cache path
 	for _, cache := range caches {
 		pattern := fmt.Sprintf("--mount=type=cache,id=\\w+,target=%s", cache)
 		ok, err := regexp.MatchString(pattern, string(d))

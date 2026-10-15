@@ -49,8 +49,8 @@ func newTLSConfigWithSystemCA() *tls.Config {
 	return &tls.Config{}
 }
 
-// startSshForwarder This functions starts the ssh-forwarded process expected to be run on remote-run commands.
-// This process just listens a UNIX socket, and forward the messages to the SSH Agent exposed in the hostname
+// startSshForwarder This function starts the ssh-forwarder process expected to be run on remote-run commands.
+// This process just listens on a UNIX socket, and forwards the messages to the SSH Agent exposed in the hostname
 // and port received as parameters
 func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, sshAgentPort, sshSocket, userToken string) error {
 	// Remove existing socket if it exists

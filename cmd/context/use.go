@@ -160,7 +160,7 @@ func (c *Command) RunStateless(ctx context.Context, ctxOptions *Options) (*oktet
 	}
 
 	cfg := okteto.GetContext().Cfg.DeepCopy()
-	// Storing previous global namespace gotten after executing c.Run as it is memory, but after reading the
+	// Storing previous global namespace gotten after executing c.Run as it is in memory, but after reading the
 	// context store from path that is lost
 	globalNamespace := okteto.GetContext().GlobalNamespace
 	builder := okteto.GetContext().Builder

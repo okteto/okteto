@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	// stacksSupportEnabledEnvVar is the environment variable to know if we should use compose or stacks
+	// stackSupportEnabledEnvVar is the environment variable to know if we should use compose or stacks
 	stackSupportEnabledEnvVar = "OKTETO_SUPPORT_STACKS_ENABLED"
 	// defaultValueStackSupportEnabledEnvVar is the default value for stackSupportEnabledEnvVar
 	defaultValueStackSupportEnabledEnvVar = false
@@ -149,7 +149,7 @@ type ServiceIdentityToken struct {
 // a string after manifest expansion — is parsed correctly.
 type IdentityTokenExpiration int64
 
-// StackSecurityContext defines which user and group use
+// StackSecurityContext defines which user and group to use
 type StackSecurityContext struct {
 	RunAsUser  *int64 `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
 	RunAsGroup *int64 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
@@ -183,13 +183,13 @@ type HTTPHealtcheck struct {
 
 type HealtcheckTest []string
 
-// StackResources represents an okteto stack resources
+// StackResources represents okteto stack resources
 type StackResources struct {
 	Limits   ServiceResources `json:"limits,omitempty" yaml:"limits,omitempty"`
 	Requests ServiceResources `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
-// ServiceResources represents an okteto stack service resources
+// ServiceResources represents okteto stack service resources
 type ServiceResources struct {
 	CPU     Quantity        `json:"cpu,omitempty" yaml:"cpu,omitempty"`
 	Memory  Quantity        `json:"memory,omitempty" yaml:"memory,omitempty"`
@@ -202,7 +202,7 @@ type StorageResource struct {
 	Class string   `json:"class,omitempty" yaml:"class,omitempty"`
 }
 
-// Quantity represents an okteto stack service storage resource
+// Quantity represents a resource quantity (cpu, memory or storage size) of an okteto stack service
 type Quantity struct {
 	Value resource.Quantity
 }
@@ -237,7 +237,7 @@ type CommandStack struct {
 	Values []string
 }
 
-// ArgsStack represents an okteto stack args
+// ArgsStack represents okteto stack args
 type ArgsStack struct {
 	Values []string
 }
@@ -308,7 +308,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 	}
 
 	if endpoint, ok := s.Endpoints[""]; ok {
-		// s.Name should be sanitize and compliant with url format
+		// s.Name should be sanitized and compliant with url format
 		s.Endpoints[format.ResourceK8sMetaString(s.Name)] = endpoint
 		delete(s.Endpoints, "")
 	}
@@ -337,7 +337,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool, fs afero.Fs) (*Sta
 	return s, nil
 }
 
-// getStackName it returns the stack name based in the following criteria
+// getStackName returns the stack name based on the following criteria
 //   - If `name` is set, that value is used as stack name. This represents the value provided by
 //     the user with `--name`
 //   - If `actualStackName` is provided, that is the value used. This represents the value provided
@@ -355,7 +355,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if actualStackName == "" {
 		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
-			// this name could be not sanitized when running at pipeline installer
+			// this name might not be sanitized when running at pipeline installer
 			return nameEnvVar, nil
 		}
 		name, err := getValidNameFromGitRepo(filepath.Dir(stackPath))
@@ -498,7 +498,7 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 }
 
 func (s *Stack) Validate() error {
-	// in case name is coming from option "name" at deploy this could not be sanitized
+	// in case name is coming from option "name" at deploy this might not be sanitized
 	if err := validateStackName(format.ResourceK8sMetaString(s.Name)); err != nil {
 		return fmt.Errorf("invalid compose name: %w", err)
 	}
@@ -618,7 +618,7 @@ func (s *Stack) GetLabelSelector() string {
 	return fmt.Sprintf("%s=%s", StackNameLabel, format.ResourceK8sMetaString(s.Name))
 }
 
-// GetStackConfigMapName returns the label selector for the stack name
+// GetStackConfigMapName returns the configmap name for the stack
 func GetStackConfigMapName(stackName string) string {
 	// we need to sanitize the stack name in case this is overridden by the deploy options name
 	return fmt.Sprintf("okteto-%s", format.ResourceK8sMetaString(stackName))
@@ -633,7 +633,7 @@ func IsPortInService(port int32, ports []Port) bool {
 	return false
 }
 
-// SetLastBuiltAnnotation sets the dev timestamp
+// SetLastBuiltAnnotation sets the last built annotation timestamp of the service
 func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
@@ -831,8 +831,8 @@ func (svcResources *ServiceResources) IsDefaultValue() bool {
 }
 
 // isFileCompose checks if the path is a compose file
-// if the env var OKTETO_SUPPORT_STACKS_ENABLED is set to true, it will return true for any file no matter the name
-// if the env var is not set, it will return true for files that start with "compose", "docker-compose" or "okteto-compose"
+// if the env var OKTETO_SUPPORT_STACKS_ENABLED is not set or is false, it will return true for any file no matter the name
+// if the env var is set to true, it will only return true for files that start with "compose", "docker-compose" or "okteto-compose"
 func isFileCompose(path string) bool {
 	base := filepath.Base(path)
 	isComposeFileName := strings.HasPrefix(base, "compose") || strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")

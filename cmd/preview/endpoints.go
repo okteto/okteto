@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Endpoints show all the endpoints of a preview environment
+// Endpoints shows all the endpoints of a preview environment
 func Endpoints(ctx context.Context) *cobra.Command {
 	var output string
 	var k8sContext string

@@ -51,7 +51,7 @@ type DestroyCommand struct {
 }
 
 // Destroy starts the destroy command remotely. This is the command executed in the
-// remote environment when destroy deploy is executed with the remote flag
+// remote environment when okteto destroy is executed with the remote flag
 func Destroy(ctx context.Context) *cobra.Command {
 	options := &DestroyOptions{}
 	cmd := &cobra.Command{
@@ -84,7 +84,7 @@ It is important that this command does the minimum and must not do calculations 
 			}
 
 			// We need to store the kubeconfig of the current Okteto context locally, so commands
-			// would use the expected
+			// would use the expected cluster
 			kubeconfigPath := getTempKubeConfigFile("destroy", options.Name)
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err

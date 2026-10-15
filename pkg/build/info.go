@@ -218,7 +218,7 @@ func (i *Info) SetBuildDefaults() {
 
 }
 
-// AddArgs add a set of args to the build information
+// AddArgs adds a set of args to the build information
 func (i *Info) AddArgs(previousImageArgs map[string]string) error {
 	if err := i.expandManifestBuildArgs(previousImageArgs); err != nil {
 		return err

@@ -29,7 +29,7 @@ type TestRunner struct {
 	Fs       afero.Fs
 }
 
-// TestParameters represents the parameters for destroying a remote entity
+// TestParameters represents the parameters for running tests
 type TestParameters struct {
 	Name         string
 	Namespace    string

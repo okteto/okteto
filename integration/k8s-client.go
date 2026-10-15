@@ -108,7 +108,7 @@ func GetVolume(ctx context.Context, ns, name string, client kubernetes.Interface
 	return client.CoreV1().PersistentVolumeClaims(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
-// WaitForDeployment waits until a deployment is rollout correctly
+// WaitForDeployment waits until a deployment is rolled out correctly
 func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOptions, revision int, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -154,7 +154,7 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 	}
 }
 
-// WaitForStatefulset waits until a sfs is rollout correctly
+// WaitForStatefulset waits until a sfs is rolled out correctly
 func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptions, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
@@ -181,7 +181,7 @@ func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptio
 	}
 }
 
-// DestroyPod returns a deployment given a namespace and name
+// DestroyPod deletes the pods matching a label selector in a namespace
 func DestroyPod(ctx context.Context, ns, labelSelector string, c kubernetes.Interface) error {
 	log.Printf("destroying pods with label selector: %s", labelSelector)
 

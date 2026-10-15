@@ -57,7 +57,7 @@ type DeployOptions struct {
 	workflowID           string
 }
 
-// Deploy Deploy a preview environment
+// Deploy deploys a preview environment
 func Deploy(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	opts := &DeployOptions{}
 	cmd := &cobra.Command{

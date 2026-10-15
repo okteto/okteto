@@ -326,7 +326,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 }
 
 // buildServiceImages builds the images for the given service.
-// if service has volumes to include but is not okteto, an error is returned.
+// if service has no Dockerfile, it is skipped and an empty reference is returned.
 // Returned image reference includes the digest
 func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svc *buildTypes.BuildInfo, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svc.Name()]
@@ -371,12 +371,12 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 
 	// check that all tags are pushed and return the first one to not break any scenario
 	for idx, tag := range tags {
-		// check if the image is pushed to the dev registry if DevTag is set
+		// check if the image is pushed to the registry
 		reference := tag
 		var digest string
 		var err error
 
-		// Retry up to 3 times with 2 second delays
+		// Try up to 3 times with 2 second delays
 		for attempt := 1; attempt <= 3; attempt++ {
 			digest, err = bc.Registry.GetImageTagWithDigest(reference)
 			if err == nil {

@@ -268,7 +268,7 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*Client, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-// NewOktetoClientFromUrl creates a new client to connect with Okteto API provided an url
+// NewOktetoClientFromUrl creates a new client to connect with Okteto API provided a URL
 func NewOktetoClientFromUrl(url string) (*Client, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {

@@ -98,7 +98,7 @@ const (
 	docsURL          = "https://okteto.com/docs/reference/okteto-cli/#build"
 )
 
-// Build build and optionally push a Docker image
+// Build builds and optionally pushes a Docker image
 func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
@@ -167,9 +167,9 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 }
 
 // getBuilder returns the proper builder (V1 or V2) based on the manifest. The following rules are applied:
-//   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
+//   - If the manifest is not found or there is any error getting the manifest, the builder falls back to V1
 //   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
-//   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
+//   - If the manifest is found and it is a V1 manifest, the builder falls back to V1
 func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	// the file flag is a Dockerfile
 	isDockerfileValid := validateDockerfile(options.File) == nil

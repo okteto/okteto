@@ -259,7 +259,7 @@ func (ic *InClusterConnector) GetType() string {
 	return "in-cluster"
 }
 
-// Stop clears podIP to force a new pod assignment and connection verification on next Start()
+// Stop is a no-op: the pod IP is kept and re-verified on the next Start()
 func (ic *InClusterConnector) Stop() {
 
 }

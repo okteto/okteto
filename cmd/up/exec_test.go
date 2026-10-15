@@ -400,7 +400,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	}
 
 	// according to exec.Cmd.Env docs, if cmd.Env contains duplicate environment keys, only the last
-	// value in the slice for each duplicate key is used so most priority values needs to be add
+	// value in the slice for each duplicate key is used so highest-priority values need to be added
 	// at the end of the list
 	expectedEnvsSortedByPriority := []string{
 		"ENVFROMIMAGE=FROMIMAGEVALUE",

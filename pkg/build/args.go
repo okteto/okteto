@@ -114,7 +114,7 @@ func SerializeArgs(buildArgs Args) []string {
 	for _, e := range buildArgs {
 		result = append(result, e.String())
 	}
-	// // stable serialization
+	// stable serialization
 	sort.Strings(result)
 	return result
 }

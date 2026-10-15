@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// fakeURLParser defines an interface for parsing URLs
+// fakeURLParser is a fake implementation of the urlParser interface
 type fakeURLParser struct {
 	url *url.URL
 	err error
@@ -36,7 +36,7 @@ func (p *fakeURLParser) Parse(rawurl string) (*url.URL, error) {
 	return p.url, p.err
 }
 
-// fakeCertDecoder defines an interface for decoding certificates
+// fakeCertDecoder is a fake implementation of the certDecoder interface
 type fakeCertDecoder struct {
 	err  error
 	data []byte
@@ -47,7 +47,7 @@ func (b *fakeCertDecoder) DecodeString(s string) ([]byte, error) {
 	return b.data, b.err
 }
 
-// fileWriter defines an interface for writing files
+// fakeFileWriter is a fake implementation of the fileWriter interface
 type fakeFileWriter struct {
 	err error
 }
@@ -57,7 +57,7 @@ func (f *fakeFileWriter) WriteFile(filename string, data []byte, perm os.FileMod
 	return f.err
 }
 
-// mockBuildkitClientCreator is a mock implementation of the buildkitClientCreator interface.
+// mockBuildkitClientCreator is a mock implementation of the clientCreator interface.
 type mockBuildkitClientCreator struct {
 	client *client.Client
 	err    error

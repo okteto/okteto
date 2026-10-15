@@ -90,7 +90,7 @@ func (lda *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) e
 		connectionTimeout := 5 * time.Minute
 		err := lda.oktetoClient.Stream().DestroyAllLogs(logsCtx, opts.Namespace, connectionTimeout)
 
-		// Check if error is not canceled because in the case of a timeout waiting the operation to complete,
+		// Check if error is not canceled because in the case of a timeout waiting for the operation to complete,
 		// we cancel the context to stop streaming logs, but we should not display the warning
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
@@ -176,7 +176,7 @@ func (lda *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx cont
 // checkAllResourcesDestroyed performs a comprehensive check to verify all resources have been destroyed
 func (lda *localDestroyAllCommand) checkAllResourcesDestroyed(ctx context.Context, namespace string, k8s kubernetes.Interface) error {
 	// when status is active again check if all resources have been correctly destroyed
-	// list configmaps that belong okteto deployments
+	// list configmaps that belong to okteto deployments
 	resourcesLabels := map[string]bool{
 		model.GitDeployLabel: true,
 		model.StackLabel:     true,

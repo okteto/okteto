@@ -35,7 +35,7 @@ type spinnerLogger struct {
 	onHold         bool
 }
 
-// hold is used within the TTYWritter to pause the spinner to display the log
+// hold is used within the TTYWriter to pause the spinner to display the log
 // if the spinner is Active (running) it will stop
 func (sl *spinnerLogger) hold() {
 	if !sl.sp.Active() {
@@ -45,8 +45,8 @@ func (sl *spinnerLogger) hold() {
 	StopSpinner()
 }
 
-// unhold is used within the TTYWritter to restart the spinner after display the log.
-// If the spinner is onHold (previously Active) this will start the spinning running again
+// unhold is used within the TTYWriter to restart the spinner after displaying the log.
+// If the spinner is onHold (previously Active) this will start the spinner running again
 func (sl *spinnerLogger) unhold() {
 	if !sl.onHold {
 		return

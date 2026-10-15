@@ -35,7 +35,7 @@ type fakeDeployer struct {
 	tracked  bool
 }
 
-// Deploy implements the devEnvEnvDeployStrategy interface
+// Run implements the deployer interface
 func (f *fakeDeployer) Run(context.Context, *deploy.Options) error {
 	f.deployed = true
 	return f.err

@@ -72,8 +72,8 @@ type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 }
 
-// DeployRunner is responsible for running the commands defined in a manifest, deploy the divert
-// information and deploy external resources.
+// DeployRunner is responsible for running the commands defined in a manifest, deploying the divert
+// information and deploying external resources.
 // This DeployRunner has the common functionality to deal with the mentioned resources when deploy is
 // run locally or remotely. As this runs also in the remote, it should NEVER build any kind of image
 // or execute some logic that might differ from local.
@@ -111,7 +111,7 @@ type DeployParameters struct {
 	Variables    []string
 }
 
-// PortGetterFunc is a function that retrieves a free port the port for specified interface
+// PortGetterFunc is a function that retrieves a free port for the specified interface
 type PortGetterFunc func(string) (int, error)
 
 // newDeployExternalK8sControl creates a new instance of external resources controller
@@ -253,7 +253,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		params.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
 		fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, r.TempKubeconfigFile),
-		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
+		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands run inside this deploy
 		// know they are running inside another okteto deploy
 		fmt.Sprintf("%s=true", constants.OktetoWithinDeployCommandContextEnvVar),
 		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
@@ -261,7 +261,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
-		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commands runs on the same namespace
+		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commands run on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.GetContext().Namespace),
 	)
 
@@ -278,7 +278,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		}
 	}
 
-	// Setup helm version based on environment variable
+	// Set up helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
 		return err
 	}
@@ -397,7 +397,7 @@ func (r *DeployRunner) deployExternals(ctx context.Context, params DeployParamet
 	return nil
 }
 
-// CleanUp cleans up the resources created by the runner to avoid to leave any temporal resource
+// CleanUp cleans up the resources created by the runner to avoid leaving any temporary resource
 func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
 	oktetoLog.Debugf("removing temporary kubeconfig file '%s'", r.TempKubeconfigFile)
 	if err := os.Remove(r.TempKubeconfigFile); err != nil {
@@ -415,7 +415,7 @@ func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
 	oktetoLog.Debugf("executed clean up completely")
 }
 
-// createTempOktetoEnvFile creates a temporal file use to store the environment variables
+// createTempOktetoEnvFile creates a temporary file used to store the environment variables
 func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 	oktetoEnvFileDir, err := afero.TempDir(fs, "", "")
 	if err != nil {

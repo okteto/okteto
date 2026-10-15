@@ -33,7 +33,7 @@ func (e UserError) Unwrap() error {
 	return e.E
 }
 
-// CommandError is meant for errors displayed to the user. It can include a message and a hint
+// CommandError is meant for errors displayed to the user. It includes an error and the reason it failed
 type CommandError struct {
 	E      error
 	Reason error
@@ -164,7 +164,7 @@ var (
 	// ErrNoServicesToBuildDefined is raised when there are no services to build and buildV2 is called
 	ErrNoServicesToBuildDefined = errors.New("no services to build defined")
 
-	// ErrNoFlagAllowedOnSingleImageBuild is raised when the user tries to build a single image with flags
+	// ErrNoFlagAllowedOnSingleImageBuild is raised when the user tries to build multiple images with flags
 	ErrNoFlagAllowedOnSingleImageBuild = errors.New("flags only allowed when building a single image with `okteto build [NAME]`")
 
 	// ErrManifestNoDevSection is raised when the manifest doesn't have a dev section and the user tries to access it
@@ -176,25 +176,25 @@ var (
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
 
-	// ErrInvalidManifest is raised when cannot unmarshal manifest properly
+	// ErrInvalidManifest is raised when it cannot unmarshal manifest properly
 	ErrInvalidManifest = errors.New("your Okteto Manifest is not valid, please check the following errors")
 
 	// ErrServiceEmpty is raised whenever service is empty in docker-compose
 	ErrServiceEmpty = errors.New("service cannot be empty")
 
-	// ErrEmptyManifest is raised when cannot detected content to read in manifest
+	// ErrEmptyManifest is raised when it cannot detect content to read in manifest
 	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
 
-	// ErrPortAlreadyAllocated is raised when port is allocated by other process
+	// ErrPortAlreadyAllocated is raised when port is allocated by another process
 	ErrPortAlreadyAllocated = errors.New("port is already allocated")
 
-	// ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
+	// ErrNotManifestContentDetected is raised when it cannot load any field accepted by okteto manifest doc
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load
 	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest or compose)")
 
-	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
+	// ErrX509Hint should be included within a UserError.Hint when IsX509() returns true
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/install/certificates/"
 
 	// ErrTimeout is raised when an operation has timed out
@@ -223,12 +223,12 @@ var (
 	ErrLivenessProbeFailed  = errors.New("liveness probe failed")
 )
 
-// IsForbidden raised if the Okteto API returns 401
+// IsForbidden returns true if the Okteto API returns 401
 func IsForbidden(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "unauthorized")
 }
 
-// IsX509 raised if the Okteto API returns an error which contains x509
+// IsX509 returns true if the Okteto API returns an error which contains x509
 func IsX509(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "x509")
 }

@@ -34,7 +34,7 @@ func newTTYFormatter() *ttyFormatter {
 	return &ttyFormatter{}
 }
 
-// Format formats the message for the tty
+// format formats the message for the tty
 func (f *ttyFormatter) format(msg string) ([]byte, error) {
 	return []byte(msg), nil
 }
@@ -53,7 +53,7 @@ func newPlainFormatter() *plainFormatter {
 	return &plainFormatter{}
 }
 
-// Format formats the message for the plain
+// format formats the message for plain output
 func (f *plainFormatter) format(msg string) ([]byte, error) {
 	return ansiRegex.ReplaceAll([]byte(msg), []byte("")), nil
 }
@@ -85,7 +85,7 @@ func (f *jsonFormatter) SetStage(stage string) {
 	f.stage = stage
 }
 
-// Format formats the message for the json
+// format formats the message for json output
 func (f *jsonFormatter) format(msg string) ([]byte, error) {
 	msg = strings.TrimRightFunc(msg, unicode.IsSpace)
 	entry := &logrus.Entry{

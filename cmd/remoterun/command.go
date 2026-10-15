@@ -28,7 +28,7 @@ import (
 )
 
 // RemoteRun starts the remote run command. This is the command executed in the
-// remote environment when okteto deploy is executed with the remote flag
+// remote environment when okteto deploy, destroy or test are executed remotely
 func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controller) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "remote-run",
@@ -43,7 +43,7 @@ func RemoteRun(ctx context.Context, k8sLogger *io.K8sLogger, ioCtrl *io.Controll
 	return cmd
 }
 
-// getDeployable get the deployable entity from the OKTETO_DEPLOYABLE environment variable
+// getDeployable gets the deployable entity from the OKTETO_DEPLOYABLE environment variable
 func getDeployable() (deployable.Entity, error) {
 	encodedDeployable := os.Getenv(constants.OktetoDeployableEnvVar)
 

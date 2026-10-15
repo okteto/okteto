@@ -234,7 +234,7 @@ func (pc *Command) waitToBeDestroyed(ctx context.Context, name, namespace string
 	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, namespace, action.Name, timeout)
 }
 
-// toOptions transform the flags
+// toOptions transforms the flags
 func (f destroyFlags) toOptions() *DestroyOptions {
 	return &DestroyOptions{
 		Name:                f.name,

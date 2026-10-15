@@ -28,14 +28,14 @@ const (
 	maxK8sResourceMetaLength = 63
 )
 
-// ResourceK8sMetaString transforms the name param intro a compatible k8s string to be used as name or meta information in any resource
+// ResourceK8sMetaString transforms the name param into a compatible k8s string to be used as name or meta information in any resource
 func ResourceK8sMetaString(name string) string {
 	name = strings.TrimSpace(name)
 	name = strings.ToLower(name)
 
 	name = validKubeNameRegex.ReplaceAllString(name, "-")
 
-	// trim the repository name for internal use in labels
+	// trim the name to the max length allowed for k8s names and labels
 	if len(name) > maxK8sResourceMetaLength {
 		name = name[:maxK8sResourceMetaLength]
 	}

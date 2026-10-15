@@ -41,7 +41,7 @@ type Statefulset struct {
 	Endpoints  []Endpoint `json:"endpoints"`
 }
 
-// Deployment represents an Okteto statefulset
+// Deployment represents an Okteto deployment
 type Deployment struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`

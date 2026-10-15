@@ -71,7 +71,7 @@ func (er *ExternalResource) SetDefaults(externalName string) {
 	}
 }
 
-// LoadMarkdownContent loads and store markdown content related to external resource
+// LoadMarkdownContent loads and stores markdown content related to external resource
 func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
 
 	if ef.ExternalResource.Notes == nil {

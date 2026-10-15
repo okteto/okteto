@@ -79,7 +79,7 @@ func validateOktetoManifest(content string) error {
 	return nil
 }
 
-// Validate validates a Okteto Manifest file
+// Validate validates an Okteto Manifest file
 func Validate(fs afero.Fs) *cobra.Command {
 	options := &options{}
 

@@ -705,7 +705,7 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
 	rawPorts = expandRangePorts(rawPorts)
 
-	// If public is set at this point it means that it comes from an okteto stacks and it's true
+	// If public is set at this point it means that it comes from an okteto stack and it's true
 	if public {
 		rawPorts = translateOktetoStacksPortsIntoComposeSyntax(rawPorts)
 	}

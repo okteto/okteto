@@ -187,7 +187,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 
 	ticker := time.NewTicker(1 * time.Second)
 	timeoutDuration := 3 * timeout
-	to := time.Now().Add(timeoutDuration) // 90 seconds
+	to := time.Now().Add(timeoutDuration) // 3x the dev timeout (180 seconds by default)
 	logDebounceInterval := 5
 
 	for i := 0; ; i++ {

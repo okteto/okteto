@@ -152,7 +152,7 @@ func (r gitRepoController) sanitiseURL(u string) string {
 	return url.String()
 }
 
-// isClean checks if the repository have changes over the commit
+// isClean checks if the repository has changes over the commit
 func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	// We use context.TODO() in a few places to call isClean, so let's make sure
 	// we set proper internal timeouts to not leak goroutines
@@ -213,7 +213,7 @@ type commitResponse struct {
 
 // GetLatestDirSHA It calculates a sha of the contextDir specified as parameter based on the content
 func (r gitRepoController) GetLatestDirSHA(contextDir string) (string, error) {
-	// We use context.TODO() in a few places to call isClean, so let's make sure
+	// We use context.TODO() in a few places to call GetLatestDirSHA, so let's make sure
 	// we set proper internal timeouts to not leak goroutines
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -485,7 +485,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, repoRoot string, localG
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
-		// git is not available, so we fall back on git-go
+		// git is not available, so we fall back on go-git
 		oktetoLog.Debug("Calculating git status: git is not installed, for better performance consider installing it")
 		status, err := ogr.worktree.Status()
 		if err != nil {
@@ -507,7 +507,7 @@ func (ogr oktetoGitWorktree) ListUntrackedFiles(ctx context.Context, workdir str
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
-		// git is not available, so we fall back on git-go
+		// git is not available, so we fall back on go-git
 		oktetoLog.Debug("Calculating git untrackedFiles: git is not installed, for better performance consider installing it")
 
 		status, err := ogr.Status(ctx, ogr.GetRoot(), NewLocalGit("git", &LocalExec{}, nil, false))
@@ -542,7 +542,7 @@ func (ogr oktetoGitRepository) GetLatestSHA(ctx context.Context, dirpath string,
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
-		// git is not available, so we fall back on git-go
+		// git is not available, so we fall back on go-git
 		oktetoLog.Debug("Calculating git latest commit: git is not installed, for better performance consider installing it")
 		cIter, err := ogr.Log(&git.LogOptions{
 			PathFilter: func(s string) bool {
@@ -607,7 +607,7 @@ func FindTopLevelGitDir(workingDir string) (string, error) {
 	return worktree.Filesystem().Root(), nil
 }
 
-// FindTopLevelGitRepoFromPath returns the git repository for the given absolute path taking into parent folders
+// FindTopLevelGitRepoFromPath returns the git repository for the given absolute path taking into account parent folders
 func FindTopLevelGitRepoFromPath(path string) (*git.Repository, error) {
 	opts := &git.PlainOpenOptions{
 		DetectDotGit: true,

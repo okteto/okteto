@@ -41,7 +41,7 @@ type Command struct {
 	analyticsTracker  pipelineAnalyticsTracker
 }
 
-// NewCommand creates a namespace command to
+// NewCommand creates a pipeline command
 func NewCommand(at pipelineAnalyticsTracker) (*Command, error) {
 	var okClient = &okteto.Client{}
 	if okteto.IsOkteto() {
