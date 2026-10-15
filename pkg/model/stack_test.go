@@ -193,7 +193,7 @@ services:
 	}
 	memory = s.Services["db"].Resources.Requests.Memory.Value
 	if memory.Cmp(resource.MustParse("128Mi")) != 0 {
-		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
+		t.Errorf("'db.resources.memory' was not parsed: %+v", s)
 	}
 	assert.Equal(t, manifest, s.Manifest)
 }
@@ -221,7 +221,7 @@ services:
       memory: 258Mi
       storage: 1Gi
     labels:
-      - traeffick.routes=Path("/")
+      - traefik.routes=Path("/")
   db:
     image: postgres:9.4
     resources:
@@ -306,7 +306,7 @@ services:
 		t.Errorf("'vote.resources.storage' was not parsed: %+v", s)
 	}
 	for key, value := range s.Services["vote"].Annotations {
-		if key == "traeffick.routes" && value == `Path("/")` {
+		if key == "traefik.routes" && value == `Path("/")` {
 			continue
 		}
 		t.Errorf("'vote.annotations' was not parsed correctly: %+v", s.Services["vote"].Annotations)
@@ -355,7 +355,7 @@ services:
 	}
 	memory = s.Services["db"].Resources.Requests.Memory.Value
 	if memory.Cmp(resource.MustParse("128Mi")) != 0 {
-		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
+		t.Errorf("'db.resources.memory' was not parsed: %+v", s)
 	}
 	assert.Equal(t, string(manifest), string(s.Manifest))
 }
@@ -456,7 +456,7 @@ func TestStack_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.stack.Validate(); err == nil {
-				t.Errorf("Stack.validate() not failed for test '%s'", tt.name)
+				t.Errorf("Stack.validate() did not fail for test '%s'", tt.name)
 			}
 		})
 	}
@@ -478,7 +478,7 @@ func Test_validateStackName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := validateStackName(tt.stackName); (err != nil) != tt.wantErr {
-				t.Errorf("Stack.validate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validateStackName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -1072,7 +1072,7 @@ func TestStack_ResourcesIsDefault(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "resources limits not zero",
+			name: "resources requests not zero",
 			resources: &StackResources{
 				Requests: ServiceResources{
 					CPU: Quantity{resource.MustParse("1")},
@@ -1133,7 +1133,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			},
 		},
 		{
-			name: "override testEnv image",
+			name: "override env image",
 			manifest: []byte(`services:
   app:
     image: ${IMAGE:-alpine}`),
@@ -1151,7 +1151,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			},
 		},
 		{
-			name: "expand image with default",
+			name: "expand image and ports",
 			manifest: []byte(`services:
   app:
     image: ${IMAGE:-alpine}
@@ -1179,7 +1179,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 			},
 		},
 		{
-			name: "expand image with default",
+			name: "expand image and environment",
 			manifest: []byte(`services:
   app:
     image: ${IMAGE:-alpine}
@@ -1310,7 +1310,7 @@ func Test_validateDependsOn(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := ReadStack(tt.manifest, false)
 			if err != nil {
-				t.Fatal("Wrong stack readiness")
+				t.Fatal("Could not read stack")
 			}
 			s.Name = "test"
 			err = s.Validate()
@@ -1350,12 +1350,12 @@ func Test_getStackName(t *testing.T) {
 			expected:        "stack2",
 		},
 		{
-			testName: "name and actualName and stackPath are empty - name testEnv var not empty",
+			testName: "name and actualName and stackPath are empty - name env var not empty",
 			nameEnv:  "stack3",
 			expected: "stack3",
 		},
 		{
-			testName:  "name and actualName are empty - name testEnv var and stackPath not empty",
+			testName:  "name and actualName are empty - name env var and stackPath not empty",
 			nameEnv:   "stack3",
 			stackPath: "path/to/stack4/compose.yaml",
 			expected:  "stack3",
@@ -1397,7 +1397,7 @@ func Test_getStackName(t *testing.T) {
 				t.Fatalf("expected %s, got %s", tt.expected, res)
 			}
 			if resEnv != tt.expected {
-				t.Fatalf("expected testEnv OKTETO_NAME %s, got %s", tt.expected, resEnv)
+				t.Fatalf("expected env OKTETO_NAME %s, got %s", tt.expected, resEnv)
 			}
 		})
 
@@ -1431,19 +1431,19 @@ func Test_getStackNameWithinRepository(t *testing.T) {
 func Test_translateEnvVars(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", ".env")
 	if err != nil {
-		t.Fatalf("failed to create dynamic testEnv file: %s", err.Error())
+		t.Fatalf("failed to create dynamic env file: %s", err.Error())
 	}
 	if err := os.WriteFile(tmpFile.Name(), []byte(testEnv), 0600); err != nil {
-		t.Fatalf("failed to write testEnv file: %s", err.Error())
+		t.Fatalf("failed to write env file: %s", err.Error())
 	}
 	defer os.RemoveAll(tmpFile.Name())
 
 	tmpFile2, err := os.CreateTemp("", ".env")
 	if err != nil {
-		t.Fatalf("failed to create dynamic testEnv file: %s", err.Error())
+		t.Fatalf("failed to create dynamic env file: %s", err.Error())
 	}
 	if err := os.WriteFile(tmpFile2.Name(), []byte(envOverride), 0600); err != nil {
-		t.Fatalf("failed to write testEnv file: %s", err.Error())
+		t.Fatalf("failed to write env file: %s", err.Error())
 	}
 	defer os.RemoveAll(tmpFile2.Name())
 

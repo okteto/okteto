@@ -87,7 +87,7 @@ func Test_add(t *testing.T) {
 
 	h = cfg.getHost("test.okteto")
 	if h != nil {
-		t.Fatal("didn't delete test2.okteto")
+		t.Fatal("didn't delete test.okteto")
 	}
 }
 
@@ -253,6 +253,6 @@ func Test_getSSHConfigPath(t *testing.T) {
 	}
 
 	if !found {
-		t.Errorf("didn't found the correct .ssh folder: %s", parts)
+		t.Errorf("didn't find the correct .ssh folder: %s", parts)
 	}
 }

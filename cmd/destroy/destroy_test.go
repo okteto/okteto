@@ -624,7 +624,7 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 			expected:      false,
 		},
 		{
-			Name: "Cluster default=remote, deploy.remote=false",
+			Name: "Cluster default=remote, destroy.remote=false",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Destroy: &model.DestroyInfo{

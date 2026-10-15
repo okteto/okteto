@@ -498,7 +498,7 @@ func Test_divertIngresses(t *testing.T) {
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
 				{
-					Host: "i1-cstaging.okteto.dev",
+					Host: "i1-staging.okteto.dev",
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{

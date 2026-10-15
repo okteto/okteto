@@ -100,7 +100,7 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 
 // RunOktetoPipelineDestroy runs an okteto pipeline destroy command
 func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipelineOptions) error {
-	log.Printf("okteto destroy %s", oktetoPath)
+	log.Printf("okteto pipeline destroy %s", oktetoPath)
 	cmd := exec.Command(oktetoPath, "pipeline", "destroy")
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
@@ -121,8 +121,8 @@ func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipeline
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
+		return fmt.Errorf("okteto pipeline destroy failed: %s - %w", string(o), err)
 	}
-	log.Printf("okteto destroy success")
+	log.Printf("okteto pipeline destroy success")
 	return nil
 }

@@ -80,7 +80,7 @@ func TestGetFrontend(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "ExtraHosts Present, Use DockerfileV0",
+			name: "ExtraHosts Present, Use gateway frontend",
 			buildOptions: &types.BuildOptions{
 				ExtraHosts: []types.HostMap{
 					{Hostname: "host1", IP: "192.168.1.1"},
@@ -120,7 +120,7 @@ func TestGetFrontend(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "ExportCache and Custom Frontend Image via Env",
+			name: "ExportCache with BuildKit version supporting multiple cache exports",
 			buildOptions: &types.BuildOptions{
 				ExportCache: []string{"cache1", "cache2"},
 			},
@@ -133,7 +133,7 @@ func TestGetFrontend(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "ExportCache and Custom Frontend Image via Env",
+			name: "ExportCache with BuildKit version not supporting multiple cache exports",
 			buildOptions: &types.BuildOptions{
 				ExportCache: []string{"cache1", "cache2"},
 			},

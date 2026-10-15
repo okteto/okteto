@@ -36,7 +36,7 @@ deploy:
 deploy:
   image: aquasec/trivy:canary
   commands:
-    - name: trivy helm
+    - name: trivy help
       command: trivy help
     - name: echo testing variable
       command: echo "inner var ${INNER_VAR}"`

@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-func TestConvertTestdMetadataToEvent(t *testing.T) {
+func TestConvertTestMetadataToEvent(t *testing.T) {
 	metadata := &analytics.SingleTestMetadata{
 		DevenvName: "test-devenv",
 		TestName:   "test-test",

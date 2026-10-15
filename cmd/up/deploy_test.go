@@ -98,7 +98,7 @@ func TestDeployIfNeeded(t *testing.T) {
 			expected: expected{isDeploymentExpected: true, expectedErr: assert.AnError},
 		},
 		{
-			name:     "must deploy: false // isDeployedApp: false",
+			name:     "must deploy: true // deploy returns ErrManifestFoundButNoDeployAndDependenciesCommands",
 			input:    input{isOkteto: true, mustDeploy: true, deployErr: oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands},
 			expected: expected{isDeploymentExpected: true, expectedErr: nil},
 		},

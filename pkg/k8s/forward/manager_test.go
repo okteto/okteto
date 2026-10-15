@@ -75,7 +75,7 @@ func TestStop(t *testing.T) {
 	}
 
 	if pf.activeServices != nil {
-		t.Error("pf.activeServices wasn't to nil")
+		t.Error("pf.activeServices wasn't set to nil")
 	}
 }
 

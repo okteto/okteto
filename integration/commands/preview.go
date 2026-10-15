@@ -88,7 +88,7 @@ func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptio
 
 // RunOktetoPreviewDestroy runs an okteto preview destroy command
 func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOptions) error {
-	log.Printf("okteto destroy %s", oktetoPath)
+	log.Printf("okteto preview destroy %s", oktetoPath)
 	cmd := exec.Command(oktetoPath, "preview", "destroy", destroyOptions.Namespace)
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
@@ -105,8 +105,8 @@ func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOp
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
+		return fmt.Errorf("okteto preview destroy failed: %s - %w", string(o), err)
 	}
-	log.Printf("okteto destroy success")
+	log.Printf("okteto preview destroy success")
 	return nil
 }

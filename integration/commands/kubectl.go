@@ -61,7 +61,7 @@ func RunKubectlRolloutDeployment(kubectlBinary string, kubectlOpts *KubectlOptio
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("kubectl apply failed: %s", string(o))
+		return "", fmt.Errorf("kubectl rollout status failed: %s", string(o))
 	}
 	return string(o), nil
 }
@@ -82,7 +82,7 @@ func RunKubectlRolloutStatefulset(kubectlBinary string, kubectlOpts *KubectlOpti
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("kubectl apply failed: %s", string(o))
+		return "", fmt.Errorf("kubectl rollout status failed: %s", string(o))
 	}
 	return string(o), nil
 }

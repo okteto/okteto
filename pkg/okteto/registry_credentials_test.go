@@ -127,8 +127,8 @@ func TestExternalRegistryCredentialsOK(t *testing.T) {
 			getter: spyOnAndExpect("gcr.io"),
 		},
 		{
-			input:  "some-extranous-host/with-strange-path",
-			getter: spyOnAndExpect("some-extranous-host"),
+			input:  "some-extraneous-host/with-strange-path",
+			getter: spyOnAndExpect("some-extraneous-host"),
 		},
 		{
 			input:  "https://gcr.io?with=query-string#and-fragment",

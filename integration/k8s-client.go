@@ -120,7 +120,7 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts.Name, timeout.String())
+			return fmt.Errorf("%s didn't roll out after %s", kubectlOpts.Name, timeout.String())
 		case <-ticker.C:
 			retry++
 			output, err := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
@@ -161,7 +161,7 @@ func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptio
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts, timeout.String())
+			return fmt.Errorf("%s didn't roll out after %s", kubectlOpts.Name, timeout.String())
 		case <-ticker.C:
 			output, err := commands.RunKubectlRolloutStatefulset(kubectlBinary, kubectlOpts)
 			if err != nil {
@@ -187,11 +187,11 @@ func DestroyPod(ctx context.Context, ns, labelSelector string, c kubernetes.Inte
 
 	pods, err := c.CoreV1().Pods(ns).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
-		return fmt.Errorf("failed to retrieve deployment %s pods: %w", labelSelector, err)
+		return fmt.Errorf("failed to retrieve pods with label selector %s: %w", labelSelector, err)
 	}
 	var zero int64 = 0
 	if len(pods.Items) == 0 {
-		return fmt.Errorf("not detected any pod")
+		return fmt.Errorf("no pods detected")
 	}
 	for idx := range pods.Items {
 		log.Printf("destroying pod %s", pods.Items[idx].Name)

@@ -257,7 +257,7 @@ func TestValidateMountPaths(t *testing.T) {
 			if err == nil && tt.expectedError {
 				t.Fatalf("Didn't receive any error and it was expected")
 			} else if err != nil && !tt.expectedError {
-				t.Fatalf("Receive error and it was not expected")
+				t.Fatalf("Received error and it was not expected")
 			}
 		})
 	}

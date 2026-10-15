@@ -396,7 +396,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 			ctxOptions: &Options{
 				IsOkteto:     true,
 				Context:      "https://okteto.example.com",
-				Token:        "this is a invalid token",
+				Token:        "this is an invalid token",
 				IsCtxCommand: true,
 			},
 			user:                user,
@@ -408,7 +408,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 			ctxOptions: &Options{
 				IsOkteto:     true,
 				Context:      "https://okteto.example.com",
-				Token:        "this is a invalid token",
+				Token:        "this is an invalid token",
 				IsCtxCommand: false,
 			},
 			user:                user,
@@ -474,7 +474,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			name: "okteto client cannot access to namespace",
 			ctxOptions: &Options{
 				IsOkteto:  true,
-				Namespace: "non-ccessible-ns",
+				Namespace: "non-accessible-ns",
 			},
 			fakeOktetoClient: &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(nil, oktetoErrors.ErrNamespaceNotFound),
@@ -895,7 +895,7 @@ func Test_loadDotEnv(t *testing.T) {
 			},
 		},
 		{
-			name: "valid .env with multiple vars",
+			name: "valid .env with expanded vars",
 			mockEnv: func(t *testing.T) {
 				t.Setenv("VALUE4", "VALUE4")
 			},

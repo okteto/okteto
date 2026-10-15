@@ -348,7 +348,7 @@ func TestGetLatestDirSHA(t *testing.T) {
 			},
 		},
 		{
-			name: "get build context hash with error getting head",
+			name: "get build context hash with error getting latest SHA",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
 					repository: []*fakeRepository{

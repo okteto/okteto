@@ -49,7 +49,7 @@ func TestCopyFile(t *testing.T) {
 	}
 
 	if !bytes.Equal(content, copied) {
-		t.Fatalf("got %s, expected %s", string(content), string(copied))
+		t.Fatalf("got %s, expected %s", string(copied), string(content))
 	}
 
 	if err := CopyFile(from, to); err != nil {
@@ -153,7 +153,7 @@ func TestGetLastNLines(t *testing.T) {
 			},
 		},
 		{
-			name: "file with less  lines than requested",
+			name: "file with less lines than requested",
 			mockFs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				err := afero.WriteFile(fs, "file.txt", []byte("line1\nline2\nline3"), 0644)

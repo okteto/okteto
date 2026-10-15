@@ -151,6 +151,6 @@ func SkipIfWindows(t *testing.T) {
 // SkipIfNotOktetoCluster skips a test if it is not on an okteto cluster
 func SkipIfNotOktetoCluster(t *testing.T) {
 	if !okteto.GetContext().IsOkteto {
-		t.Skip("Skipping because is not on an okteto cluster")
+		t.Skip("Skipping because it is not on an okteto cluster")
 	}
 }

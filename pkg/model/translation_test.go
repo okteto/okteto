@@ -248,7 +248,7 @@ func TestDevToTranslationRule(t *testing.T) {
 	}
 }
 
-func TestAffinittiesIfWriteMany(t *testing.T) {
+func TestAffinitiesIfWriteMany(t *testing.T) {
 	manifestBytes := []byte(`dev:
     web:
         persistentVolume:

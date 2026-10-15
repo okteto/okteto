@@ -322,7 +322,7 @@ func TestRepositoryURL_String(t *testing.T) {
 			expected: "https://okteto.com/docs",
 		},
 		{
-			name: "git scheme",
+			name: "ssh scheme with .git suffix",
 			url: repositoryURL{
 				URL: url.URL{
 					Scheme: "ssh",

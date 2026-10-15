@@ -80,7 +80,7 @@ func TestPreReqValidator(t *testing.T) {
 			expected: assert.AnError,
 		},
 		{
-			name: "ctx timeout",
+			name: "ctx cancelled",
 			input: input{
 				ctxName: "https://okteto.com",
 				ns:      "test",

@@ -318,7 +318,7 @@ func getDevEnvironmentConfigMaps() []runtime.Object {
 		},
 		&apiv1.ConfigMap{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      "single-dev-name-with-okteto.yml-name-saved",
+				Name:      "single-dev-name-with-okteto.yml-filename-saved",
 				Namespace: "test",
 				Labels: map[string]string{
 					model.GitDeployLabel: "true",

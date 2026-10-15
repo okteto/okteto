@@ -90,7 +90,7 @@ func Test_IsLocalHostname(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "localhost-ipv6-unicast",
+			name:     "link-local-ipv6-unicast",
 			hostname: "fe80::9656:d028:8652:66b6",
 			expected: true,
 		},
