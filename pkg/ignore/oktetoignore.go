@@ -26,7 +26,7 @@ import (
 	"github.com/moby/patternmatcher/ignorefile"
 )
 
-const RootSection = "__DEFAULT___"
+const RootSection = "__DEFAULT__"
 
 type OktetoIgnorer struct {
 	sections map[string]string

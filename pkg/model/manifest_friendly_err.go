@@ -69,8 +69,8 @@ func getManifestSuggestionRules(manifestSchema interface{}) []*suggest.Rule {
 
 		// struct names
 		suggest.NewStrReplaceRule("in type model.manifestRaw", "the okteto manifest"),
-		suggest.NewStrReplaceRule("in type model.ManifestBuild", "the 'build' section"),
-		suggest.NewStrReplaceRule("into model.ManifestBuild", "into a 'build' object"),
+		suggest.NewStrReplaceRule("in type build.ManifestBuild", "the 'build' section"),
+		suggest.NewStrReplaceRule("into build.ManifestBuild", "into a 'build' object"),
 		suggest.NewStrReplaceRule("in type build.infoRaw", "the 'build' object"),
 		suggest.NewStrReplaceRule("in type model.devType", "the 'dev' object"),
 		suggest.NewStrReplaceRule("into model.devType", "the 'dev' object"),
