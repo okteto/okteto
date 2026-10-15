@@ -452,7 +452,7 @@ func (svc *Service) ignoreSyncVolumes() {
 	notIgnoredVolumes := make([]build.VolumeMounts, 0)
 	wd, err := os.Getwd()
 	if err != nil {
-		oktetoLog.Info("could not get wd to ignore secrets")
+		oktetoLog.Info("could not get wd to ignore sync volumes")
 	}
 	for _, volume := range svc.VolumeMounts {
 		if filepath.IsAbs(volume.LocalPath) {
@@ -655,11 +655,11 @@ func IsAlreadyAdded(p PortInterface, ports []Port) bool {
 func IsAlreadyAddedExpose(p Port, ports []Port) bool {
 	for _, port := range ports {
 		if p.HostPort == 0 && (port.ContainerPort == p.ContainerPort || port.HostPort == p.ContainerPort) {
-			oktetoLog.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			oktetoLog.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.ContainerPort, port.HostPort, port.ContainerPort)
 			return true
 
 		} else if p.HostPort != 0 && (port.ContainerPort == p.ContainerPort || port.ContainerPort == p.HostPort || port.HostPort == p.HostPort || port.HostPort == p.ContainerPort) {
-			oktetoLog.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			oktetoLog.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.ContainerPort, port.HostPort, port.ContainerPort)
 			return true
 		}
 	}

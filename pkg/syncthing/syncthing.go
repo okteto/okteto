@@ -849,7 +849,7 @@ func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 	}
 	body, err := s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, false, nil, true, 0)
 	if err != nil {
-		oktetoLog.Infof("error getting GetInSynchronizationItem: %s", err.Error())
+		oktetoLog.Infof("error getting GetInSynchronizationFile: %s", err.Error())
 		return ""
 	}
 
@@ -888,7 +888,7 @@ func (s *Syncthing) Restart(ctx context.Context) error {
 
 // HardTerminate halts the background process, waits for 1s and kills the process if it is still running
 func (s *Syncthing) HardTerminate() error {
-	oktetoLog.Info("termitating previous syncthing process")
+	oktetoLog.Info("terminating previous syncthing process")
 	pList, err := process.Processes()
 	if err != nil {
 		return err
@@ -1012,7 +1012,7 @@ func RemoveFolder(dev *model.Dev, namespace string, fs afero.Fs) error {
 	}
 
 	if err := os.RemoveAll(s.Home); err != nil {
-		oktetoLog.Infof("failed to remote syncthing home directory at %s: %s", s.Home, err)
+		oktetoLog.Infof("failed to remove syncthing home directory at %s: %s", s.Home, err)
 		return nil
 	}
 

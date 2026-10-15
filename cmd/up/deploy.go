@@ -101,7 +101,7 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 // DeployIfNeeded deploys the app if it's not already deployed or if the user has set the auto deploy env var or the --deploy flag
 func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params deployParams, analyticsMeta *analytics.UpMetricsMetadata) error {
 	if !params.okCtx.IsOkteto {
-		dd.ioCtrl.Logger().Infof("Deploy is skipped because is not okteto context")
+		dd.ioCtrl.Logger().Infof("Deploy is skipped because it is not an okteto context")
 		return nil
 	}
 	k8sClient, _, err := dd.k8sClientProvider.Provide(params.okCtx.Cfg)

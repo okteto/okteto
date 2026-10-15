@@ -79,7 +79,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 		if errors.Is(err, buildv2.ErrOktetBuildSyntaxImageIsNotInBuildSection) {
 			return fmt.Errorf("the image '%s' is not in the build section of the manifest", manifest.Destroy.Image)
 		}
-		oktetoLog.Debugf("error getting services to build for image '%s': %s", svcToBuild, err)
+		oktetoLog.Debugf("error getting services to build for image '%s': %s", manifest.Destroy.Image, err)
 	}
 
 	svcsToBuild, err := bc.builder.GetServicesToBuildDuringExecution(ctx, manifest, []string{svcToBuild})

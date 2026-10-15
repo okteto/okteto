@@ -75,7 +75,7 @@ func isChildrenOfExceptByParent(p *process.Process) bool {
 	} else {
 		exeName := filepath.Base(exe)
 		if _, ok := exceptByParent[exeName]; ok {
-			log.Infof("not killing, children of %s", exeName)
+			log.Infof("not killing, child of %s", exeName)
 			return true
 		}
 	}

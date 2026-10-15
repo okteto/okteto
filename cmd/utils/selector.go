@@ -99,7 +99,7 @@ func (s *OktetoSelector) AskForOptionsOkteto(options []SelectorItem, initialPosi
 	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 	optionSelected, err := s.run(initialPosition)
 	if err != nil || !isValidOption(s.Items, optionSelected) {
-		oktetoLog.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid option: %s", err)
 		return "", ErrInvalidOption
 	}
 

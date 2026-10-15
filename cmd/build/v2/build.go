@@ -336,7 +336,7 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 		return bc.buildSvcFromDockerfile(ctx, manifest, svc, options)
 
 	default:
-		bc.ioCtrl.Logger().Info(fmt.Sprintf("could not build service %s, due to not having Dockerfile defined or volumes to include", svc.Name()))
+		bc.ioCtrl.Logger().Info(fmt.Sprintf("could not build service %s, due to not having Dockerfile defined", svc.Name()))
 	}
 	return "", nil
 }

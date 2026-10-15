@@ -211,9 +211,9 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 	}
 
 	// Injecting the PROXY into the kubeconfig file
-	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", r.TempKubeconfigFile)
+	oktetoLog.Debugf("creating temporary kubeconfig file '%s'", r.TempKubeconfigFile)
 	if err := r.Kubeconfig.Modify(r.Proxy.GetPort(), r.Proxy.GetToken(), r.TempKubeconfigFile); err != nil {
-		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
+		oktetoLog.Infof("could not create temporary kubeconfig %s", err)
 		return err
 	}
 
@@ -399,9 +399,9 @@ func (r *DeployRunner) deployExternals(ctx context.Context, params DeployParamet
 
 // CleanUp cleans up the resources created by the runner to avoid to leave any temporal resource
 func (r *DeployRunner) CleanUp(ctx context.Context, err error) {
-	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", r.TempKubeconfigFile)
+	oktetoLog.Debugf("removing temporary kubeconfig file '%s'", r.TempKubeconfigFile)
 	if err := os.Remove(r.TempKubeconfigFile); err != nil {
-		oktetoLog.Infof("could not remove temporal kubeconfig file: %s", err)
+		oktetoLog.Infof("could not remove temporary kubeconfig file: %s", err)
 	}
 
 	oktetoLog.Debugf("stopping local server...")
@@ -428,7 +428,7 @@ func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 	}
 
 	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
-	oktetoLog.Debug(fmt.Sprintf("using %s as env file for deploy command", oktetoEnvFile.Name()))
+	oktetoLog.Debug(fmt.Sprintf("using %s as env file for custom commands", oktetoEnvFile.Name()))
 
 	return oktetoEnvFile, func() {
 		if err := fs.RemoveAll(filepath.Dir(oktetoEnvFile.Name())); err != nil {

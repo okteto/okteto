@@ -130,7 +130,7 @@ func (dc *Command) addEnvVars(cwd string) {
 	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
 		repo, err := modelUtils.GetRepositoryURL(cwd)
 		if err != nil {
-			oktetoLog.Infof("could not retrieve repo name: %s", err)
+			oktetoLog.Infof("could not retrieve repository URL: %s", err)
 		}
 
 		if repo != "" {
@@ -154,7 +154,7 @@ func (dc *Command) addEnvVars(cwd string) {
 		if !dc.IsRemote {
 			isClean, err = repository.NewRepository(cwd).IsClean()
 			if err != nil {
-				oktetoLog.Infof("could not status: %s", err)
+				oktetoLog.Infof("could not get repository status: %s", err)
 			}
 		}
 		if !isClean {
@@ -188,7 +188,7 @@ func switchRepoSchemaToHTTPS(repo string) *url.URL {
 		return repoURL
 	default:
 		// if repo was parsed but has not a valid schema
-		oktetoLog.Infof("retrieved schema for %s - %s", repo, repoURL.Scheme)
+		oktetoLog.Infof("retrieved scheme for %s - %s", repo, repoURL.Scheme)
 		return nil
 	}
 }

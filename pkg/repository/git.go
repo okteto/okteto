@@ -486,7 +486,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, repoRoot string, localG
 	_, err := localGit.Exists()
 	if err != nil {
 		// git is not available, so we fall back on git-go
-		oktetoLog.Debug("Calculating git status: git is not installed, for better performances consider installing it")
+		oktetoLog.Debug("Calculating git status: git is not installed, for better performance consider installing it")
 		status, err := ogr.worktree.Status()
 		if err != nil {
 			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
@@ -508,7 +508,7 @@ func (ogr oktetoGitWorktree) ListUntrackedFiles(ctx context.Context, workdir str
 	_, err := localGit.Exists()
 	if err != nil {
 		// git is not available, so we fall back on git-go
-		oktetoLog.Debug("Calculating git untrackedFiles: git is not installed, for better performances consider installing it")
+		oktetoLog.Debug("Calculating git untrackedFiles: git is not installed, for better performance consider installing it")
 
 		status, err := ogr.Status(ctx, ogr.GetRoot(), NewLocalGit("git", &LocalExec{}, nil, false))
 		if err != nil {
@@ -543,7 +543,7 @@ func (ogr oktetoGitRepository) GetLatestSHA(ctx context.Context, dirpath string,
 	_, err := localGit.Exists()
 	if err != nil {
 		// git is not available, so we fall back on git-go
-		oktetoLog.Debug("Calculating git latest commit: git is not installed, for better performances consider installing it")
+		oktetoLog.Debug("Calculating git latest commit: git is not installed, for better performance consider installing it")
 		cIter, err := ogr.Log(&git.LogOptions{
 			PathFilter: func(s string) bool {
 				return s == dirpath
@@ -565,7 +565,7 @@ func (ogr oktetoGitRepository) GetLatestSHA(ctx context.Context, dirpath string,
 
 	commit, err := localGit.GetDirContentSHA(ctx, ogr.root, dirpath, 0)
 	if err != nil {
-		return "", fmt.Errorf("failed to get git status: %w", err)
+		return "", fmt.Errorf("failed to get git dir content SHA: %w", err)
 	}
 
 	return commit, nil
@@ -576,12 +576,12 @@ func (ogr oktetoGitRepository) GetDiff(ctx context.Context, dirpath string, loca
 	// using git directly is faster, so we check if it's available
 	_, err := localGit.Exists()
 	if err != nil {
-		return "", fmt.Errorf("failed to get git status: %w", err)
+		return "", fmt.Errorf("failed to get git diff: %w", err)
 	}
 
 	diff, err := localGit.Diff(ctx, ogr.root, dirpath, 0)
 	if err != nil {
-		return "", fmt.Errorf("failed to get git status: %w", err)
+		return "", fmt.Errorf("failed to get git diff: %w", err)
 	}
 
 	return diff, nil
@@ -591,7 +591,7 @@ func (ogr oktetoGitRepository) GetDiff(ctx context.Context, dirpath string, loca
 func FindTopLevelGitDir(workingDir string) (string, error) {
 	dir, err := filepath.Abs(workingDir)
 	if err != nil {
-		return "", fmt.Errorf("%w: invalid workind dir: %w", errFindingRepo, err)
+		return "", fmt.Errorf("%w: invalid working dir: %w", errFindingRepo, err)
 	}
 
 	repo, err := FindTopLevelGitRepoFromPath(dir)

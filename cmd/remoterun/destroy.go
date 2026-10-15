@@ -134,7 +134,7 @@ It is important that this command does the minimum and must not do calculations 
 					oktetoLog.Infof("error starting ssh forwarder %v", err)
 				}()
 			} else {
-				message := fmt.Sprintf("ssh forwarded not started because some mandatory configuration parameters are missing. %s=%s, %s=%s and %s=%s",
+				message := fmt.Sprintf("ssh forwarder not started because some mandatory configuration parameters are missing. %s=%s, %s=%s and %s=%s",
 					constants.OktetoSshAgentHostnameEnvVar,
 					sshAgentHostname,
 					constants.OktetoSshAgentPortEnvVar,

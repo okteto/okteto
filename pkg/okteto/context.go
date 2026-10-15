@@ -591,7 +591,7 @@ func GetContextCertificate() (*x509.Certificate, error) {
 	block, _ := pem.Decode(certPEM)
 
 	if block == nil {
-		oktetoLog.Debugf("couldn't decode context certificate from pem: %s", err)
+		oktetoLog.Debugf("couldn't decode context certificate from pem")
 		return nil, fmt.Errorf("couldn't decode pem")
 	}
 
@@ -637,7 +637,7 @@ func GetContextCertificateStateless(certB64 string) (*x509.Certificate, error) {
 	block, _ := pem.Decode(certPEM)
 
 	if block == nil {
-		oktetoLog.Debugf("couldn't decode context certificate from pem: %s", err)
+		oktetoLog.Debugf("couldn't decode context certificate from pem")
 		return nil, fmt.Errorf("couldn't decode pem")
 	}
 

@@ -335,7 +335,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
-		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
+		oktetoLog.Info("devManifest err, fallback to stack unmarshal")
 		stackManifest := &Manifest{
 			Type: StackType,
 			Deploy: &DeployInfo{
@@ -984,7 +984,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	out := addEmptyLineBetweenSections(buffer.Bytes())
 	if err := os.WriteFile(filePath, out, 0600); err != nil {
-		oktetoLog.Infof("failed to write stignore file: %s", err)
+		oktetoLog.Infof("failed to write okteto manifest: %s", err)
 		return err
 	}
 	return nil

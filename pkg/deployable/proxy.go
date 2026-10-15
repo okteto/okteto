@@ -282,7 +282,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
 			t, err := newProtocolTransport(clusterConfig, true)
 			if err != nil {
-				oktetoLog.Infof("could not disabled HTTP/2: %s", err)
+				oktetoLog.Infof("could not disable HTTP/2: %s", err)
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}

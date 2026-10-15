@@ -750,7 +750,7 @@ func (dev *Dev) LoadForcePull() {
 func (dev *Dev) Save(path string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
-		oktetoLog.Infof("failed to marshall development container: %s", err)
+		oktetoLog.Infof("failed to marshal development container: %s", err)
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 

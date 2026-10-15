@@ -442,7 +442,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
 		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
 		if _, err := os.Stat(knownHostsPath); err != nil {
-			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+			oktetoLog.Debugf("No known_hosts file. Error reading file: %s", err.Error())
 		} else {
 			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
 			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))

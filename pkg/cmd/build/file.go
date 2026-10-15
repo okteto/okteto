@@ -113,7 +113,7 @@ func copyDockerIgnore(originalPath, translatedPath string) error {
 func copyFile(orig, dest string) error {
 	input, err := os.ReadFile(orig)
 	if err != nil {
-		oktetoLog.Infof("could not read %s dockerfile", orig)
+		oktetoLog.Infof("could not read %s", orig)
 		return err
 	}
 

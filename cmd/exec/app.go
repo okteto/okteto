@@ -82,7 +82,7 @@ func (ar *appRetriever) getApp(ctx context.Context, dev *model.Dev, namespace st
 		return nil, fmt.Errorf("failed to refresh app: %w", err)
 	}
 
-	ar.ioControl.Logger().Debug("finish to retrieve app")
+	ar.ioControl.Logger().Debug("finished retrieving app")
 	return devApp, nil
 }
 

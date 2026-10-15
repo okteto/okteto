@@ -38,7 +38,7 @@ func checkLocalWatchesConfiguration() {
 	w := "/proc/sys/fs/inotify/max_user_watches"
 	f, err := os.ReadFile(w)
 	if err != nil {
-		oktetoLog.Infof("Fail to read %s: %s", w, err)
+		oktetoLog.Infof("Failed to read %s: %s", w, err)
 		return
 	}
 

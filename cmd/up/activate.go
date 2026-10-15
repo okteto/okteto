@@ -127,7 +127,7 @@ func (up *upContext) activate() error {
 	}
 
 	if err := up.waitUntilAppIsAwaken(ctx, app); err != nil {
-		oktetoLog.Infof("error waiting for the original %s to be awaken: %s", app.Kind(), err.Error())
+		oktetoLog.Infof("error waiting for the original %s to wake up: %s", app.Kind(), err.Error())
 		return err
 	}
 
@@ -298,7 +298,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return initSyncErr
 	}
 
-	oktetoLog.Info("create deployment secrets")
+	oktetoLog.Info("create development container secrets")
 	if err := secrets.Create(ctx, up.Dev, up.Namespace, k8sClient, up.Sy); err != nil {
 		return err
 	}

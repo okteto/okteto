@@ -90,13 +90,13 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 				// If manifestPath is empty and filename is not equal to one of the default okteto name,
 				// log a message indicating the mismatch between the configmap and the provided manifest.
 				if cmapFilename != discoveredFile {
-					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmapFilename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmap.Name, cmapFilename, discoveredFile)
 					continue
 				}
 			} else {
 				// If manifestPath is not empty and filename is not the same as manifestPath,
 				// log a message indicating the mismatch between the configmap and the provided manifest.
-				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmapFilename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmap.Name, cmapFilename, manifestPath)
 				continue
 			}
 		}

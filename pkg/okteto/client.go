@@ -362,7 +362,7 @@ func parseOktetoURLWithPath(u, path string) (string, error) {
 }
 
 func translateAPIErr(err error) error {
-	oktetoLog.Debugf("returnedAPI error: %s", err.Error())
+	oktetoLog.Debugf("returned API error: %s", err.Error())
 
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {

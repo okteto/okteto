@@ -108,7 +108,7 @@ func sendErrAndExit(logger *log.Entry, s ssh.Session, err error) {
 	}
 
 	if err := s.Exit(getExitStatusFromError(err)); err != nil {
-		logger.WithError(err).Errorf("pty session failed to exit")
+		logger.WithError(err).Errorf("session failed to exit")
 	}
 }
 

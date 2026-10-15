@@ -176,7 +176,7 @@ func AskForOptions(options []string, label string) (string, error) {
 
 	i, _, err := prompt.Run()
 	if err != nil {
-		oktetoLog.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid option: %s", err)
 		return "", fmt.Errorf("invalid option")
 	}
 

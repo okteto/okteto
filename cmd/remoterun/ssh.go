@@ -82,7 +82,7 @@ func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, 
 		localConn, err := localListener.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
-				oktetoLog.Debugf("Listener closed, stopping accept new connections")
+				oktetoLog.Debugf("Listener closed, stop accepting new connections")
 				break
 			}
 			oktetoLog.Errorf("Failed to accept local connection: %v", err)
@@ -166,7 +166,7 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	err = localConn.SetDeadline(time.Time{})
 	if err != nil {
-		oktetoLog.Infof("failed to set timeout to the local socket connection: %v", err)
+		oktetoLog.Infof("failed to reset timeout to the local socket connection: %v", err)
 	}
 
 	go func() {

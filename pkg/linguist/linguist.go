@@ -141,7 +141,7 @@ func refineJavaChoice(root string) string {
 		return Gradle
 	}
 
-	oktetoLog.Infof("didn't found %s : %s", p, err)
+	oktetoLog.Infof("didn't find %s : %s", p, err)
 	return Maven
 }
 
