@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -378,6 +379,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	// show an informational warning per service once
 	serviceWarnings := make(map[string]string)
 	restartsPerSvc := map[string]int{}
+	checkedServiceAccounts := map[string]bool{}
 	for {
 		select {
 		case <-to.C:
@@ -420,6 +422,9 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 							return err
 						}
 						continue
+					}
+					if err := checkServiceAccountExists(ctx, stack, svcName, k8sClient, checkedServiceAccounts); err != nil {
+						return err
 					}
 					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
 					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
@@ -933,6 +938,37 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Depl
 	if !options.InsidePipeline {
 		options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, s, options.ServicesToDeploy, c)
 	}
+	return nil
+}
+
+// checkServiceAccountExists checks that the ServiceAccount set with x-okteto-service-account for a service exists.
+// It runs right before the service's workload is created, once its depends_on are satisfied, so a ServiceAccount
+// created earlier in the same deploy (by the deploy commands, a dependency or a service it depends on) is found, while
+// a missing one fails with a clear error instead of leaving the workload unable to create pods. ServiceAccounts that exist, or that can't be verified, are recorded in
+// checked so each one is fetched once
+func checkServiceAccountExists(ctx context.Context, stack *model.Stack, svcName string, c kubernetes.Interface, checked map[string]bool) error {
+	sa := stack.Services[svcName].ServiceAccount
+	if sa == "" || checked[sa] {
+		return nil
+	}
+
+	_, err := c.CoreV1().ServiceAccounts(stack.Namespace).Get(ctx, sa, metav1.GetOptions{})
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		// check the API status reason instead of oktetoErrors.IsNotFound: a false positive from matching the error
+		// text would block a deploy that works
+		if k8sErrors.IsNotFound(err) {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("ServiceAccount '%s' used by service '%s' doesn't exist in namespace '%s'", sa, svcName, stack.Namespace),
+				Hint: "Create it (for example in your deploy commands), or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount",
+			}
+		}
+		// e.g. the user can't get ServiceAccounts: don't block a deploy that might work
+		oktetoLog.Warning("Could not verify that ServiceAccount '%s' used by service '%s' exists: %s", sa, svcName, err)
+	}
+	checked[sa] = true
 	return nil
 }
 
