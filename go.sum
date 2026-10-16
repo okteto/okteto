@@ -543,8 +543,8 @@ github.com/samber/slog-common v0.11.0 h1:JdESCaXcEwdtoTCYHKQFfHGbWN2vZJq0DDGEE/l
 github.com/samber/slog-common v0.11.0/go.mod h1:Qjrfhwk79XiCIhBj8+jTq1Cr0u9rlWbjawh3dWXzaHk=
 github.com/samber/slog-logrus/v2 v2.1.0 h1:Bn+td3leijw+73c+TT3MhQBGuH2hjClWln4FugReUlQ=
 github.com/samber/slog-logrus/v2 v2.1.0/go.mod h1:iB2IyX3uSmQUqmkHmLX73MVtUGhujyBnmEN+18HrAQY=
-github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 h1:KRzFb2m7YtdldCEkzs6KqmJw4nqEVZGK7IN2kJkjTuQ=
-github.com/santhosh-tekuri/jsonschema/v6 v6.0.2/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
+github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 h1:1EYB5IzjZawrrnELUi78f9fPu57HuXjmddZPjrls/28=
+github.com/santhosh-tekuri/jsonschema/v6 v6.0.3/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
 github.com/secure-systems-lab/go-securesystemslib v0.11.0 h1:iuCR9kcMFD4QurdKrGvPLoKZLv9YvwPYVr0473BdtFs=
 github.com/secure-systems-lab/go-securesystemslib v0.11.0/go.mod h1:+PMOTjUGwHj2vcZ+TFKlb1tXRbrdWE1LYDT5i9JC80Q=
 github.com/sergi/go-diff v1.4.0 h1:n/SP9D5ad1fORl+llWyN+D6qoUETXNZARKjyY2/KVCw=
