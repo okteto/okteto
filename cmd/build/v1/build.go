@@ -32,8 +32,9 @@ type OktetoBuilder struct {
 func NewBuilder(builder basic.BuildRunner, ioCtrl *io.Controller) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder: basic.Builder{
-			BuildRunner: builder,
-			IoCtrl:      ioCtrl,
+			BuildRunner:      builder,
+			IoCtrl:           ioCtrl,
+			ShowBuildMessage: true,
 		},
 	}
 }

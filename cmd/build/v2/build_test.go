@@ -218,6 +218,7 @@ func NewFakeBuilder(builder buildCmd.OktetoBuilderInterface, registryIface oktet
 			},
 		},
 		serviceEnvVarsHandler: environment.NewServiceEnvVarsHandler(ioCtrl, registryIface),
+		buildStrategy:         sequentialBuildStrategy{},
 	}
 }
 
@@ -328,7 +329,7 @@ func TestTwoStepsBuild(t *testing.T) {
 		},
 	}
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
-	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{}, bc.Builder)
 
 	require.NoError(t, err)
 	require.Equal(t, "okteto.dev/test-test:okteto", image)
@@ -360,7 +361,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 		},
 	}
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
-	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{}, bc.Builder)
 
 	// error from the build
 	assert.NoError(t, err)
@@ -395,7 +396,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 		},
 	}
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
-	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{}, bc.Builder)
 
 	// error from the build
 	assert.NoError(t, err)
@@ -431,7 +432,7 @@ func TestBuildWithStack(t *testing.T) {
 		},
 	}
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
-	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
+	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{}, bc.Builder)
 
 	// error from the build
 	assert.NoError(t, err)

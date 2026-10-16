@@ -14,6 +14,7 @@
 package buildkit
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -546,4 +547,79 @@ func TestCheckIfImageIsPushed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunnerRunDoesNotShowBuildMessage(t *testing.T) {
+	var out bytes.Buffer
+	r := &Runner{
+		connector: &fakeBuildkitConnector{
+			waiter:        &fakeBuildkitWaiter{},
+			clientFactory: &fakeBuildkitClientFactory{},
+		},
+		registry: &fakeRegistryImageChecker{},
+		solveBuild: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
+			return nil
+		},
+		metadata:               &runnerMetadata{},
+		logger:                 io.NewIOController().WithOutput(&out, ""),
+		okCtx:                  &fakeOktetoContext{},
+		fs:                     afero.NewMemMapFs(),
+		solveOptBuilderFactory: newFakeSolveOptBuilderFactory(&client.SolveOpt{}, nil),
+	}
+
+	err := r.Run(context.Background(), &types.BuildOptions{File: "api/Dockerfile"}, "")
+
+	require.NoError(t, err)
+	require.NotContains(t, out.String(), "Building '")
+}
+
+func TestRunnerRunDoesNotRetryCancelledBuilds(t *testing.T) {
+	var out bytes.Buffer
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	solves := 0
+	r := &Runner{
+		connector: &fakeBuildkitConnector{
+			waiter:        &fakeBuildkitWaiter{},
+			clientFactory: &fakeBuildkitClientFactory{},
+		},
+		registry: &fakeRegistryImageChecker{},
+		solveBuild: func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *BuildMetadata) error {
+			solves++
+			// Another build failed and the batch was cancelled while this one was solving
+			cancel()
+			return fmt.Errorf("build failed: rpc error: code = Canceled desc = context canceled")
+		},
+		metadata:                           &runnerMetadata{},
+		logger:                             io.NewIOController().WithOutput(&out, ""),
+		maxAttemptsBuildkitTransientErrors: 5,
+		okCtx:                              &fakeOktetoContext{},
+		fs:                                 afero.NewMemMapFs(),
+		solveOptBuilderFactory:             newFakeSolveOptBuilderFactory(&client.SolveOpt{}, nil),
+	}
+
+	err := r.Run(ctx, &types.BuildOptions{}, "")
+
+	require.Error(t, err)
+	require.Equal(t, 1, solves)
+	require.NotContains(t, out.String(), "Retrying")
+}
+
+func TestRunnerRunReturnsSolveOptionsError(t *testing.T) {
+	r := &Runner{
+		connector: &fakeBuildkitConnector{
+			waiter:        &fakeBuildkitWaiter{},
+			clientFactory: &fakeBuildkitClientFactory{},
+		},
+		registry:               &fakeRegistryImageChecker{},
+		metadata:               &runnerMetadata{},
+		logger:                 io.NewIOController(),
+		okCtx:                  &fakeOktetoContext{},
+		fs:                     afero.NewMemMapFs(),
+		solveOptBuilderFactory: newFakeSolveOptBuilderFactory(nil, assert.AnError),
+	}
+
+	err := r.Run(context.Background(), &types.BuildOptions{}, "")
+
+	require.ErrorIs(t, err, assert.AnError)
 }

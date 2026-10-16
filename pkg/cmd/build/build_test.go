@@ -15,17 +15,23 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/build/buildkit"
+	"github.com/okteto/okteto/pkg/build/buildkit/connector"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -546,7 +552,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 
-			result := OptsFromBuildInfo(manifest, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx)
+			result := OptsFromBuildInfo(manifest, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr, okCtx, oktetoLog.Warning)
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -743,7 +749,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 				contextTest = tt.optionalContext
 			}
 
-			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, tt.getWd)
+			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName, tt.getWd, oktetoLog.Warning)
 			warningErr := strings.TrimSuffix(buf.String(), "\n")
 
 			if warningErr != "" && tt.expectedError == "" {
@@ -968,4 +974,76 @@ func Test_shouldUseInClusterConnector(t *testing.T) {
 			require.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+type fakeBuildkitConnector struct{}
+
+func (fakeBuildkitConnector) Start(context.Context) error            { return nil }
+func (fakeBuildkitConnector) WaitUntilIsReady(context.Context) error { return nil }
+func (fakeBuildkitConnector) Stop()                                  {}
+func (fakeBuildkitConnector) GetBuildkitClient(context.Context) (*client.Client, error) {
+	return nil, assert.AnError
+}
+func (fakeBuildkitConnector) GetType() string { return "fake" }
+
+func TestBuildWithOktetoResetsMetadataOnFailure(t *testing.T) {
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), fakeBuildkitConnector{})
+	ob.metadata = &buildkit.BuildMetadata{ConnectionType: "previous-build", BuildContextSize: 42}
+
+	err := ob.buildWithOkteto(context.Background(), &types.BuildOptions{File: filepath.Join(t.TempDir(), "missing.Dockerfile")}, io.NewIOController(), nil)
+
+	require.Error(t, err)
+	require.Equal(t, &buildkit.BuildMetadata{}, ob.GetMetadata())
+}
+
+func TestConnectorFactoryForPortForwarder(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.PortForwarder{})
+
+	require.NotNil(t, ob.connectorFactory())
+}
+
+func TestConnectorFactoryForInClusterConnector(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.InClusterConnector{})
+
+	require.NotNil(t, ob.connectorFactory())
+}
+
+func TestConnectorFactoryForIngress(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), &connector.IngressConnector{})
+
+	require.NotNil(t, ob.connectorFactory())
+}
+
+func TestSolveBuildFnDefaultsToSolveBuild(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), fakeBuildkitConnector{})
+
+	require.Equal(t, reflect.ValueOf(SolveBuild).Pointer(), reflect.ValueOf(ob.solveBuildFn()).Pointer())
+}
+
+func TestSetSolveFnReplacesSolveFunction(t *testing.T) {
+	ob := NewOktetoBuilder(&mockOktetoContext{}, afero.NewMemMapFs(), io.NewIOController(), fakeBuildkitConnector{})
+	custom := func(context.Context, *client.Client, *client.SolveOpt, string, *io.Controller, *buildkit.BuildMetadata) error {
+		return nil
+	}
+
+	ob.SetSolveFn(custom)
+
+	require.Equal(t, reflect.ValueOf(custom).Pointer(), reflect.ValueOf(ob.solveBuildFn()).Pointer())
+}
+
+func TestRelayStatusForwardsUntilSolveClosesChannel(t *testing.T) {
+	ch := make(chan *client.SolveStatus, 2)
+	displayCh := make(chan *client.SolveStatus, 2)
+	ch <- &client.SolveStatus{}
+	ch <- &client.SolveStatus{}
+	close(ch)
+
+	relayStatus(ch, displayCh, make(chan error, 1), NewBuildKitLogsFilter(nil, nil), newContextSyncTracker(), &buildkit.BuildMetadata{}, "plain")
+
+	forwarded := 0
+	for range displayCh {
+		forwarded++
+	}
+	require.Equal(t, 2, forwarded)
 }

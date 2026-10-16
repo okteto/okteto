@@ -14,11 +14,13 @@
 package connector
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
+	"sync"
 
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -64,8 +66,19 @@ type fileWriter interface {
 // osFileWriter implements the fileWriter interface
 type osFileWriter struct{}
 
-// WriteFile writes data to a file
+// fileWriteMu serializes writes of the certificate file: several connectors can create
+// clients at the same time and every client creation writes the same file.
+var fileWriteMu sync.Mutex
+
+// WriteFile writes data to a file. It skips the write when the file already has the same
+// content, so a file that another client is reading is never truncated.
 func (o *osFileWriter) WriteFile(filename string, data []byte, perm os.FileMode) error {
+	fileWriteMu.Lock()
+	defer fileWriteMu.Unlock()
+
+	if current, err := os.ReadFile(filename); err == nil && bytes.Equal(current, data) {
+		return nil
+	}
 	return os.WriteFile(filename, data, perm)
 }
 

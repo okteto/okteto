@@ -14,8 +14,11 @@
 package io
 
 import (
+	"bytes"
+	"io"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -72,4 +75,102 @@ func TestStage(t *testing.T) {
 	l.SetOutputFormat("json")
 	l.SetStage("test")
 	assert.Equal(t, "test", l.oktetoLogger.logrusFormatter.(*logrusJSONFormatter).stage)
+}
+
+func TestWithQuietOutputSharesLogger(t *testing.T) {
+	ioCtrl := NewIOController()
+
+	quiet := ioCtrl.WithQuietOutput()
+
+	require.Same(t, ioCtrl.Logger(), quiet.Logger())
+	require.Same(t, ioCtrl.In(), quiet.In())
+}
+
+func TestWithQuietOutputDiscardsOutput(t *testing.T) {
+	quiet := NewIOController().WithQuietOutput()
+
+	require.Equal(t, io.Discard, quiet.Out().out)
+}
+
+func TestWithQuietOutputNeverDrawsSpinner(t *testing.T) {
+	quiet := NewIOController().WithQuietOutput()
+
+	_, isNoSpinner := quiet.Out().Spinner("Waiting for the Okteto Build service").(*noSpinner)
+
+	require.True(t, isNoSpinner)
+}
+
+func TestWithQuietOutputIsSafeForConcurrentSpinners(t *testing.T) {
+	quiet := NewIOController().WithQuietOutput()
+
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sp := quiet.Out().Spinner("Waiting for BuildKit service to be ready...")
+			sp.Start()
+			quiet.Out().Println("message")
+			sp.Stop()
+		}()
+	}
+	wg.Wait()
+
+	require.Nil(t, quiet.Out().spinner)
+}
+
+func TestWithOutputWritesToGivenWriter(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("plain")
+	var out bytes.Buffer
+
+	child := ioCtrl.WithOutput(&out, "Building service api")
+	child.Out().Println("hello")
+
+	require.Equal(t, "hello\n", out.String())
+}
+
+func TestWithOutputTagsStage(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("json")
+	var out bytes.Buffer
+
+	child := ioCtrl.WithOutput(&out, "Building service api")
+	child.Out().Println("hello")
+
+	require.Contains(t, out.String(), `"stage":"Building service api"`)
+}
+
+func TestWithOutputLeavesParentStage(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("json")
+	ioCtrl.SetStage("Building services")
+	t.Cleanup(func() { ioCtrl.SetStage("") })
+	var parentOut, childOut bytes.Buffer
+	ioCtrl.out.out = &parentOut
+
+	ioCtrl.WithOutput(&childOut, "Building service api")
+	ioCtrl.Out().Println("hello")
+
+	require.Contains(t, parentOut.String(), `"stage":"Building services"`)
+}
+
+func TestWithOutputKeepsParentFormat(t *testing.T) {
+	ioCtrl := NewIOController()
+	ioCtrl.SetOutputFormat("plain")
+
+	child := ioCtrl.WithOutput(&bytes.Buffer{}, "Building service api")
+
+	_, isPlain := child.Out().formatter.(*plainFormatter)
+	require.True(t, isPlain)
+}
+
+func TestWithOutputSharesLoggerAndNeverDrawsSpinner(t *testing.T) {
+	ioCtrl := NewIOController()
+
+	child := ioCtrl.WithOutput(&bytes.Buffer{}, "Building service api")
+	_, isNoSpinner := child.Out().Spinner("waiting").(*noSpinner)
+
+	require.Same(t, ioCtrl.Logger(), child.Logger())
+	require.True(t, isNoSpinner)
 }

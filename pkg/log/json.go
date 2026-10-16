@@ -204,8 +204,7 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 		}
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 			fmt.Fprintln(w.out.Out, msg)
 		}
 	}
@@ -226,8 +225,7 @@ func (w *JSONWriter) Fprintf(writer io.Writer, format string, a ...interface{}) 
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 		}
 		fmt.Fprint(writer, msg)
 	}
@@ -240,8 +238,7 @@ func (w *JSONWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 			fmt.Fprintln(writer, msg)
 		}
 
@@ -252,8 +249,7 @@ func (w *JSONWriter) FPrintln(writer io.Writer, args ...interface{}) {
 func (w *JSONWriter) Print(args ...interface{}) {
 	msg := convertToJSON(InfoLevel, log.stage, fmt.Sprint(args...))
 	if msg != "" {
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		writeLineToBuffer(msg)
 		fmt.Fprint(w.out.Out, msg)
 	}
 
@@ -293,8 +289,7 @@ func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	msg = convertToJSON(level, log.stage, msg)
 	if msg != "" {
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		writeLineToBuffer(msg)
 		fmt.Fprintln(w.out.Out, msg)
 	}
 }

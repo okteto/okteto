@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -24,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeRegistry struct {
@@ -162,4 +164,37 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			assert.Equal(t, tt.expected.expSHA, shaEnvValue)
 		})
 	}
+}
+
+func Test_GetBuildEnvVarsReturnsCopy(t *testing.T) {
+	t.Setenv("OKTETO_TEST_COPY_KEY", "")
+	handler := NewServiceEnvVarsHandler(io.NewIOController(), newFakeRegistry())
+	handler.SetEnvVar("OKTETO_TEST_COPY_KEY", "original")
+
+	got := handler.GetBuildEnvVars()
+	got["OKTETO_TEST_COPY_KEY"] = "modified"
+
+	require.Equal(t, "original", handler.GetBuildEnvVars()["OKTETO_TEST_COPY_KEY"])
+}
+
+func Test_GetBuildEnvVarsConcurrentWithSetEnvVar(t *testing.T) {
+	t.Setenv("OKTETO_TEST_CONCURRENT_KEY", "")
+	handler := NewServiceEnvVarsHandler(io.NewIOController(), newFakeRegistry())
+
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			handler.SetEnvVar("OKTETO_TEST_CONCURRENT_KEY", fmt.Sprintf("%d", i))
+		}()
+		go func() {
+			defer wg.Done()
+			for range handler.GetBuildEnvVars() {
+			}
+		}()
+	}
+	wg.Wait()
+
+	require.Contains(t, handler.GetBuildEnvVars(), "OKTETO_TEST_CONCURRENT_KEY")
 }

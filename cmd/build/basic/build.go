@@ -38,6 +38,9 @@ type BuildRunner interface {
 type Builder struct {
 	BuildRunner BuildRunner
 	IoCtrl      *io.Controller
+	// ShowBuildMessage prints "Building '<Dockerfile>'..." before each build. Only the
+	// builder used for sequential builds shows it: a parallel batch has its own header.
+	ShowBuildMessage bool
 }
 
 // Build builds the image defined by the BuildOptions used the BuildRunner passed as dependency
@@ -67,6 +70,14 @@ func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error
 	options.Tag, err = env.ExpandEnv(options.Tag)
 	if err != nil {
 		return err
+	}
+
+	if ob.ShowBuildMessage {
+		switch options.OutputMode {
+		case "test", "deploy", "destroy":
+		default:
+			ob.IoCtrl.Out().Infof("Building '%s'...", options.File)
+		}
 	}
 
 	if err := ob.BuildRunner.Run(ctx, options, ob.IoCtrl); err != nil {

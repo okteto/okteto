@@ -75,6 +75,8 @@ type OktetoBuilder struct {
 	metadata      *buildkit.BuildMetadata
 	logger        *io.Controller
 	connector     BuildkitConnector
+	// solveFn runs each solve; nil means SolveBuild
+	solveFn buildkit.SolveBuildFn
 }
 
 func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
@@ -85,6 +87,60 @@ func (ob *OktetoBuilder) GetMetadata() *buildkit.BuildMetadata {
 // This allows the connector to be reused across multiple build operations.
 func (ob *OktetoBuilder) GetConnector() BuildkitConnector {
 	return ob.connector
+}
+
+// SetSolveFn sets the function that runs the solves of the next builds. It is used to
+// route the output of concurrent builds to a shared display.
+func (ob *OktetoBuilder) SetSolveFn(fn buildkit.SolveBuildFn) {
+	ob.solveFn = fn
+}
+
+// UsesDefaultSolveFn reports whether ob runs its solves with SolveBuild
+func UsesDefaultSolveFn(ob *OktetoBuilder) bool {
+	return ob.solveFn == nil
+}
+
+func (ob *OktetoBuilder) solveBuildFn() buildkit.SolveBuildFn {
+	if ob.solveFn == nil {
+		return SolveBuild
+	}
+	return ob.solveFn
+}
+
+// connectorFactory creates an independent BuildKit connector: its own session, its own
+// queue slot and, potentially, its own BuildKit pod
+type connectorFactory func(ctx context.Context) (BuildkitConnector, error)
+
+// connectorFactory returns how to open extra connectors for concurrent builds. It returns
+// nil when the connector type is unknown, meaning concurrent builds must share it. Extra
+// connectors never print to the terminal.
+func (ob *OktetoBuilder) connectorFactory() connectorFactory {
+	quietIO := ob.logger.WithQuietOutput()
+	switch conn := ob.connector.(type) {
+	case *connector.PortForwarder:
+		return func(ctx context.Context) (BuildkitConnector, error) {
+			sibling, err := conn.NewSibling(ctx, quietIO)
+			if err != nil {
+				// Return an untyped nil: a nil *PortForwarder would be a non-nil interface
+				return nil, err
+			}
+			return sibling, nil
+		}
+	case *connector.InClusterConnector:
+		return func(ctx context.Context) (BuildkitConnector, error) {
+			sibling, err := conn.NewSibling(ctx, quietIO)
+			if err != nil {
+				return nil, err
+			}
+			return sibling, nil
+		}
+	case *connector.IngressConnector:
+		return func(context.Context) (BuildkitConnector, error) {
+			return conn.NewSibling(quietIO), nil
+		}
+	default:
+		return nil
+	}
 }
 
 // OktetoRegistryInterface checks if an image is at the registry
@@ -161,7 +217,16 @@ func (ob *OktetoBuilder) GetBuilder() string {
 func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 
-	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, SolveBuild)
+	return ob.buildWithOkteto(ctx, buildOptions, ioCtrl, ob.solveBuildFn())
+}
+
+// buildOutputMode returns the progress mode of a build of the manifest: the requested one,
+// or the format of the logs when none was requested
+func buildOutputMode(requested string) string {
+	if requested == "" {
+		requested = oktetoLog.GetOutputFormat()
+	}
+	return setOutputMode(requested)
 }
 
 func setOutputMode(outputMode string) string {
@@ -195,6 +260,8 @@ func GetRegistryConfigFromOktetoConfig(okCtx OktetoContextInterface) *okteto.Con
 }
 
 func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller, run buildkit.SolveBuildFn) error {
+	// Reset metadata so a failed build never reports the metadata of the previous build
+	ob.metadata = &buildkit.BuildMetadata{}
 	oktetoLog.Infof("building your image using %s connector", ob.connector.GetType())
 
 	repoURL := ""
@@ -277,7 +344,7 @@ type regInterface interface {
 }
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface) *types.BuildOptions {
+func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, o *types.BuildOptions, reg regInterface, okCtx OktetoContextInterface, warn func(format string, args ...any)) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -303,7 +370,7 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 
 	file := b.Dockerfile
 	if b.Context != "" && b.Dockerfile != "" {
-		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName, os.Getwd)
+		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName, os.Getwd, warn)
 	}
 
 	args := []build.Arg{}
@@ -382,7 +449,7 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 	for id, secret := range b.Secrets {
 		if secret.Env != "" {
 			if os.Getenv(secret.Env) == "" {
-				oktetoLog.Warning("secret %q uses env var %q which is not set: the build secret will be empty and the build may fail", id, secret.Env)
+				warn("secret %q uses env var %q which is not set: the build secret will be empty and the build may fail", id, secret.Env)
 			}
 			opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,env=%s", id, secret.Env))
 		} else {
@@ -390,11 +457,11 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 		}
 	}
 
-	outputMode := oktetoLog.GetOutputFormat()
-	if o != nil && o.OutputMode != "" {
-		outputMode = o.OutputMode
+	requestedMode := ""
+	if o != nil {
+		requestedMode = o.OutputMode
 	}
-	opts.OutputMode = setOutputMode(outputMode)
+	opts.OutputMode = buildOutputMode(requestedMode)
 
 	return opts
 }
@@ -410,7 +477,7 @@ func OptsFromBuildInfoForRemoteDeploy(b *build.Info, o *types.BuildOptions) *typ
 	return opts
 }
 
-func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd func() (string, error)) string {
+func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd func() (string, error), warn func(format string, args ...any)) string {
 	if filepath.IsAbs(dockerfile) {
 		return dockerfile
 	}
@@ -419,7 +486,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 
 	joinPath := filepath.Join(context, dockerfile)
 	if !filesystem.FileExistsAndNotDir(joinPath, fs) {
-		oktetoLog.Warning(warningDockerfilePath, svcName, dockerfile, context)
+		warn(warningDockerfilePath, svcName, dockerfile, context)
 		return dockerfile
 	}
 
@@ -433,7 +500,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string, getWd 
 	}
 
 	if joinPath != filepath.Join(wd, filepath.Clean(dockerfile)) && filesystem.FileExistsAndNotDir(dockerfile, fs) {
-		oktetoLog.Warning(doubleDockerfileWarning, svcName, context, dockerfile)
+		warn(doubleDockerfileWarning, svcName, context, dockerfile)
 	}
 
 	return joinPath
