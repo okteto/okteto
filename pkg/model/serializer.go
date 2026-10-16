@@ -371,7 +371,7 @@ func (f *Reverse) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	maxReverseParts := 2
 	parts := strings.SplitN(raw, ":", maxReverseParts)
 	if len(parts) != maxReverseParts {
-		return fmt.Errorf("wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
+		return fmt.Errorf("wrong reverse syntax '%s', must be of the form 'remotePort:localPort'", raw)
 	}
 	remotePort, err := strconv.Atoi(parts[0])
 	if err != nil {
@@ -916,7 +916,7 @@ func (c *ComposeSectionInfo) UnmarshalYAML(unmarshal func(interface{}) error) er
 	return err
 }
 
-// MarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (c *ComposeSectionInfo) MarshalYAML() (interface{}, error) {
 	if len(c.ComposesInfo) == 1 {
 		return c.ComposesInfo[0], nil

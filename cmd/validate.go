@@ -79,7 +79,7 @@ func validateOktetoManifest(content string) error {
 	return nil
 }
 
-// Validate validates a Okteto Manifest file
+// Validate validates an Okteto Manifest file
 func Validate(fs afero.Fs) *cobra.Command {
 	options := &options{}
 
@@ -139,7 +139,7 @@ func Validate(fs afero.Fs) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.file, "file", "f", "", "the path to the Okteto Manifest or Dockerfile")
+	cmd.Flags().StringVarP(&options.file, "file", "f", "", "the path to the Okteto Manifest")
 
 	return cmd
 }

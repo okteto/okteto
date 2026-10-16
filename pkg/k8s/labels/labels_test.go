@@ -53,7 +53,7 @@ func TestTransformLabelsToSelector(t *testing.T) {
 				}
 			}
 			if !passed {
-				t.Errorf("didn't transformed correctly. Actual %+v, Expected one of %+v", result, tt.expected)
+				t.Errorf("didn't transform correctly. Actual %+v, Expected one of %+v", result, tt.expected)
 			}
 
 		})
@@ -95,7 +95,7 @@ func TestSetInMetadata(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			SetInMetadata(tt.om, tt.key, tt.value)
 			if !reflect.DeepEqual(tt.om.Labels, tt.expected) {
-				t.Errorf("error in %s: Actual %+v, Expected one of %+v", tt.name, tt.om.Labels, tt.expected)
+				t.Errorf("error in %s: Actual %+v, Expected %+v", tt.name, tt.om.Labels, tt.expected)
 			}
 		})
 	}

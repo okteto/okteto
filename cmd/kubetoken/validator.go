@@ -150,8 +150,8 @@ func getCtxResource(ctxName, ns string) *contextCMD.Options {
 
 type getContextStoreFunc func() *okteto.ContextStore
 
-// ctxValidator checks that the ctx use to execute the command is an okteto context
-// that has already being added to your okteto context
+// ctxValidator checks that the ctx used to execute the command is an okteto context
+// that has already been added to your okteto context
 type ctxValidator struct {
 	ctxResource       *contextCMD.Options
 	k8sClientProvider k8sClientProvider

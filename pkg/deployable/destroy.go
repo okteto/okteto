@@ -53,7 +53,7 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 	}
 	params.Variables = appendGatewayEnvVars(params.Variables)
 
-	// Setup helm version based on environment variable
+	// Set up helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 
 	// This is a hack for improving the logs until we refactor all that. The oktetoLog.Information('Running '%s'')
 	// should not appear under any stage, that is why we clear the stage after each execution. To keep backward compatibility
-	// in case of failure of command, we end up the function setting the stage to the last command executed.
+	// in case of failure of command, we end the function by setting the stage to the last command executed.
 	oktetoLog.SetStage(lastCommandName)
 
 	return commandErr

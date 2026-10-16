@@ -112,7 +112,7 @@ func (or OktetoRegistry) IsGlobalRegistry(image string) bool {
 	return strings.HasPrefix(expandedImage, expandedGlobalImage)
 }
 
-// GetImageTag returns the image tag to build for a given services
+// GetImageTag returns the image tag to build for a given service
 func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 	if or.config.GetRegistryURL() != "" {
 		if or.IsOktetoRegistry(image) {
@@ -124,7 +124,7 @@ func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 
-// GetImageReference returns the values to setup the image environment variables
+// GetImageReference returns the values to set up the image environment variables
 func (OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
@@ -157,7 +157,7 @@ func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
 	return or.imageCtrl.GetRepoNameAndTag(repo)
 }
 
-// GetDevImageFromGlobal clones an image from the global registry to the dev registry
+// GetDevImageFromGlobal returns the dev registry image reference for an image of the global registry
 func (or OktetoRegistry) GetDevImageFromGlobal(imageWithDigest string) string {
 	// parse the image URI to extract registry and repository name
 	reg, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(imageWithDigest)
@@ -165,7 +165,7 @@ func (or OktetoRegistry) GetDevImageFromGlobal(imageWithDigest string) string {
 
 	globalNamespacePrefix := fmt.Sprintf("%s/", or.imageCtrl.config.GetGlobalNamespace())
 
-	// forging a new image URI in the dev registry, using the same repo name and tag as the global image
+	// forging a new image URI in the dev registry, using the same repo name as the global image
 	personalNamespacePrefix := fmt.Sprintf("%s/", or.config.GetNamespace())
 	devRepo := strings.Replace(repo, globalNamespacePrefix, personalNamespacePrefix, 1)
 	// When cloning an image from global to dev, we should do it to the "okteto" tag
@@ -198,7 +198,7 @@ func (or OktetoRegistry) Clone(from, to string) (string, error) {
 		return "", err
 	}
 
-	// To return always the sha256 os the dev image
+	// To return always the sha256 of the dev image
 	r, err := or.GetImageTagWithDigest(to)
 	if err != nil {
 		oktetoLog.Debugf("error getting the tag with digest for dev image: %s", err)

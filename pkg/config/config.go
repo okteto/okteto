@@ -49,7 +49,7 @@ const (
 	Pulling = "pulling"
 	// StartingSync up preparing syncthing
 	StartingSync = "startingSync"
-	// Synchronizing up is syncthing
+	// Synchronizing up is synchronizing
 	Synchronizing = "synchronizing"
 	// Ready up finished
 	Ready = "ready"
@@ -75,7 +75,7 @@ func GetBinaryName() string {
 	return filepath.Base(GetBinaryFullPath())
 }
 
-// GetBinaryFullPath returns the name of the binary
+// GetBinaryFullPath returns the full path of the binary
 func GetBinaryFullPath() string {
 	return os.Args[0]
 }
@@ -170,11 +170,11 @@ func DeleteStateFile(devName, devNamespace string) error {
 func GetState(devName, devNamespace string) (UpState, error) {
 	var result UpState
 	if devNamespace == "" {
-		return Failed, fmt.Errorf("can't update state file, namespace is empty")
+		return Failed, fmt.Errorf("can't read state file, namespace is empty")
 	}
 
 	if devName == "" {
-		return Failed, fmt.Errorf("can't update state file, name is empty")
+		return Failed, fmt.Errorf("can't read state file, name is empty")
 	}
 
 	statePath := filepath.Join(GetAppHome(devNamespace, devName), stateFile)

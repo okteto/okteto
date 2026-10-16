@@ -53,7 +53,7 @@ func GetBySelector(ctx context.Context, namespace string, selector map[string]st
 	return &r, nil
 }
 
-// ListBySelector returns all the pods that matches the selector or error if not found
+// ListBySelector returns all the pods that match the selector or error if not found
 func ListBySelector(ctx context.Context, namespace string, selector map[string]string, c kubernetes.Interface) ([]apiv1.Pod, error) {
 	if len(selector) == 0 {
 		return nil, fmt.Errorf("empty selector")
@@ -105,7 +105,7 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 	return nil, oktetoErrors.ErrNotFound
 }
 
-// GetPodByStatefulSet returns a pod of a given replicaset
+// GetPodByStatefulSet returns a pod of a given statefulset
 func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*apiv1.Pod, error) {
 	podList, err := c.CoreV1().Pods(sfs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -252,7 +252,7 @@ func Restart(ctx context.Context, dev *model.Dev, namespace string, c *kubernete
 			if strings.Contains(err.Error(), "not found") {
 				return nil
 			}
-			return fmt.Errorf("error deleting kubernetes service: %w", err)
+			return fmt.Errorf("error deleting kubernetes pod: %w", err)
 		}
 	}
 

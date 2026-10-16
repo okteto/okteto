@@ -18,7 +18,7 @@ You will be given a path to a `.go` source file (not a `_test.go` file) under `c
 2. Check if a `*_test.go` file already exists alongside it — if so, read it to avoid duplication
 3. Read `.claude/context/testing.md` for project testing conventions
 4. Check `internal/test/` for available fake clients and test utilities:
-   - `internal/test/client/` — fake Kubernetes and Okteto clients
+   - `internal/test/client/` — fake Okteto API clients
    - `internal/test/` — context helpers, filesystem utilities
 
 ### Step 2: Plan Tests

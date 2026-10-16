@@ -45,7 +45,7 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 	return defaultTimeout
 }
 
-// ExpandVars sets dependencies values if values fits with list params
+// ExpandVars sets dependencies values if values fit with list params
 func (d *Dependency) ExpandVars(variables []string) error {
 	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
 

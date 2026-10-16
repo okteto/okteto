@@ -221,7 +221,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 			expectedNumManifestEnvs: 2,
 		},
 		{
-			name:                    "Add only env vars from cmd to dev container using non ascii characters",
+			name:                    "Add only env vars from cmd to dev container using special characters",
 			dev:                     &model.Dev{},
 			upOptions:               &Options{Envs: []string{"PASS=~$#@"}},
 			expectedNumManifestEnvs: 1,
@@ -240,7 +240,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 			expectedNumManifestEnvs: 3,
 		},
 		{
-			name: "Overwrite env vars when is required",
+			name: "Overwrite env vars when required",
 			dev: &model.Dev{
 				Environment: env.Environment{
 					{
@@ -258,11 +258,11 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			overridedEnvVars, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs)
 			if err != nil {
-				t.Fatalf("unexpected error in setEnvVarsFromCmd: %s", err)
+				t.Fatalf("unexpected error in getOverridedEnvVarsFromCmd: %s", err)
 			}
 
 			if tt.expectedNumManifestEnvs != len(*overridedEnvVars) {
-				t.Fatalf("error in setEnvVarsFromCmd; expected num variables in container %d but got %d", tt.expectedNumManifestEnvs, len(tt.dev.Environment))
+				t.Fatalf("error in getOverridedEnvVarsFromCmd; expected num variables in container %d but got %d", tt.expectedNumManifestEnvs, len(*overridedEnvVars))
 			}
 		})
 	}
@@ -310,7 +310,7 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs)
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
-				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
+				t.Fatalf("expected error in getOverridedEnvVarsFromCmd: %s due to trying to set a built-in okteto environment variable", err)
 			}
 		})
 	}
@@ -324,7 +324,7 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 		expectedTrackCalls int
 	}{
 		{
-			name: "wake namespace if it is not sleeping",
+			name: "do not wake namespace if it is not sleeping",
 			ns: v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",

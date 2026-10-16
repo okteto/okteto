@@ -383,7 +383,7 @@ func Test_translateDivertHost(t *testing.T) {
 			},
 		},
 	}
-	okteto.AddOktetoContext("test", &types.User{Registry: "registry.demo.okteto.dev"}, "okteto", "cyndy")
+	okteto.AddOktetoContext("test", &types.User{Registry: "registry.demo.okteto.dev"}, "okteto", "cindy")
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

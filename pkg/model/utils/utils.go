@@ -104,7 +104,7 @@ func GetDependentCyclic(g Graph) []string {
 	// the graph.
 	for svcName := range g {
 		// dfs search for all the possible paths of a graph, starting from a node. If we find more
-		// than once one nodeit means that it has detected a cycle and returns the cycle
+		// than once one node it means that it has detected a cycle and returns the cycle
 		if dfs(g, svcName, visited, stack) {
 			for svc, isInStack := range stack {
 				if isInStack {
@@ -117,7 +117,7 @@ func GetDependentCyclic(g Graph) []string {
 	return cycle
 }
 
-// dfs executes deep first search algorithm.
+// dfs executes depth-first search algorithm.
 // More information can be found at https://en.wikipedia.org/wiki/Depth-first_search
 func dfs(g Graph, svcName string, visited, stack map[string]bool) bool {
 	isVisited := visited[svcName]

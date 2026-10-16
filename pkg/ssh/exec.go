@@ -130,7 +130,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		oktetoLog.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
 	} else {
 		if err := agent.ForwardToRemote(connection, sockEnvVar); err != nil {
-			oktetoLog.Infof("failed to existing SSH_AUTH_SOCK('%s'): %s", sockEnvVar, err)
+			oktetoLog.Infof("failed to forward to existing SSH_AUTH_SOCK('%s'): %s", sockEnvVar, err)
 		}
 		if err := agent.RequestAgentForwarding(session); err != nil {
 			oktetoLog.Infof("failed to forward ssh agent to remote: %s", err)
@@ -161,7 +161,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	go func() {
 		if _, err := io.Copy(errW, stderr); err != nil {
-			oktetoLog.Infof("error while writing to stdOut: %s", err)
+			oktetoLog.Infof("error while writing to stdErr: %s", err)
 		}
 	}()
 

@@ -23,7 +23,7 @@ func (test) JSONSchema() *jsonschema.Schema {
 	testProps.Set("artifacts", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
 		Title:       "artifacts",
-		Description: withManifestRefDocLink("A list of files and/or folder to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.", "artifacts-string-optional"),
+		Description: withManifestRefDocLink("A list of files and/or folders to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.", "artifacts-string-optional"),
 		Items: &jsonschema.Schema{
 			Type: &jsonschema.Type{Types: []string{"string"}},
 		},

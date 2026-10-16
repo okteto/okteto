@@ -118,18 +118,18 @@ func writeFile(filepath, content string) error {
 func killLocalSyncthing(upPid int) error {
 	processes, err := ps.Processes()
 	if err != nil {
-		return fmt.Errorf("fail to list processes: %s", err.Error())
+		return fmt.Errorf("failed to list processes: %s", err.Error())
 	}
 	for _, p := range processes {
 		if p.Executable() == "syncthing" {
 			pr, err := os.FindProcess(p.Pid())
 			if err != nil {
-				log.Printf("fail to find process %d : %s", p.Pid(), err)
+				log.Printf("failed to find process %d : %s", p.Pid(), err)
 				continue
 			}
 			if upPid == p.PPid() {
 				if err := pr.Kill(); err != nil {
-					log.Printf("fail to kill process %d : %s", p.Pid(), err)
+					log.Printf("failed to kill process %d : %s", p.Pid(), err)
 				}
 			}
 		}

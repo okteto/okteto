@@ -20,20 +20,20 @@ import (
 )
 
 var (
-	// ErrComposeFileNotFound is raised when discovery package could not found any compose file
+	// ErrComposeFileNotFound is raised when discovery package could not find any compose file
 	ErrComposeFileNotFound = oktetoErrors.UserError{
 		E:    errors.New("could not detect any compose file"),
 		Hint: "If you have a compose file, use the flag '--file' to point to your compose file",
 	}
-	// ErrOktetoManifestNotFound is raised when discovery package could not found any okteto manifest file
+	// ErrOktetoManifestNotFound is raised when discovery package could not find any okteto manifest file
 	ErrOktetoManifestNotFound = oktetoErrors.UserError{
 		E:    errors.New("could not detect any okteto manifest"),
 		Hint: "If you have an okteto manifest file, use the flag '--file' to point to your okteto manifest file",
 	}
-	// ErrOktetoPipelineManifestNotFound is raised when discovery package could not found any okteto pipeline manifest
+	// ErrOktetoPipelineManifestNotFound is raised when discovery package could not find any okteto pipeline manifest
 	ErrOktetoPipelineManifestNotFound = errors.New("could not detect any okteto pipeline manifest")
-	// ErrHelmChartNotFound is raised when discovery package could not found any helm chart
+	// ErrHelmChartNotFound is raised when discovery package could not find any helm chart
 	ErrHelmChartNotFound = errors.New("could not detect any helm chart")
-	// ErrK8sManifestNotFound is raised when discovery package could not found any k8s manifest
+	// ErrK8sManifestNotFound is raised when discovery package could not find any k8s manifest
 	ErrK8sManifestNotFound = errors.New("could not detect any k8s manifest")
 )

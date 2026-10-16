@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	// errorDevNameRequired is the error returned when the dev name is required
+	// errDevNameRequired is the error returned when the dev name is required
 	errDevNameRequired = errors.New("dev name is required")
 
-	// errorCommandRequired is the error returned when the command is required
+	// errCommandRequired is the error returned when the command is required
 	errCommandRequired = errors.New("command is required")
 
 	// errNoDevContainerInDevMode is the error returned when there are no development containers in dev mode

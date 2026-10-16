@@ -155,10 +155,10 @@ func (h *Host) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	hh.Hostname = hostname
 	hh.IP = ip
 	if hh.Hostname == "" {
-		return fmt.Errorf("%w: '%s' hostname is empty", ErrInvalidHostName, hostnameIP)
+		return fmt.Errorf("%w: hostname is empty", ErrInvalidHostName)
 	}
 	if hh.IP == "" {
-		return fmt.Errorf("%w: '%s' ip is empty", ErrInvalidIp, hostnameIP)
+		return fmt.Errorf("%w: ip is empty", ErrInvalidIp)
 	}
 
 	*h = Host(hh)

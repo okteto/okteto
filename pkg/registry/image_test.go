@@ -64,7 +64,7 @@ func TestExpandRegistry(t *testing.T) {
 			expected: "ghcr.io/okteto/okteto:latest",
 		},
 		{
-			name: "okteto dev should expansion - Okteto",
+			name: "okteto dev should expand - Okteto",
 			input: input{
 				config: fakeImageConfig{
 					isOkteto:    true,
@@ -76,7 +76,7 @@ func TestExpandRegistry(t *testing.T) {
 			expected: "https://my-registry/test/okteto:latest",
 		},
 		{
-			name: "no need to expand registry - Okteto",
+			name: "no need to expand okteto dev registry - Vanilla",
 			input: input{
 				config: fakeImageConfig{
 					isOkteto: false,
@@ -86,7 +86,7 @@ func TestExpandRegistry(t *testing.T) {
 			expected: "okteto.dev/okteto:latest",
 		},
 		{
-			name: "okteto global should expansion - Okteto",
+			name: "okteto global should expand - Okteto",
 			input: input{
 				config: fakeImageConfig{
 					isOkteto:    true,
@@ -98,7 +98,7 @@ func TestExpandRegistry(t *testing.T) {
 			expected: "https://my-registry/test/okteto:latest",
 		},
 		{
-			name: "no need to expand registry - Okteto",
+			name: "no need to expand okteto global registry - Vanilla",
 			input: input{
 				config: fakeImageConfig{
 					isOkteto: false,
@@ -128,7 +128,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "is-splitted-image-not-docker-io",
+			name: "is-split-image-not-docker-io",
 			tag:  "registry.url.net/image",
 			expected: expected{
 				registry: "registry.url.net",
@@ -136,7 +136,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 			},
 		},
 		{
-			name: "is-splitted-image-not-docker-io-double-slash",
+			name: "is-split-image-not-docker-io-double-slash",
 			tag:  "registry.url.net/image/other",
 			expected: expected{
 				registry: "registry.url.net",
@@ -144,7 +144,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 			},
 		},
 		{
-			name: "is-splitted-image-docker",
+			name: "is-split-image-docker",
 			tag:  "docker.io/image",
 			expected: expected{
 				registry: "docker.io",
@@ -152,7 +152,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 			},
 		},
 		{
-			name: "is-splitted-image-docker",
+			name: "is-split-image-docker-official",
 			tag:  "image",
 			expected: expected{
 				registry: "docker.io",
@@ -160,7 +160,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 			},
 		},
 		{
-			name: "is-splitted-image-docker",
+			name: "is-split-image-docker-repo",
 			tag:  "image/test",
 			expected: expected{
 				registry: "docker.io",
@@ -246,7 +246,7 @@ func Test_GetRepoNameAndTag(t *testing.T) {
 			},
 		},
 		{
-			name:  "registry-without-tag",
+			name:  "localhost-without-tag",
 			image: "localhost:5000/test/ubuntu",
 			expected: expected{
 				repo: "localhost:5000/test/ubuntu",

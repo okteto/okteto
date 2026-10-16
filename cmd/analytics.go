@@ -35,7 +35,7 @@ func Analytics() *cobra.Command {
 			return enableAnalytics()
 		},
 	}
-	cmd.Flags().BoolVarP(&disable, "disable", "d", false, "disable analytic collection")
+	cmd.Flags().BoolVarP(&disable, "disable", "d", false, "disable analytics collection")
 	return cmd
 }
 

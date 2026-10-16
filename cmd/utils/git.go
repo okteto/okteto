@@ -54,7 +54,7 @@ func GetBranch(path string) (string, error) {
 	return name, nil
 }
 
-// GetRandomSHA returns a random sha generated in the fly
+// GetRandomSHA returns a random sha generated on the fly
 func GetRandomSHA() string {
 	var letters = []rune("0123456789abcdef")
 	b := make([]rune, 40)

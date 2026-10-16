@@ -522,7 +522,7 @@ func TestDeployExternalWithErrorGettingClient(t *testing.T) {
 	require.ErrorIs(t, err, assert.AnError)
 }
 
-func TestCleaUp(t *testing.T) {
+func TestDeployRunnerCleanUp(t *testing.T) {
 	executor := &fakeExecutor{}
 	proxy := &fakeProxy{}
 	r := DeployRunner{

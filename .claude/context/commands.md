@@ -99,7 +99,7 @@ Main execution logic:
 ### Manifest Loading
 
 ```go
-manifest, err := contextCMD.LoadManifestWithContext(ctx, opts.ManifestPath, opts.Namespace)
+manifest, err := model.GetManifestV2(opts.ManifestPath, afero.NewOsFs())
 ```
 
 ### Context & Namespace Setup
@@ -107,7 +107,7 @@ manifest, err := contextCMD.LoadManifestWithContext(ctx, opts.ManifestPath, opts
 ```go
 ctxStore := okteto.GetContextStore()
 if !okteto.IsOkteto() {
-    return errOnlyOktetoContexts
+    return oktetoErrors.ErrContextIsNotOktetoCluster
 }
 ```
 
@@ -115,7 +115,7 @@ if !okteto.IsOkteto() {
 
 ```go
 defer func() {
-    analytics.TrackDeploy(err == nil)
+    analytics.TrackBuild(err == nil)
 }()
 ```
 

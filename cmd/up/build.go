@@ -48,7 +48,7 @@ func (ub *upBuilder) build(ctx context.Context) error {
 		return nil
 	}
 
-	// check if the dev image has a OKTETO_BUILD syntax
+	// check if the dev image has an OKTETO_BUILD syntax
 	buildSvc, err := ub.builder.GetSvcToBuildFromRegex(ub.manifest, ub.getBuildSvcFromDev)
 	if err != nil && !errors.Is(err, buildv2.ErrImageIsNotAOktetoBuildSyntax) {
 		return err

@@ -55,7 +55,7 @@ func Sleep(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 }
 
 func (pr *Command) ExecuteSleepPreview(ctx context.Context, preview string) error {
-	// Spinner to be loaded sleeping a preview environment
+	// Spinner to be loaded before sleeping a preview environment
 	oktetoLog.Spinner(fmt.Sprintf("Sleeping preview environment '%s'...", preview))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()

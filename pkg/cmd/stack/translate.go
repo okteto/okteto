@@ -84,13 +84,13 @@ const (
 type updateStrategy string
 
 const (
-	// rollingUpdateStrategy represent a rolling update strategy
+	// rollingUpdateStrategy represents a rolling update strategy
 	rollingUpdateStrategy updateStrategy = "rolling"
 
 	// recreateUpdateStrategy represents a recreate update strategy
 	recreateUpdateStrategy updateStrategy = "recreate"
 
-	// onDeleteUpdateStrategy represents a recreate update strategy
+	// onDeleteUpdateStrategy represents an on-delete update strategy
 	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 

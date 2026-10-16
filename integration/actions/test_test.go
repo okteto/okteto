@@ -48,7 +48,7 @@ func TestOktetoTestActions(t *testing.T) {
 func executeOktetoTestAction(namespace, oktetoManifest string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, testPath)
 	actionFolder := strings.Split(testPath, "/")[1]
-	log.Printf("cloning destroy path repository: %s", actionRepo)
+	log.Printf("cloning test action repository: %s", actionRepo)
 	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
 		if err := integration.CloneGitRepo(actionRepo); err != nil {
 			return err

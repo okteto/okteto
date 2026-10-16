@@ -150,7 +150,7 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong spec.template.annotations: '%s'", result.Spec.Template.Annotations)
 	}
 	if *result.Spec.Template.Spec.TerminationGracePeriodSeconds != 20 {
-		t.Errorf("Wrong deployment spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		t.Errorf("Wrong deployment spec.template.spec.termination_grace_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
 	c := result.Spec.Template.Spec.Containers[0]
 	if c.Name != "svcName" {
@@ -276,7 +276,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong spec.template.annotations: '%s'", result.Spec.Template.Annotations)
 	}
 	if *result.Spec.Template.Spec.TerminationGracePeriodSeconds != 20 {
-		t.Errorf("Wrong statefulset spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		t.Errorf("Wrong statefulset spec.template.spec.termination_grace_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", "svcName"),
@@ -366,13 +366,13 @@ func Test_translateStatefulSet(t *testing.T) {
 
 	vct := result.Spec.VolumeClaimTemplates[0]
 	if vct.Name != pvcName {
-		t.Errorf("Wrong statefulset name: '%s'", vct.Name)
+		t.Errorf("Wrong volume claim template name: '%s'", vct.Name)
 	}
 	if !reflect.DeepEqual(vct.Labels, labels) {
-		t.Errorf("Wrong statefulset labels: '%s'", vct.Labels)
+		t.Errorf("Wrong volume claim template labels: '%s'", vct.Labels)
 	}
 	if !reflect.DeepEqual(vct.Annotations, annotations) {
-		t.Errorf("Wrong statefulset annotations: '%s'", vct.Annotations)
+		t.Errorf("Wrong volume claim template annotations: '%s'", vct.Annotations)
 	}
 	volumeClaimTemplateSpec := apiv1.PersistentVolumeClaimSpec{
 		AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
@@ -484,7 +484,7 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		t.Errorf("Wrong spec.template.annotations: '%s'", result.Spec.Template.Annotations)
 	}
 	if *result.Spec.Template.Spec.TerminationGracePeriodSeconds != 20 {
-		t.Errorf("Wrong job spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		t.Errorf("Wrong job spec.template.spec.termination_grace_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
 	if len(result.Spec.Template.Spec.InitContainers) > 0 {
 		t.Errorf("Wrong job spec.template.spec.initContainers: '%d'", len(result.Spec.Template.Spec.InitContainers))
@@ -632,7 +632,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		t.Errorf("Wrong spec.template.annotations: '%s'", result.Spec.Template.Annotations)
 	}
 	if *result.Spec.Template.Spec.TerminationGracePeriodSeconds != 20 {
-		t.Errorf("Wrong job spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		t.Errorf("Wrong job spec.template.spec.termination_grace_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
 	initContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-%s", "svcName"),
@@ -1037,7 +1037,7 @@ func Test_translateService(t *testing.T) {
 			},
 		},
 		{
-			name: "translate svc private endpoints by private annotation",
+			name: "translate svc with same host and container port",
 			stack: &model.Stack{
 				Name: "stackName",
 				Services: map[string]*model.Service{
@@ -1301,7 +1301,7 @@ func Test_translateSvcProbe(t *testing.T) {
 			},
 		},
 		{
-			name: "healthcheck exec with others fields only liveness",
+			name: "healthcheck exec with other fields only liveness",
 			svc: &model.Service{
 				Healtcheck: &model.HealthCheck{
 					Test: model.HealtcheckTest{
@@ -1827,7 +1827,7 @@ func TestGetDeploymentStrategy(t *testing.T) {
 			},
 		},
 		{
-			name: "annotation not ok - rolling",
+			name: "annotation not ok - recreate",
 			svc: &model.Service{
 				Annotations: model.Annotations{
 					model.OktetoComposeUpdateStrategyAnnotation: string(onDeleteUpdateStrategy),
@@ -1898,7 +1898,7 @@ func TestGetDeploymentStrategy(t *testing.T) {
 	}
 }
 
-func TestGetStrategyStrategy(t *testing.T) {
+func TestGetStatefulSetStrategy(t *testing.T) {
 	tests := []struct {
 		expected appsv1.StatefulSetUpdateStrategy
 		svc      *model.Service

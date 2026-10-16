@@ -164,12 +164,12 @@ func (wfc *waitForCompletion) isCompleted() bool {
 	if wfc.localCompletion.NeedDeletes > 0 {
 		wfc.needDeletesRetries++
 		if wfc.needDeletesRetries < maxNeedDeletesRetries {
-			oktetoLog.Info("synced completed, but need deletes, retrying...")
+			oktetoLog.Info("sync completed, but need deletes, retrying...")
 			return false
 		}
 	}
 	if !wfc.sy.IsAllOverwritten() {
-		oktetoLog.Info("synced completed, but overwrites not sent, retrying...")
+		oktetoLog.Info("sync completed, but overwrites not sent, retrying...")
 		return false
 	}
 	return true

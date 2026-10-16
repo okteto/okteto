@@ -76,7 +76,7 @@ func TestOktetoIgnore(t *testing.T) {
 			},
 		},
 		{
-			name: "extran_newlines",
+			name: "extra_newlines",
 			input: `
 
       .git

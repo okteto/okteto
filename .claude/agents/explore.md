@@ -40,9 +40,8 @@ okteto/
 │   └── clean/        # Cleanup utility
 ├── internal/
 │   └── test/         # Fake clients and test utilities
-│       └── client/   # fakeK8s, fakeOkteto clients
-├── integration/      # E2e tests (require live cluster)
-└── vendor/           # Vendored dependencies
+│       └── client/   # Fake Okteto API clients
+└── integration/      # E2e tests (require live cluster)
 ```
 
 ## Key Patterns
@@ -65,12 +64,8 @@ func NewCommand() *cobra.Command {
             return opts.Run(cmd.Context())
         },
     }
-    addFlags(cmd, opts)
-    return cmd
-}
-
-func addFlags(cmd *cobra.Command, opts *Options) {
     cmd.Flags().StringVarP(&opts.Manifest, "file", "f", "", "...")
+    return cmd
 }
 
 func (o *Options) Run(ctx context.Context) error {
@@ -89,16 +84,16 @@ func (o *Options) Run(ctx context.Context) error {
 
 ```go
 // Commands load manifests via:
-manifest, err := model.GetManifestV2(opts.ManifestPath)
+manifest, err := model.GetManifestV2(opts.ManifestPath, afero.NewOsFs())
 // or via discovery:
-manifest, err := contextCMD.LoadManifestWithContext(ctx, opts)
+manifestPath, err := discovery.GetOktetoManifestPath(wd)
 ```
 
 ### Context Flow
 
 ```go
 // Get current Okteto context:
-okCtx := okteto.GetContextStore().CurrentContext
+okCtx := okteto.GetContext()
 // Includes: URL, namespace, token, k8s config
 ```
 

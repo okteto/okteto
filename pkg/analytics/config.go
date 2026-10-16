@@ -177,7 +177,7 @@ func getTrackID() string {
 // analyticsEnabled returns true if analytics should be sent.
 // Both mixpanelBackend and posthogBackend call this to stay in sync.
 // Order matters: IsContextInitialized must precede disabledByOktetoAdmin
-// because the latter calls GetContext() which panics on uninitialized context.
+// because the latter calls GetContext() which exits via Fatalf on an uninitialized context.
 func analyticsEnabled() bool {
 	return get().Enabled && okteto.IsContextInitialized() && !disabledByOktetoAdmin()
 }

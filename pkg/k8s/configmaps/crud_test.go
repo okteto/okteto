@@ -186,7 +186,7 @@ func TestList_Err(t *testing.T) {
 		return true, nil, mockErr
 	})
 
-	cfg, err := configmaps.List(ctx, "fake-cfg-name", "fake-ns", clientset)
+	cfg, err := configmaps.List(ctx, "fake-ns", "app=my-app", clientset)
 
 	assert.Nil(t, cfg)
 	assert.ErrorIs(t, err, mockErr)

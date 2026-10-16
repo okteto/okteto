@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Endpoints show all the endpoints of a preview environment
+// Endpoints shows all the endpoints of a preview environment
 func Endpoints(ctx context.Context) *cobra.Command {
 	var output string
 	var k8sContext string
@@ -91,7 +91,7 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 	}
 	endpointList, err := oktetoClient.Previews().ListEndpoints(ctx, name)
 	if err != nil {
-		return fmt.Errorf("failed to get preview environments: %w", err)
+		return fmt.Errorf("failed to get preview environment endpoints: %w", err)
 	}
 
 	switch output {

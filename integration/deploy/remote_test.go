@@ -37,7 +37,7 @@ deploy:
 )
 
 // TestDeployRemoteWithBuildCommand tests the following scenario:
-// - Deploying a okteto manifest in remote with a build command
+// - Deploying an okteto manifest in remote with a build command
 func TestDeployRemoteWithBuildCommand(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
@@ -76,8 +76,8 @@ func TestDeployRemoteWithBuildCommand(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestDeployRemoteWithBuildCommand tests the following scenario:
-// - Deploying a okteto manifest with a k8s and there is a dockerignore file containing the k8s.yml
+// TestDeployRemoteK8sWithDockerignore tests the following scenario:
+// - Deploying an okteto manifest with a k8s manifest and there is a dockerignore file containing the k8s.yml
 func TestDeployRemoteK8sWithDockerignore(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)

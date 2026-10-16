@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test_KubeconfigHasExec kubeconfig command should use exec instead of token for the user auth if feature flag enabled
+// Test_KubeconfigHasExec kubeconfig command should use exec instead of token for the user auth unless the static token feature flag is enabled
 func Test_KubeconfigHasExec(t *testing.T) {
 	tests := []struct {
 		name           string

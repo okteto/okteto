@@ -280,7 +280,7 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 		Contexts: map[string]*okteto.Context{
 			"ctx-test": {
 				UserID:    "test-user",
-				Namespace: "ns-text",
+				Namespace: "ns-test",
 				Cfg: &api.Config{
 					AuthInfos: map[string]*api.AuthInfo{
 						"test-user": {Token: "test-token", Exec: &api.ExecConfig{Command: "test-cmd"}},
@@ -326,7 +326,7 @@ func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
 		Contexts: map[string]*okteto.Context{
 			"ctx-test": {
 				UserID:    "test-user",
-				Namespace: "ns-text",
+				Namespace: "ns-test",
 				Cfg: &api.Config{
 					AuthInfos: map[string]*api.AuthInfo{
 						"test-user": {Exec: &api.ExecConfig{Command: "test-cmd"}},

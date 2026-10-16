@@ -226,7 +226,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		// we must not fail since the image may not be found because the platform
 		// of the image executed in the pod might not match the local platform used
 		// for the search.
-		reason := fmt.Sprintf("Could not to retrieve environment variables from the image '%s'", svcImage)
+		reason := fmt.Sprintf("Could not retrieve environment variables from the image '%s'", svcImage)
 		oktetoLog.Debugf("%s: %s", reason, err.Error())
 		oktetoLog.Warning("%s", reason)
 	}

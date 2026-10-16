@@ -58,7 +58,7 @@ func (p *Process) Kill() error {
 		}
 		err := p.Find()
 		if err != nil {
-			oktetoLog.Debugf("process %d cannot be : %v", p.pid, err)
+			oktetoLog.Debugf("process %d cannot be found: %v", p.pid, err)
 			return err
 		}
 		oktetoLog.Debugf("process terminated successfully: %d", p.pid)

@@ -17,7 +17,7 @@ okteto/
 
 **Command structure**: Each command in `cmd/` may have subcommands in subdirectories (e.g., `cmd/namespace/create.go`, `cmd/context/use.go`).
 
-**Package organization**: `pkg/` contains domain packages. Core packages include `k8s` (Kubernetes operations), `model` (data structures), `okteto` (API client), `types` (manifest types).
+**Package organization**: `pkg/` contains domain packages. Core packages include `k8s` (Kubernetes operations), `model` (data structures), `okteto` (API client), `types` (Okteto API types and client interfaces).
 
 ## CLI Execution Flow
 
@@ -48,7 +48,7 @@ Core business logic organized by domain:
 **Data & Configuration:**
 
 - `model/` - Core data structures (Manifest, Dev, Stack, etc.)
-- `types/` - Type definitions for manifests and build options
+- `types/` - Okteto API types, client interfaces and build options
 - `config/` - Configuration management (home directory, binary name, version)
 
 **Okteto Platform:**
@@ -119,7 +119,7 @@ Internal utilities that run inside development containers:
 
 - `pkg/okteto.GetContextStore()` provides current context
 - Context includes: cluster URL, namespace, user, K8s config
-- Commands call `contextCMD.LoadManifestWithContext()` to respect active context
+- Commands call `contextCMD.NewContextCommand().Run()` to respect active context
 
 ## Manifest-Driven Design
 

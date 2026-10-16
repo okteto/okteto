@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	// PipelineFiles represents the possible names an okteto pipeline can have
+	// possibleOktetoPipelineFiles represents the possible names an okteto pipeline can have
 	possibleOktetoPipelineFiles = [][]string{
 		{"okteto-pipeline.yml"},
 		{"okteto-pipeline.yaml"},

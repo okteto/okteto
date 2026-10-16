@@ -153,11 +153,11 @@ func TestBuildKitMissingCacheTransformerNotMatching(t *testing.T) {
 	BuildKitMissingCacheTransformer(v, ss, oktetoLog.TTYFormat)
 
 	if !reflect.DeepEqual(expectedV, v) {
-		t.Errorf("expected %v, got %v", v, v)
+		t.Errorf("expected %v, got %v", expectedV, v)
 	}
 
 	if !reflect.DeepEqual(expectedSs, ss) {
-		t.Errorf("expected %v, got %v", ss, ss)
+		t.Errorf("expected %v, got %v", expectedSs, ss)
 	}
 }
 

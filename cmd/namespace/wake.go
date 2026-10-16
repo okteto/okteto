@@ -62,7 +62,7 @@ func (nc *Command) ExecuteWakeNamespace(ctx context.Context, namespace string, a
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	// trigger namespace to sleep
+	// trigger namespace to wake
 	if err := nc.okClient.Namespaces().Wake(ctx, namespace); err != nil {
 		return fmt.Errorf("%w: %w", errFailedWakeNamespace, err)
 	}

@@ -30,7 +30,6 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
-	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -706,7 +705,7 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
 	rawPorts = expandRangePorts(rawPorts)
 
-	// If public is set at this point it means that it comes from an okteto stacks and it's true
+	// If public is set at this point it means that it comes from an okteto stack and it's true
 	if public {
 		rawPorts = translateOktetoStacksPortsIntoComposeSyntax(rawPorts)
 	}
@@ -886,7 +885,7 @@ func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error)
 			securityContextLength := 2
 			parts := strings.Split(rawSecurityContext, ":")
 			if len(parts) != securityContextLength {
-				return fmt.Errorf("securityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
+				return fmt.Errorf("user '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
 			}
 			runAsUser, err := strconv.ParseInt(parts[0], 10, 64)
 			if err != nil {
@@ -1043,7 +1042,7 @@ func getPortWithMapping(p *PortRaw, portString string) error {
 	localToContainer := strings.Split(portString, ":")
 	maxLength := 3
 	if len(localToContainer) > maxLength {
-		return fmt.Errorf(forward.MalformedPortForward, portString)
+		return fmt.Errorf("cannot convert '%s' to a port: must be of the form 'hostPort:containerPort'", portString)
 	}
 
 	containerPortString := localToContainer[len(localToContainer)-1]
@@ -1090,7 +1089,7 @@ func IsSkippablePort(port int32) bool {
 		1433: "SQL Server", 1434: "SQL Server", 7210: "MaxDB", 7473: "Neo4j", 7474: "Neo4j", 8529: "ArangoDB",
 		7000: "Cassandra", 7001: "Cassandra", 9042: "Cassandra", 8086: "InfluxDB", 9200: "Elasticsearch", 9300: "Elasticsearch",
 		5984: "CouchDB", 27017: "MongoDB", 27018: "MongoDB", 27019: "MongoDB", 28017: "MongoDB", 6379: "Redis",
-		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 28015: "Rethink", 7574: "Solr", 8983: "Solr",
+		8087: "Riak", 8098: "Riak", 29015: "Rethink", 28015: "Rethink", 7574: "Solr", 8983: "Solr",
 		2345: "Golang debugger", 5858: "Node debugger", 9229: "Node debugger", 5005: "Java debugger", 1234: "Ruby debugger",
 		4444: "Python pdb", 5678: "Python debugpy"}
 	if _, ok := skippablePorts[port]; ok {
@@ -1264,7 +1263,7 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 	healthCheckLength := 2
 	if err == nil {
 		if len(rawList) == 0 {
-			return fmt.Errorf("healtcheck.test can not be an empty list")
+			return fmt.Errorf("healthcheck.test can not be an empty list")
 		}
 		switch rawList[0] {
 		case "NONE":
@@ -1274,14 +1273,14 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 			*healthcheckTest = rawList[1:]
 		case "CMD-SHELL":
 			if len(rawList) != healthCheckLength {
-				return fmt.Errorf("'CMD-SHELL' healtcheck.test must have exactly 2 elements")
+				return fmt.Errorf("'CMD-SHELL' healthcheck.test must have exactly 2 elements")
 			}
 			*healthcheckTest, err = shellquote.Split(rawList[1])
 			if err != nil {
 				return err
 			}
 		default:
-			return fmt.Errorf("when 'healtcheck.test' is a list the first item must be either 'NONE', 'CMD' or 'CMD-SHELL'")
+			return fmt.Errorf("when 'healthcheck.test' is a list the first item must be either 'NONE', 'CMD' or 'CMD-SHELL'")
 		}
 		return nil
 	}
@@ -1572,10 +1571,10 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 
 	if deploy.RestartPolicy != nil {
 		if deploy.RestartPolicy.Delay != nil {
-			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.delay", svcName))
+			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.restart_policy.delay", svcName))
 		}
 		if deploy.RestartPolicy.Window != nil {
-			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.window", svcName))
+			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.restart_policy.window", svcName))
 		}
 	}
 	if deploy.Mode != nil {

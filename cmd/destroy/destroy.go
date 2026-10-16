@@ -88,7 +88,7 @@ type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the path to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used through the command execution.
 	// This might change its value during execution
 	ManifestPath        string
 	Name                string
@@ -156,7 +156,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 			options.RunInRemoteSet = cmd.Flags().Changed("remote")
 
 			if options.ManifestPath != "" {
-				// if path is absolute, its transformed to rel from root
+				// if path is absolute, it's transformed to rel from root
 				initialCWD, err := os.Getwd()
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -259,7 +259,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				},
 			}
 
-			// We need to create a custom kubeconfig file to avoid to modify the user's kubeconfig when running the
+			// We need to create a custom kubeconfig file to avoid modifying the user's kubeconfig when running the
 			// destroy operation locally. This kubeconfig contains the kubernetes configuration got from the okteto
 			// context
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
@@ -287,14 +287,14 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 	return cmd
 }
 
-// getTempKubeConfigFile creates the temporal kubernetes config file needed to avoid to modify the user's kubeconfig
+// getTempKubeConfigFile creates the temporary kubernetes config file needed to avoid modifying the user's kubeconfig
 func getTempKubeConfigFile(name string) string {
 	tempKubeconfigFileName := fmt.Sprintf("kubeconfig-destroy-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
 func shouldRunInRemote(opts *Options) bool {
-	// already in remote so we need to deploy locally
+	// already in remote so we need to destroy locally
 	if env.LoadBoolean(constants.OktetoDeployRemote) {
 		return false
 	}
@@ -305,7 +305,7 @@ func shouldRunInRemote(opts *Options) bool {
 			return false
 		}
 
-		// the user forces manifest.deploy.remote=false
+		// the user forces manifest.destroy.remote=false
 		if opts.Manifest != nil && opts.Manifest.Destroy != nil {
 			if opts.Manifest.Destroy.Remote != nil && !*opts.Manifest.Destroy.Remote {
 				return false
@@ -479,8 +479,8 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	}
 
 	var commandErr error
-	// As the destroy only execute the commands within the destroy section, if there are no commands,
-	// it should be executed
+	// As the destroy only executes the commands within the destroy section, if there are no commands,
+	// it should not be executed
 	if opts.Manifest.Destroy != nil && len(opts.Manifest.Destroy.Commands) > 0 {
 		// call to specific Destroy logic
 		destroyer := dc.getDestroyer(opts, buildCtrl.GetConnector())
@@ -618,7 +618,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		}
 	}
 
-	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid to leave orphan release resources
+	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid leaving orphan release resources
 	for releaseName := range helmReleases {
 		oktetoLog.Debugf("uninstalling helm release '%s'", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)

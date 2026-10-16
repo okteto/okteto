@@ -20,7 +20,7 @@ import (
 )
 
 // ProxyTracker is a dedicated wrapper for okteto test that intercepts deploy
-// operation to edit metadata prior to be sent to out analytics backend
+// operation to edit metadata prior to being sent to our analytics backend
 type ProxyTracker struct {
 	*analytics.Tracker
 }

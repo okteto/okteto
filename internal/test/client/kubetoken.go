@@ -38,7 +38,7 @@ func (c *FakeKubetokenClient) GetKubeToken(_, _, _ string) (types.KubeTokenRespo
 	return c.response.Token, c.response.Err
 }
 
-// CheckService returns a temp token
+// CheckService returns the configured error
 func (c *FakeKubetokenClient) CheckService(_, _ string) error {
 	return c.response.Err
 }
