@@ -54,6 +54,35 @@ dependencies:
     branch: develop`,
 		},
 		{
+			name: "depends_on as list",
+			manifest: `
+dependencies:
+  database:
+    repository: https://github.com/okteto/database
+  backend:
+    repository: https://github.com/okteto/backend
+    depends_on: [database]`,
+		},
+		{
+			name: "depends_on as string",
+			manifest: `
+dependencies:
+  database:
+    repository: https://github.com/okteto/database
+  backend:
+    repository: https://github.com/okteto/backend
+    depends_on: database`,
+		},
+		{
+			name: "invalid depends_on type",
+			manifest: `
+dependencies:
+  backend:
+    repository: https://github.com/okteto/backend
+    depends_on: true`,
+			expectErr: true,
+		},
+		{
 			name: "invalid dependencies type",
 			manifest: `
 dependencies: invalid`,

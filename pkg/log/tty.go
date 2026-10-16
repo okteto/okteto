@@ -170,10 +170,9 @@ func (w *TTYWriter) Fail(format string, args ...interface{}) {
 	w.Fprintf(w.out.Out, "%s %s\n", coloredErrorSymbol, redString(format, args...))
 	log.spinner.unhold()
 	if msg != "" {
-		msg = convertToJSON(ErrorLevel, log.stage, msg)
+		msg = convertToJSON(ErrorLevel, log.getStage(), msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			log.writeToBuffer(msg)
 		}
 	}
 }
@@ -188,13 +187,16 @@ func (w *TTYWriter) Println(args ...interface{}) {
 
 // Fprintf prints a line with format
 func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
+	w.fprintfWithStage(writer, log.getStage(), format, a...)
+}
+
+func (w *TTYWriter) fprintfWithStage(writer io.Writer, stage, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	fmt.Fprint(writer, msg)
 	if msg != "" && writer == w.out.Out {
-		msg = convertToJSON(InfoLevel, log.stage, msg)
+		msg = convertToJSON(InfoLevel, stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			log.writeToBuffer(msg)
 		}
 	}
 
@@ -202,13 +204,16 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 
 // FPrintln prints a line with format
 func (w *TTYWriter) FPrintln(writer io.Writer, args ...interface{}) {
+	w.fprintlnWithStage(writer, log.getStage(), args...)
+}
+
+func (w *TTYWriter) fprintlnWithStage(writer io.Writer, stage string, args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	fmt.Fprintln(writer, msg)
 	if msg != "" && writer == w.out.Out {
-		msg = convertToJSON(InfoLevel, log.stage, msg)
+		msg = convertToJSON(InfoLevel, stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			log.writeToBuffer(msg)
 		}
 	}
 
@@ -219,10 +224,9 @@ func (w *TTYWriter) Print(args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	fmt.Fprint(w.out.Out, args...)
 	if msg != "" {
-		msg = convertToJSON(ErrorLevel, log.stage, msg)
+		msg = convertToJSON(ErrorLevel, log.getStage(), msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			log.writeToBuffer(msg)
 		}
 	}
 
@@ -244,10 +248,9 @@ func (*TTYWriter) IsInteractive() bool {
 func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	if msg != "" {
-		msg = convertToJSON(level, log.stage, msg)
+		msg = convertToJSON(level, log.getStage(), msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			log.writeToBuffer(msg)
 		}
 	}
 }
@@ -255,4 +258,28 @@ func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 // Write logs into the buffer but does not print anything
 func (w *TTYWriter) Write(p []byte) (n int, err error) {
 	return w.out.Out.Write(p)
+}
+
+// PrintlnWithStage writes a line recorded under stage
+func (w *TTYWriter) PrintlnWithStage(stage, msg string) {
+	log.out.Info(msg)
+	log.spinner.hold()
+	w.fprintlnWithStage(w.out.Out, stage, msg)
+	log.spinner.unhold()
+}
+
+// SuccessWithStage prints a message with the success symbol first, and the text in green, recorded under stage
+func (w *TTYWriter) SuccessWithStage(stage, msg string) {
+	log.out.Info(msg)
+	log.spinner.hold()
+	w.fprintfWithStage(w.out.Out, stage, "%s %s\n", coloredSuccessSymbol, greenString("%s", msg))
+	log.spinner.unhold()
+}
+
+// WarningWithStage prints a message with the warning symbol first, and the text in yellow, recorded under stage
+func (w *TTYWriter) WarningWithStage(stage, msg string) {
+	log.out.Info(msg)
+	log.spinner.hold()
+	w.fprintfWithStage(w.out.Out, stage, "%s %s\n", coloredWarningSymbol, yellowString("%s", msg))
+	log.spinner.unhold()
 }

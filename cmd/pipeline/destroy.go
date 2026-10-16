@@ -197,7 +197,7 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name, namespace strin
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout, globalDeployOutput{})
 		if err != nil {
 			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
 		}

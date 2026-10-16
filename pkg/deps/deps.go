@@ -16,11 +16,14 @@ package deps
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/a8m/envsubst/parse"
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model/utils"
 )
 
@@ -35,6 +38,28 @@ type Dependency struct {
 	Variables    env.Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Timeout      time.Duration   `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Wait         bool            `json:"wait,omitempty" yaml:"wait,omitempty"`
+	DependsOn    DependsOn       `json:"depends_on,omitempty" yaml:"depends_on,omitempty"`
+}
+
+// DependsOn represents the dependencies that need to be deployed successfully before
+type DependsOn []string
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (d *DependsOn) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*d = DependsOn{rawString}
+		return nil
+	}
+
+	var rawStringList []string
+	err = unmarshal(&rawStringList)
+	if err == nil {
+		*d = rawStringList
+		return nil
+	}
+	return err
 }
 
 // GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not
@@ -47,7 +72,12 @@ func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 
 // ExpandVars sets dependencies values if values fits with list params
 func (d *Dependency) ExpandVars(variables []string) error {
-	parser := parse.New("string", append(os.Environ(), variables...), &parse.Restrictions{})
+	return d.ExpandVarsFrom(os.Environ(), variables)
+}
+
+// ExpandVarsFrom sets dependencies values expanding them with environ and the variables
+func (d *Dependency) ExpandVarsFrom(environ, variables []string) error {
+	parser := parse.New("string", append(append([]string{}, environ...), variables...), &parse.Restrictions{})
 
 	expandedBranch, err := parser.Parse(d.Branch)
 	if err != nil {
@@ -113,6 +143,9 @@ func (md *ManifestSection) UnmarshalYAML(unmarshal func(interface{}) error) erro
 				return err
 			}
 			name := utils.TranslateURLToName(r.String())
+			if _, ok := rawMd[name]; ok {
+				return fmt.Errorf("dependency '%s' is defined more than once", name)
+			}
 			rawMd[name] = &Dependency{
 				Repository: r.String(),
 			}
@@ -149,6 +182,56 @@ func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	*d = Dependency(dependencyRaw)
 
 	return nil
+}
+
+// Validate validates the execution graph defined by the depends_on fields
+func (md ManifestSection) Validate() error {
+	names := make([]string, 0, len(md))
+	for name := range md {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	// every dependency is deployed as the pipeline of its sanitized name
+	pipelineNames := map[string]string{}
+	for _, name := range names {
+		pipelineName := format.ResourceK8sMetaString(name)
+		if other, ok := pipelineNames[pipelineName]; ok {
+			return fmt.Errorf("manifest validation failed: dependencies '%s' and '%s' resolve to the same name '%s'", other, name, pipelineName)
+		}
+		pipelineNames[pipelineName] = name
+	}
+
+	for _, name := range names {
+		dep := md[name]
+		if dep == nil {
+			return fmt.Errorf("manifest validation failed: dependency '%s' is not defined correctly", name)
+		}
+		for _, predecessor := range dep.DependsOn {
+			if predecessor == name {
+				return fmt.Errorf("manifest validation failed: dependency '%s' cannot depend on itself", name)
+			}
+			if _, ok := md[predecessor]; !ok {
+				return fmt.Errorf("manifest validation failed: dependency '%s' depends on '%s', which is not defined in the dependencies section", name, predecessor)
+			}
+		}
+	}
+
+	cycle := utils.GetDependentCyclic(md.toGraph())
+	if len(cycle) > 1 {
+		sort.Strings(cycle)
+		depsInCycle := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
+		return fmt.Errorf("manifest validation failed: cyclic dependency found between dependencies %s", depsInCycle)
+	}
+	return nil
+}
+
+func (md ManifestSection) toGraph() utils.Graph {
+	g := utils.Graph{}
+	for name, dep := range md {
+		g[name] = dep.DependsOn
+	}
+	return g
 }
 
 func (md ManifestSection) IsEmpty() bool {

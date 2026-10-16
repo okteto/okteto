@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -78,6 +79,9 @@ type logger struct {
 
 	maskedWords []string
 	isMasked    bool
+
+	// mu guards stage, buf and the masking fields: dependencies deployed in parallel log at the same time
+	mu sync.RWMutex
 }
 
 var log = &logger{
@@ -96,10 +100,14 @@ func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 	log.writer = log.getWriter(TTYFormat)
+	log.mu.Lock()
 	log.maskedWords = []string{}
 	log.buf = &bytes.Buffer{}
+	log.mu.Unlock()
+	spinner := newSpinner()
 	log.spinner = &spinnerLogger{
-		sp:             newSpinner(),
+		sp:             spinner,
+		isActive:       spinner.Active,
 		spinnerSupport: !loadBool(OktetoDisableSpinnerEnvVar) && IsInteractive(),
 	}
 }
@@ -173,7 +181,40 @@ func GetOutputWriter() OktetoWriter {
 
 // SetStage sets the stage of the logger
 func SetStage(stage string) {
+	log.mu.Lock()
+	defer log.mu.Unlock()
 	log.stage = stage
+}
+
+func (l *logger) getStage() string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.stage
+}
+
+// getStageOrSet returns the stage of the logger, setting it to stage when it is empty
+func (l *logger) getStageOrSet(stage string) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.stage == "" {
+		l.stage = stage
+	}
+	return l.stage
+}
+
+// writeRawToBuffer adds msg to the buffer of the running command, without a new line
+func (l *logger) writeRawToBuffer(msg string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.buf.WriteString(msg)
+}
+
+// writeToBuffer adds a line to the buffer of the running command
+func (l *logger) writeToBuffer(line string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.buf.WriteString(line)
+	l.buf.WriteString("\n")
 }
 
 // IsDebug checks if the level of the main logger is DEBUG or TRACE
@@ -285,6 +326,22 @@ func Println(args ...interface{}) {
 	log.writer.Println(msg)
 }
 
+// PrintlnWithStage writes a line recorded under stage instead of the current stage of the logger.
+// It is used by dependencies deployed in parallel with the main deploy, whose stage keeps changing
+func PrintlnWithStage(stage, line string) {
+	log.writer.PrintlnWithStage(stage, redactMessage(line))
+}
+
+// SuccessWithStage prints a success message recorded under stage instead of the current stage of the logger
+func SuccessWithStage(stage, msg string) {
+	log.writer.SuccessWithStage(stage, msg)
+}
+
+// WarningWithStage prints a warning message recorded under stage instead of the current stage of the logger
+func WarningWithStage(stage, msg string) {
+	log.writer.WarningWithStage(stage, msg)
+}
+
 // FPrintln writes a line with colors to specific writer
 func FPrintln(w io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
@@ -320,6 +377,8 @@ func AddMaskedWord(word string) {
 	if len(clean) <= minCharsToMask {
 		return
 	}
+	log.mu.Lock()
+	defer log.mu.Unlock()
 	log.maskedWords = append(log.maskedWords, clean)
 
 	crossPlatformCleanWord := strings.ReplaceAll(clean, "\r\n", "\n")
@@ -335,6 +394,8 @@ func AddMaskedWord(word string) {
 
 // EnableMasking starts redacting all variables
 func EnableMasking() {
+	log.mu.Lock()
+	defer log.mu.Unlock()
 	log.isMasked = true
 	sort.Slice(log.maskedWords, func(i, j int) bool {
 		return len(log.maskedWords[i]) > len(log.maskedWords[j])
@@ -349,19 +410,26 @@ func EnableMasking() {
 
 // DisableMasking will stop showing secrets and vars
 func DisableMasking() {
+	log.mu.Lock()
+	defer log.mu.Unlock()
 	log.isMasked = false
 }
 
 func redactMessage(message string) string {
+	log.mu.RLock()
+	defer log.mu.RUnlock()
 	if log.isMasked {
 		return log.replacer.Replace(message)
 	}
 	return message
 }
 
-// GetOutputBuffer returns the buffer of the running command
+// GetOutputBuffer returns a copy of the buffer of the running command.
+// It is a copy so that it can be read while dependencies deployed in parallel keep logging
 func GetOutputBuffer() *bytes.Buffer {
-	return log.buf
+	log.mu.RLock()
+	defer log.mu.RUnlock()
+	return bytes.NewBuffer(append([]byte(nil), log.buf.Bytes()...))
 }
 
 // AddToBuffer logs into the buffer but does not print anything

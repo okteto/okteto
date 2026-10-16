@@ -140,6 +140,29 @@ func GetConfigmapBuildEnvVars(ctx context.Context, name, namespace string, c kub
 	return envVars, nil
 }
 
+// GetConfigmapDependencyEnvVars returns the decoded Data["dependencyEnvs"] content from Configmap:
+// the variables a dependency exposes to the manifests that depend on it
+func GetConfigmapDependencyEnvVars(ctx context.Context, name, namespace string, c kubernetes.Interface) (map[string]string, error) {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return nil, err
+	}
+	v, ok := cmap.Data[constants.OktetoDependencyEnvsKey]
+	if !ok {
+		return nil, nil
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(v)
+	if err != nil {
+		return nil, err
+	}
+	var envVars map[string]string
+	if err := json.Unmarshal(decoded, &envVars); err != nil {
+		return nil, err
+	}
+	return envVars, nil
+}
+
 // TranslateConfigMapAndDeploy translates the app into a configMap.
 // Name param is the pipeline sanitized name
 func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {

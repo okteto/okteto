@@ -54,6 +54,7 @@ import (
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -70,6 +71,9 @@ var (
 
 // Options represents options for deploy command
 type Options struct {
+	// forcePlainBuildProgress shows the build progress in plain mode: dependencies log at the same time
+	forcePlainBuildProgress bool
+
 	Manifest *model.Manifest
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
@@ -478,76 +482,85 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
-	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
+	if deployOptions.Manifest.HasDependencies() {
+		// on Ctrl+C the deploy command doesn't wait for Run, and dependencies can be running before and after the
+		// main deploy: the interruption is recorded so the deploy doesn't stay in progress
+		dc.onCleanUp = append(dc.onCleanUp, dc.recordInterruption(cfg, *data))
+	}
+
+	scheduler, err := dc.startDependencies(ctx, deployOptions)
+	if err != nil {
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
 	}
 
+	if err := scheduler.WaitUntilMainReady(); err != nil {
+		// a dependency failed or was interrupted: the running ones are allowed to finish and every failure is reported
+		if depsErr := scheduler.Wait(); depsErr != nil {
+			err = depsErr
+		}
+		setFailedDependencyStage(scheduler)
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
+			return errStatus
+		}
+		return err
+	}
+
+	if err := dc.exportDependencyEnvVars(ctx, scheduler.MainPredecessors(), deployOptions.Namespace); err != nil {
+		scheduler.Stop()
+		err = errors.Join(err, scheduler.Wait())
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
+			return errStatus
+		}
+		return err
+	}
+	oktetoLog.SetStage("")
+	// dependencies running at the same time as the build would break its TTY progress display
+	deployOptions.forcePlainBuildProgress = scheduler.OverlapsMainDeploy() && oktetoLog.GetOutputFormat() == oktetoLog.TTYFormat
+
 	if deployOptions.Manifest.Deploy == nil {
+		if err := scheduler.Wait(); err != nil {
+			setFailedDependencyStage(scheduler)
+			if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
+				return errStatus
+			}
+			return err
+		}
 		return nil
 	}
 
-	if err := buildImages(ctx, dc.Builder, dc.CfgMapHandler, deployOptions); err != nil {
-		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
-			return errStatus
-		}
-		return err
+	result, mainErr := dc.deployMain(ctx, deployOptions, cwd, c)
+	if mainErr != nil {
+		// no new dependency starts, but the running ones are allowed to finish
+		scheduler.Stop()
+	}
+	depsErr := scheduler.Wait()
+	// when only dependencies failed, their error is reported under their stage without the end marker, as when
+	// they fail before the main deploy
+	if result.deployRan && (mainErr != nil || depsErr == nil) {
+		oktetoLog.SetStage("done")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 	}
 
-	if err := dc.recreateFailedPods(ctx, deployOptions.Name); err != nil {
-		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
+	if errors.Is(mainErr, oktetoErrors.ErrIntSig) {
+		if depsErr != nil {
+			oktetoLog.Infof("dependencies failed while the deploy was interrupted: %s", depsErr)
+		}
+		return nil
 	}
 
-	oktetoLog.EnableMasking()
-	err = dc.deploy(ctx, deployOptions, cwd, c)
-	oktetoLog.DisableMasking()
-	oktetoLog.SetStage("done")
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-
-	if err != nil {
-		if errors.Is(err, oktetoErrors.ErrIntSig) {
-			return nil
-		}
-		// transform internal errors to user errors
-		if !errors.As(err, &oktetoErrors.UserError{}) {
-			err = oktetoErrors.UserError{E: err}
-		}
-		data.Status = pipeline.ErrorStatus
-	} else {
-		// This has to be set only when the command succeeds for the case in which the deploy is executed within an
-		// installer. When running in installer, if the command fails, and we set an empty stage, we would display
-		// a stage with "Internal Server Error" duplicating the message we already display on error. For that reason,
-		// we should not set empty stage on error.
-		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, okteto.GetContext().Namespace, c)
-		if err != nil {
-			return err
-		}
-		if hasDeployed {
-			if deployOptions.Wait {
-				if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
-					if err := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); err != nil {
-						oktetoLog.Infof("could not update configmap with timeout error: %s", err)
-						return err
-					}
-					return err
-				}
-			}
-			if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				eg, err := dc.EndpointGetter(dc.K8sLogger)
-				if err != nil {
-					oktetoLog.Infof("could not create endpoint getter: %s", err)
-				}
-				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: okteto.GetContext().Namespace}); err != nil {
-					oktetoLog.Infof("could not retrieve endpoints: %s", err)
-				}
-			}
-			if deployOptions.ShowCTA {
-				oktetoLog.Success(succesfullyDeployedmsg, deployOptions.Name)
-			}
-			pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c)
+	err = mainErr
+	if depsErr != nil {
+		err = errors.Join(mainErr, depsErr)
+	}
+	if mainErr == nil {
+		setFailedDependencyStage(scheduler)
+	}
+	if err == nil {
+		if result.hasDeployed && deployOptions.ShowCTA {
+			oktetoLog.Success(succesfullyDeployedmsg, deployOptions.Name)
 		}
 		data.Status = pipeline.DeployedStatus
 	}
@@ -557,6 +570,72 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	return err
+}
+
+// mainDeployResult describes how far the main deploy went
+type mainDeployResult struct {
+	// deployRan is true when the deploy commands were executed
+	deployRan bool
+	// hasDeployed is true when the deploy commands deployed some resource
+	hasDeployed bool
+}
+
+// deployMain builds the images and runs the deploy commands of the manifest
+func (dc *Command) deployMain(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) (mainDeployResult, error) {
+	result := mainDeployResult{}
+	if err := buildImages(ctx, dc.Builder, dc.CfgMapHandler, deployOptions); err != nil {
+		return result, err
+	}
+
+	if err := dc.recreateFailedPods(ctx, deployOptions.Name); err != nil {
+		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
+	}
+
+	oktetoLog.EnableMasking()
+	err := dc.deploy(ctx, deployOptions, cwd, c)
+	oktetoLog.DisableMasking()
+	result.deployRan = true
+
+	if err != nil {
+		if errors.Is(err, oktetoErrors.ErrIntSig) {
+			return result, err
+		}
+		// transform internal errors to user errors
+		if !errors.As(err, &oktetoErrors.UserError{}) {
+			err = oktetoErrors.UserError{E: err}
+		}
+		return result, err
+	}
+
+	// This has to be set only when the command succeeds for the case in which the deploy is executed within an
+	// installer. When running in installer, if the command fails, and we set an empty stage, we would display
+	// a stage with "Internal Server Error" duplicating the message we already display on error. For that reason,
+	// we should not set empty stage on error.
+	oktetoLog.SetStage("")
+	hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, okteto.GetContext().Namespace, c)
+	if err != nil {
+		return result, err
+	}
+	result.hasDeployed = hasDeployed
+	if !hasDeployed {
+		return result, nil
+	}
+	if deployOptions.Wait {
+		if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
+			return result, err
+		}
+	}
+	if !env.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
+		eg, err := dc.EndpointGetter(dc.K8sLogger)
+		if err != nil {
+			oktetoLog.Infof("could not create endpoint getter: %s", err)
+		}
+		if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: okteto.GetContext().Namespace}); err != nil {
+			oktetoLog.Infof("could not retrieve endpoints: %s", err)
+		}
+	}
+	pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c)
+	return result, nil
 }
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
@@ -783,63 +862,67 @@ func resolveIsRedeploy(ctx context.Context, name, namespace string, c kubernetes
 	return pipeline.IsDeployed(ctx, name, namespace, c)
 }
 
-// deployDependencies deploy the dependencies in the manifest
-func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Options) error {
-	if len(deployOptions.Manifest.Dependencies) > 0 && !okteto.GetContext().IsOkteto {
-		return errDepenNotAvailableInVanilla
+// startDependencies starts deploying the dependencies of the manifest following their depends_on graph
+func (dc *Command) startDependencies(ctx context.Context, deployOptions *Options) (*dependencyScheduler, error) {
+	section := deployOptions.Manifest.Dependencies
+	if len(section) > 0 && !okteto.GetContext().IsOkteto {
+		return nil, errDepenNotAvailableInVanilla
+	}
+	// prefixed dependencies record their logs under their own stage. A single dependency that the main
+	// deploy waits for keeps using the global stage, as before
+	for name, prefixed := range prefixedDependencies(section) {
+		if !prefixed {
+			oktetoLog.SetStage(pipelineCMD.DependencyStage(name))
+		}
 	}
 
 	// parentWorkflowID correlates all the dependencies deployed by this deploy operation
 	// with their parent. It is sent to the backend on each dependency deploy.
 	parentWorkflowID := uuid.New().String()
+	runner := newPipelineDependencyRunner(dc.PipelineCMD, section, deployOptions, okteto.GetContext().Namespace, parentWorkflowID)
+	scheduler := newDependencyScheduler(section, runner)
+	scheduler.Start(ctx)
+	return scheduler, nil
+}
 
-	for depName, dep := range deployOptions.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency  '%s'", depName)
-		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
-		if err := validator.CheckReservedVarName(dep.Variables); err != nil {
-			return err
+// recordInterruption returns a clean up function that marks the deploy as failed with the interruption
+func (dc *Command) recordInterruption(cfg *apiv1.ConfigMap, data pipeline.CfgData) cleanUpFunc {
+	return func(ctx context.Context, err error) {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, &data, err); errStatus != nil && !errors.Is(errStatus, err) {
+			oktetoLog.Infof("could not record the interruption of the deploy: %s", errStatus)
 		}
+	}
+}
 
-		dep.Variables = append(dep.Variables, env.Var{
-			Name:  "OKTETO_ORIGIN",
-			Value: "okteto-deploy",
-		})
+// setFailedDependencyStage sets the stage of the first dependency that failed, if any, so that the error is
+// reported under it: dependencies deployed in parallel don't use the global stage while they run
+func setFailedDependencyStage(scheduler *dependencyScheduler) {
+	if failed := scheduler.Failed(); len(failed) > 0 {
+		oktetoLog.SetStage(pipelineCMD.DependencyStage(failed[0]))
+	}
+}
 
-		err := dep.ExpandVars(deployOptions.Variables)
+// exportDependencyEnvVars exports the env vars generated by the dependencies the main deploy waited for
+func (dc *Command) exportDependencyEnvVars(ctx context.Context, names []string, namespace string) error {
+	for _, name := range names {
+		variableEnvs, err := dc.CfgMapHandler.GetDependencyVariableEnvVars(ctx, name, namespace)
 		if err != nil {
-			return fmt.Errorf("could not expand variables in dependencies: %w", err)
+			oktetoLog.SetStage(pipelineCMD.DependencyStage(name))
+			return fmt.Errorf("could not get environment variables generated by dependency '%s': %w", name, err)
 		}
-		pipOpts := &pipelineCMD.DeployOptions{
-			Name:             depName,
-			Repository:       dep.Repository,
-			Branch:           dep.Branch,
-			File:             dep.ManifestPath,
-			Variables:        model.SerializeEnvironmentVars(dep.Variables),
-			Wait:             dep.Wait,
-			Timeout:          dep.GetTimeout(deployOptions.Timeout),
-			SkipIfExists:     !deployOptions.Dependencies,
-			Namespace:        okteto.GetContext().Namespace,
-			IsDependency:     true,
-			ParentWorkflowID: parentWorkflowID,
+		buildEnvs, err := dc.CfgMapHandler.GetDependencyBuildEnvVars(ctx, name, namespace)
+		if err != nil {
+			oktetoLog.SetStage(pipelineCMD.DependencyStage(name))
+			return fmt.Errorf("could not get dependency build env vars: %w", err)
 		}
-
-		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-			return err
-		}
-		if dep.Wait {
-			depBuildEnvs, err := dc.CfgMapHandler.GetDependencyBuildEnvVars(ctx, depName, deployOptions.Namespace)
-			if err != nil {
-				return fmt.Errorf("could not get dependency build env vars: %w", err)
-			}
-			for key, val := range depBuildEnvs {
+		for _, envs := range []map[string]string{variableEnvs, buildEnvs} {
+			for key, val := range envs {
 				if err := os.Setenv(key, val); err != nil {
 					return fmt.Errorf("could not set dependency env var %s: %w", key, err)
 				}
 			}
 		}
-		oktetoLog.SetStage("")
 	}
-	oktetoLog.SetStage("")
 	return nil
 }
 

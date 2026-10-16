@@ -32,13 +32,13 @@ const (
 	maxAttemptPower = 10
 )
 
-func request(c *http.Client, url string) (*http.Response, error) {
-	resp, err := c.Get(url)
+// request is bound to ctx: cancelling it aborts the request and the reading of its body
+func request(ctx context.Context, c *http.Client, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	return resp, nil
+	return c.Do(req)
 }
 
 func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout time.Duration) (*http.Response, error) {
@@ -55,7 +55,7 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 
 		default:
 			// Attempt to stream logs
-			resp, err := request(c, url)
+			resp, err := request(ctx, c, url)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					return nil, err
@@ -106,7 +106,8 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler han
 
 	sc := bufio.NewScanner(resp.Body)
 	done := false
-	for sc.Scan() && !done {
+	// done is checked before scanning: the server may keep the connection open after the done message
+	for !done && sc.Scan() {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -123,6 +124,10 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler han
 		}
 	}
 
+	// a cancelled request ends the scan with a read error
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	// return whether the scan has encountered any error
 	return sc.Err()
 }
