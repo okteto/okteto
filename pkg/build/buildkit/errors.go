@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"google.golang.org/grpc/status"
 )
 
@@ -76,6 +77,8 @@ func GetSolveErrorMessage(err error) error {
 	if err == nil {
 		return nil
 	}
+	// The messages below replace the original error, so keep it in the debug logs
+	oktetoLog.Debugf("build failed: %s", err)
 
 	imageFromError := extractImageFromError(err)
 	isOktetoRegistry := hasOktetoRegistryImage(err)
@@ -162,15 +165,20 @@ func getRegistryServerError(err error) (string, string, bool) {
 	if len(matches) != 3 {
 		return "", "", false
 	}
-	return imageFromRegistryURL(matches[1]), strings.TrimSpace(matches[2]), true
+	u, parseErr := url.Parse(matches[1])
+	if parseErr != nil {
+		return "", "", false
+	}
+	return imageFromRegistryURL(u), strings.TrimSpace(matches[2]), true
 }
 
 // imageFromRegistryURL returns the image of a registry API URL: <registry>/<name>:<tag> (or @<digest>) for
 // https://<registry>/v2/<name>/manifests/<reference>, and <registry>/<name> for https://<registry>/v2/<name>/blobs/...
-func imageFromRegistryURL(rawURL string) string {
-	u, err := url.Parse(rawURL)
-	if err != nil || u.Host == "" || !strings.HasPrefix(u.Path, "/v2/") {
-		return rawURL
+// Other URLs, like uploads redirected to a storage service, return <host>/<path>: the user info and the query can
+// have credentials or signatures
+func imageFromRegistryURL(u *url.URL) string {
+	if u.Host == "" || !strings.HasPrefix(u.Path, "/v2/") {
+		return u.Host + u.Path
 	}
 	path := strings.TrimPrefix(u.Path, "/v2/")
 	if i := strings.LastIndex(path, "/manifests/"); i > 0 {
@@ -183,7 +191,7 @@ func imageFromRegistryURL(rawURL string) string {
 	if i := strings.LastIndex(path, "/blobs/"); i > 0 {
 		return fmt.Sprintf("%s/%s", u.Host, path[:i])
 	}
-	return rawURL
+	return u.Host + u.Path
 }
 
 // IsRetryable returns true if err represents a transient registry error

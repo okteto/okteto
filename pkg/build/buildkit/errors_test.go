@@ -16,11 +16,14 @@ package buildkit
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+var errUnparseableRegistryURL = errors.New("failed to solve: unexpected status from GET request to https://registry.example.com/%zz: 502 Bad Gateway")
 
 func Test_GetSolveErrorMessage(t *testing.T) {
 	tests := []struct {
@@ -94,6 +97,22 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 				E: fmt.Errorf("the registry returned '503 Service Unavailable' for the image 'registry-1.docker.io/library/golang'"),
 				Hint: `This is a registry error, not a build error. Please try again later.
     If it keeps failing for this image, the registry logs show the cause.`,
+			},
+		},
+		{
+			name: "registry server error - upload to another host with a signed URL",
+			err:  errors.New("failed to solve: failed to push registry.example.com/ns/app:dev: unexpected status from PUT request to https://storage.example.com/bucket/uploads/abc?X-Signature=secret: 503 Service Unavailable"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the registry returned '503 Service Unavailable' for the image 'storage.example.com/bucket/uploads/abc'"),
+				Hint: `This is a registry error, not a build error. Please try again later.
+    If it keeps failing for this image, the registry logs show the cause.`,
+			},
+		},
+		{
+			name: "registry server error - URL that can't be parsed",
+			err:  errUnparseableRegistryURL,
+			expected: oktetoErrors.UserError{
+				E: errUnparseableRegistryURL,
 			},
 		},
 		{
@@ -225,19 +244,26 @@ func Test_imageFromRegistryURL(t *testing.T) {
 			expected: "registry.example.com/ns/app",
 		},
 		{
-			name:     "not a registry API URL",
-			url:      "https://registry.example.com/token",
-			expected: "https://registry.example.com/token",
+			name:     "manifest with user info",
+			url:      "https://user:secret@registry.example.com/v2/ns/app/manifests/dev",
+			expected: "registry.example.com/ns/app:dev",
 		},
 		{
-			name:     "not a URL",
-			url:      "%zz",
-			expected: "%zz",
+			name:     "not a registry API URL",
+			url:      "https://registry.example.com/token",
+			expected: "registry.example.com/token",
+		},
+		{
+			name:     "not a registry API URL with user info, query and fragment",
+			url:      "https://user:secret@storage.example.com/bucket/uploads/abc?X-Signature=secret#part",
+			expected: "storage.example.com/bucket/uploads/abc",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, imageFromRegistryURL(tt.url))
+			u, err := url.Parse(tt.url)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, imageFromRegistryURL(u))
 		})
 	}
 }
