@@ -16,11 +16,14 @@ package buildkit
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+var errUnparseableRegistryURL = errors.New("failed to solve: unexpected status from GET request to https://registry.example.com/%zz: 502 Bad Gateway")
 
 func Test_GetSolveErrorMessage(t *testing.T) {
 	tests := []struct {
@@ -67,6 +70,49 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			expected: oktetoErrors.UserError{
 				E:    fmt.Errorf("buildkit service is not available at the moment"),
 				Hint: "Please try again later.",
+			},
+		},
+		{
+			name: "registry server error - push of a tag",
+			err:  errors.New("failed to solve: failed to push registry.example.com/ns/app:dev: unexpected status from HEAD request to https://registry.example.com/v2/ns/app/manifests/dev: 500 Internal Server Error"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the registry returned '500 Internal Server Error' for the image 'registry.example.com/ns/app:dev'"),
+				Hint: `This is a registry error, not a build error. Please try again later.
+    If it keeps failing for this image, the registry logs show the cause.`,
+			},
+		},
+		{
+			name: "registry server error - pull of a digest",
+			err:  errors.New("failed to solve: failed to resolve source metadata for registry.example.com/ns/base@sha256:abc: unexpected status from GET request to https://registry.example.com/v2/ns/base/manifests/sha256:abc: 502 Bad Gateway"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the registry returned '502 Bad Gateway' for the image 'registry.example.com/ns/base@sha256:abc'"),
+				Hint: `This is a registry error, not a build error. Please try again later.
+    If it keeps failing for this image, the registry logs show the cause.`,
+			},
+		},
+		{
+			name: "registry server error - blob",
+			err:  errors.New("failed to solve: failed to copy: unexpected status from GET request to https://registry-1.docker.io/v2/library/golang/blobs/sha256:abc: 503 Service Unavailable"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the registry returned '503 Service Unavailable' for the image 'registry-1.docker.io/library/golang'"),
+				Hint: `This is a registry error, not a build error. Please try again later.
+    If it keeps failing for this image, the registry logs show the cause.`,
+			},
+		},
+		{
+			name: "registry server error - upload to another host with a signed URL",
+			err:  errors.New("failed to solve: failed to push registry.example.com/ns/app:dev: unexpected status from PUT request to https://storage.example.com/bucket/uploads/abc?X-Signature=secret: 503 Service Unavailable"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the registry returned '503 Service Unavailable' for the image 'storage.example.com/bucket/uploads/abc'"),
+				Hint: `This is a registry error, not a build error. Please try again later.
+    If it keeps failing for this image, the registry logs show the cause.`,
+			},
+		},
+		{
+			name: "registry server error - URL that can't be parsed",
+			err:  errUnparseableRegistryURL,
+			expected: oktetoErrors.UserError{
+				E: errUnparseableRegistryURL,
 			},
 		},
 		{
@@ -162,6 +208,62 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := GetSolveErrorMessage(tt.err)
 			assert.Equal(t, tt.expected, err)
+		})
+	}
+}
+
+func Test_imageFromRegistryURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "manifest by tag",
+			url:      "https://registry.example.com/v2/ns/app/manifests/dev",
+			expected: "registry.example.com/ns/app:dev",
+		},
+		{
+			name:     "manifest by digest",
+			url:      "https://registry.example.com/v2/ns/app/manifests/sha256:abc",
+			expected: "registry.example.com/ns/app@sha256:abc",
+		},
+		{
+			name:     "manifest in a registry with a port",
+			url:      "https://registry.example.com:5000/v2/app/manifests/1.0",
+			expected: "registry.example.com:5000/app:1.0",
+		},
+		{
+			name:     "blob",
+			url:      "https://registry.example.com/v2/ns/app/blobs/sha256:abc",
+			expected: "registry.example.com/ns/app",
+		},
+		{
+			name:     "blob upload",
+			url:      "https://registry.example.com/v2/ns/app/blobs/uploads/0b8f?_state=x",
+			expected: "registry.example.com/ns/app",
+		},
+		{
+			name:     "manifest with user info",
+			url:      "https://user:secret@registry.example.com/v2/ns/app/manifests/dev",
+			expected: "registry.example.com/ns/app:dev",
+		},
+		{
+			name:     "not a registry API URL",
+			url:      "https://registry.example.com/token",
+			expected: "registry.example.com/token",
+		},
+		{
+			name:     "not a registry API URL with user info, query and fragment",
+			url:      "https://user:secret@storage.example.com/bucket/uploads/abc?X-Signature=secret#part",
+			expected: "storage.example.com/bucket/uploads/abc",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u, err := url.Parse(tt.url)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, imageFromRegistryURL(u))
 		})
 	}
 }
