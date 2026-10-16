@@ -29,6 +29,14 @@ type User struct {
 	New             bool
 }
 
+// ExecutionFile is a file the platform asks the cli to write before running
+// the deploy, destroy and test commands. The path of the written file is
+// exposed to the commands in the env var named EnvVar.
+type ExecutionFile struct {
+	EnvVar  string
+	Content string
+}
+
 // KnownHostsConfig contains the SSH known hosts configuration
 type KnownHostsConfig struct {
 	Content string
