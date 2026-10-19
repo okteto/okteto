@@ -238,12 +238,6 @@ func (w *PlainWriter) Write(p []byte) (n int, err error) {
 func (w *PlainWriter) PrintlnWithStage(stage, msg string) {
 	log.out.Info(msg)
 	w.fprintlnWithStage(w.out.Out, stage, msg)
-	if msg != "" {
-		msg = convertToJSON(InfoLevel, stage, msg)
-		if msg != "" {
-			log.writeToBuffer(msg)
-		}
-	}
 }
 
 // SuccessWithStage prints a success message recorded under stage

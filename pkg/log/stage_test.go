@@ -60,6 +60,18 @@ func TestPrintlnWithStage(t *testing.T) {
 	}
 }
 
+func TestPrintlnWithStageRecordsTheLineOnce(t *testing.T) {
+	for _, format := range []string{TTYFormat, PlainFormat, JSONFormat} {
+		t.Run(format, func(t *testing.T) {
+			initLoggerWithFormat(t, format)
+
+			PrintlnWithStage("Deploying dependency db", "creating tables")
+
+			require.Equal(t, 1, strings.Count(GetOutputBuffer().String(), "creating tables"))
+		})
+	}
+}
+
 func TestSuccessWithStage(t *testing.T) {
 	for _, format := range []string{TTYFormat, PlainFormat, JSONFormat} {
 		t.Run(format, func(t *testing.T) {
