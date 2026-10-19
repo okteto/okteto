@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,11 +36,13 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1002,6 +1005,42 @@ func TestDeployOnlyDependencies(t *testing.T) {
 			require.ErrorIs(t, err, tc.expecterErr)
 		})
 	}
+}
+
+func TestDeployOnlyDependenciesSetsDeployedStatus(t *testing.T) {
+	oktetoLog.Init(logrus.WarnLevel)
+	fakeK8sClientProvider := test.NewFakeK8sProvider()
+	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
+		PipelineCMD:       fakePipelineDeployer{nil},
+		GetManifest:       getFakeManifestWithDependency,
+		K8sClientProvider: fakeK8sClientProvider,
+		Fs:                afero.NewMemMapFs(),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		IoCtrl:            io.NewIOController(),
+	}
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.NoError(t, err)
+	fakeClient, _, err := fakeK8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	require.NoError(t, err)
+	cfg, err := configmaps.Get(context.Background(), pipeline.TranslatePipelineName("movies"), "test", fakeClient)
+	require.NoError(t, err)
+	require.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
+	output, err := base64.StdEncoding.DecodeString(cfg.Data["output"])
+	require.NoError(t, err)
+	require.Contains(t, string(output), `"stage":"done","message":"EOF"`)
 }
 
 type fakeTracker struct{}
