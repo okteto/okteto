@@ -62,15 +62,16 @@ type dependencyScheduler struct {
 	section          deps.ManifestSection
 	mainPredecessors map[string]bool
 	results          chan dependencyResult
-	stop             chan struct{}
 	mainReady        chan struct{}
 	done             chan struct{}
 	mainReadyErr     error
 	err              error
 	failed           []string
-	stopOnce         sync.Once
 	mainReadyOnce    sync.Once
 	startOnce        sync.Once
+	// stopMu is held while a dependency starts, so none starts after Stop returns
+	stopMu  sync.Mutex
+	stopped bool
 }
 
 func newDependencyScheduler(section deps.ManifestSection, runner dependencyRunner) *dependencyScheduler {
@@ -79,7 +80,6 @@ func newDependencyScheduler(section deps.ManifestSection, runner dependencyRunne
 		section:          section,
 		mainPredecessors: mainDeployPredecessors(section),
 		results:          make(chan dependencyResult, len(section)),
-		stop:             make(chan struct{}),
 		mainReady:        make(chan struct{}),
 		done:             make(chan struct{}),
 	}
@@ -123,9 +123,9 @@ func (s *dependencyScheduler) OverlapsMainDeploy() bool {
 
 // Stop prevents new dependencies from starting. Running dependencies are allowed to finish.
 func (s *dependencyScheduler) Stop() {
-	s.stopOnce.Do(func() {
-		close(s.stop)
-	})
+	s.stopMu.Lock()
+	defer s.stopMu.Unlock()
+	s.stopped = true
 }
 
 // Wait blocks until every started dependency has finished and returns their errors
@@ -135,8 +135,7 @@ func (s *dependencyScheduler) Wait() error {
 }
 
 // coordinate owns the scheduling state: dependencies only report their results through s.results.
-// Stop and cancellation are checked before scheduling successors, so a result that arrives at the
-// same time as Stop or Ctrl+C never starts new dependencies.
+// Cancellation is checked before scheduling successors, and no dependency starts after Stop returns.
 func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	names := sortedDependencyNames(s.section)
 	pendingPredecessors := make(map[string]int, len(s.section))
@@ -151,11 +150,15 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	started := make(map[string]bool, len(s.section))
 	failures := map[string]error{}
 	running := 0
-	stopped := false
 	cancelled := false
 	pendingMainPredecessors := len(s.mainPredecessors)
 
 	start := func(name string) {
+		s.stopMu.Lock()
+		defer s.stopMu.Unlock()
+		if s.stopped {
+			return
+		}
 		started[name] = true
 		running++
 		go func() {
@@ -187,9 +190,6 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 			if !cancelled && ctx.Err() != nil {
 				cancel()
 			}
-			if s.isStopped() {
-				stopped = true
-			}
 
 			// the pipeline deployer handles Ctrl+C on its own, even when ctx is not cancelled
 			if errors.Is(result.err, oktetoErrors.ErrIntSig) {
@@ -209,7 +209,7 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 					s.resolveMainReady(nil)
 				}
 			}
-			if cancelled || stopped || len(failures) > 0 {
+			if cancelled || len(failures) > 0 {
 				continue
 			}
 			for _, successor := range successors[result.name] {
@@ -240,15 +240,6 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	}
 	s.resolveMainReady(errDependenciesStopped)
 	close(s.done)
-}
-
-func (s *dependencyScheduler) isStopped() bool {
-	select {
-	case <-s.stop:
-		return true
-	default:
-		return false
-	}
 }
 
 func (s *dependencyScheduler) resolveMainReady(err error) {

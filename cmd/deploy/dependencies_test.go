@@ -346,6 +346,19 @@ func TestDependencyScheduler_StopPreventsNewDependencies(t *testing.T) {
 	require.EqualError(t, err, "dependencies not deployed because the deploy was stopped: analytics, backend")
 }
 
+func TestDependencyScheduler_StopBeforeStartStartsNothing(t *testing.T) {
+	section := specExampleSection()
+	runner := newFakeDependencyRunner(section)
+	s := newDependencyScheduler(section, runner)
+
+	s.Stop()
+	s.Start(context.Background())
+	err := requireWaitResult(t, s)
+	requireNoMoreStarted(t, runner)
+
+	require.EqualError(t, err, "dependencies not deployed because the deploy was stopped: analytics, backend, database, messaging")
+}
+
 func TestDependencyScheduler_StopBeforeMainReady(t *testing.T) {
 	section := specExampleSection()
 	runner := newFakeDependencyRunner(section)
