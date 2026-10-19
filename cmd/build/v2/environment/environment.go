@@ -15,6 +15,7 @@ package environment
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 	"sync"
@@ -102,7 +103,10 @@ func (es *ServiceEnvVarsHandler) SetServiceEnvVars(service, reference string) {
 	es.ioCtrl.Logger().Debug("manifest env vars set")
 }
 
-// GetBuildEnvVars gets okteto build env vars
+// GetBuildEnvVars returns a snapshot of the okteto build env vars. It returns a copy so
+// callers can iterate it while other goroutines keep setting env vars.
 func (es *ServiceEnvVarsHandler) GetBuildEnvVars() map[string]string {
-	return es.buildEnvironments
+	es.lock.RLock()
+	defer es.lock.RUnlock()
+	return maps.Clone(es.buildEnvironments)
 }

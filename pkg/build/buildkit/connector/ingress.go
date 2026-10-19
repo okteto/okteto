@@ -28,6 +28,7 @@ type IngressOktetoContextInterface interface {
 }
 
 type IngressConnector struct {
+	okCtx                 IngressOktetoContextInterface
 	buildkitClientFactory *ClientFactory
 	waiter                *Waiter
 }
@@ -43,9 +44,16 @@ func NewIngressConnector(okCtx IngressOktetoContextInterface, ioCtrl *io.Control
 	waiter := NewBuildkitClientWaiter(ioCtrl)
 
 	return &IngressConnector{
+		okCtx:                 okCtx,
 		buildkitClientFactory: buildkitClientFactory,
 		waiter:                waiter,
 	}
+}
+
+// NewSibling creates another ingress connector to the same BuildKit endpoint with its own
+// client factory and readiness waiter, so concurrent builds don't share their state
+func (i *IngressConnector) NewSibling(ioCtrl *io.Controller) *IngressConnector {
+	return NewIngressConnector(i.okCtx, ioCtrl)
 }
 
 // Start is a no-op for the ingress connector since it doesn't maintain a persistent connection
@@ -70,4 +78,13 @@ func (i *IngressConnector) GetType() string {
 // Stop is a no-op for the ingress connector since it doesn't maintain a persistent connection
 func (i *IngressConnector) Stop() {
 	// No-op: ingress connector doesn't maintain a persistent connection that needs to be closed
+}
+
+// UseOutput makes the connector print its readiness status through ioCtrl and returns
+// the controller it used before
+func (i *IngressConnector) UseOutput(ioCtrl *io.Controller) *io.Controller {
+	previous := i.waiter.logger
+	i.waiter.logger = ioCtrl
+	i.buildkitClientFactory.logger = ioCtrl
+	return previous
 }

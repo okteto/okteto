@@ -134,12 +134,14 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 	// We need to call it once in order to check if the buildkit pod endpoint is available
 	response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 	if err != nil {
-		if errors.Is(err, okteto.ErrIncompatibleBackend) {
-			pf.metrics.SetErrReason("IncompatibleBackend")
-		} else {
-			pf.metrics.SetErrReason("BackendInternalError")
+		if !pf.metrics.TrackCancelledRequest(ctx) {
+			if errors.Is(err, okteto.ErrIncompatibleBackend) {
+				pf.metrics.SetErrReason("IncompatibleBackend")
+			} else {
+				pf.metrics.SetErrReason("BackendInternalError")
+			}
+			pf.metrics.TrackFailure()
 		}
-		pf.metrics.TrackFailure()
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 	}
 
@@ -148,6 +150,14 @@ func NewPortForwarder(ctx context.Context, okCtx PortForwarderOktetoContextInter
 		pf.podName = response.PodName
 	}
 	return pf, nil
+}
+
+// NewSibling creates a new port forwarder with its own session. Like any new port
+// forwarder it asks the backend for the least loaded BuildKit pod (or waits in the
+// queue), so it may land on a different pod than pf. It reuses pf's Okteto context and
+// reports connection metrics to the same tracker.
+func (pf *PortForwarder) NewSibling(ctx context.Context, ioCtrl *io.Controller) (*PortForwarder, error) {
+	return NewPortForwarder(ctx, pf.okCtx, ioCtrl, pf.metrics.tracker)
 }
 
 // buildkitPort is the port where buildkit listens inside the pod
@@ -199,7 +209,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 		return nil
 	}
 	if ctx.Err() != nil || !errors.Is(err, errPortForwardCreation) {
-		pf.trackConnectFailure(connectFailureReason(err))
+		pf.trackConnectFailure(ctx, connectFailureReason(err))
 		return err
 	}
 	// The pod assigned to the session might be gone, e.g. removed by the BuildKit autoscaler
@@ -207,7 +217,7 @@ func (pf *PortForwarder) Start(ctx context.Context) error {
 	// after each build, so the session can safely continue on another pod. Other port forward
 	// failures (e.g. an expired kubetoken) get the same single retry.
 	// The failure is tracked with its own reason, as the build can still succeed on the new pod.
-	pf.trackConnectFailure("AssignedPodUnreachable")
+	pf.trackConnectFailure(ctx, "AssignedPodUnreachable")
 	pf.ioCtrl.Logger().Infof("could not reach buildkit pod %s, requesting a new one", pf.podName)
 	retryErr := pf.connectToNewPod(ctx)
 	var userErr oktetoErrors.UserError
@@ -229,7 +239,7 @@ func (pf *PortForwarder) connectToNewPod(ctx context.Context) error {
 	}
 	pf.podName = podName
 	if err := pf.connect(ctx); err != nil {
-		pf.trackConnectFailure(connectFailureReason(err))
+		pf.trackConnectFailure(ctx, connectFailureReason(err))
 		return err
 	}
 	return nil
@@ -251,10 +261,11 @@ func (pf *PortForwarder) connect(ctx context.Context) error {
 	return nil
 }
 
-// trackConnectFailure sends a port forward failure event to analytics with the given reason
-func (pf *PortForwarder) trackConnectFailure(reason string) {
+// trackConnectFailure sends a port forward failure event to analytics with the given
+// reason, unless the connector is no longer needed
+func (pf *PortForwarder) trackConnectFailure(ctx context.Context, reason string) {
 	pf.metrics.SetErrReason(reason)
-	pf.metrics.TrackFailure()
+	pf.metrics.TrackFailureUnlessNotNeeded(ctx)
 }
 
 // connectFailureReason returns the analytics reason of a failed port forward connection
@@ -298,12 +309,14 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 
 		response, err := pf.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, pf.sessionID)
 		if err != nil {
-			if errors.Is(err, okteto.ErrIncompatibleBackend) {
-				pf.metrics.SetErrReason("IncompatibleBackend")
-			} else {
-				pf.metrics.SetErrReason("BackendInternalError")
+			if !pf.metrics.TrackCancelledRequest(ctx) {
+				if errors.Is(err, okteto.ErrIncompatibleBackend) {
+					pf.metrics.SetErrReason("IncompatibleBackend")
+				} else {
+					pf.metrics.SetErrReason("BackendInternalError")
+				}
+				pf.metrics.TrackFailure()
 			}
-			pf.metrics.TrackFailure()
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 
@@ -342,7 +355,7 @@ func (pf *PortForwarder) assignBuildkitPod(ctx context.Context) (string, error) 
 			}
 		case <-ctx.Done():
 			pf.metrics.SetErrReason("ContextCancelledWhileWaitingForBuildkitPod")
-			pf.metrics.TrackFailure()
+			pf.metrics.TrackFailureUnlessNotNeeded(ctx)
 			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}
@@ -550,4 +563,15 @@ func (pf *PortForwarder) GetBuildkitClient(ctx context.Context) (*client.Client,
 
 	pf.buildkitClient = c
 	return c, nil
+}
+
+// UseOutput makes the port forwarder print its queue and readiness status through ioCtrl
+// and returns the controller it used before
+func (pf *PortForwarder) UseOutput(ioCtrl *io.Controller) *io.Controller {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+	previous := pf.ioCtrl
+	pf.ioCtrl = ioCtrl
+	pf.waiter.logger = ioCtrl
+	return previous
 }

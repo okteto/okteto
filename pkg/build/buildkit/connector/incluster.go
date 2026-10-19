@@ -78,8 +78,10 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 	response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 	if err != nil {
 
-		ic.metrics.SetErrReason("BackendInternalError")
-		ic.metrics.TrackFailure()
+		if !ic.metrics.TrackCancelledRequest(ctx) {
+			ic.metrics.SetErrReason("BackendInternalError")
+			ic.metrics.TrackFailure()
+		}
 		return nil, fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 	}
 
@@ -89,6 +91,14 @@ func NewInClusterConnector(ctx context.Context, okCtx InClusterOktetoContextInte
 	}
 
 	return ic, nil
+}
+
+// NewSibling creates a new in-cluster connector with its own session. Like any new
+// in-cluster connector it asks the backend for the least loaded BuildKit pod (or waits
+// in the queue), so it may land on a different pod than ic. It reuses ic's Okteto
+// context and reports connection metrics to the same tracker.
+func (ic *InClusterConnector) NewSibling(ctx context.Context, ioCtrl *io.Controller) (*InClusterConnector, error) {
+	return NewInClusterConnector(ctx, ic.okCtx, ioCtrl, ic.metrics.tracker)
 }
 
 // Start establishes the connection to the buildkit pod.
@@ -164,8 +174,10 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 
 		response, err := ic.oktetoClient.Buildkit().GetLeastLoadedBuildKitPod(ctx, ic.sessionID)
 		if err != nil {
-			ic.metrics.SetErrReason("BackendInternalError")
-			ic.metrics.TrackFailure()
+			if !ic.metrics.TrackCancelledRequest(ctx) {
+				ic.metrics.SetErrReason("BackendInternalError")
+				ic.metrics.TrackFailure()
+			}
 			return "", fmt.Errorf("could not get least loaded buildkit pod: %w", err)
 		}
 
@@ -204,7 +216,7 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 			}
 		case <-ctx.Done():
 			ic.metrics.SetErrReason("ContextCancelled")
-			ic.metrics.TrackFailure()
+			ic.metrics.TrackFailureUnlessNotNeeded(ctx)
 			return "", fmt.Errorf("context cancelled while waiting for buildkit pod: %w", ctx.Err())
 		}
 	}
@@ -262,4 +274,14 @@ func (ic *InClusterConnector) GetType() string {
 // Stop clears podIP to force a new pod assignment and connection verification on next Start()
 func (ic *InClusterConnector) Stop() {
 
+}
+
+// UseOutput makes the connector print its queue status through ioCtrl and returns the
+// controller it used before
+func (ic *InClusterConnector) UseOutput(ioCtrl *io.Controller) *io.Controller {
+	ic.mu.Lock()
+	defer ic.mu.Unlock()
+	previous := ic.ioCtrl
+	ic.ioCtrl = ioCtrl
+	return previous
 }

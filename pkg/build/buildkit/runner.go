@@ -155,23 +155,6 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		r.metadata.solveTime = solveTime
 	}()
 
-	var showBuildMessage bool
-	switch buildOptions.OutputMode {
-	case "test", "deploy", "destroy":
-		showBuildMessage = false
-	default:
-		showBuildMessage = true
-	}
-
-	if showBuildMessage {
-		// Use the original user-facing path if available, otherwise fall back to the internal path
-		displayPath := buildOptions.File
-		if buildOptions.OriginalDockerfile != "" {
-			displayPath = buildOptions.OriginalDockerfile
-		}
-		r.logger.Out().Infof("Building '%s'...", displayPath)
-	}
-
 	for {
 		attempts++
 		if attempts > 1 {
@@ -205,6 +188,11 @@ func (r *Runner) Run(ctx context.Context, buildOptions *types.BuildOptions, outp
 		solveTime = time.Since(startSolverTime)
 		r.metadata.build.BuildkitDuration = solveTime
 		if err != nil {
+			if ctx.Err() != nil {
+				// The build was cancelled (interrupted, or another build of a parallel batch
+				// failed): it is not a transient BuildKit error, don't retry it
+				return err
+			}
 			if IsRetryable(err) {
 				r.connector.Stop()
 				r.logger.Logger().Infof("retrying operation: %s", err)

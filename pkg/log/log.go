@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -82,6 +83,24 @@ type logger struct {
 
 var log = &logger{
 	out: logrus.New(),
+}
+
+// bufMu guards log.buf: builds running at the same time write to it concurrently
+var bufMu sync.Mutex
+
+// writeToBuffer appends msg to the output buffer
+func writeToBuffer(msg string) {
+	bufMu.Lock()
+	defer bufMu.Unlock()
+	log.buf.WriteString(msg)
+}
+
+// writeLineToBuffer appends msg and a new line to the output buffer
+func writeLineToBuffer(msg string) {
+	bufMu.Lock()
+	defer bufMu.Unlock()
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
 }
 
 func init() {

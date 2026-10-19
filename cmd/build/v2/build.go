@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -80,6 +81,8 @@ type OktetoBuilder struct {
 	k8sLogger *io.K8sLogger
 
 	onBuildFinish []OnBuildFinish
+
+	buildStrategy buildStrategy
 }
 
 type OnBuildFinish func(ctx context.Context, meta *analytics.ImageBuildMetadata)
@@ -111,7 +114,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, registryCtrl, config.fs, ioCtrl, wdCtrl, smartBuildConfig, tagger, imageCtrl, serviceEnvVarsHandler, okCtx.GetNamespace(), okCtx.GetRegistryURL())
 
 	ob := &OktetoBuilder{
-		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl, ShowBuildMessage: true},
 		Registry:              registryCtrl,
 		Config:                config,
 		ioCtrl:                ioCtrl,
@@ -121,6 +124,7 @@ func NewBuilder(builder buildCmd.OktetoBuilderInterface, registryCtrl oktetoRegi
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
+		buildStrategy:         newBuildStrategy(),
 	}
 
 	return ob
@@ -167,7 +171,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish,
 	smartBuildCtrl := smartbuild.NewSmartBuildCtrl(gitRepo, reg, config.fs, ioCtrl, wdCtrl, smartBuildConfig, tagger, imageCtrl, serviceEnvVarsHandler, okCtx.GetNamespace(), okCtx.GetRegistryURL())
 
 	return &OktetoBuilder{
-		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl},
+		Builder:               basic.Builder{BuildRunner: builder, IoCtrl: ioCtrl, ShowBuildMessage: true},
 		Registry:              reg,
 		Config:                config,
 		ioCtrl:                ioCtrl,
@@ -176,6 +180,7 @@ func NewBuilderFromScratch(ioCtrl *io.Controller, onBuildFinish []OnBuildFinish,
 		onBuildFinish:         onBuildFinish,
 		serviceEnvVarsHandler: serviceEnvVarsHandler,
 		tagger:                tagger,
+		buildStrategy:         newBuildStrategy(),
 	}
 }
 
@@ -275,48 +280,8 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		ob.ioCtrl.Logger().Infof("Images not cached: %v", notCachedSvcs)
 	}
 
-	for _, svcToBuild := range notCachedSvcs {
-		if options.EnableStages {
-			ob.ioCtrl.SetStage(fmt.Sprintf("Building service %s", svcToBuild.Name()))
-		}
-		buildSvcInfo := options.Manifest.Build[svcToBuild.Name()]
-		if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
-			return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
-		}
-
-		buildDurationStart := time.Now()
-		imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options)
-
-		buildDuration := time.Since(buildDurationStart)
-
-		waitForBuildkitAvailable := time.Duration(0)
-		buildContextSize := int64(0)
-		connectionType := ""
-		buildkitDuration := time.Duration(0)
-		contextTransferDuration := time.Duration(0)
-		buildkitRunner, ok := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
-		if ok {
-			buildkitMetadata := buildkitRunner.GetMetadata()
-			if buildkitMetadata != nil {
-				waitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
-				buildContextSize = buildkitMetadata.BuildContextSize
-				connectionType = buildkitMetadata.ConnectionType
-				buildkitDuration = buildkitMetadata.BuildkitDuration
-				contextTransferDuration = buildkitMetadata.ContextTransferDuration
-			}
-		}
-		svcToBuild.SetBuildDuration(buildDuration, waitForBuildkitAvailable, err == nil)
-		svcToBuild.Metadata().BuildContextSize = buildContextSize
-		svcToBuild.Metadata().ConnectionType = connectionType
-		svcToBuild.Metadata().BuildkitDuration = buildkitDuration
-		svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
-
-		if err != nil {
-			svcToBuild.Metadata().ErrorReason = err.Error()
-			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
-		}
-
-		ob.serviceEnvVarsHandler.SetServiceEnvVars(svcToBuild.Name(), imageTag)
+	if err := ob.buildServices(ctx, notCachedSvcs, options); err != nil {
+		return err
 	}
 
 	if options.EnableStages {
@@ -325,15 +290,76 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	return options.Manifest.ExpandEnvVars()
 }
 
+// buildServices builds the services that are not cached: at the same time when the
+// parallel strategy is enabled and there is more than one, one after another otherwise
+func (ob *OktetoBuilder) buildServices(ctx context.Context, svcs []*buildTypes.BuildInfo, options *types.BuildOptions) error {
+	buildOne := func(ctx context.Context, svc *buildTypes.BuildInfo, runner basic.Builder) error {
+		return ob.buildService(ctx, svc, options, runner)
+	}
+	runner, isOktetoRunner := ob.Builder.BuildRunner.(*buildCmd.OktetoBuilder)
+	if isOktetoRunner && len(svcs) > 1 && ob.buildStrategy.maxConcurrency() > 1 {
+		return ob.buildInParallel(ctx, runner, svcs, options, buildOne)
+	}
+	return ob.buildSequentially(ctx, svcs, options, buildOne)
+}
+
+// buildService builds a single service that is not cached with runner, records its build
+// metadata and publishes its OKTETO_BUILD_<SVC>_* env vars for the services that depend on it
+func (ob *OktetoBuilder) buildService(ctx context.Context, svcToBuild *buildTypes.BuildInfo, options *types.BuildOptions, runner basic.Builder) error {
+	buildSvcInfo := options.Manifest.Build[svcToBuild.Name()]
+	if !ob.oktetoContext.IsOktetoCluster() && buildSvcInfo.Image == "" {
+		return fmt.Errorf("'build.%s.image' is required if your context doesn't have Okteto installed", svcToBuild)
+	}
+
+	buildDurationStart := time.Now()
+	imageTag, err := ob.buildServiceImages(ctx, options.Manifest, svcToBuild, options, runner)
+
+	buildDuration := time.Since(buildDurationStart)
+
+	waitForBuildkitAvailable := time.Duration(0)
+	buildContextSize := int64(0)
+	connectionType := ""
+	buildkitDuration := time.Duration(0)
+	contextTransferDuration := time.Duration(0)
+	buildkitRunner, ok := runner.BuildRunner.(*buildCmd.OktetoBuilder)
+	if ok {
+		buildkitMetadata := buildkitRunner.GetMetadata()
+		if buildkitMetadata != nil {
+			waitForBuildkitAvailable = buildkitMetadata.WaitForBuildkitAvailableTime
+			buildContextSize = buildkitMetadata.BuildContextSize
+			connectionType = buildkitMetadata.ConnectionType
+			buildkitDuration = buildkitMetadata.BuildkitDuration
+			contextTransferDuration = buildkitMetadata.ContextTransferDuration
+		}
+	}
+	svcToBuild.SetBuildDuration(buildDuration, waitForBuildkitAvailable, err == nil)
+	svcToBuild.Metadata().BuildContextSize = buildContextSize
+	svcToBuild.Metadata().ConnectionType = connectionType
+	svcToBuild.Metadata().BuildkitDuration = buildkitDuration
+	svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
+
+	if err != nil {
+		svcToBuild.Metadata().ErrorReason = err.Error()
+		if ctx.Err() != nil {
+			// Cancelled because another build failed or the command was interrupted
+			svcToBuild.Metadata().ErrorReason = "cancelled"
+		}
+		return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
+	}
+
+	ob.serviceEnvVarsHandler.SetServiceEnvVars(svcToBuild.Name(), imageTag)
+	return nil
+}
+
 // buildServiceImages builds the images for the given service.
 // if service has volumes to include but is not okteto, an error is returned.
 // Returned image reference includes the digest
-func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svc *buildTypes.BuildInfo, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model.Manifest, svc *buildTypes.BuildInfo, options *types.BuildOptions, runner basic.Builder) (string, error) {
 	buildSvcInfo := manifest.Build[svc.Name()]
 
 	switch {
 	case serviceHasDockerfile(buildSvcInfo):
-		return bc.buildSvcFromDockerfile(ctx, manifest, svc, options)
+		return bc.buildSvcFromDockerfile(ctx, manifest, svc, options, runner)
 
 	default:
 		bc.ioCtrl.Logger().Info(fmt.Sprintf("could not build service %s, due to not having Dockerfile defined or volumes to include", svc.Name()))
@@ -341,7 +367,7 @@ func (bc *OktetoBuilder) buildServiceImages(ctx context.Context, manifest *model
 	return "", nil
 }
 
-func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcInfo *buildTypes.BuildInfo, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcInfo *buildTypes.BuildInfo, options *types.BuildOptions, runner basic.Builder) (string, error) {
 	bc.ioCtrl.Logger().Info(fmt.Sprintf("Building service '%s' from Dockerfile", svcInfo.Name()))
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcInfo.Name()], isStackManifest)
@@ -361,9 +387,14 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcInfo.Name(), err)
 	}
 
-	buildOptions := buildCmd.OptsFromBuildInfo(manifest, svcInfo.Name(), buildSvcInfo, options, bc.Registry, bc.oktetoContext)
+	// Builds with their own output (parallel builds) print their warnings there
+	warn := oktetoLog.Warning
+	if runner.IoCtrl != bc.ioCtrl {
+		warn = runner.IoCtrl.Out().Warning
+	}
+	buildOptions := buildCmd.OptsFromBuildInfo(manifest, svcInfo.Name(), buildSvcInfo, options, bc.Registry, bc.oktetoContext, warn)
 
-	if err := bc.Builder.Build(ctx, buildOptions); err != nil {
+	if err := runner.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	var imageTagWithDigest string

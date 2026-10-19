@@ -16,6 +16,7 @@ package buildkit
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/docker/cli/cli/config/configfile"
@@ -125,8 +126,6 @@ func TestGetOktetoCredentials(t *testing.T) {
 }
 
 func TestCredentials(t *testing.T) {
-	oktetoRegistry = "okteto.registry.com"
-
 	tt := []struct {
 		credRequest       *auth.CredentialsRequest
 		expected          *auth.CredentialsResponse
@@ -317,6 +316,7 @@ func TestCredentials(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ap := &authProvider{
+				oktetoRegistry: "okteto.registry.com",
 				config: &configfile.ConfigFile{
 					AuthConfigs: map[string]types.AuthConfig{
 						"okteto.registry.com": {
@@ -355,4 +355,15 @@ func TestCredentials(t *testing.T) {
 			require.Equal(t, tc.expected, creds)
 		})
 	}
+}
+
+func TestNewDockerAndOktetoAuthProviderKeepsRegistryPerInstance(t *testing.T) {
+	first := newDockerAndOktetoAuthProvider("first.registry.com", "first-user", "first-pass", &fakeContext{}, io.Discard)
+	// Creating a second provider must not change which registry the first one serves
+	newDockerAndOktetoAuthProvider("second.registry.com", "second-user", "second-pass", &fakeContext{}, io.Discard)
+
+	creds, err := first.Credentials(context.Background(), &auth.CredentialsRequest{Host: "first.registry.com"})
+
+	require.NoError(t, err)
+	require.Equal(t, &auth.CredentialsResponse{Username: "first-user", Secret: "first-pass"}, creds)
 }

@@ -14,6 +14,7 @@
 package basic
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeBuildRunner struct {
@@ -217,4 +219,43 @@ func createDockerfile(t *testing.T) (string, error) {
 		return "", err
 	}
 	return dir, nil
+}
+
+// buildAndCaptureOutput builds a Dockerfile with a builder that shows or hides the build
+// message and returns what it printed and the Dockerfile path
+func buildAndCaptureOutput(t *testing.T, showBuildMessage bool, outputMode string) (string, string) {
+	t.Helper()
+	buildRunner := &fakeBuildRunner{}
+	buildRunner.On("Run", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	var out bytes.Buffer
+	bc := &Builder{
+		BuildRunner:      buildRunner,
+		IoCtrl:           io.NewIOController().WithOutput(&out, ""),
+		ShowBuildMessage: showBuildMessage,
+	}
+	dir, err := createDockerfile(t)
+	require.NoError(t, err)
+
+	err = bc.Build(context.Background(), &types.BuildOptions{CommandArgs: []string{dir}, Tag: "okteto.dev/test", OutputMode: outputMode})
+
+	require.NoError(t, err)
+	return out.String(), filepath.Join(dir, "Dockerfile")
+}
+
+func TestBuildShowsBuildMessageWhenEnabled(t *testing.T) {
+	out, dockerfile := buildAndCaptureOutput(t, true, "tty")
+
+	require.Contains(t, out, "Building '"+dockerfile+"'...")
+}
+
+func TestBuildHidesBuildMessageByDefault(t *testing.T) {
+	out, _ := buildAndCaptureOutput(t, false, "tty")
+
+	require.NotContains(t, out, "Building '")
+}
+
+func TestBuildHidesBuildMessageInDeployMode(t *testing.T) {
+	out, _ := buildAndCaptureOutput(t, true, "deploy")
+
+	require.NotContains(t, out, "Building '")
 }

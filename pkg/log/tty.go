@@ -172,8 +172,7 @@ func (w *TTYWriter) Fail(format string, args ...interface{}) {
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 		}
 	}
 }
@@ -193,8 +192,7 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 		}
 	}
 
@@ -207,8 +205,7 @@ func (w *TTYWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 		}
 	}
 
@@ -221,8 +218,7 @@ func (w *TTYWriter) Print(args ...interface{}) {
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 		}
 	}
 
@@ -246,8 +242,7 @@ func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 	if msg != "" {
 		msg = convertToJSON(level, log.stage, msg)
 		if msg != "" {
-			log.buf.WriteString(msg)
-			log.buf.WriteString("\n")
+			writeLineToBuffer(msg)
 		}
 	}
 }

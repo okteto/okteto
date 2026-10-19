@@ -33,16 +33,14 @@ import (
 
 const oktetoLocalRegistryStorePriorityEnabledEnvVarKey = "OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED"
 
-var oktetoRegistry = ""
-
 func newDockerAndOktetoAuthProvider(registryURL, username, password string, authContext authProviderContextInterface, stderr io.Writer) *authProvider {
 	result := &authProvider{
 		config:          config.LoadDefaultConfigFile(stderr),
 		externalAuth:    authContext.getExternalRegistryCreds,
 		newOktetoClient: okteto.NewOktetoClientStateless,
 		authContext:     authContext,
+		oktetoRegistry:  registryURL,
 	}
-	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{
 		ServerAddress: registryURL,
 		Username:      username,
@@ -88,6 +86,9 @@ type authProvider struct {
 	authContext authProviderContextInterface
 	config      *configfile.ConfigFile
 
+	// oktetoRegistry is the Okteto registry host whose credentials are served from config
+	oktetoRegistry string
+
 	// externalAuth is an external registry credentials getter that live
 	// outside of the configfile. It is used to load external auth data without
 	// going through the target config file store
@@ -123,10 +124,10 @@ func (*authProvider) VerifyTokenAuthority(_ context.Context, _ *auth.VerifyToken
 // If the host is not the okteto registry and the OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED is false or unset, it returns the credentials retrieved from the okteto credentials store.
 // If the host is not the okteto registry, it returns the credentials from the config file if the OKTETO_LOCAL_REGISTRY_STORE_PRIORITY_ENABLED is true.
 func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
-	if req.Host == oktetoRegistry {
+	if req.Host == ap.oktetoRegistry {
 		return &auth.CredentialsResponse{
-			Username: ap.config.AuthConfigs[oktetoRegistry].Username,
-			Secret:   ap.config.AuthConfigs[oktetoRegistry].Password,
+			Username: ap.config.AuthConfigs[ap.oktetoRegistry].Username,
+			Secret:   ap.config.AuthConfigs[ap.oktetoRegistry].Password,
 		}, nil
 	}
 

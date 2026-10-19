@@ -14,9 +14,14 @@
 package connector
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/log/io"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -130,4 +135,123 @@ func TestConnectorMetrics_SetErrReason(t *testing.T) {
 	require.Equal(t, "QueueTimeout", m.errReason)
 	m.SetErrReason("PortForwardCreation")
 	require.Equal(t, "PortForwardCreation", m.errReason)
+}
+
+// countingConnectionTracker counts the connection events it receives
+type countingConnectionTracker struct {
+	events []*analytics.BuildkitConnectorMetadata
+}
+
+func (c *countingConnectionTracker) TrackBuildkitConnection(m *analytics.BuildkitConnectorMetadata) {
+	c.events = append(c.events, m)
+}
+
+func TestTrackFailureUnlessNotNeededSkipsConnectorsNoLongerNeeded(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrConnectorNotNeeded)
+
+	m.TrackFailureUnlessNotNeeded(ctx)
+
+	require.Empty(t, tracker.events)
+}
+
+func TestTrackFailureUnlessNotNeededTracksOtherCancellations(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	m.TrackFailureUnlessNotNeeded(ctx)
+
+	require.Len(t, tracker.events, 1)
+	require.False(t, tracker.events[0].Success)
+}
+
+func TestTrackFailureUnlessNotNeededTracksFailuresWithLiveContext(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+
+	m.TrackFailureUnlessNotNeeded(context.Background())
+
+	require.Len(t, tracker.events, 1)
+}
+
+func TestTrackCancelledRequestIgnoresLiveContexts(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+
+	cancelled := m.TrackCancelledRequest(context.Background())
+
+	require.False(t, cancelled)
+	require.Empty(t, tracker.events)
+}
+
+func TestTrackCancelledRequestReportsCancellations(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	cancelled := m.TrackCancelledRequest(ctx)
+
+	require.True(t, cancelled)
+	require.Len(t, tracker.events, 1)
+	require.Equal(t, "ContextCancelled", tracker.events[0].ErrReason)
+}
+
+func TestTrackCancelledRequestSkipsConnectorsNoLongerNeeded(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	m := NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker)
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrConnectorNotNeeded)
+
+	cancelled := m.TrackCancelledRequest(ctx)
+
+	require.True(t, cancelled)
+	require.Empty(t, tracker.events)
+}
+
+// cancelledPodClient fails like the backend client does once its context is cancelled
+type cancelledPodClient struct{}
+
+func (cancelledPodClient) GetLeastLoadedBuildKitPod(ctx context.Context, _ string) (*types.BuildKitPodResponse, error) {
+	return nil, ctx.Err()
+}
+
+func notNeededContext() context.Context {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrConnectorNotNeeded)
+	return ctx
+}
+
+func TestPortForwarderAssignPodDoesNotReportUnneededConnectors(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	pf := &PortForwarder{
+		oktetoClient: &client.FakeOktetoClient{BuildkitClient: cancelledPodClient{}},
+		ioCtrl:       io.NewIOController(),
+		maxWaitTime:  time.Minute,
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypePortForward, "session", tracker),
+	}
+
+	_, err := pf.assignBuildkitPod(notNeededContext())
+
+	require.Error(t, err)
+	require.Empty(t, tracker.events)
+}
+
+func TestInClusterAssignPodDoesNotReportUnneededConnectors(t *testing.T) {
+	tracker := &countingConnectionTracker{}
+	ic := &InClusterConnector{
+		oktetoClient: &client.FakeOktetoClient{BuildkitClient: cancelledPodClient{}},
+		ioCtrl:       io.NewIOController(),
+		maxWaitTime:  time.Minute,
+		metrics:      NewConnectorMetrics(analytics.ConnectorTypeInCluster, "session", tracker),
+	}
+
+	_, err := ic.assignBuildkitPod(notNeededContext())
+
+	require.Error(t, err)
+	require.Empty(t, tracker.events)
 }
