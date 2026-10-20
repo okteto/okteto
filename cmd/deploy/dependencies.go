@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	// errDependencyFailed is returned by WaitUntilMainReady when a dependency failed before the main deploy could start.
+	// errDependencyFailed is returned by WaitUntilMainReady when a dependency the main deploy waits for failed.
 	// The details of every failure are returned by Wait.
 	errDependencyFailed = errors.New("a dependency failed to deploy")
 
@@ -55,8 +55,9 @@ type dependencyResult struct {
 // A dependency starts as soon as all its predecessors have succeeded. The main deploy is treated
 // as one more node: it is ready when its predecessors (every dependency with wait: true, and all
 // their predecessors) have succeeded.
-// After the first failure (or Stop), no new dependency is started and the running ones are
-// allowed to finish.
+// A failing dependency that the main deploy doesn't wait for doesn't block it: after its failure, only the
+// dependencies the main deploy waits for keep starting. After a failure of one of those (or Stop), no new
+// dependency is started. The running ones are always allowed to finish.
 type dependencyScheduler struct {
 	runner           dependencyRunner
 	section          deps.ManifestSection
@@ -151,6 +152,8 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	failures := map[string]error{}
 	running := 0
 	cancelled := false
+	// mainBlocked is set when a dependency the main deploy waits for fails
+	mainBlocked := false
 	pendingMainPredecessors := len(s.mainPredecessors)
 
 	start := func(name string) {
@@ -200,7 +203,10 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 			}
 			if result.err != nil {
 				failures[result.name] = result.err
-				s.resolveMainReady(errDependencyFailed)
+				if s.mainPredecessors[result.name] {
+					mainBlocked = true
+					s.resolveMainReady(errDependencyFailed)
+				}
 				continue
 			}
 			if s.mainPredecessors[result.name] {
@@ -209,12 +215,12 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 					s.resolveMainReady(nil)
 				}
 			}
-			if cancelled || len(failures) > 0 {
+			if cancelled || mainBlocked {
 				continue
 			}
 			for _, successor := range successors[result.name] {
 				pendingPredecessors[successor]--
-				if pendingPredecessors[successor] == 0 {
+				if pendingPredecessors[successor] == 0 && s.startsAfterFailures(successor, len(failures) > 0) {
 					start(successor)
 				}
 			}
@@ -240,6 +246,13 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	}
 	s.resolveMainReady(errDependenciesStopped)
 	close(s.done)
+}
+
+// startsAfterFailures returns whether a dependency whose predecessors have succeeded can start when other
+// dependencies have failed. Only the dependencies the main deploy waits for keep starting after a failure,
+// so a failing dependency that the main deploy doesn't wait for doesn't block it
+func (s *dependencyScheduler) startsAfterFailures(name string, failed bool) bool {
+	return !failed || s.mainPredecessors[name]
 }
 
 func (s *dependencyScheduler) resolveMainReady(err error) {

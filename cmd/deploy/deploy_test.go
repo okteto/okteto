@@ -1023,6 +1023,24 @@ func TestRunNotAwaitedDependencyFailureFailsTheDeploy(t *testing.T) {
 	deployer.AssertCalled(t, "Deploy", mock.Anything, mock.Anything)
 }
 
+func TestRunNotAwaitedDependencyFailureDoesNotBlockTheMainDeploy(t *testing.T) {
+	t.Setenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR", "")
+	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": assert.AnError}}
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"db":      &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, pipelineDeployer, deployer)
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorContains(t, err, "dependency 'reports' failed")
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
+	deployer.AssertCalled(t, "Deploy", mock.Anything, mock.Anything)
+}
+
 func TestRunWithDependenciesSucceeds(t *testing.T) {
 	t.Setenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR", "")
 	t.Setenv("OKTETO_DEPENDENCY_REPORTS_VARIABLE_DEP_VAR", "")

@@ -377,7 +377,7 @@ func TestDependencyScheduler_StopBeforeMainReady(t *testing.T) {
 	require.Error(t, requireWaitResult(t, s))
 }
 
-func TestDependencyScheduler_FailureOfNonPredecessorBlocksMain(t *testing.T) {
+func TestDependencyScheduler_FailureOfNotAwaitedDependencyDoesNotBlockMain(t *testing.T) {
 	section := deps.ManifestSection{
 		"database": &deps.Dependency{Repository: "https://github.com/okteto/database", Wait: true},
 		"reports":  &deps.Dependency{Repository: "https://github.com/okteto/reports"},
@@ -390,12 +390,47 @@ func TestDependencyScheduler_FailureOfNonPredecessorBlocksMain(t *testing.T) {
 	requireStarted(t, runner, "database", "reports")
 
 	runner.finish("reports", errors.New("boom"))
-	require.ErrorIs(t, requireMainReadyResult(t, mainReady), errDependencyFailed)
+	requireMainReadyPending(t, mainReady)
 
-	// database is a main predecessor and already running: it finishes, but the main deploy stays blocked
 	runner.finish("database", nil)
+	require.NoError(t, requireMainReadyResult(t, mainReady))
+	// the deploy fails once everything has finished
 	require.EqualError(t, requireWaitResult(t, s), "dependency 'reports' failed: boom")
-	require.ErrorIs(t, s.WaitUntilMainReady(), errDependencyFailed)
+}
+
+func TestDependencyScheduler_MainPredecessorsKeepStartingAfterANotAwaitedFailure(t *testing.T) {
+	section := deps.ManifestSection{
+		"database":  &deps.Dependency{Repository: "https://github.com/okteto/database"},
+		"messaging": &deps.Dependency{Repository: "https://github.com/okteto/messaging"},
+		"backend": &deps.Dependency{
+			Repository: "https://github.com/okteto/backend",
+			DependsOn:  deps.DependsOn{"database", "messaging"},
+			Wait:       true,
+		},
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}
+	runner := newFakeDependencyRunner(section)
+	s := newDependencyScheduler(section, runner)
+
+	s.Start(context.Background())
+	mainReady := waitUntilMainReadyAsync(s)
+	requireStarted(t, runner, "database", "messaging", "reports")
+	runner.finish("reports", errors.New("boom"))
+	runner.finish("database", nil)
+	runner.finish("messaging", nil)
+
+	requireStarted(t, runner, "backend")
+	runner.finish("backend", nil)
+	require.NoError(t, requireMainReadyResult(t, mainReady))
+	require.EqualError(t, requireWaitResult(t, s), "dependency 'reports' failed: boom")
+}
+
+func TestDependencyScheduler_OnlyMainPredecessorsStartAfterAFailure(t *testing.T) {
+	s := newDependencyScheduler(specExampleSection(), nil)
+
+	require.True(t, s.startsAfterFailures("analytics", false))
+	require.False(t, s.startsAfterFailures("analytics", true))
+	require.True(t, s.startsAfterFailures("backend", true))
 }
 
 func TestDependencyScheduler_Diamond(t *testing.T) {
