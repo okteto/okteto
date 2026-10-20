@@ -21,8 +21,11 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDestroyPipelineSuccessful(t *testing.T) {
@@ -177,4 +180,45 @@ func TestDestroyExistentPipelineTimeoutError(t *testing.T) {
 	}
 	err := pc.ExecuteDestroyPipeline(ctx, opts)
 	assert.ErrorIs(t, err, pipelineErr)
+}
+
+// initLogBuffer resets the output buffer. Lines are only recorded in it under a stage
+func initLogBuffer(t *testing.T) {
+	t.Helper()
+	oktetoLog.Init(logrus.WarnLevel)
+	oktetoLog.SetStage("Destroying")
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+}
+
+func newDestroyWaitTestCommand(stream *slowStreamClient) *Command {
+	return &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: client.NewFakePipelineClient(&client.FakePipelineResponses{}),
+			StreamClient:   stream,
+		},
+	}
+}
+
+func TestWaitUntilDestroyedKeepsTheLastLogLines(t *testing.T) {
+	initLogBuffer(t)
+	pc := newDestroyWaitTestCommand(&slowStreamClient{lines: []string{"last line"}, delay: 100 * time.Millisecond})
+
+	err := pc.waitUntilDestroyed(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second)
+
+	require.NoError(t, err)
+	require.Contains(t, oktetoLog.GetOutputBuffer().String(), "last line")
+}
+
+func TestWaitUntilDestroyedDoesNotWarnWhenTheStreamIsCancelled(t *testing.T) {
+	previous := logsDrainTimeout
+	logsDrainTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { logsDrainTimeout = previous })
+	initLogBuffer(t)
+	// the stream never reaches the end: it is cancelled after the drain timeout
+	pc := newDestroyWaitTestCommand(&slowStreamClient{delay: time.Hour})
+
+	err := pc.waitUntilDestroyed(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second)
+
+	require.NoError(t, err)
+	require.NotContains(t, oktetoLog.GetOutputBuffer().String(), "error streaming pipeline logs")
 }
