@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/validator"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -502,10 +503,29 @@ func runAllDependencies(t *testing.T, runner *pipelineDependencyRunner, section 
 	}
 }
 
+// noDependencyEnvVars is the deployedDependencyEnvVarsGetter of dependencies that generate no env vars
+func noDependencyEnvVars(context.Context, string, string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+
+// fakeDependencyEnvVars returns the env vars of each dependency and records the dependencies asked for
+type fakeDependencyEnvVars struct {
+	envs  map[string]map[string]string
+	asked []string
+	mu    sync.Mutex
+}
+
+func (f *fakeDependencyEnvVars) get(_ context.Context, name, _ string) (map[string]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.asked = append(f.asked, name)
+	return f.envs[name], nil
+}
+
 func TestPipelineDependencyRunnerOptions(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -523,7 +543,7 @@ func TestPipelineDependencyRunnerOptions(t *testing.T) {
 func TestPipelineDependencyRunnerChecksResourcesOnlyWhenNeeded(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -538,7 +558,7 @@ func TestPipelineDependencyRunnerChecksResourcesOnlyWhenNeeded(t *testing.T) {
 func TestPipelineDependencyRunnerChecksEveryResourceWithWaitFlag(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{Wait: true}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Wait: true}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -548,7 +568,7 @@ func TestPipelineDependencyRunnerChecksEveryResourceWithWaitFlag(t *testing.T) {
 func TestPipelineDependencyRunnerRedeploysWithDependenciesFlag(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{Dependencies: true}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Dependencies: true}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -560,7 +580,7 @@ func TestPipelineDependencyRunnerSingleDependencyKeepsCurrentOutput(t *testing.T
 		"database": &deps.Dependency{Repository: "https://github.com/okteto/database", Wait: true},
 	}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -573,7 +593,7 @@ func TestPipelineDependencyRunnerDoesNotModifyTheManifest(t *testing.T) {
 		Variables:  env.Environment{{Name: "SIZE", Value: "small"}},
 	}
 	section := deps.ManifestSection{"database": dep}
-	runner := newPipelineDependencyRunner(&capturingPipelineDeployer{}, section, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(&capturingPipelineDeployer{}, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -586,7 +606,7 @@ func TestPipelineDependencyRunnerRejectsReservedVariables(t *testing.T) {
 		Variables:  env.Environment{{Name: "OKTETO_CONTEXT", Value: "other"}},
 	}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, deps.ManifestSection{"database": dep}, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, deps.ManifestSection{"database": dep}, &Options{}, "test", "parent-id")
 
 	err := runner.Run(context.Background(), "database", dep)
 
@@ -600,7 +620,7 @@ func TestPipelineDependencyRunnerSingleNotAwaitedDependencyIsPrefixed(t *testing
 		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
 	}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
@@ -612,11 +632,62 @@ func TestPipelineDependencyRunnerExpandsVariablesWithTheStartEnvironment(t *test
 	dep := &deps.Dependency{Repository: "https://github.com/okteto/database", Branch: "${DEPS_TEST_BRANCH}"}
 	section := deps.ManifestSection{"database": dep}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, section, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
 
 	// the main deploy exports env vars while the dependencies are running
 	t.Setenv("DEPS_TEST_BRANCH", "exported-later")
 	runAllDependencies(t, runner, section)
 
 	require.Equal(t, "at-start", deployer.captured["database"].Branch)
+}
+
+func TestPipelineDependencyRunnerExpandsVariablesWithThePredecessorsEnvVars(t *testing.T) {
+	section := deps.ManifestSection{
+		"database": &deps.Dependency{Repository: "https://github.com/okteto/database"},
+		"backend": &deps.Dependency{
+			Repository: "https://github.com/okteto/backend",
+			DependsOn:  deps.DependsOn{"database"},
+			Variables:  env.Environment{{Name: "DB_HOST", Value: "${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}"}},
+		},
+		"frontend": &deps.Dependency{
+			Repository: "https://github.com/okteto/frontend",
+			DependsOn:  deps.DependsOn{"backend"},
+			Variables:  env.Environment{{Name: "DB_HOST", Value: "${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}"}},
+		},
+	}
+	envVars := &fakeDependencyEnvVars{envs: map[string]map[string]string{
+		"database": {"OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST": "db.svc"},
+	}}
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, envVars.get, section, &Options{}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	require.Contains(t, deployer.captured["backend"].Variables, "DB_HOST=db.svc")
+	// predecessors of predecessors too
+	require.Contains(t, deployer.captured["frontend"].Variables, "DB_HOST=db.svc")
+}
+
+func TestPipelineDependencyRunnerOnlyReadsThePredecessorsEnvVars(t *testing.T) {
+	section := specExampleSection()
+	envVars := &fakeDependencyEnvVars{}
+	runner := newPipelineDependencyRunner(&capturingPipelineDeployer{}, envVars.get, section, &Options{}, "test", "parent-id")
+
+	require.NoError(t, runner.Run(context.Background(), "analytics", section["analytics"]))
+
+	require.Equal(t, []string{"database"}, envVars.asked)
+}
+
+func TestPipelineDependencyRunnerFailsWhenThePredecessorsEnvVarsCannotBeRead(t *testing.T) {
+	section := specExampleSection()
+	deployer := &capturingPipelineDeployer{}
+	envVarsOf := func(context.Context, string, string) (map[string]string, error) {
+		return nil, assert.AnError
+	}
+	runner := newPipelineDependencyRunner(deployer, envVarsOf, section, &Options{}, "test", "parent-id")
+
+	err := runner.Run(context.Background(), "analytics", section["analytics"])
+
+	require.ErrorIs(t, err, assert.AnError)
+	require.Empty(t, deployer.captured)
 }
