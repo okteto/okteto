@@ -404,7 +404,13 @@ func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, acti
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, skipResourcesCheck bool, out deployOutput) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
-	defer ctxCancel()
+	var wg sync.WaitGroup
+	// no goroutine outlives the wait, whatever the way out: they write into the deploy output, which is read
+	// once the wait returns. They stop within a poll interval once cancelled
+	defer func() {
+		ctxCancel()
+		wg.Wait()
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -414,8 +420,6 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	// both goroutines can report an error, so there is room for both
 	exit := make(chan error, 2)
 	streamDone := make(chan struct{})
-
-	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
@@ -471,9 +475,6 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
 	}
-	// no goroutine outlives the wait: they write into the deploy output, which is read once the wait returns
-	ctxCancel()
-	wg.Wait()
 	return nil
 }
 

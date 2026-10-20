@@ -18,12 +18,14 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -241,4 +243,40 @@ func TestWaitUntilRunningDoesNotWarnWhenTheStreamIsCancelled(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Empty(t, recorder.lines)
+}
+
+// failingFinishPipelineClient fails while waiting for the action to finish
+type failingFinishPipelineClient struct {
+	*client.FakePipelineClient
+}
+
+func (failingFinishPipelineClient) WaitForActionToFinish(context.Context, string, string, string, time.Duration) error {
+	return assert.AnError
+}
+
+// lingeringStreamClient streams until it is cancelled, and records when it has returned
+type lingeringStreamClient struct {
+	*client.FakeStreamClient
+	returned atomic.Bool
+}
+
+func (c *lingeringStreamClient) PipelineLogsTo(ctx context.Context, _, _, _ string, _ time.Duration, _, _ func(msg string)) error {
+	<-ctx.Done()
+	// it takes a moment to stop, as a real stream that is still printing a line
+	time.Sleep(10 * time.Millisecond)
+	c.returned.Store(true)
+	return ctx.Err()
+}
+
+func TestWaitUntilRunningStopsTheLogsStreamBeforeReturningAnError(t *testing.T) {
+	stream := &lingeringStreamClient{}
+	pc := newWaitTestCommand(map[string]string{"svc": okteto.RunningStatus})
+	fake := pc.okClient.(*client.FakeOktetoClient)
+	fake.PipelineClient = failingFinishPipelineClient{fake.PipelineClient.(*client.FakePipelineClient)}
+	fake.StreamClient = stream
+
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, globalDeployOutput{})
+
+	require.ErrorIs(t, err, assert.AnError)
+	require.True(t, stream.returned.Load())
 }
