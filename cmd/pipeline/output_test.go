@@ -176,6 +176,22 @@ func TestStreamPipelineLogsUsesTheDeployOutput(t *testing.T) {
 	require.Equal(t, []string{"[database] creating tables", "[database] done"}, recorder.lines)
 }
 
+func TestStreamPipelineLogsWarnsThroughTheDeployOutput(t *testing.T) {
+	recorder := &safeLineRecorder{}
+	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: client.NewFakePipelineClient(&client.FakePipelineResponses{}),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{Warnings: []string{"reconnecting"}}),
+		},
+	}
+
+	err := pc.streamPipelineLogs(context.Background(), "database", "test", "action", time.Second, out)
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"warning: [database] reconnecting"}, recorder.lines)
+}
+
 // slowStreamClient prints its lines after a delay, unless the stream is cancelled before
 type slowStreamClient struct {
 	*client.FakeStreamClient
@@ -183,7 +199,7 @@ type slowStreamClient struct {
 	delay time.Duration
 }
 
-func (c *slowStreamClient) PipelineLogsTo(ctx context.Context, _, _, _ string, _ time.Duration, printLine func(line string)) error {
+func (c *slowStreamClient) PipelineLogsTo(ctx context.Context, _, _, _ string, _ time.Duration, printLine, _ func(msg string)) error {
 	select {
 	case <-time.After(c.delay):
 		for _, line := range c.lines {

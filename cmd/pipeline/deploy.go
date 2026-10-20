@@ -391,7 +391,8 @@ func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, acti
 		return err
 	}
 
-	return pc.okClient.Stream().PipelineLogsTo(ctx, name, namespace, actionName, timeout, out.Println)
+	// a dependency's warnings about the connection get its prefix and stage, like its lines
+	return pc.okClient.Stream().PipelineLogsTo(ctx, name, namespace, actionName, timeout, out.Println, out.Warning)
 }
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, skipResourcesCheck bool, out deployOutput) error {

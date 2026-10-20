@@ -50,7 +50,7 @@ func newOpenStreamServer(t *testing.T, lines ...string) *httptest.Server {
 func getLogsAsync(ctx context.Context, url string, handler handleLineFn) <-chan error {
 	result := make(chan error, 1)
 	go func() {
-		result <- GetLogsFromURL(ctx, http.DefaultClient, url, handler, time.Minute)
+		result <- GetLogsFromURL(ctx, http.DefaultClient, url, handler, func(string) {}, time.Minute)
 	}()
 	return result
 }
@@ -92,4 +92,27 @@ func TestGetLogsFromURLReturnsWhenCancelledWhileWaitingForLines(t *testing.T) {
 	cancel()
 
 	require.ErrorIs(t, requireReturnsWithin(t, result, 5*time.Second), context.Canceled)
+}
+
+func TestGetLogsFromURLWarnsWhenReconnecting(t *testing.T) {
+	attempts := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts++
+		if attempts == 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprintf(w, "data: %s\n", "EOF")
+	}))
+	t.Cleanup(server.Close)
+	warnings := []string{}
+
+	err := GetLogsFromURL(context.Background(), http.DefaultClient, server.URL, func(line string) bool {
+		return line == "EOF"
+	}, func(msg string) {
+		warnings = append(warnings, msg)
+	}, time.Minute)
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"Unable to connect to stream logs, waiting to reconnect..."}, warnings)
 }

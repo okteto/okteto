@@ -50,21 +50,26 @@ type destroyAllLogFormat struct {
 
 // PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
-	return c.PipelineLogsTo(ctx, name, namespace, actionName, timeout, printPipelineLogLine)
+	return c.PipelineLogsTo(ctx, name, namespace, actionName, timeout, printPipelineLogLine, printStreamWarning)
 }
 
-// PipelineLogsTo retrieves logs from the pipeline provided and passes every line to printLine, returns error
-func (c *streamClient) PipelineLogsTo(ctx context.Context, name, namespace, actionName string, timeout time.Duration, printLine func(line string)) error {
+// PipelineLogsTo retrieves logs from the pipeline provided and passes every line to printLine and every warning
+// about the connection to warn, returns error
+func (c *streamClient) PipelineLogsTo(ctx context.Context, name, namespace, actionName string, timeout time.Duration, printLine, warn func(msg string)) error {
 	streamURL := fmt.Sprintf(gitDeployUrlTemplate, GetContext().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), pipelineLogLineHandler(printLine), timeout)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), pipelineLogLineHandler(printLine), warn, timeout)
 }
 
 func printPipelineLogLine(line string) {
 	oktetoLog.Println(line)
+}
+
+func printStreamWarning(msg string) {
+	oktetoLog.Warning("%s", msg)
 }
 
 // pipelineLogLineHandler returns a handler that passes the Message unmarshalled from each line to printLine.
@@ -104,7 +109,7 @@ func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string, tim
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog, timeout)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog, printStreamWarning, timeout)
 }
 
 // handlerDestroyAllLog prints a line with the Message unmarshalled from line
