@@ -691,3 +691,36 @@ func TestPipelineDependencyRunnerFailsWhenThePredecessorsEnvVarsCannotBeRead(t *
 	require.ErrorIs(t, err, assert.AnError)
 	require.Empty(t, deployer.captured)
 }
+
+func TestPipelineDependencyRunnerWaitsAtLeastTenMinutesForNotAwaitedDependencies(t *testing.T) {
+	section := specExampleSection()
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	// the main deploy doesn't wait for analytics
+	require.Equal(t, 10*time.Minute, deployer.captured["analytics"].Timeout)
+	require.Equal(t, 5*time.Minute, deployer.captured["database"].Timeout)
+}
+
+func TestPipelineDependencyRunnerUsesALongerTimeoutFlagForNotAwaitedDependencies(t *testing.T) {
+	section := specExampleSection()
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 20 * time.Minute}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	require.Equal(t, 20*time.Minute, deployer.captured["analytics"].Timeout)
+}
+
+func TestPipelineDependencyRunnerUsesTheDependencyTimeout(t *testing.T) {
+	section := specExampleSection()
+	section["analytics"].Timeout = 2 * time.Minute
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	require.Equal(t, 2*time.Minute, deployer.captured["analytics"].Timeout)
+}

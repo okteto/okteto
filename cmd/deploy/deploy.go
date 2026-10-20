@@ -329,7 +329,7 @@ $ okteto deploy --no-build=true`,
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "run the deploy commands using Remote Execution")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the deployment finishes and pods are healthy")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "when using `wait`, the maximum time to wait for the resources of the deployment to be healthy")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the maximum time to wait for each dependency and, when using `wait`, for the resources of the deployment to be healthy")
 
 	return cmd
 }
