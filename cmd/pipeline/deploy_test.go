@@ -1114,3 +1114,18 @@ func TestWaitForExistingDeployTimesOut(t *testing.T) {
 
 	require.EqualError(t, err, "timed out waiting for repository 'test' to be deployed")
 }
+
+func TestWaitForExistingDeployHealthCheckGetsTheTimeLeft(t *testing.T) {
+	// the deploy is found finished after a poll interval, and its resources never get running
+	pc := newWaitTestCommand(map[string]string{"svc": okteto.ProgressingStatus}, existingDeployConfigMap(pipeline.DeployedStatus))
+	c, _, err := pc.k8sClientProvider.Provide(nil)
+	require.NoError(t, err)
+	opts := &DeployOptions{Name: "test", Namespace: "test", Timeout: 1500 * time.Millisecond}
+	start := time.Now()
+
+	err = pc.waitForExistingDeploy(context.Background(), c, pipeline.TranslatePipelineName("test"), opts)
+
+	require.ErrorContains(t, err, "deploy didn't finish")
+	// with the whole timeout again for the health check, it would take a poll interval more
+	require.Less(t, time.Since(start), 2*time.Second)
+}

@@ -294,8 +294,10 @@ func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Inter
 		return err
 	}
 
+	deadline := time.Now().Add(opts.Timeout)
 	timeout := time.NewTimer(opts.Timeout)
 	defer timeout.Stop()
+	timedOut := fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
 	ticker := time.NewTicker(existingDeployPollInterval)
 	defer ticker.Stop()
 
@@ -304,7 +306,7 @@ func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Inter
 		case <-sigCtx.Done():
 			return interrupted(sigCtx.Err())
 		case <-timeout.C:
-			return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
+			return timedOut
 		case <-ticker.C:
 			cfg, err := configmaps.Get(sigCtx, cfgName, opts.Namespace, c)
 			if err != nil {
@@ -318,7 +320,12 @@ func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Inter
 				if opts.SkipResourcesCheck {
 					return nil
 				}
-				return interrupted(pc.waitForResourcesToBeRunning(sigCtx, opts.Name, opts.Namespace, opts.Timeout))
+				// the health check gets the time left, so the whole wait is bounded by the timeout
+				left := time.Until(deadline)
+				if left <= 0 {
+					return timedOut
+				}
+				return interrupted(pc.waitForResourcesToBeRunning(sigCtx, opts.Name, opts.Namespace, left))
 			case pipeline.ErrorStatus:
 				return fmt.Errorf("repository '%s' failed to deploy", opts.Name)
 			}
