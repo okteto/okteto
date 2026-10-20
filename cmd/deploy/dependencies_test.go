@@ -641,8 +641,9 @@ func TestPipelineDependencyRunnerExpandsVariablesWithTheStartEnvironment(t *test
 	require.Equal(t, "at-start", deployer.captured["database"].Branch)
 }
 
-func TestPipelineDependencyRunnerExpandsVariablesWithThePredecessorsEnvVars(t *testing.T) {
-	section := deps.ManifestSection{
+// chainSection returns a chain of dependencies: frontend depends on backend, which depends on database
+func chainSection() deps.ManifestSection {
+	return deps.ManifestSection{
 		"database": &deps.Dependency{Repository: "https://github.com/okteto/database"},
 		"backend": &deps.Dependency{
 			Repository: "https://github.com/okteto/backend",
@@ -652,33 +653,46 @@ func TestPipelineDependencyRunnerExpandsVariablesWithThePredecessorsEnvVars(t *t
 		"frontend": &deps.Dependency{
 			Repository: "https://github.com/okteto/frontend",
 			DependsOn:  deps.DependsOn{"backend"},
-			Variables:  env.Environment{{Name: "DB_HOST", Value: "${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}"}},
+			Variables: env.Environment{
+				{Name: "API_URL", Value: "${OKTETO_DEPENDENCY_BACKEND_VARIABLE_URL}"},
+				{Name: "DB_HOST", Value: "${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}"},
+			},
 		},
 	}
-	envVars := &fakeDependencyEnvVars{envs: map[string]map[string]string{
+}
+
+func chainEnvVars() *fakeDependencyEnvVars {
+	return &fakeDependencyEnvVars{envs: map[string]map[string]string{
 		"database": {"OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST": "db.svc"},
+		"backend":  {"OKTETO_DEPENDENCY_BACKEND_VARIABLE_URL": "https://backend"},
 	}}
+}
+
+func TestPipelineDependencyRunnerExpandsVariablesWithTheDependsOnEnvVars(t *testing.T) {
+	section := chainSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, envVars.get, section, &Options{}, "test", "parent-id")
+	runner := newPipelineDependencyRunner(deployer, chainEnvVars().get, section, &Options{}, "test", "parent-id")
 
 	runAllDependencies(t, runner, section)
 
 	require.Contains(t, deployer.captured["backend"].Variables, "DB_HOST=db.svc")
-	// predecessors of predecessors too
-	require.Contains(t, deployer.captured["frontend"].Variables, "DB_HOST=db.svc")
+	require.Contains(t, deployer.captured["frontend"].Variables, "API_URL=https://backend")
 }
 
-func TestPipelineDependencyRunnerOnlyReadsThePredecessorsEnvVars(t *testing.T) {
-	section := specExampleSection()
-	envVars := &fakeDependencyEnvVars{}
-	runner := newPipelineDependencyRunner(&capturingPipelineDeployer{}, envVars.get, section, &Options{}, "test", "parent-id")
+func TestPipelineDependencyRunnerLeavesOutThePredecessorsOfDependsOn(t *testing.T) {
+	section := chainSection()
+	envVars := chainEnvVars()
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, envVars.get, section, &Options{}, "test", "parent-id")
 
-	require.NoError(t, runner.Run(context.Background(), "analytics", section["analytics"]))
+	require.NoError(t, runner.Run(context.Background(), "frontend", section["frontend"]))
 
-	require.Equal(t, []string{"database"}, envVars.asked)
+	require.Equal(t, []string{"backend"}, envVars.asked)
+	// frontend doesn't declare database, so its env vars are not expanded
+	require.Contains(t, deployer.captured["frontend"].Variables, "DB_HOST=${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}")
 }
 
-func TestPipelineDependencyRunnerFailsWhenThePredecessorsEnvVarsCannotBeRead(t *testing.T) {
+func TestPipelineDependencyRunnerFailsWhenTheDependsOnEnvVarsCannotBeRead(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
 	envVarsOf := func(context.Context, string, string) (map[string]string, error) {
