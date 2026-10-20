@@ -498,8 +498,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/nwaples/rardecode/v2 v2.2.0 h1:4ufPGHiNe1rYJxYfehALLjup4Ls3ck42CWwjKiOqu0A=
 github.com/nwaples/rardecode/v2 v2.2.0/go.mod h1:7uz379lSxPe6j9nvzxUZ+n7mnJNgjsRNb6IbvGVHRmw=
-github.com/okteto/buildkit v0.34.1-0.20261008103754-06b797dcbc17 h1:kcZ9jSNzHAdrnhLokQeARK8H1CiDKkUvxh/sqipmpSU=
-github.com/okteto/buildkit v0.34.1-0.20261008103754-06b797dcbc17/go.mod h1:ki8f/BY+0ITH6ge2H7cIuSQdAkbWrED7RkcudLI4T7U=
+github.com/okteto/buildkit v0.34.2-0.20261020221304-94a56f5e96dd h1:FUILLW3IV/cbItmK42WzP740nSh4wbqkGrpjGJvRCsQ=
+github.com/okteto/buildkit v0.34.2-0.20261020221304-94a56f5e96dd/go.mod h1:ki8f/BY+0ITH6ge2H7cIuSQdAkbWrED7RkcudLI4T7U=
 github.com/onsi/ginkgo/v2 v2.32.0 h1:Hw7s2pVrQo/8Yz5N77qdnpHaoc+c6cC9WIV1Jce+J6E=
 github.com/onsi/ginkgo/v2 v2.32.0/go.mod h1:+aXOY+vzZ5mu2iI2HpTZUPmM//oQfsNFX6gU9kNcA44=
 github.com/onsi/gomega v1.40.0 h1:Vtol0e1MghCD2ZVIilPDIg44XSL9l2QAn8ZNaljWcJc=
