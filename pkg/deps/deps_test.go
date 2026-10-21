@@ -347,6 +347,19 @@ func Test_ManifestSection_Validate_Cycle(t *testing.T) {
 	require.EqualError(t, err, "manifest validation failed: cyclic dependency found between dependencies a, b and c")
 }
 
+func Test_ManifestSection_Validate_CycleOnlyNamesItsDependencies(t *testing.T) {
+	deps := ManifestSection{
+		"frontend": &Dependency{Repository: "https://github.com/okteto/frontend", DependsOn: DependsOn{"api"}},
+		"api":      &Dependency{Repository: "https://github.com/okteto/api", DependsOn: DependsOn{"db"}},
+		"db":       &Dependency{Repository: "https://github.com/okteto/db", DependsOn: DependsOn{"cache"}},
+		"cache":    &Dependency{Repository: "https://github.com/okteto/cache", DependsOn: DependsOn{"db"}},
+	}
+
+	err := deps.Validate()
+
+	require.EqualError(t, err, "manifest validation failed: cyclic dependency found between dependencies cache and db")
+}
+
 func Test_ExpandVarsFrom_UsesTheGivenEnviron(t *testing.T) {
 	t.Setenv("DEPS_TEST_BRANCH", "from-process")
 	dependency := &Dependency{Branch: "${DEPS_TEST_BRANCH}"}

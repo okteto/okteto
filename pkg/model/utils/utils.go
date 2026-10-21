@@ -16,6 +16,8 @@ package utils
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/go-git/go-git/v6"
@@ -95,45 +97,47 @@ func GetRepositoryURL(path string) (string, error) {
 
 type Graph map[string][]string
 
+// GetDependentCyclic returns the nodes of a cycle of the graph, or an empty slice if it has none. Only the nodes
+// of the cycle are returned, not the ones that lead to it, and the nodes are visited in order, so the same graph
+// always reports the same cycle
 func GetDependentCyclic(g Graph) []string {
-	visited := make(map[string]bool)
-	stack := make(map[string]bool)
-	cycle := make([]string, 0)
+	svcNames := make([]string, 0, len(g))
+	for svcName := range g {
+		svcNames = append(svcNames, svcName)
+	}
+	sort.Strings(svcNames)
 
+	visited := make(map[string]bool)
 	// We need to iterate from all the nodes on the graph checking that there are no cycles in
 	// the graph.
-	for svcName := range g {
-		// dfs search for all the possible paths of a graph, starting from a node. If we find more
-		// than once one nodeit means that it has detected a cycle and returns the cycle
-		if dfs(g, svcName, visited, stack) {
-			for svc, isInStack := range stack {
-				if isInStack {
-					cycle = append(cycle, svc)
-				}
-			}
+	for _, svcName := range svcNames {
+		if visited[svcName] {
+			continue
+		}
+		if cycle := dfs(g, svcName, visited, nil); len(cycle) > 0 {
 			return cycle
 		}
 	}
-	return cycle
+	return []string{}
 }
 
-// dfs executes deep first search algorithm.
+// dfs executes deep first search algorithm from svcName, and returns the first cycle it finds. path holds the
+// nodes from the start to svcName: when one of its dependencies is already on it, the nodes from that one on
+// are a cycle.
 // More information can be found at https://en.wikipedia.org/wiki/Depth-first_search
-func dfs(g Graph, svcName string, visited, stack map[string]bool) bool {
-	isVisited := visited[svcName]
-	if !isVisited {
-		visited[svcName] = true
-		stack[svcName] = true
-
-		svc := g[svcName]
-		for _, dependentSvc := range svc {
-			if !visited[dependentSvc] && dfs(g, dependentSvc, visited, stack) {
-				return true
-			} else if value, ok := stack[dependentSvc]; ok && value {
-				return true
-			}
+func dfs(g Graph, svcName string, visited map[string]bool, path []string) []string {
+	visited[svcName] = true
+	path = append(path, svcName)
+	for _, dependentSvc := range g[svcName] {
+		if i := slices.Index(path, dependentSvc); i >= 0 {
+			return slices.Clone(path[i:])
+		}
+		if visited[dependentSvc] {
+			continue
+		}
+		if cycle := dfs(g, dependentSvc, visited, path); len(cycle) > 0 {
+			return cycle
 		}
 	}
-	stack[svcName] = false
-	return false
+	return nil
 }
