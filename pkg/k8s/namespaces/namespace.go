@@ -92,7 +92,7 @@ type Trip struct {
 }
 
 // noneRateLimiter noop rate limiter to avoid rate limiting errors on k8s client.
-// We created this to avoid depending on github.com/rancher/rancher dependency as this is the only place where it was used.
+// We created this to avoid to depend on github.com/rancher/rancher dependency as this is the only place where it was used.
 type noneRateLimiter struct{}
 
 func (*noneRateLimiter) TryAccept() bool              { return true }
@@ -101,7 +101,7 @@ func (*noneRateLimiter) Accept()                      {}
 func (*noneRateLimiter) QPS() float32                 { return 1 }
 func (*noneRateLimiter) Wait(_ context.Context) error { return nil }
 
-// NewNamespace creates a new Namespace object
+// NewNamespace allows to create a new Namespace object
 func NewNamespace(dynClient dynamic.Interface, discClient discovery.DiscoveryInterface, restConfig *rest.Config, k8s kubernetes.Interface) *Namespaces {
 	return &Namespaces{
 		dynClient:  dynClient,
@@ -134,7 +134,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 	rm := restmapper.NewDiscoveryRESTMapper(groupResources)
 
 	// This is done because the wander function will try to list all k8s resources and most of them cannot be listed by
-	// Okteto user's service accounts, so it prints tons of warnings in the standard output. Setting the logrus level to err avoids those warnings
+	// Okteto user's service accounts, so it prints tons of warnings in the standard output. Setting the logrus level to err avoid those warnings
 	prevLevel := logrus.GetLevel()
 	logrus.SetLevel(logrus.ErrorLevel)
 	defer func() {
@@ -185,7 +185,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 }
 
 // DestroySFSVolumes This function deletes volumes for any statefulset that matches with opts.LabelSelector but it doesn't have any
-// dev.okteto.com/deployed-by label. This is to avoid leaving PVCs behind when everything deployed with okteto deploy
+// dev.okteto.com/deployed-by label. This is to avoid to left PVCs behind when everything deployed with okteto deploy
 // command is deleted
 func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts DeleteAllOptions) error {
 	if !opts.IncludeVolumes {
@@ -282,7 +282,7 @@ func newTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 func (t *Trip) wander(ctx context.Context, traveler Traveler) error {
 	_, apis, err := t.k8s.Discovery().ServerGroupsAndResources()
 	if err != nil {
-		// only return the err when it is NOT GroupDiscoveryFailedError and NOT related to metrics.k8s.io or custom.metrics.k8s.io
+		// only return the err when is NOT GroupDiscoveryFailedError and NOT relative to metrics.k8s.io or custom.metrics.k8s.io
 		groupErr, ok := err.(*discovery.ErrGroupDiscoveryFailed)
 		if !ok {
 			return err
@@ -371,7 +371,7 @@ func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.Re
 	})
 }
 
-// isStorage returns whether the kind is a storage kind
+// isStorage returns if the kind is some of storage kind
 func isStorage(kind string) bool {
 	switch kind {
 	case volumeKind, volumeSnapshotKind:

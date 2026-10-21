@@ -60,13 +60,13 @@ To sign your work, just add a line like this at the end of your commit message:
 Signed-off-by: Cindy Lopez <cindy.lopez@okteto.com>
 ```
 
-This can easily be done with the `-s` command-line option to append this automatically to your commit message.
+This can easily be done with the `-s' command-line option to append this automatically to your commit message.
 
 ```
 git commit -s -m 'Meaningful commit message'
 ```
 
-> In order to use the `-s` flag for auto signing the commits, you'll need to set your `user.name` and `user.email` git configs
+> In order to use the `-s` flag for auto signing the commits, you'll need to set your `user.name`and`user.email` git configs
 
 Finally, you can push your changes to GitHub using:
 
@@ -94,7 +94,7 @@ If a pull request does not have one of these labels checks will fail and PR merg
 
 ## Development Guide
 
-Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.26](https://go.dev/doc/go1.26). It uses go modules for dependency management.
+Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.25](https://go.dev/doc/go1.25). It uses go modules for dependency management.
 
 ### Building
 
@@ -119,7 +119,7 @@ In order to execute the `okteto` binary locally, you can do this manually by cre
 However, there's an easy and preferred way for doing this by creating an `alias` using the following command:
 
 ```
-alias <alias-name>=/path/to/okteto/binary
+alias <alias-name> = /path/to/okteto/binary
 ```
 
 This will make sure the `alias-name` is in sync with your okteto binary. However, this is a temporary alias. If you'd like to create a permanent alias, you can read more about it [here](https://www.freecodecamp.org/news/how-to-create-your-own-command-in-linux/).
@@ -142,7 +142,7 @@ Integration tests can be executed by running:
 make integration
 ```
 
-These tests will use your Okteto context to create a namespace and all the required k8s resources.
+These tests will use your Kubernetes context to create a namespace and all the required k8s resources.
 
 ### Linting
 

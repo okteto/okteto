@@ -33,7 +33,7 @@ const (
 	// maxBuildkitWaitTimeEnvVar is the environment variable to set the max wait time for buildkit
 	maxBuildkitWaitTimeEnvVar = "OKTETO_BUILDKIT_WAIT_TIMEOUT"
 
-	// retryBuildkitIntervalEnvVar is the environment variable to set the retry time for buildkit
+	// retryBuildkitTimeEnvVar is the environment variable to set the retry time for buildkit
 	retryBuildkitIntervalEnvVar = "OKTETO_BUILDKIT_RETRY_INTERVAL"
 
 	// defaultReadinessTimeout is the default budget for the buildkit readiness health-check
@@ -71,7 +71,7 @@ type Waiter struct {
 
 type GetBuildkitClientFn func(ctx context.Context) (*client.Client, error)
 
-// NewBuildkitClientWaiter creates a new Waiter
+// NewBuildkitClientWaiter creates a new buildkitWaiter
 func NewBuildkitClientWaiter(logger *io.Controller) *Waiter {
 	return &Waiter{
 		maxWaitTime:   env.LoadTimeOrDefault(maxBuildkitWaitTimeEnvVar, maxWaitTime),

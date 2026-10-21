@@ -216,7 +216,7 @@ func TestAutoDownRunner_Run_WithAppNotFound(t *testing.T) {
 
 	err := ad.run(context.Background(), dev, namespace, "test-manifest", fakeK8sClient)
 
-	// Not found is handled gracefully, so the only error is the one returned by the down command
+	// Should not error as not found is handled gracefully
 	assert.ErrorIs(t, err, assert.AnError)
 	at.AssertExpectations(t)
 }

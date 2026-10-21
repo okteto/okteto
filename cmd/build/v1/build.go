@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-// OktetoBuilder is a wrapper of basic.Builder to build an image specified by a Dockerfile. a.k.a. Builder v1
+// OktetoBuilder It is a wrapper of basic.Builder to build an image specified by a Dockerfile. a.k.a. Builder v1
 // It mainly extends the basic.Builder with the ability to expand the image tag with the environment variables and
 // printing the corresponding output when the build finishes.
 type OktetoBuilder struct {

@@ -13,7 +13,7 @@
 
 package types
 
-// Credential represents Okteto Space k8s credentials
+// Credential represents an Okteto Space k8s credentials
 type Credential struct {
 	Server      string `json:"server" yaml:"server"`
 	Certificate string `json:"certificate" yaml:"certificate"`

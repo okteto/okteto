@@ -96,7 +96,7 @@ func List(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVarP(&flags.k8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "overwrites the current Okteto Namespace")
-	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "filter Preview Environments by label (multiple --label flags accepted)")
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize Preview Environments using labels (multiple --label flags accepted)")
 	cmd.Flags().StringVarP(&flags.output, "output", "o", "", "output format. One of: ['json', 'yaml']")
 
 	return cmd
@@ -124,7 +124,7 @@ func (cmd *listPreviewCommand) run(ctx context.Context) error {
 func displayListPreviews(previews []previewOutput, outputFormat string) error {
 	switch outputFormat {
 	case "json":
-		// json marshal returns null for empty objects, returning the empty list if no previews are retrieved
+		// json marshal return null for empty objects, returning the empty list if no previews are retrieved
 		if len(previews) == 0 {
 			fmt.Println(previews)
 			return nil
@@ -165,7 +165,7 @@ func getPreviewDefaultOutput(preview previewOutput) string {
 	return fmt.Sprintf("%s\t%s\t%v\t%v\t%s\t%s\n", preview.Name, preview.Scope, preview.Sleeping, preview.Persistent, preview.Branch, previewLabels)
 }
 
-// getPreviewOutput transforms types.Preview into previewOutput type
+// getPreviewOutput transforms type.Preview into previewOutput type
 func getPreviewOutput(previews []types.Preview) []previewOutput {
 	var previewSlice []previewOutput
 	for _, p := range previews {

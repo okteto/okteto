@@ -55,7 +55,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 	return c.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-// List returns the list of ingresses
+// List returns the list of deployments
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]networkingv1.Ingress, error) {
 	iList, err := c.NetworkingV1().Ingresses(namespace).List(
 		ctx,
@@ -69,7 +69,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return iList.Items, nil
 }
 
-// Destroy destroys a k8s ingress
+// Destroy destroys a k8s deployment
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	oktetoLog.Infof("deleting ingress '%s'", name)
 	err := c.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})

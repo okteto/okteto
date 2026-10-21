@@ -26,7 +26,7 @@ const (
 	totalProgressValue = 100
 )
 
-// SyncthingProgress tracks the progress of all the files being synchronized by syncthing
+// SyncthingProgress tracks the progress of all the files syncthing
 type SyncthingProgress struct {
 	progressContainer *mpb.Progress
 	progressBar       *mpb.Bar

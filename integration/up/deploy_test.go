@@ -136,7 +136,7 @@ func TestUpWithDeploy(t *testing.T) {
 
 	// During an active up session, doctor should collect at least these 5 core files:
 	// 1. okteto-summary.txt (always generated)
-	// 2. .stignore (from sync folders if it exists)
+	// 2. .stignore (from sync folders if exists)
 	// 3. okteto.log (app logs)
 	// 4. syncthing/local/syncthing.log (local sync logs)
 	// 5. pod.yaml (when up is running)

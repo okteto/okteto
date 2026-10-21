@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	ErrWaitResourcesTimeout = errors.New("preview environment didn't finish on time")
+	ErrWaitResourcesTimeout = errors.New("preview environment didn't finish after on time")
 	fiveMinutes             = 5 * time.Minute
 )
 
@@ -57,14 +57,14 @@ type DeployOptions struct {
 	workflowID           string
 }
 
-// Deploy deploys a preview environment
+// Deploy Deploy a preview environment
 func Deploy(ctx context.Context, at previewAnalyticsTracker) *cobra.Command {
 	opts := &DeployOptions{}
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
 		Short: "Deploy a Preview Environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
-		Example: `To deploy a preview environment without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
+		Example: `To deploy a preview environment without the Okteto CLI wait for its completion, use the '--wait=false' flag:
 okteto preview deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()

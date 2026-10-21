@@ -27,7 +27,7 @@ const (
 	// reconnectCauseDefault is the default cause for a reconnection
 	reconnectCauseDefault = "unrecognised"
 
-	// reconnectCauseDevPodRecreated is cause when pods UID change between retries
+	// reconnectCauseDevPodRecreated is cause when pods UID change between retrys
 	reconnectCauseDevPodRecreated = "dev-pod-recreated"
 )
 
@@ -167,17 +167,17 @@ func (u *UpMetricsMetadata) ErrSync() {
 	u.errSync = true
 }
 
-// ErrSyncResetDatabase sets to true the property errSyncResetDatabase
+// ErrSyncResetDatabase sets to true the property errResetDatabase
 func (u *UpMetricsMetadata) ErrSyncResetDatabase() {
 	u.errSyncResetDatabase = true
 }
 
-// ErrSyncInsufficientSpace sets to true the property errSyncInsufficientSpace
+// ErrSyncInsufficientSpace sets to true the property errResetDatabase
 func (u *UpMetricsMetadata) ErrSyncInsufficientSpace() {
 	u.errSyncInsufficientSpace = true
 }
 
-// ErrSyncLostSyncthing sets to true the property errSyncLostSyncthing
+// ErrSyncLostSyncthing sets to true the property errResetDatabase
 func (u *UpMetricsMetadata) ErrSyncLostSyncthing() {
 	u.errSyncLostSyncthing = true
 }
@@ -295,7 +295,7 @@ func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 	}
 }
 
-// TrackUpStarted fires the up_started event at the beginning of the up command.
+// TrackUpStarted fires the okteto_up_started event at the beginning of the up command.
 func (a *Tracker) TrackUpStarted(service, namespace, repoURL, workflowID string) {
 	for _, b := range a.backends {
 		b.TrackUpStarted(service, namespace, repoURL, workflowID)

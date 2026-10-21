@@ -65,7 +65,7 @@ func Test_isErrCredentialsHelperNotAccessible(t *testing.T) {
 	}
 }
 
-func Test_GetAuthConfig_OmissionIfNeeded(t *testing.T) {
+func Test_GetAuthConfig_OmisionIfNeeded(t *testing.T) {
 	config := &configfile.ConfigFile{
 		AuthConfigs: map[string]types.AuthConfig{
 			"https://index.docker.io/v1/": {},

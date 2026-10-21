@@ -40,7 +40,7 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	return ExecOktetoBuildCmd(cmd)
 }
 
-// GetOktetoBuildCmd returns an exec.Cmd with the needed values given buildOptions
+// GetOktetoBuildCmd returns an exec.Cmd with the needed values given buildOpts
 func GetOktetoBuildCmd(oktetoPath string, buildOptions *BuildOptions) *exec.Cmd {
 	cmd := exec.Command(oktetoPath)
 	cmd.Args = append(cmd.Args, "build")

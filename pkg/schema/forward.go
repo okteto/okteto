@@ -21,7 +21,7 @@ func (forward) JSONSchema() *jsonschema.Schema {
 	shorthandPattern := &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "forward",
-		Description: "Port forward in the format localPort:service:remotePort",
+		Description: "Port forward in the format localPort:service:remotePort or localPort:remotePort",
 		Pattern:     "^\\d+:[^:]+:\\d+$|^\\d+:\\d+$", // example: 5432:postgres:5432
 	}
 

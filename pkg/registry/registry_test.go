@@ -292,7 +292,7 @@ func TestGetImageMetadata(t *testing.T) {
 			},
 		},
 		{
-			name: "getImageConfig with error",
+			name: "getDigest/getImageMetadata no error",
 			input: config{
 				input: "okteto/test",
 				config: FakeConfig{
@@ -529,7 +529,7 @@ func Test_GetImageTag(t *testing.T) {
 			expected: "my-registry.com/hello",
 		},
 		{
-			name: "in-okteto-image-not-in-okteto-registry",
+			name: "in-okteto-image-in-okteto",
 			input: input{
 				image:     "hello",
 				service:   "service",

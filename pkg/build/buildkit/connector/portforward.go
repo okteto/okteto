@@ -423,7 +423,7 @@ func (pf *PortForwarder) handlePortForwardError(err error, errChan chan<- error)
 	pf.stop()
 }
 
-// waitUntilPortForwardIsReady waits for the port forward to be ready or context to be cancelled
+// waitUntilReady waits for the port forward to be ready or context to be cancelled
 func (pf *PortForwarder) waitUntilPortForwardIsReady(ctx context.Context) error {
 	pf.ioCtrl.Logger().Infof("waiting for port forward to be ready to pod %s", pf.podName)
 

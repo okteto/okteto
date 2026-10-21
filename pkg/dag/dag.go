@@ -50,7 +50,7 @@ func (tree *Tree) Subtree(nodeIds ...string) (*Tree, error) {
 		// Add the node to the subnode list
 		n, ok := nI.(Node)
 		if !ok {
-			return nil, fmt.Errorf("failed to cast tree vertex to Node type")
+			return nil, fmt.Errorf("fail to cast tree vertex to Node type")
 		}
 		selection[nodeId] = n
 
@@ -62,7 +62,7 @@ func (tree *Tree) Subtree(nodeIds ...string) (*Tree, error) {
 		for childID, nI := range ancestor {
 			n, ok := nI.(Node)
 			if !ok {
-				return nil, fmt.Errorf("failed to cast tree vertex to Node type")
+				return nil, fmt.Errorf("fail to cast tree vertex to Node type")
 			}
 			selection[childID] = n
 		}

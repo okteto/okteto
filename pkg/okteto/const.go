@@ -14,7 +14,7 @@
 package okteto
 
 const (
-	// Deployment k8s deployment kind
+	// Deployment k8s deployemnt kind
 	Deployment = "Deployment"
 	// StatefulSet k8s statefulset kind
 	StatefulSet = "StatefulSet"

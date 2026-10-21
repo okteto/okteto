@@ -46,7 +46,7 @@ type namespaceOutput struct {
 	Current    bool   `json:"current" yaml:"current"`
 }
 
-// List all namespaces in current context
+// List all namespace in current context
 func List(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 	flags := &listFlags{}
 	cmd := &cobra.Command{
@@ -137,7 +137,7 @@ func validateNamespaceListOutput(output string) error {
 	}
 }
 
-// getNamespaceOutput transforms types.Namespace into namespaceOutput type
+// getNamespaceOutput transforms type.Namespace into namespaceOutput type
 func getNamespaceOutput(namespaces []types.Namespace) []namespaceOutput {
 	var namespaceSlice []namespaceOutput
 	currentNamespace := okteto.GetContext().Namespace

@@ -167,7 +167,7 @@ func startServers(fm *ForwardManager) error {
 
 			err = server.ListenAndServe()
 			if err != nil {
-				oktetoLog.Infof("forward server %d failed: %s", remote, err.Error())
+				oktetoLog.Infof("reverse server %d failed: %s", local, err.Error())
 			}
 		}()
 	}
@@ -364,6 +364,6 @@ func TestAdd(t *testing.T) {
 	}
 
 	if pf.forwards[10012].remoteAddress != "svc:15123" {
-		t.Fatalf("expected 'svc:15123', got '%s'", pf.forwards[10012].remoteAddress)
+		t.Fatalf("expected 'svc:15123', got '%s'", pf.forwards[1012].remoteAddress)
 	}
 }

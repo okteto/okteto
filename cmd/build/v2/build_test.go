@@ -362,7 +362,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
 	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
-	// no error from the build
+	// error from the build
 	assert.NoError(t, err)
 	// assert that the name of the image is the dev one
 	assert.Equal(t, "okteto.dev/test-test:okteto", image)
@@ -397,9 +397,9 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
 	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
-	// no error from the build
+	// error from the build
 	assert.NoError(t, err)
-	// assert that the name of the image is the one defined in the manifest
+	// assert that the name of the image is the dev one
 	assert.Equal(t, "okteto/test", image)
 	// the image is at the fake registry
 	image, err = bc.Registry.GetImageTagWithDigest(image)
@@ -433,7 +433,7 @@ func TestBuildWithStack(t *testing.T) {
 	infos := buildTypes.NewBuildInfos(manifest.Name, "test", "", []string{"test"})
 	image, err := bc.buildServiceImages(ctx, manifest, infos[0], &types.BuildOptions{})
 
-	// no error from the build
+	// error from the build
 	assert.NoError(t, err)
 	// assert that the name of the image is the dev one
 	assert.Equal(t, "okteto.dev/test-test:okteto", image)
@@ -488,7 +488,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 		Manifest: manifest,
 	})
 
-	// no error from the build
+	// error from the build
 	assert.NoError(t, err)
 
 	// check that images are on the registry

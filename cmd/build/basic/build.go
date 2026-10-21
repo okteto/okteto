@@ -33,14 +33,14 @@ type BuildRunner interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions, ioCtrl *io.Controller) error
 }
 
-// Builder provides basic functionality to build images.
+// Builder It provides basic functionality to build images.
 // This might be used as a base for more complex builders (e.g. v1, v2)
 type Builder struct {
 	BuildRunner BuildRunner
 	IoCtrl      *io.Controller
 }
 
-// Build builds the image defined by the BuildOptions using the BuildRunner passed as dependency
+// Build builds the image defined by the BuildOptions used the BuildRunner passed as dependency
 // of the builder
 func (ob *Builder) Build(ctx context.Context, options *types.BuildOptions) error {
 	path := "."

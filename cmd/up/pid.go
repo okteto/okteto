@@ -28,7 +28,7 @@ import (
 
 const oktetoPIDFilename = "okteto.pid"
 
-// PIDController creates, gets and removes the info about the OktetoPID
+// PIDController creates get and removes the info about the OktetoPID
 type pidController struct {
 	filesystem         afero.Fs
 	pidProvider        pidProvider
@@ -103,7 +103,7 @@ func (pc *pidController) create() error {
 	return nil
 }
 
-// get reads the PID file containing the okteto PID and returns it as a string
+// get reads the PID file containing the okteto PID and return it as string
 func (pc pidController) get() (string, error) {
 	bytes, err := afero.ReadFile(pc.filesystem, pc.pidFilePath)
 	if err != nil {
@@ -147,7 +147,7 @@ func (pc pidController) notifyIfPIDFileChange(notifyCh chan error) {
 			case e.Op == fsnotify.Remove || e.Op == fsnotify.Rename:
 				// If the PID file has been removed or moved to another path
 				// okteto will try to recreate it and if it fails to recreate
-				// we will wait until the other okteto process notices that it needs
+				// we will wait until the other okteto process notices that needs
 				// to exit.
 				oktetoLog.Infof("file %s has been moved or removed", pc.pidFilePath)
 				if err := pc.create(); err != nil {
@@ -161,7 +161,7 @@ func (pc pidController) notifyIfPIDFileChange(notifyCh chan error) {
 				oktetoLog.Infof("file %s has been recreated", pc.pidFilePath)
 				continue
 			case e.Op == fsnotify.Chmod:
-				// If file permissions have been modified we need to log it and continue
+				// If file permissions has been modified we need to log it and continue
 				// waiting for any change in the content of the file
 				oktetoLog.Infof("permissions from %s have been modified", pc.pidFilePath)
 				continue
@@ -191,7 +191,7 @@ func (pc pidController) notifyIfPIDFileChange(notifyCh chan error) {
 				continue
 			}
 			// If there is an error on the filewatcher we should log and wait
-			// until the other okteto process notices that it needs to exit.
+			// until the other okteto process notices that needs to exit.
 			oktetoLog.Info(err)
 			return
 		}

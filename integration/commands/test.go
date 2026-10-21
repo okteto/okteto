@@ -37,7 +37,7 @@ type TestOptions struct {
 	NoCache      bool
 }
 
-// RunOktetoTestAndGetOutput runs an okteto test command and returns the output
+// RunOktetoTestAndGetOutput runs an okteto deploy command and returns the output
 func RunOktetoTestAndGetOutput(oktetoPath string, testOptions *TestOptions) (string, error) {
 	cmd := getTestCmd(oktetoPath, testOptions)
 	log.Printf("Running '%s'", cmd.String())

@@ -303,7 +303,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the app image has been created correctly
+	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Equal(t, appDeployment.ObjectMeta.Labels["dev.okteto.com/annotation-1"], "value-annotation-1")
@@ -321,7 +321,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
-	// Test that the k8s services have been created correctly
+	// Test that the k8s services has been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -424,7 +424,7 @@ func TestDeployPipelineFromComposeWithVolumeMounts(t *testing.T) {
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
-	// Test that the k8s services have been created correctly
+	// Test that the k8s services has been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -500,13 +500,13 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the app image has been created correctly
+	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the k8s services have been created correctly
+	// Test that the k8s services has been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -543,7 +543,7 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 }
 
 // TestDeployPipelineFromOktetoStacks tests the following scenario:
-// - Deploying a pipeline manifest locally from an okteto stack file
+// - Deploying a pipeline manifest locally from a compose file
 // - The endpoints generated are accessible
 // - Depends on
 // - Test secret injection
@@ -664,13 +664,13 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the app image has been created correctly
+	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/app:okteto", okteto.GetContext().Registry, testNamespace)
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the k8s services have been created correctly
+	// Test that the k8s services has been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)

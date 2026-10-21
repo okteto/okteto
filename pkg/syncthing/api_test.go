@@ -64,7 +64,7 @@ func Test_APIClient(t *testing.T) {
 		t,
 		expectation,
 		client.Timeout,
-		"timeout should be set to %s",
+		"timeout should be set to %s seconds",
 		expectation,
 	)
 }

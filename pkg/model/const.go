@@ -24,7 +24,7 @@ const (
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
 
-	// OktetoSampleAnnotation indicates that the repo is an okteto sample
+	// OktetoSampleAnnotation indicates that the repo is a okteto sample
 	OktetoSampleAnnotation = "dev.okteto.com/sample"
 
 	// OktetoComposeUpdateStrategyAnnotation indicates how a compose service must be updated
@@ -33,7 +33,7 @@ const (
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
-	// DeploymentRevisionAnnotation indicates the revision of the Kubernetes deployment
+	// DeploymentRevisionAnnotation indicates the revision when the development container was activated
 	DeploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
 
 	// OktetoRevisionAnnotation indicates the revision when the development container was activated
@@ -57,10 +57,10 @@ const (
 	// OktetoDevNameAnnotation indicates the name of the dev to be deployed
 	OktetoDevNameAnnotation = "dev.okteto.com/name"
 
-	// FluxAnnotation indicates if the deployment has been deployed by Flux
+	// FluxAnnotation indicates if the deployment ha been deployed by Flux
 	FluxAnnotation = "helm.fluxcd.io/antecedent"
 
-	// DefaultStorageClassAnnotation indicates the default storage class
+	// DefaultStorageClassAnnotation indicates the defaault storage class
 	DefaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
 
 	// StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
@@ -84,7 +84,7 @@ const (
 	// StackEndpointNameLabel indicates the name of the endpoint an object belongs to
 	StackEndpointNameLabel = "stack.okteto.com/endpoint"
 
-	// OktetoIngressAutoGenerateHost generates an ingress host
+	// OktetoIngressAutoGenerateHost generates a ingress host for
 	OktetoIngressAutoGenerateHost = "dev.okteto.com/generate-host"
 
 	// OktetoAutoIngressAnnotation indicates an ingress must be created for a service
@@ -161,13 +161,13 @@ const (
 	// OktetoBuildkitHostURLEnvVar is the url of the Okteto Buildkit instance
 	OktetoBuildkitHostURLEnvVar = "BUILDKIT_HOST"
 
-	// OktetoSkipCleanupEnvVar skips the cleanup of the local syncthing folder
+	// OktetoSkipCleanupEnvVar defines the okteto binary that should be used
 	OktetoSkipCleanupEnvVar = "OKTETO_SKIP_CLEANUP"
 
 	// OktetoUserEnvVar defines the user using okteto
 	OktetoUserEnvVar = "OKTETO_USER"
 
-	// OktetoUserNameEnvVar defines the username of the user using okteto
+	// OktetoUserNameEnvVar defines the user is using okteto
 	OktetoUserNameEnvVar = "OKTETO_USERNAME"
 
 	// OktetoTokenEnvVar defines the environmental variable that stores the okteto user token
@@ -200,7 +200,7 @@ const (
 	// OktetoAppsSubdomainEnvVar defines which is the subdomain for urls
 	OktetoAppsSubdomainEnvVar = "OKTETO_APPS_SUBDOMAIN"
 
-	// OktetoPathEnvVar defines where the okteto binary is
+	// OktetoPathEnvVar defines where is okteto binary
 	OktetoPathEnvVar = "OKTETO_PATH"
 
 	// OktetoExecuteSSHEnvVar defines if the command should be executed through ssh
@@ -240,7 +240,7 @@ const (
 	// BuildkitProgressEnvVar defines the output of buildkit
 	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"
 
-	// OktetoActionNameEnvVar defines the name of the pipeline action
+	// OktetoActionNameEnvVar defines the name of the pipeline action name
 	OktetoActionNameEnvVar = "OKTETO_ACTION_NAME"
 
 	// OktetoComposeUpdateStrategyEnvVar defines the strategy on compose to update the services

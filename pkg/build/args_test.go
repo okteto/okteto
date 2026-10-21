@@ -133,7 +133,7 @@ func TestArgsUnmarshalling(t *testing.T) {
 	}
 }
 
-func TestSerializeArgs(t *testing.T) {
+func TestSerializeArs(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    Args
@@ -145,7 +145,7 @@ func TestSerializeArgs(t *testing.T) {
 			expected: []string{},
 		},
 		{
-			name: "args exist, returns expected string list",
+			name: "args exits, returns expected string list",
 			input: Args{
 				{
 					Name:  "AKEY",

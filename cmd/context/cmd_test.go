@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-func Test_NoArgsAcceptedShow(t *testing.T) {
+func Test_NoArgsAcceptedCtx(t *testing.T) {
 	cmd := Show()
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
@@ -26,7 +26,7 @@ func Test_NoArgsAcceptedShow(t *testing.T) {
 	}
 }
 
-func Test_NoArgsAcceptedCtx(t *testing.T) {
+func Test_NoArgsAcceptedShow(t *testing.T) {
 	cmd := Context()
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
@@ -49,7 +49,7 @@ func Test_NoArgsAcceptedUpdateKubeConfig(t *testing.T) {
 	cmd.SetArgs([]string{"args"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("Args not supported")
+		t.Fatal("MaxArgs not supported")
 	}
 }
 
@@ -67,6 +67,6 @@ func Test_ExactArgsDelete(t *testing.T) {
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("MinimumNArgs not supported")
+		t.Fatal("ExactArgs not supported")
 	}
 }

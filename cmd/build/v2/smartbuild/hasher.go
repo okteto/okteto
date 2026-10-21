@@ -69,7 +69,7 @@ func newServiceHasher(gitRepoCtrl repositoryCommitRetriever, fs afero.Fs, wdGett
 	}
 }
 
-// hashWithBuildContext returns the hash of the service using its context tree hash
+// hashBuildContext returns the hash of the service using its context tree hash
 func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service string) string {
 	buildContext := buildInfo.Context
 	if buildContext == "" {
@@ -120,7 +120,7 @@ func (sh *serviceHasher) hashWithBuildContext(buildInfo *build.Info, service str
 		diffHash = sh.calculateRandomShaForService(service)
 	}
 
-	// This is to display just one single warning if any of the git operations fails. As we generate random sha
+	// This is to display just one single warning if any of the git operation fails. As we generate random sha
 	// it will imply a new build of image, and we want to warn users
 	if errorGettingGitInfo {
 		sh.ioCtrl.Out().Warning("Smart builds: git metadata unavailable for %q", service)
@@ -179,7 +179,7 @@ func (sh *serviceHasher) hash(buildInfo *build.Info, commitHash string, diff str
 	return hex.EncodeToString(oktetoBuildHash[:])
 }
 
-// getDockerfileContent returns the sha256 hash of the Dockerfile content
+// getDockerfileContent returns the content of the Dockerfile
 func (sh *serviceHasher) getDockerfileContent(dockerfileContext, dockerfilePath string) string {
 	content, err := afero.ReadFile(sh.fs, dockerfilePath)
 	if err != nil {

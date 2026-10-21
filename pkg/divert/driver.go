@@ -48,7 +48,7 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 		var err error
 		divertClient := k8s.GetNoopDivertClient(ioCtrl)
 
-		// If divert CRDs are not enabled, we use the noop divert client
+		// If linkerd divert is not enabled, we use the noop divert client
 		if okteto.GetContext().DivertCRDSEnabled {
 			divertClient, err = k8s.GetDivertClient()
 			if err != nil {

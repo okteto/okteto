@@ -35,7 +35,7 @@ var (
 
 var schemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: GroupVersion}
 
-// ExternalResourceV1Interface defines a method to get an ExternalResourceInterface
+// ExternalResourceV1Interface defines a method to get a ExternalResourceInterface
 type ExternalResourceV1Interface interface {
 	ExternalResources(namespace string) ExternalResourceInterface
 }

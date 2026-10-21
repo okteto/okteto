@@ -113,7 +113,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return sfsList.Items, nil
 }
 
-// Get returns a statefulset object by name
+// Get returns a deployment object by name
 func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	return c.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 }
@@ -154,7 +154,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("error deleting kubernetes statefulset: %w", err)
+		return fmt.Errorf("error deleting kubernetes job: %w", err)
 	}
 	oktetoLog.Infof("statefulset '%s' deleted", name)
 	return nil

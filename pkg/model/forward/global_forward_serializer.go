@@ -51,7 +51,7 @@ func (gf *GlobalForward) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	remotePort, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[2], raw)
+		return fmt.Errorf("Cannot convert local port '%s' in port-forward '%s'", parts[0], raw)
 	}
 	gf.Remote = remotePort
 
@@ -75,11 +75,11 @@ func (gf *GlobalForward) UnmarshalExtendedForm(unmarshal func(interface{}) error
 	gf.Labels = rawGlobalForward.Labels
 
 	if gf.Labels != nil && gf.ServiceName != "" {
-		return fmt.Errorf("Can not use both 'name' and 'labels' to select the service.\nUse either the service name or labels to select the service to be exposed.")
+		return fmt.Errorf("Can not use both ServiceName and Labels to select the service.\nUse either the service name or labels to select the service to be exposed.")
 	}
 
 	if gf.Labels == nil && gf.ServiceName == "" {
-		return fmt.Errorf("You need to specify either 'name' or 'labels' to select the service.")
+		return fmt.Errorf("You need to specify either ServiceName or labels to select the service.")
 	}
 
 	return nil

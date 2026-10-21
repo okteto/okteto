@@ -42,7 +42,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 			},
 		},
 		{
-			name:     "token-but-not-in-kubeconfig",
+			name:     "token-token-but-not-in-kubeconfig",
 			tokenUrl: "https://okteto.example.com",
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"okteto_example_com"},
@@ -86,17 +86,17 @@ func createDeprecatedToken(t *testing.T, url string) (string, error) {
 	}
 	marshalled, err := json.MarshalIndent(token, "", "\t")
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token file: %s", err)
+		return "", fmt.Errorf("failed to generate analytics file: %s", err)
 	}
 
 	if err := os.WriteFile(config.GetTokenPathDeprecated(), marshalled, 0600); err != nil {
-		return "", fmt.Errorf("couldn't save token: %s", err)
+		return "", fmt.Errorf("couldn't save analytics: %s", err)
 	}
 	if _, err := os.Stat(config.GetTokenPathDeprecated()); err != nil {
 		return "", fmt.Errorf("Not created correctly")
 	}
 	if err := os.WriteFile(config.GetCertificatePath(), []byte("a"), 0600); err != nil {
-		return "", fmt.Errorf("couldn't save certificate: %s", err)
+		return "", fmt.Errorf("couldn't save analytics: %s", err)
 	}
 
 	return config.GetTokenPathDeprecated(), nil

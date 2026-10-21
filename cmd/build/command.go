@@ -98,7 +98,7 @@ const (
 	docsURL          = "https://okteto.com/docs/reference/okteto-cli/#build"
 )
 
-// Build builds and optionally pushes a Docker image
+// Build build and optionally push a Docker image
 func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTrackerInterface, k8slogger *io.K8sLogger) *cobra.Command {
 	options := &types.BuildOptions{}
 	cmd := &cobra.Command{
@@ -157,7 +157,7 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 	cmd.Flags().StringVarP(&options.Target, "target", "", "", "target build stage to build (optional)")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "list of cache source images (optional)")
-	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "image tag for exported cache when building (optional)")
+	cmd.Flags().StringArrayVar(&options.ExportCache, "export-cache", nil, "image tag for exported cache when build (optional)s")
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", string(TTYFormat), "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables (optional)")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret exposed to the build. Formats: id=mysecret,src=/local/secret (file) or id=mysecret,env=MY_ENV_VAR (env var)")
@@ -167,9 +167,9 @@ func Build(ctx context.Context, ioCtrl *io.Controller, at, insights buildTracker
 }
 
 // getBuilder returns the proper builder (V1 or V2) based on the manifest. The following rules are applied:
-//   - If the manifest is not found or there is any error getting the manifest, the builder falls back to V1
+//   - If the manifest is not found or there is any error getting the manifest, the builder fallsback to V1
 //   - If the manifest is found and it is a V2 manifest and the build section has some image, the builder is V2
-//   - If the manifest is found and it is a V1 manifest, the builder falls back to V1
+//   - If the manifest is found and it is a V1 manifest or the build section is empty, the builder fallsback to V1
 func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.ContextStateless) (Builder, error) {
 	// the file flag is a Dockerfile
 	isDockerfileValid := validateDockerfile(options.File) == nil

@@ -307,7 +307,7 @@ func Test_computeParentSyncFolder(t *testing.T) {
 		result string
 	}{
 		{
-			name: "linux-prefix",
+			name: "linux-preffix",
 			dev: &Dev{
 				Sync: Sync{
 					Folders: []SyncFolder{
@@ -324,7 +324,7 @@ func Test_computeParentSyncFolder(t *testing.T) {
 			result: "/aaa",
 		},
 		{
-			name: "windows-double-prefix",
+			name: "windows-double-preffix",
 			dev: &Dev{
 				Sync: Sync{
 					Folders: []SyncFolder{
@@ -694,7 +694,7 @@ func Test_validatePersistentVolume(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.dev.validatePersistentVolume()
 			if err == nil && tt.wantErr {
-				t.Errorf("'%s' did not get the expected error", tt.name)
+				t.Errorf("'%s' did get an expected error", tt.name)
 			}
 			if err != nil && !tt.wantErr {
 				t.Errorf("'%s' got unexpected error: %s", tt.name, err.Error())
@@ -848,7 +848,7 @@ func Test_PersistentVolumeEnabled(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.dev.PersistentVolumeEnabled()
 			if result != tt.want {
-				t.Errorf("'%s' did not get the expected result '%t' vs '%t'", tt.name, tt.want, result)
+				t.Errorf("'%s' did get an expected result '%t' vs '%t'", tt.name, tt.want, result)
 			}
 		})
 	}
@@ -881,7 +881,7 @@ func Test_PersistentVolumeAccessMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.dev.PersistentVolumeAccessMode()
 			if result != tt.want {
-				t.Errorf("'%s' did not get the expected result '%s' vs '%s'", tt.name, tt.want, result)
+				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)
 			}
 		})
 	}
@@ -914,7 +914,7 @@ func Test_PersistentVolumeMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.dev.PersistentVolumeMode()
 			if result != tt.want {
-				t.Errorf("'%s' did not get the expected result '%s' vs '%s'", tt.name, tt.want, result)
+				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)
 			}
 		})
 	}
@@ -942,7 +942,7 @@ func Test_PersistentVolumeAnnotations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.dev.PersistentVolumeAnnotations()
 			if !reflect.DeepEqual(result, tt.want) {
-				t.Errorf("'%s' did not get the expected result '%v' vs '%v'", tt.name, tt.want, result)
+				t.Errorf("'%s' did get an expected result '%v' vs '%v'", tt.name, tt.want, result)
 			}
 		})
 	}
@@ -970,7 +970,7 @@ func Test_PersistentVolumeLabels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.dev.PersistentVolumeLabels()
 			if !reflect.DeepEqual(result, tt.want) {
-				t.Errorf("'%s' did not get the expected result '%v' vs '%v'", tt.name, tt.want, result)
+				t.Errorf("'%s' did get an expected result '%v' vs '%v'", tt.name, tt.want, result)
 			}
 		})
 	}
@@ -1023,7 +1023,7 @@ func Test_PersistentVolumeSize(t *testing.T) {
 			t.Setenv(devPersistentVolumeSizeEnvVar, tt.devPersistentVolumeSizeEnvValue)
 			result := tt.dev.PersistentVolumeSize()
 			if result != tt.want {
-				t.Errorf("'%s' did not get the expected result '%s' vs '%s'", tt.name, tt.want, result)
+				t.Errorf("'%s' did get an expected result '%s' vs '%s'", tt.name, tt.want, result)
 			}
 		})
 	}

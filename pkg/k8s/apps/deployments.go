@@ -181,7 +181,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 				}
 			}
 		case err := <-ctx.Done():
-			oktetoLog.Debugf("call to up.applyToApps cancelled: %v", err)
+			oktetoLog.Debugf("call to up.applyToApp cancelled: %v", err)
 			return
 		}
 	}

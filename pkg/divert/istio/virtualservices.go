@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// based on https://github.com/havoc-io/ssh_config
 package istio
 
 import (

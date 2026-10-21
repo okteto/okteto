@@ -71,7 +71,7 @@ func (er *ExternalResource) SetDefaults(externalName string) {
 	}
 }
 
-// LoadMarkdownContent loads and stores markdown content related to external resource
+// LoadMarkdownContent loads and store markdown content related to external resource
 func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
 
 	if ef.ExternalResource.Notes == nil {
@@ -101,7 +101,7 @@ func (er *ExternalResource) SetURLUsingEnvironFile(name string, dynamicEnvs map[
 		}
 
 		if endpoint.Url == "" {
-			return fmt.Errorf("no value associated to the url of the endpoint '%s' of the external resource '%s'.", endpoint.Name, name)
+			return fmt.Errorf("no value associated to the url '%s' of the external resource '%s'.", endpoint.Name, name)
 		}
 	}
 

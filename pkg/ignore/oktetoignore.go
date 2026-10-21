@@ -26,7 +26,7 @@ import (
 	"github.com/moby/patternmatcher/ignorefile"
 )
 
-const RootSection = "__DEFAULT__"
+const RootSection = "__DEFAULT___"
 
 type OktetoIgnorer struct {
 	sections map[string]string
@@ -40,7 +40,7 @@ func (i *OktetoIgnorer) Get(section string) (data string) {
 	return
 }
 
-// Ignore matches all the sections of the okteto file against the given file path
+// Ignore matches the root section of the okteto file against the given file path
 func (i *OktetoIgnorer) Ignore(filePath string) (bool, error) {
 	var allSections []string
 	for section := range i.sections {
@@ -67,7 +67,7 @@ func (i *OktetoIgnorer) Rules(sections ...string) ([]string, error) {
 	return rules, nil
 }
 
-// NewOktetoIgnorer creates a new OktetoIgnorer from the given file. If the file
+// NewOktetoIgnorer created a new OktetoIgnorer from the given file. If the file
 // does not exist or if there's an error reading the file the ignorer will be
 // empty, meaning that no files will be ignored.
 func NewOktetoIgnorer(ignorefile string) *OktetoIgnorer {

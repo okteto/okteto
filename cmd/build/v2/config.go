@@ -59,7 +59,7 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 
 	isClean, err := gitRepo.IsClean()
 	if err != nil {
-		l.Infof("error checking if the repository is clean: %s", err)
+		l.Infof("error trying to get directory: %s", err)
 	}
 
 	return oktetoBuilderConfig{
@@ -80,7 +80,7 @@ func getConfigStateless(registry configRegistryInterface, gitRepo configReposito
 
 	isClean, err := gitRepo.IsClean()
 	if err != nil {
-		l.Infof("error checking if the repository is clean: %s", err)
+		l.Infof("error trying to get directory: %s", err)
 	}
 
 	return oktetoBuilderConfig{

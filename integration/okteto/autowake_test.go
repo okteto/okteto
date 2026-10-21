@@ -218,7 +218,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestAutoWakeFromRunningUp tests the following scenario:
+// TestAutoWakeFromURL tests the following scenario:
 // - waking up the resource by running okteto up on it
 // - waking up all other resources on the namespace
 func TestAutoWakeFromRunningUp(t *testing.T) {

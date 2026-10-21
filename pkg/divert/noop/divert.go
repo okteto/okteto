@@ -28,7 +28,7 @@ func (*Driver) Deploy(_ context.Context) error {
 	return nil
 }
 
-// Destroy implements the interface divert.Driver
+// Destroy implements from the interface diver.Driver
 // nolint:unparam
 func (*Driver) Destroy(_ context.Context) error {
 	return nil

@@ -450,7 +450,7 @@ func (s *Syncthing) Overwrite(ctx context.Context) error {
 	return nil
 }
 
-// IsAllOverwritten checks if all overwrite operations have been completed
+// IsAllOverwritten checks if all overwrite operations has been completed
 func (s *Syncthing) IsAllOverwritten() bool {
 	for _, folder := range s.Folders {
 		if !folder.Overwritten {
@@ -517,7 +517,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	oktetoLog.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
 	timeoutDuration := s.timeout * 10
-	to := time.Now().Add(timeoutDuration) // 10 minutes with the default 60s timeout
+	to := time.Now().Add(timeoutDuration) // 5 minutes
 
 	for retries := 0; ; retries++ {
 		status, err := s.GetSyncthingStatus(ctx, folder, local)
@@ -537,7 +537,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 		}
 
 		if time.Now().After(to) && retries > 10 {
-			return fmt.Errorf("initial file scan not completed after %s, please try again", timeoutDuration.String())
+			return fmt.Errorf("initial file scan not completed after %s, please try again", s.timeout.String())
 		}
 
 		select {
@@ -837,7 +837,7 @@ func (s *Syncthing) IsLocalRunningOutOfSpace(ctx context.Context) bool {
 	return false
 }
 
-// GetInSynchronizationFile returns the largest file syncthing is synchronizing
+// GetInSynchronizationFile the files syncthing
 func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 	events := []ItemEvent{}
 	params := map[string]string{
@@ -849,7 +849,7 @@ func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 	}
 	body, err := s.APICall(ctx, "rest/events", "GET", http.StatusOK, params, false, nil, true, 0)
 	if err != nil {
-		oktetoLog.Infof("error getting GetInSynchronizationFile: %s", err.Error())
+		oktetoLog.Infof("error getting GetInSynchronizationItem: %s", err.Error())
 		return ""
 	}
 
@@ -888,7 +888,7 @@ func (s *Syncthing) Restart(ctx context.Context) error {
 
 // HardTerminate halts the background process, waits for 1s and kills the process if it is still running
 func (s *Syncthing) HardTerminate() error {
-	oktetoLog.Info("terminating previous syncthing process")
+	oktetoLog.Info("termitating previous syncthing process")
 	pList, err := process.Processes()
 	if err != nil {
 		return err
@@ -901,7 +901,7 @@ func (s *Syncthing) HardTerminate() error {
 
 		name, err := p.Name()
 		if err != nil {
-			// it's expected to get EOF if the process no longer exists at this point.
+			// it's expected go get EOF if the process no longer exists at this point.
 			if err != io.EOF {
 				oktetoLog.Infof("error getting name for process %d: %s", p.Pid, err.Error())
 			}
@@ -1012,7 +1012,7 @@ func RemoveFolder(dev *model.Dev, namespace string, fs afero.Fs) error {
 	}
 
 	if err := os.RemoveAll(s.Home); err != nil {
-		oktetoLog.Infof("failed to remove syncthing home directory at %s: %s", s.Home, err)
+		oktetoLog.Infof("failed to remote syncthing home directory at %s: %s", s.Home, err)
 		return nil
 	}
 

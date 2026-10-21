@@ -44,13 +44,13 @@ func assertDevFields(t *testing.T, dev, main *Dev) {
 	assert.Equal("64Mi", memory.String(), "Resources.Requests.Memory was not parsed: %s", memory.String())
 
 	cpu := dev.Resources.Requests["cpu"]
-	assert.Equal("250m", cpu.String(), "Resources.Requests.CPU was not parsed correctly. Expected '250m', got '%s'", cpu.String())
+	assert.Equal("250m", cpu.String(), "Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
 
 	memory = dev.Resources.Limits["memory"]
 	assert.Equal("128Mi", memory.String(), "Resources.Limits.Memory was not parsed: %s", memory.String())
 
 	cpu = dev.Resources.Limits["cpu"]
-	assert.Equal("500m", cpu.String(), "Resources.Limits.CPU was not parsed correctly. Expected '500m', got '%s'", cpu.String())
+	assert.Equal("500m", cpu.String(), "Resources.Limits.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
 
 	assert.Equal("value1", dev.Metadata.Annotations["key1"], "Annotation 'key1' was not parsed correctly")
 	assert.Equal("value2", dev.Metadata.Annotations["key2"], "Annotation 'key2' was not parsed correctly")
@@ -76,7 +76,7 @@ func assertManifestDefaults(t *testing.T, d *Dev, expectedEnvironment env.Enviro
 		}
 	}
 	if !reflect.DeepEqual(d.Forward, expectedForward) {
-		t.Errorf("forward was not parsed correctly:\n%+v\n%+v", d.Forward, expectedForward)
+		t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Forward, expectedForward)
 	}
 	for k, v := range d.Resources.Limits {
 		if v.IsZero() {
@@ -85,7 +85,7 @@ func assertManifestDefaults(t *testing.T, d *Dev, expectedEnvironment env.Enviro
 	}
 	for k, v := range d.Resources.Requests {
 		if !v.IsZero() {
-			t.Errorf("resources.requests.%s was set", k)
+			t.Errorf("resources.limits.%s was set", k)
 		}
 	}
 	if !d.PersistentVolumeEnabled() {
@@ -145,7 +145,7 @@ func Test_LoadManifest(t *testing.T) {
         securityContext:
             capabilities:
                 add:
-                - SYS_PTRACE
+                - SYS_TRACE
                 drop:
                 - SYS_NICE
         serviceAccount: sa
@@ -305,7 +305,7 @@ func Test_loadName(t *testing.T) {
 			want:    "code-",
 		},
 		{
-			name:      "no-var-svc",
+			name:      "no-var-vc",
 			devName:   "code",
 			value:     "1",
 			onService: true,
@@ -576,7 +576,7 @@ func Test_LoadRemote(t *testing.T) {
         securityContext:
             capabilities:
                 add:
-                - SYS_PTRACE
+                - SYS_TRACE
                 drop:
                 - SYS_NICE
         workdir: /app`)
@@ -1056,7 +1056,7 @@ func Test_loadEnvFile(t *testing.T) {
 			expected:  map[string]string{"foo": "bar"},
 		},
 		{
-			name:      "does-not-override",
+			name:      "doesnt-override",
 			expectErr: false,
 			content:   map[string]string{"foo": "bar"},
 			existing:  map[string]string{"foo": "var"},
@@ -1160,11 +1160,11 @@ func Test_LoadManifestWithEnvFile(t *testing.T) {
 	}
 
 	if main.Services[0].Name != "deployment-secondary" {
-		t.Errorf("'name' was not parsed: got %s, expected %s", main.Services[0].Name, "deployment-secondary")
+		t.Errorf("'name' was not parsed: got %s, expected %s", main.Services[0].Name, "deployment-main")
 	}
 
 	if main.Services[0].Image != "code/service:2.1" {
-		t.Errorf("'image' was not parsed: got %s, expected %s", main.Services[0].Image, "code/service:2.1")
+		t.Errorf("'tag' was not parsed: got %s, expected %s", main.Services[0].Image, "code/service:2.1")
 	}
 
 	if main.Services[0].Environment[0].Value != "from-env-file" {
@@ -1290,7 +1290,7 @@ func Test_validateForExtraFields(t *testing.T) {
         securityContext:
             capabilities:
                 add:
-                - SYS_PTRACE
+                - SYS_TRACE
                 drop:
                 - SYS_NICE
         serviceAccount: sa
@@ -1370,7 +1370,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			},
 		},
 		{
-			name: "don't overwrite envs",
+			name: "dont overwrite envs",
 			dev: &Dev{
 				Environment: env.Environment{
 					env.Var{
@@ -1413,7 +1413,7 @@ func Test_expandEnvFiles(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
 
 			file, err := os.CreateTemp("", ".env")
 			if err != nil {

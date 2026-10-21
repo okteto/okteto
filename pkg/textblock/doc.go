@@ -14,7 +14,7 @@
 package textblock
 
 // This package is similar to "encoding/pem" but allows custom headers and
-// footers. This makes it easier to integrate with any configuration
+// footers. This make it easier to integrate with any configuration
 // language and their comment syntax.
 //
 // Example:
@@ -26,9 +26,9 @@ package textblock
 //   consectetur adipiscing elit
 //   # ---- END LOREMIPSUM ----
 //   more unrelated data
-//   `
+//   ``
 //
-//   parser := textblock.NewTextBlock(
+//   parser := block.NewBlockWriter(
 //       "# ---- BEGIN LOREMIPSUM ----",
 //       "# ---- END LOREMIPSUM ----",
 //   )

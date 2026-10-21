@@ -108,7 +108,7 @@ func GetVolume(ctx context.Context, ns, name string, client kubernetes.Interface
 	return client.CoreV1().PersistentVolumeClaims(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
-// WaitForDeployment waits until a deployment is rolled out correctly
+// WaitForDeployment waits until a deployment is rollout correctly
 func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOptions, revision int, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -120,7 +120,7 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%s didn't roll out after %s", kubectlOpts.Name, timeout.String())
+			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts.Name, timeout.String())
 		case <-ticker.C:
 			retry++
 			output, err := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
@@ -154,14 +154,14 @@ func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOption
 	}
 }
 
-// WaitForStatefulset waits until a sfs is rolled out correctly
+// WaitForStatefulset waits until a sfs is rollout correctly
 func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptions, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%s didn't roll out after %s", kubectlOpts.Name, timeout.String())
+			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts, timeout.String())
 		case <-ticker.C:
 			output, err := commands.RunKubectlRolloutStatefulset(kubectlBinary, kubectlOpts)
 			if err != nil {
@@ -181,17 +181,17 @@ func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptio
 	}
 }
 
-// DestroyPod deletes the pods matching a label selector in a namespace
+// DestroyPod returns a deployment given a namespace and name
 func DestroyPod(ctx context.Context, ns, labelSelector string, c kubernetes.Interface) error {
 	log.Printf("destroying pods with label selector: %s", labelSelector)
 
 	pods, err := c.CoreV1().Pods(ns).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
-		return fmt.Errorf("failed to retrieve pods with label selector %s: %w", labelSelector, err)
+		return fmt.Errorf("failed to retrieve deployment %s pods: %w", labelSelector, err)
 	}
 	var zero int64 = 0
 	if len(pods.Items) == 0 {
-		return fmt.Errorf("no pods detected")
+		return fmt.Errorf("not detected any pod")
 	}
 	for idx := range pods.Items {
 		log.Printf("destroying pod %s", pods.Items[idx].Name)

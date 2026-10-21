@@ -10,7 +10,7 @@
 # All subsequent pushes to this branch will build a new beta release:
 # 2.4.0-beta.2, 2.4.0-beta.3 etc.
 # To release the first stable version, the 2.4.0 tag must be manually created
-# and pushed from the tip of the release branch after acceptance criteria have
+# and pushed from the tip of the release branch after acceptance criteria has
 # been met (decided internally by the team). There is no automation in place
 # for this at the moment.
 
@@ -38,8 +38,8 @@
         # beta_regex is a semver version regex for the beta channel
         beta_regex='^[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$'
 
-        # PREVIOUS_TAGS are the tags that point to the previous known ancestor
-        # The known ancestor is the last commit a release points to. It can point to a
+        # PREVIOUS_TAGS are the tags to which the previous known ancestor
+        # The known ancestor is that last commit a release points to. It can point to a
         # beta AND a stable release at the same time so git describe won't work.
         # This will happen when creating a patch release from an LTS branch and it's
         # usually how promotion works.
@@ -68,7 +68,7 @@
                 exit 1
         fi
 
-        # Select the tag from the list of all the tags that point to the last release
+        # Select the tag from the list all of the tags that point to the last release
         previous_stable=$(echo "${PREVIOUS_TAGS}" | grep -E "$stable_regex" || echo "")
         previous_beta=$(echo "${PREVIOUS_TAGS}" | grep -E "$beta_regex" || echo "")
 
@@ -81,8 +81,8 @@
                 # make sure we are building within the bounds of patch/prerelease
                 diff="$(semver diff "${ROOT_MINOR_TAG}" "$previous_stable")"
                 case "$diff" in
-                # If the major or minor versions differ, we must be ahead meaning
-                # this is the first tag
+                # If the major or minor version differ, we must be ahead meaning
+                # this is first tag
                 major | minor)
                         if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_stable")" -eq "-1" ]; then
                                 echo "Cannot build tag. Latest reachable tag from release branch ${CURRENT_BRANCH} is bigger than ${ROOT_MINOR_TAG}"
@@ -114,8 +114,8 @@
                 # make sure we are building within the bounds of patch/prerelease
                 diff="$(semver diff "${ROOT_MINOR_TAG}" "$previous_beta")"
                 case "$diff" in
-                # If the major or minor versions differ, we must be ahead meaning
-                # this is the first tag
+                # If the major or minor version differ, we must be ahead meaning
+                # this is first tag
                 major | minor)
                         if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_beta")" -eq "-1" ]; then
                                 echo "Cannot build tag. Latest reachable tag from release branch ${CURRENT_BRANCH} is bigger than ${ROOT_MINOR_TAG}"

@@ -24,7 +24,7 @@ const (
 	SyncthingBin = "/var/okteto/bin/syncthing"
 )
 
-// Process is a monitored process
+// Process is process monitored
 type Process struct {
 	Name       string
 	Path       string
@@ -174,7 +174,7 @@ func (p *Process) killAllByName() {
 
 		name, err := proc.Name()
 		if err != nil {
-			// it's expected to get EOF if the process no longer exists at this point.
+			// it's expected go get EOF if the process no longer exists at this point.
 			if err != io.EOF {
 				log.Infof("error getting name for process %d: %s", proc.Pid, err.Error())
 			}

@@ -31,19 +31,19 @@ func Test_validateAndSet(t *testing.T) {
 		variables     []string
 	}{
 		{
-			name:          "correct assignment",
+			name:          "correct assingnament",
 			variables:     []string{"NAME=test"},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"NAME": "test"},
 		},
 		{
-			name:          "bad assignment",
+			name:          "bas assingnament",
 			variables:     []string{"NAME:test"},
 			expectedError: fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", "NAME:test"),
 			expectedEnvs:  map[string]string{},
 		},
 		{
-			name:          "more than one equals",
+			name:          "more than 2 equals",
 			variables:     []string{"too=many=equals"},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"too": "many=equals"},

@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	ErrLabelsFeatureNotSupported = fmt.Errorf(`Using labels with preview environments requires a more recent version of Okteto.
+	ErrLabelsFeatureNotSupported = fmt.Errorf(`Filtering preview environments by label requires a more recent version of Okteto.
 
     Consider removing the "--label" flag, or please upgrade to the latest version.
 
@@ -382,7 +382,7 @@ func (*previewClient) getDeployVariables(name, scope, repository, branch, source
 	return vars
 }
 
-// Destroy destroys a preview environment
+// DestroyPreview destroy a preview environment
 func (c *previewClient) Destroy(ctx context.Context, name string, timeout int) error {
 	mutationStruct := destroyPreviewMutationWithTimeout{}
 	variables := map[string]interface{}{
@@ -485,9 +485,9 @@ func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) (
 		endpointsMap[endpoint.Url] = true
 	}
 
-	// @francisco - 2023/05/02
-	// The backend Endpoints field was being returned empty in okteto clusters <1.9
-	// Let's make sure we correctly resolve the endpoints from the known resources
+	// @francisco - 2023//05/02
+	// The backend Endpoints field was being return empty in okteto clusters <1.9
+	// Lets make sure we correctly resolve the endpoints from the known resources
 	// All this below should be safe to remove in newer versions of the okteto cli
 	// <-- LEGACY START -->
 	for _, d := range queryStruct.Response.Deployments {

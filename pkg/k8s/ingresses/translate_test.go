@@ -151,7 +151,7 @@ func Test_translateV1(t *testing.T) {
 	}
 }
 
-func Test_translateV1Beta1(t *testing.T) {
+func Test_translateV1BetaV1(t *testing.T) {
 	tests := []struct {
 		name                       string
 		endpointName               string
@@ -252,10 +252,10 @@ func Test_translateV1Beta1(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := translateV1Beta1(tt.endpointName, tt.endpointSpec[tt.endpointName], tt.opts)
 			if result.Name != "endpoint1" {
-				t.Errorf("Wrong ingress name: '%s'", result.Name)
+				t.Errorf("Wrong service name: '%s'", result.Name)
 			}
 			if !reflect.DeepEqual(result.Annotations, tt.expectedIngressAnnotations) {
-				t.Errorf("Wrong ingress annotations: '%s'", result.Annotations)
+				t.Errorf("Wrong service annotations: '%s'", result.Annotations)
 			}
 
 			if !reflect.DeepEqual(result.Labels, tt.expectedIngressLabels) {

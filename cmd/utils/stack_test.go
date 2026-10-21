@@ -146,7 +146,7 @@ func Test_overrideFileStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Environment, svc.Environment)
 	}
 	if !reflect.DeepEqual(svc.Annotations, svcResult.Annotations) {
-		t.Fatalf("Expected %v but got %v", svcResult.Annotations, svc.Annotations)
+		t.Fatalf("Expected %v but got %v", svcResult.Labels, svc.Labels)
 	}
 	if svc.Image != svcResult.Image {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)

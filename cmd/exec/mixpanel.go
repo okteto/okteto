@@ -15,12 +15,12 @@ package exec
 
 import "github.com/okteto/okteto/pkg/analytics"
 
-// mixpannelTrack represents a track to be sent to mixpanel
+// mixpannelTrack represents a track to be sent to mixpannel
 type mixpannelTrack struct {
 	trackFunc func(m *analytics.TrackExecMetadata)
 }
 
-// Track sends the track to mixpanel
+// TrackExec sends the track to mixpannel
 func (t *mixpannelTrack) Track(metadata *analytics.TrackExecMetadata) {
 	t.trackFunc(metadata)
 }

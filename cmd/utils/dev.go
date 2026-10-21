@@ -176,7 +176,7 @@ func AskForOptions(options []string, label string) (string, error) {
 
 	i, _, err := prompt.Run()
 	if err != nil {
-		oktetoLog.Infof("invalid option: %s", err)
+		oktetoLog.Infof("invalid init option: %s", err)
 		return "", fmt.Errorf("invalid option")
 	}
 
@@ -219,8 +219,8 @@ func GetApp(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.
 		if len(dev.Selector) > 0 {
 			if oktetoErrors.IsNotFound(err) {
 				err = oktetoErrors.UserError{
-					E:    fmt.Errorf("didn't find an application in namespace %s that matches the selector in your Okteto manifest", namespace),
-					Hint: "Update the selector or point your context to a different namespace and try again"}
+					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", namespace),
+					Hint: "Update the labels or point your context to a different namespace and try again"}
 			}
 			return nil, false, err
 		}

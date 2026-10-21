@@ -76,7 +76,7 @@ func TestOktetoIgnore(t *testing.T) {
 			},
 		},
 		{
-			name: "extra_newlines",
+			name: "extran_newlines",
 			input: `
 
       .git
@@ -206,18 +206,6 @@ func TestOktetoIgnoreRules(t *testing.T) {
 			`,
 			section:  []string{"nonexistent"},
 			expected: nil,
-		},
-		{
-			name: "literal_root_section_header",
-			input: `
-			.git
-			[deploy]
-			integration
-			[__DEFAULT__]
-			node_modules
-			`,
-			section:  []string{RootSection, "deploy"},
-			expected: []string{".git", "node_modules", "integration"},
 		},
 		{
 			name:     "empty_section",

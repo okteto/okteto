@@ -784,7 +784,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(fakeDeployer, nil)
-	divert.On("Deploy", mock.Anything).Return(fmt.Errorf("error deploying divert driver"))
+	divert.On("Deploy", mock.Anything).Return(fmt.Errorf("error getting deploying driver"))
 
 	expectedOpts := &Options{
 		Name:         "movies",
@@ -798,7 +798,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 	err := c.Run(ctx, opts)
 
 	assert.Error(t, err)
-	assert.Equal(t, "error deploying divert driver", err.Error())
+	assert.Equal(t, "error getting deploying driver", err.Error())
 
 	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)

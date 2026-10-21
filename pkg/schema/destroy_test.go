@@ -52,7 +52,7 @@ destroy:
 			manifest: `
 destroy:
   commands:
-    - name: Destroy app
+    - name: Deploy app
       command: kubectl delete -f manifests
     - name: Other
       command: some other command`,

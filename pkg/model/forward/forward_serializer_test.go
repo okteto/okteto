@@ -89,7 +89,7 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name:      "too-few-parts",
+			name:      "too-little-parts",
 			data:      "8080",
 			expectErr: true,
 		},
@@ -122,7 +122,7 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 			}
 
 			if tt.expectErr {
-				t.Fatal("didn't get expected error")
+				t.Fatal("didn't got expected error")
 			}
 
 			if !reflect.DeepEqual(result, tt.expected) {
@@ -138,7 +138,7 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 			outStr = strings.TrimSuffix(outStr, "\n")
 
 			if !reflect.DeepEqual(outStr, tt.data) {
-				t.Errorf("didn't marshal correctly. Actual '%+v', Expected '%+v'", outStr, tt.data)
+				t.Errorf("didn't unmarshal correctly. Actual '%+v', Expected '%+v'", outStr, tt.data)
 			}
 		})
 	}

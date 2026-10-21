@@ -323,7 +323,7 @@ deploy:
 destroy:
   image: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
   commands:
-  - name: Delete the Bucket
+  - name: Delete the Bucket Bucket
     command: |
       bucket="gs://cloud-cred-demo-${OKTETO_NAMESPACE}"
       if gcloud storage buckets describe $bucket >/dev/null 2>&1;
@@ -347,7 +347,7 @@ dev:
       - .:/app`,
 		},
 		{
-			name: "okteto-community/tacoshop-with-cloudflare",
+			name: "okteto-community/tacopshop-with-cloudflare",
 			manifest: `
 icon: https://raw.githubusercontent.com/okteto/icons/main/oktaco.png
 

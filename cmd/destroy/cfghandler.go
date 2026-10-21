@@ -32,7 +32,7 @@ type configMapHandler interface {
 	getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error)
 }
 
-// defaultConfigMapHandler is the handler used when okteto is executed
+// oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
 // directly
 type defaultConfigMapHandler struct {
 	k8sClient kubernetes.Interface

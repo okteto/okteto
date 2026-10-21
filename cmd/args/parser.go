@@ -30,7 +30,7 @@ type devLister interface {
 	List(ctx context.Context, devs model.ManifestDevs, namespace string) ([]string, error)
 }
 
-// DevCommandArgParser is a parser for commands that take a development container and a command as arguments
+// DevCommandArgParser is a parser for commands that takes a development container and a command as arguments
 type DevCommandArgParser struct {
 	devSelector       devSelector
 	devLister         devLister

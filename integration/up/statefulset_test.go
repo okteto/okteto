@@ -205,7 +205,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
-	// Test that original hasn't changed
+	// Test that original hasn't change
 	require.NoError(t, compareStatefulSet(context.Background(), originalStatefulSet, c))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }

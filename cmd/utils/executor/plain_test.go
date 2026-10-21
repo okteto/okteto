@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitialization(t *testing.T) {
+func TestInititalization(t *testing.T) {
 	e := newPlainExecutor()
 
 	assert.NotNil(t, e)

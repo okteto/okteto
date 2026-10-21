@@ -197,13 +197,13 @@ func TestGet(t *testing.T) {
 				t.Fatalf("wrong error. Got nil, expected %s", tt.expectedErr.Error())
 			}
 			if err != nil && tt.expectedErr == nil {
-				t.Fatalf("wrong error. Expected nil, but got %s", err.Error())
+				t.Fatalf("wrong error. Got nil, expected %s", err.Error())
 			}
 			if err != nil && tt.expectedErr != nil && err.Error() != tt.expectedErr.Error() {
 				t.Fatalf("wrong error. Got %s, expected %s", err, tt.expectedErr)
 			}
 			if err == nil && d == nil {
-				t.Fatal("deployment is nil but no errors were returned")
+				t.Fatal("deployment is nil found but no errors were returned")
 			}
 			if tt.expectedFoundCount > 0 && d == nil {
 				t.Fatalf("expected %d deployments, instead found none", tt.expectedFoundCount)
@@ -301,7 +301,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: fmt.Errorf("The value of resources.limits.memory in your okteto manifest exceeds the maximum memory limit per pod."),
+			expectedErr: fmt.Errorf("The value of resources.limits.memory in your okteto manifest (5Gi) exceeds the maximum memory limit per pod (3Gi)."),
 		},
 		{
 			name: "Cpu per pod exceeded",
@@ -329,10 +329,10 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: fmt.Errorf("The value of resources.limits.cpu in your okteto manifest exceeds the maximum CPU limit per pod."),
+			expectedErr: fmt.Errorf("The value of resources.limits.cpu in your okteto manifest (2) exceeds the maximum CPU limit per pod (1)."),
 		},
 		{
-			name: "Cpu per pod exceeded 2",
+			name: "Cpu per pod exceeded",
 			deployment: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake",

@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_RedactMessage(t *testing.T) {
+func Test_GetContextResource(t *testing.T) {
 	var tests = []struct {
 		name     string
 		message  string
@@ -34,13 +34,13 @@ func Test_RedactMessage(t *testing.T) {
 			expected: "hello this is a test",
 		},
 		{
-			name:     "one banned word to replace",
+			name:     "one banned words to replace",
 			message:  "hello this is a test",
 			masked:   []string{"this"},
 			expected: "hello *** is a test",
 		},
 		{
-			name:     "one banned word to replace in-word",
+			name:     "one banned words to replace in-word",
 			message:  "hello this is a test",
 			masked:   []string{"is"},
 			expected: "hello th*** *** a test",

@@ -235,9 +235,9 @@ func TestUnmarshalInfo(t *testing.T) {
 	}{
 		{
 			name:  "unmarshal string",
-			input: "a string value",
+			input: "an string value",
 			expected: &Info{
-				Context: "a string value",
+				Context: "an string value",
 			},
 		},
 		{
@@ -310,7 +310,7 @@ secrets:
 		},
 		{
 			name:        "error unmarshal string nor struct",
-			input:       "- a string value as list",
+			input:       "- an string value as list",
 			expectedErr: true,
 		},
 		{
@@ -370,28 +370,28 @@ func TestMarshalInfo(t *testing.T) {
 		name     string
 	}{
 		{
-			name:     "marshal string",
-			expected: "context: a string value\n",
+			name:     "unmarshal string",
+			expected: "context: an string value\n",
 			input: &Info{
-				Context: "a string value",
+				Context: "an string value",
 			},
 		},
 		{
-			name:     "marshal info with dockerfile",
-			expected: "dockerfile: a string value\n",
+			name:     "unmarshal info with dockerfile",
+			expected: "dockerfile: an string value\n",
 			input: &Info{
-				Dockerfile: "a string value",
+				Dockerfile: "an string value",
 			},
 		},
 		{
-			name:     "marshal info with target",
-			expected: "target: a string value\n",
+			name:     "unmarshal info with target",
+			expected: "target: an string value\n",
 			input: &Info{
-				Target: "a string value",
+				Target: "an string value",
 			},
 		},
 		{
-			name:     "marshal info with args",
+			name:     "unmarshal info with args",
 			expected: "args:\n- name: testName\n  value: testValue\n",
 			input: &Info{
 				Args: Args{

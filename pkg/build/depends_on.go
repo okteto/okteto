@@ -13,7 +13,7 @@
 
 package build
 
-// DependsOn represents the images that need to be built before
+// DependsOn represents the images that needs to be built before
 type DependsOn []string
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

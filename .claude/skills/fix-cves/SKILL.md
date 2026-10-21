@@ -33,7 +33,7 @@ Before attempting any fixes, create a summary table showing the current state:
 ```markdown
 ## CVE Summary
 
-| Binary                  | CVEs HIGH | CVEs CRITICAL | Status                 |
+| Binario                 | CVEs HIGH | CVEs CRITICAL | Estado                 |
 | ----------------------- | --------- | ------------- | ---------------------- |
 | syncthing               | X         | Y             | ✅/⚠️/❌ [Description] |
 | kustomize               | X         | Y             | ✅/⚠️/❌ [Description] |

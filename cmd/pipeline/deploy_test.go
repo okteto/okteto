@@ -88,7 +88,7 @@ func Test_getRepositoryURL(t *testing.T) {
 
 			if _, err := utils.GetRepositoryURL(dir); err == nil {
 
-				t.Fatal("expected error when there's no git repo")
+				t.Fatal("expected error when there's no github repo")
 			}
 
 			r, err := git.PlainInit(dir, false)
@@ -117,7 +117,7 @@ func Test_getRepositoryURL(t *testing.T) {
 			}
 
 			if url != tt.expect {
-				t.Errorf("expected '%s', got '%s'", tt.expect, url)
+				t.Errorf("expected '%s', got '%s", tt.expect, url)
 			}
 		})
 	}
@@ -193,16 +193,16 @@ func TestCheckAllResourcesRunning(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := CheckAllResourcesRunning(tt.name, tt.resourceStatus)
 			if tt.expectError && err == nil || !tt.expectError && err != nil {
-				t.Errorf("expected error '%t', got '%v'", tt.expectError, err)
+				t.Errorf("expected error '%t', got '%v", tt.expectError, err)
 			}
 			if tt.expectResult != result {
-				t.Errorf("expected result '%t', got '%t'", tt.expectResult, result)
+				t.Errorf("expected result '%t', got '%t", tt.expectResult, result)
 			}
 		})
 	}
 }
 
-func TestDeployPipelineSuccessful(t *testing.T) {
+func TestDeployPipelineSuccesful(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
@@ -232,7 +232,7 @@ func TestDeployPipelineSuccessful(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDeployPipelineSuccessfulWithWait(t *testing.T) {
+func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
@@ -306,7 +306,7 @@ func TestDeployWithError(t *testing.T) {
 	assert.ErrorIs(t, err, deployErr)
 }
 
-func TestDeployPipelineSuccessfulWithWaitStreamError(t *testing.T) {
+func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
@@ -426,7 +426,7 @@ func Test_DeployPipelineWithReuseParamsSuccess(t *testing.T) {
 	}, fakePipelineDeployResponses.DeployOpts)
 }
 
-func Test_DeployPipelineWithSkipIfExists(t *testing.T) {
+func Test_DeployPipelineWithSkipIfExist(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
 		Contexts: map[string]*okteto.Context{
@@ -474,7 +474,7 @@ func Test_DeployPipelineWithSkipIfExists(t *testing.T) {
 			},
 		},
 		{
-			name: "skip because progressing status",
+			name: "skip because deployed status",
 			cmd: &Command{
 				okClient: &client.FakeOktetoClient{
 					PipelineClient: client.NewFakePipelineClient(
@@ -518,7 +518,7 @@ func Test_DeployPipelineWithSkipIfExists(t *testing.T) {
 	}
 }
 
-func Test_DeployPipelineWithSkipIfExistsAndWait(t *testing.T) {
+func Test_DeployPipelineWithSkipIfExistAndWait(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
 		Contexts: map[string]*okteto.Context{

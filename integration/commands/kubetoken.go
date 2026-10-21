@@ -44,7 +44,7 @@ func RunOktetoKubetoken(oktetoPath, oktetoHome, token string) (bytes.Buffer, err
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
-	log.Printf("Running kubetoken command: %s", cmd.String())
+	log.Printf("Running up command: %s", cmd.String())
 
 	err := cmd.Run()
 	if err != nil {

@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-// FakePipelineClient mocks the pipeline interface
+// FakePipelineClient mocks the namespace interface
 type FakePipelineClient struct {
 	responses *FakePipelineResponses
 }
@@ -68,7 +68,7 @@ func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _, _ string)
 	return fc.responses.ResourcesMap, fc.responses.ResourceErr
 }
 
-// GetByName returns a pipeline given its name
+// GetByName returns the name of the pipeline
 func (*FakePipelineClient) GetByName(_ context.Context, _, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }

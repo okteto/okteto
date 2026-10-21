@@ -74,7 +74,7 @@ type clientCreator interface {
 	New(ctx context.Context, address string, opts ...client.ClientOpt) (*client.Client, error)
 }
 
-// realBuildkitClientCreator implements the clientCreator interface
+// realBuildkitClientCreator implements the buildkitClientCreator interface
 type realBuildkitClientCreator struct{}
 
 // New creates a new buildkit client

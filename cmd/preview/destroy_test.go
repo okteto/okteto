@@ -54,7 +54,7 @@ func TestExecuteDestroyPreviewWithErrorDestroying(t *testing.T) {
 }
 
 // TestExecuteDestroyPreviewWithNotFoundPreviewErrorDestroying tests the case when the preview is not found
-// and does not return an error
+// not return an error
 func TestExecuteDestroyPreviewWithNotFoundPreviewErrorDestroying(t *testing.T) {
 	ctx := context.Background()
 	opts := &DestroyOptions{

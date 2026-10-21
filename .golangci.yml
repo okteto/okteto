@@ -59,11 +59,11 @@ linters:
 
   disable:
     # We need to revisit this. For now, we're disabling the following linters until we fix the issues they raise.
-    - copyloopvar # replaces "exportloopref"
+    - copyloopvar # replace with "exportloopref"
     - errcheck
     - mnd
     - revive
-    - staticcheck # replaces "gosimple"
+    - staticcheck # replace with "gosimple"
 
 formatters:
   enable:
@@ -74,7 +74,7 @@ formatters:
     #     sections:
     #       - standard
     #       - default
-    #       - prefix(github.com/okteto/okteto)
+    #       - prefix(github.com/tu/org/tu-proyecto)
 
 issues:
   include:

@@ -29,7 +29,7 @@ import (
 
 var (
 	ErrDeployPipelineLabelsFeatureNotSupported = oktetoErrors.UserError{
-		E: errors.New(`deploying a pipeline with labels requires a more recent version of Okteto.
+		E: errors.New(`deploying a preview environments with labels requires a more recent version of Okteto.
 
 		Consider removing the "--label" flag, or please upgrade to the latest version`),
 		Hint: "For more information and upgrade instructions, please visit our docs at https://www.okteto.com/docs or contact your system administrator.",
@@ -409,11 +409,11 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 			delete(queryVariables, "isDependency")
 			err = mutate(ctx, mutationWithoutDependencies, queryVariables, c.client)
 			if err != nil {
-				return nil, fmt.Errorf("failed to destroy pipeline: %w", err)
+				return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 			}
 			response = mutationWithoutDependencies.Response
 		} else {
-			return nil, fmt.Errorf("failed to destroy pipeline: %w", err)
+			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	}
 	gitDeployResponse.Action = &types.Action{

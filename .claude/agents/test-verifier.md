@@ -75,9 +75,9 @@ func setupFoo(t *testing.T) *Foo {
 
 If a function returns `error` and only the success case is tested, flag it.
 
-### 6. MEDIUM — `t.Fatal`/`t.Error` instead of `require`
+### 6. MEDIUM — `t.Fatal`/`t.Error` instead of `require`/`assert`
 
-Direct use of `t.Fatal` or `t.Error` should be replaced with testify's `require`.
+Direct use of `t.Fatal` or `t.Error` should be replaced with testify's `require` or `assert`.
 
 ### 7. LOW — Missing copyright header in test files
 

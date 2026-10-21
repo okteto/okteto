@@ -56,7 +56,7 @@ func (ioc *Controller) Logger() *oktetoLogger {
 	return ioc.oktetoLogger
 }
 
-// SetOutputFormat sets the output format for the CLI. We need that the logger and the output generate the same
+// SetOutputFormat sets the output format for the CLI. We need that the logger and the output generates the same
 // type of messages, so we don't end up mixing formats like json and tty.
 func (ioc *Controller) SetOutputFormat(output string) {
 	ioc.oktetoLogger.SetOutputFormat(output)

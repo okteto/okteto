@@ -48,7 +48,7 @@ func executeDeployPreviewAction(namespace string) error {
 	}
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployPreviewPath)
 	actionFolder := strings.Split(deployPreviewPath, "/")[1]
-	log.Printf("cloning deploy preview repository: %s", actionRepo)
+	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
 		if err := integration.CloneGitRepo(actionRepo); err != nil {
 			return err
@@ -68,14 +68,14 @@ func executeDeployPreviewAction(namespace string) error {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
 
-	log.Printf("deploy preview output: \n%s\n", string(o))
+	log.Printf("destroy preview output: \n%s\n", string(o))
 	return nil
 }
 
 func executeDestroyPreviewAction(namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, destroyPreviewPath)
 	actionFolder := strings.Split(destroyPreviewPath, "/")[1]
-	log.Printf("cloning destroy preview repository: %s", actionRepo)
+	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
 		if err := integration.CloneGitRepo(actionRepo); err != nil {
 			return err

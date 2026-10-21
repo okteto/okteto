@@ -40,7 +40,7 @@ type ConfigMapHandler interface {
 	AddPhaseDuration(context.Context, string, string, string, time.Duration) error
 }
 
-// defaultConfigMapHandler is the handler used when okteto is executed
+// oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
 // directly
 type defaultConfigMapHandler struct {
 	k8sClientProvider okteto.K8sClientProviderWithLogger

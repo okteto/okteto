@@ -90,7 +90,7 @@ echo "!Successful envs check!"
 exit 0`
 )
 
-// TestUpUsingHybridMode tests hybrid mode checking:
+// TestUpUsingHybridMode test hybrid mode checking:
 // - envs from config map, image and dev container are available
 // - we cannot run a micro application locally and check that it is exposed
 // using the reverse in the remote because we do not know the dependencies

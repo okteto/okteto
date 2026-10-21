@@ -58,7 +58,7 @@ func TestProcessDirectory(t *testing.T) {
 		{
 			name:  "javascript",
 			want:  Javascript,
-			files: []string{"package.json", "index.js"},
+			files: []string{"Package.json", "index.js"},
 		},
 		{
 			name:  "ruby",

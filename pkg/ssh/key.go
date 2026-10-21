@@ -86,7 +86,7 @@ func generate(public, private string) error {
 		return fmt.Errorf("failed to write private SSH key: %w", err)
 	}
 
-	oktetoLog.Infof("created ssh keypair at %s and %s", public, private)
+	oktetoLog.Infof("created ssh keypair at  %s and %s", public, private)
 	return nil
 }
 

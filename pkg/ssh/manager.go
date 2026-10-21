@@ -207,7 +207,7 @@ func (fm *ForwardManager) TransformLabelsToServiceName(f forwardModel.Forward) (
 	return f, nil
 }
 
-// StartGlobalForwarding implements the interface types.forwarder
+// StartGlobalForwarding implements from the interface types.forwarder
 // nolint:unparam
 func (fm *ForwardManager) StartGlobalForwarding() error {
 	for _, gf := range fm.globalForwards {

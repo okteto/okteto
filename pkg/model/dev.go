@@ -129,7 +129,7 @@ type SyncFolder struct {
 	RemotePath string `json:"remotePath,omitempty" yaml:"remotePath,omitempty"`
 }
 
-// ExternalVolume represents an external volume in the development container
+// ExternalVolume represents a external volume in the development container
 type ExternalVolume struct {
 	Name      string
 	SubPath   string
@@ -255,7 +255,7 @@ func NewDev() *Dev {
 	}
 }
 
-// loadAbsPaths makes every path used in the dev struct an absolute path
+// loadAbsPaths makes every path used in the dev struct an absolute paths
 func (dev *Dev) loadAbsPaths(devPath string, fs afero.Fs) error {
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
@@ -486,7 +486,7 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
-// expandEnvFiles reads each env file and appends all the variables to the environment
+// expandEnvFiles reads each env file and append all the variables to the environment
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
 		filename, err := env.ExpandEnv(envFile)
@@ -506,7 +506,7 @@ func (dev *Dev) expandEnvFiles() error {
 
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
-			return fmt.Errorf("error parsing env file %s: %w", filename, err)
+			return fmt.Errorf("error parsing env_file %s: %w", filename, err)
 		}
 
 		for _, e := range dev.Environment {
@@ -734,7 +734,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	dev.Secrets = append(dev.Secrets, p)
 }
 
-// LoadForcePull forces the dev pods to be recreated and pull the latest version of their image
+// LoadForcePull force the dev pods to be recreated and pull the latest version of their image
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
@@ -750,7 +750,7 @@ func (dev *Dev) LoadForcePull() {
 func (dev *Dev) Save(path string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
-		oktetoLog.Infof("failed to marshal development container: %s", err)
+		oktetoLog.Infof("failed to marshall development container: %s", err)
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 

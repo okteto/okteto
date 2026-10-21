@@ -134,7 +134,7 @@ func TestTwoPIDControllerRaceConditionToRemoveFile(t *testing.T) {
 
 	assert.Equal(t, strconv.Itoa(fakePP.pid), pid)
 
-	// Simulate that another okteto up session is modifying the file
+	// Simulate that another oktet up session is modifying the file
 	fakePIDProviderWitAnotherPID := fakePIDProvider{
 		pid: 10,
 	}
@@ -160,7 +160,7 @@ func TestTwoPIDControllerRaceConditionToRemoveFile(t *testing.T) {
 
 	assert.Equal(t, strconv.Itoa(fakePIDProviderWitAnotherPID.pid), pid)
 
-	// finish the first controller (finish the first okteto up while the second up keeps running)
+	// finish the first controller (finish the first okteto up while the second up keep running)
 	pc.delete()
 	if _, err := pc.filesystem.Stat(pc.pidFilePath); err != nil {
 		t.Fatal("pid was deleted")
@@ -218,7 +218,7 @@ func TestNotifyIfPIDFileChange(t *testing.T) {
 	}
 	assert.Len(t, pidFileCh, 0)
 
-	// check that write with different pid sends an error
+	// check that write with different pid send error
 	anotherPC := pidController{
 		filesystem:  filesystem,
 		pidFilePath: filepath.Clean(fmt.Sprintf("/%s/%s", deploymentName, namespace)),

@@ -187,7 +187,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 
 	ticker := time.NewTicker(1 * time.Second)
 	timeoutDuration := 3 * timeout
-	to := time.Now().Add(timeoutDuration) // 3x the dev timeout (180 seconds by default)
+	to := time.Now().Add(timeoutDuration) // 90 seconds
 	logDebounceInterval := 5
 
 	for i := 0; ; i++ {
@@ -206,7 +206,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 				return err
 			}
 
-			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeoutDuration.String())
+			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeout.String())
 		}
 
 		if i%10 == logDebounceInterval {

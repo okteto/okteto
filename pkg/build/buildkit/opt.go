@@ -367,7 +367,7 @@ func (b *SolveOptBuilder) getCompressionEnv(v compressionEnvVar) string {
 	return value
 }
 
-// validateTags validates the image tags
+// validate validates the build options
 func (b *SolveOptBuilder) validateTags(imageTag string) error {
 	if imageTag == "" {
 		return nil

@@ -76,7 +76,7 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 
 - Invent new CLI commands, flags, or arguments without explicit requirements
 - Modify code without reading it first
-- Skip copyright headers (all `.go` files require Apache 2.0 header, years 2023 onwards)
+- Skip copyright headers (all `.go` files require Apache 2.0 header, years 2023-2025)
 - Use `panic()` in production code — return errors instead
 - Break existing CLI interfaces without discussion
 - Add branching (`if/switch`) inside test function bodies — split into multiple tests
@@ -105,4 +105,4 @@ A Go CLI tool for Kubernetes development — syncs local code changes to remote 
 > **Feature flags & NoOp strategy**: [context/feature-flags.md](.claude/context/feature-flags.md)
 > **CVE remediation**: use `/fix-cves` skill — see [skills/fix-cves/SKILL.md](.claude/skills/fix-cves/SKILL.md)
 > **Go version upgrade**: use `/upgrade-go-version` skill — see [skills/upgrade-go-version/SKILL.md](.claude/skills/upgrade-go-version/SKILL.md)
-> **Self-improvement**: use `/lessons` skill — see [skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md) | log at [lessons.local.md](.claude/lessons.local.md)
+> **Self-improvement**: use `/lessons` skill — see [skills/lessons/SKILL.md](.claude/skills/lessons/SKILL.md) | log at [lessons.md](.claude/lessons.local.md)

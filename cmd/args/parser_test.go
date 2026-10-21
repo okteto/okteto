@@ -146,7 +146,7 @@ func TestSetDevFromManifest(t *testing.T) {
 					Name: "dev1",
 				},
 				"dev2": &model.Dev{
-					Name: "dev2",
+					Name: "dev1",
 				},
 			},
 			expectedDev:   "dev1",
@@ -183,7 +183,7 @@ func TestSetDevFromManifest(t *testing.T) {
 					Name: "dev1",
 				},
 				"dev2": &model.Dev{
-					Name: "dev2",
+					Name: "dev1",
 				},
 			},
 			expectedDev:   "",

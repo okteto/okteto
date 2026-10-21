@@ -83,7 +83,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			expectedErr: false,
 		},
 		{
-			name: "add two global forwarders",
+			name: "add two global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{
@@ -103,7 +103,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			expectedErr: false,
 		},
 		{
-			name: "add no global forwarders",
+			name: "add none global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
 					GlobalForward: []forward.GlobalForward{},
@@ -142,7 +142,7 @@ func TestForwards(t *testing.T) {
 			expected: assert.AnError,
 		},
 		{
-			name:                   "duplicated forward port",
+			name:                   "fakeClientProvider error",
 			OktetoExecuteSSHEnvVar: "false",
 			clientProvider:         test.NewFakeK8sProvider(),
 			expected:               fmt.Errorf("port %d is listed multiple times, please check your configuration", 8080),
@@ -172,7 +172,7 @@ func TestForwards(t *testing.T) {
 	}
 }
 
-func TestSSHForwards(t *testing.T) {
+func TestSSHForwarss(t *testing.T) {
 	tt := []struct {
 		clientProvider okteto.K8sClientProvider
 		expected       error

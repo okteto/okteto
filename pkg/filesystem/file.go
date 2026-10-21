@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-// FileExistsWithFilesystem returns true if the file exists or if there is an error.
+// FileExistsWithFilesystem return true if the file exists or if there is an error.
 func FileExistsWithFilesystem(path string, fs afero.Fs) bool {
 	_, err := fs.Stat(path)
 	if os.IsNotExist(err) {
@@ -36,7 +36,7 @@ func FileExistsWithFilesystem(path string, fs afero.Fs) bool {
 	return true
 }
 
-// FileExists returns true if the file exists
+// FileExists return true if the file exists
 func FileExists(name string) bool {
 	_, err := os.Stat(name)
 	if os.IsNotExist(err) {

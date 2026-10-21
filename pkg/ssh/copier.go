@@ -20,7 +20,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-// Copier copies from local to remote terminal
+// Copier copies from local to remote terminalhandles the lifecycle of all the forwards
 type Copier struct {
 	Local  io.Reader
 	Remote io.WriteCloser

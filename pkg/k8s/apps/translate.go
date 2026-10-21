@@ -34,7 +34,7 @@ const (
 	oktetoVersionAnnotation = "dev.okteto.com/version"
 	// OktetoBinName name of the okteto bin init container
 	OktetoBinName = "okteto-bin"
-	// OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent volume from image content
+	// OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
 	OktetoInitVolumeContainerName = "okteto-init-volume"
 
 	// syncthing
@@ -150,7 +150,7 @@ func (tr *Translation) DevModeOff() error {
 		delete(tr.App.TemplateObjectMeta().Annotations, k)
 	}
 
-	// TODO: this is for backward compatibility: remove when people are on CLI >= 1.14
+	// TODO: this is for backward compatibility: remove when people is on CLI >= 1.14
 	delete(tr.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
 	delete(tr.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
 
@@ -163,7 +163,7 @@ func (tr *Translation) DevModeOff() error {
 	return nil
 }
 
-// TranslateDevTolerations sets the user provided tolerations
+// TranslateDevTolerations sets the user provided toleretions
 func TranslateDevTolerations(spec *apiv1.PodSpec, tolerations []apiv1.Toleration) {
 	spec.Tolerations = append(spec.Tolerations, tolerations...)
 }
@@ -422,7 +422,7 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	}
 }
 
-// TranslateOktetoBinVolume translates the binaries volume attached to a pod
+// TranslateOktetoBinVolume translates the binaries volume attached to a container
 func TranslateOktetoBinVolume(spec *apiv1.PodSpec) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
@@ -457,7 +457,7 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 	}
 }
 
-// TranslatePodServiceAccount translates the service account the pod uses
+// TranslatePodServiceAccount translates the security account the pod uses
 func TranslatePodServiceAccount(spec *apiv1.PodSpec, sa string) {
 	if sa != "" {
 		spec.ServiceAccountName = sa
@@ -608,7 +608,7 @@ func isOktetoSyncSecretVolumePresent(spec *apiv1.PodSpec) bool {
 	return false
 }
 
-// TranslateOktetoSyncthingVolumes translates the syncthing secret volume of a pod
+// TranslateOktetoSyncthingVolumes translates the syncthing secret container of a pod
 func TranslateOktetoSyncthingVolumes(spec *apiv1.PodSpec, name string) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
@@ -648,7 +648,7 @@ func TranslateOktetoSyncthingVolumes(spec *apiv1.PodSpec, name string) {
 	spec.Volumes = append(spec.Volumes, syncthingVolumes...)
 }
 
-// TranslateOktetoDevSecret translates the dev secrets of a pod
+// TranslateOktetoDevSecret translates the devs secret of a pod
 func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []model.Secret) {
 	if len(secrets) == 0 {
 		return
@@ -755,9 +755,9 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, rule *model.TranslationRule, d
 	)
 }
 
-// getVolumeLabelKey generates a safe volume label key using a hash of manifestName and devName
+// getVolumeLabelKey generates a safe volume label key using a hash of manifestName and volumeName
 func getVolumeLabelKey(manifestName, devName string) string {
-	// Create a unique identifier from manifestName and devName
+	// Create a unique identifier from manifestName and volumeName
 	identifier := fmt.Sprintf("%s-%s", manifestName, devName)
 
 	// Use first 8 chars of SHA256 hash to keep it short but unique
@@ -767,7 +767,7 @@ func getVolumeLabelKey(manifestName, devName string) string {
 	return fmt.Sprintf("dev.okteto.com/volume-%s", shortHash)
 }
 
-// getInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources
+// GetInheritedResourcesFromContainer returns resources inherited from the original Kubernetes container to the dev resources
 func getInheritedResourcesFromContainer(container *apiv1.Container) model.ResourceRequirements {
 	rr := model.ResourceRequirements{}
 

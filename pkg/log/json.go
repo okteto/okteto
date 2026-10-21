@@ -94,7 +94,7 @@ func (*JSONWriter) Debugf(format string, args ...interface{}) {
 	}
 }
 
-// Info writes an info-level log
+// Info writes a info-level log
 func (*JSONWriter) Info(args ...interface{}) {
 	log.out.Info(args...)
 	if log.file != nil {
@@ -102,7 +102,7 @@ func (*JSONWriter) Info(args ...interface{}) {
 	}
 }
 
-// Infof writes an info-level log with a format
+// Infof writes a info-level log with a format
 func (*JSONWriter) Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	if log.file != nil {
@@ -110,7 +110,7 @@ func (*JSONWriter) Infof(format string, args ...interface{}) {
 	}
 }
 
-// Error writes an error-level log
+// Error writes a error-level log
 func (*JSONWriter) Error(args ...interface{}) {
 	log.out.Error(args...)
 	if log.file != nil {
@@ -118,7 +118,7 @@ func (*JSONWriter) Error(args ...interface{}) {
 	}
 }
 
-// Errorf writes an error-level log with a format
+// Errorf writes a error-level log with a format
 func (*JSONWriter) Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
@@ -126,7 +126,7 @@ func (*JSONWriter) Errorf(format string, args ...interface{}) {
 	}
 }
 
-// Fatalf writes an error-level log with a format
+// Fatalf writes a error-level log with a format
 func (*JSONWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
@@ -159,9 +159,9 @@ func (w *JSONWriter) Information(format string, args ...interface{}) {
 	w.FPrintln(w.out.Out, fmt.Sprintf("%s %s", informationSymbol, fmt.Sprintf(format, args...)))
 }
 
-// Question returns an error because questions can't be asked in json mode
+// Question prints a message with the question symbol first, and the text in magenta
 func (*JSONWriter) Question(_ string, _ ...interface{}) error {
-	return fmt.Errorf("can't ask questions in json mode")
+	return fmt.Errorf("can't ask questions on json mode")
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
@@ -234,7 +234,7 @@ func (w *JSONWriter) Fprintf(writer io.Writer, format string, a ...interface{}) 
 
 }
 
-// FPrintln prints a line to the given writer
+// FPrintln prints a line with format
 func (w *JSONWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	if msg != "" && writer == w.out.Out {
@@ -288,7 +288,7 @@ func convertToJSON(level, stage, message string) string {
 	return string(messageJSON)
 }
 
-// AddToBuffer logs into the buffer and writes to stdout if it's a json writer
+// AddToBuffer logs into the buffer and writes to stdout if its a json writer
 func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	msg = convertToJSON(level, log.stage, msg)
@@ -299,7 +299,7 @@ func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	}
 }
 
-// Write converts the message to json and writes it to the output
+// Write logs into the buffer but does not print anything
 func (w *JSONWriter) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	msg = convertToJSON(InfoLevel, log.stage, msg)

@@ -46,7 +46,7 @@ func NewFakePreviewClient(response *FakePreviewResponse) *FakePreviewsClient {
 	}
 }
 
-// List lists previews
+// List list namespaces
 func (c *FakePreviewsClient) List(_ context.Context, _ []string) ([]types.Preview, error) {
 	return c.response.PreviewList, c.response.ErrList
 }

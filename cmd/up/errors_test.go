@@ -110,7 +110,7 @@ func Test_isTransient(t *testing.T) {
 			},
 		},
 		{
-			name: "up.success true - non transient error",
+			name: "up.success false - max retries exceeded",
 			input: input{
 				err: assert.AnError,
 				up: &upContext{

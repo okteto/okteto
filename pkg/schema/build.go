@@ -75,7 +75,7 @@ func (build) JSONSchema() *jsonschema.Schema {
 		PatternProperties: map[string]*jsonschema.Schema{
 			".*": {
 				Type:                 &jsonschema.Type{Types: []string{"object"}},
-				Description:          withManifestRefDocLink("An image to build as part of your development environment.\n\n", "build-object-optional"),
+				Description:          withManifestRefDocLink("A list of images to build as part of your development environment.\n\n", "build-object-optional"),
 				Properties:           buildProps,
 				AdditionalProperties: jsonschema.FalseSchema,
 			},

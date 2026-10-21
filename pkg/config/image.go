@@ -22,7 +22,7 @@ import (
 
 var (
 	// ClusterCliRepository defines the okteto cli repository for all the operations.
-	// This var is set when executing the okteto context at the beginning of any command
+	// This env var is set when executing the okteto context at the beginning of any command
 	ClusterCliRepository = ""
 
 	// cachedCliImage stores the computed CLI image to avoid re-evaluation and duplicate warnings

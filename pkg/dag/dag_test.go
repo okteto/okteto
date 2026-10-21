@@ -108,7 +108,7 @@ func TestTraverse(t *testing.T) {
 			//	v1     v2
 			//	^      ^
 			//	|      |
-			//	v4     v3
+			//	v4 --> v3
 			//	^
 			//	|
 			//	v5

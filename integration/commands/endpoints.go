@@ -20,7 +20,7 @@ import (
 	"os/exec"
 )
 
-// EndpointOptions defines the options that can be added to an endpoints command
+// EndpointOptions defines the options that can be added to a deploy command
 type EndpointOptions struct {
 	Workdir    string
 	Output     string
@@ -28,7 +28,7 @@ type EndpointOptions struct {
 	OktetoHome string
 }
 
-// RunOktetoEndpoints runs an okteto endpoints command
+// RunOktetoEndpoints runs an okteto deploy command
 func RunOktetoEndpoints(oktetoPath string, endpointsOptions *EndpointOptions) ([]byte, error) {
 	cmd := exec.Command(oktetoPath, "endpoints")
 	cmd.Env = os.Environ()
@@ -48,8 +48,8 @@ func RunOktetoEndpoints(oktetoPath string, endpointsOptions *EndpointOptions) ([
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return o, fmt.Errorf("okteto endpoints failed: %s - %w", string(o), err)
+		return o, fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
 	}
-	log.Printf("okteto endpoints success")
+	log.Printf("okteto deploy success")
 	return o, nil
 }

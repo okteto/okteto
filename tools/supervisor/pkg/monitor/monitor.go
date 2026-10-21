@@ -57,7 +57,7 @@ func (m *Monitor) Add(p *Process) {
 	m.ps = append(m.ps, p)
 }
 
-// Run starts all the processes of the monitor and checks the state of the processes
+// Run starts all the process of the monitor and checks the state of the process
 func (m *Monitor) Run() error {
 	if m.ps == nil {
 		return fmt.Errorf("processes are not set")

@@ -151,7 +151,7 @@ func Test_destroyStatefulsets(t *testing.T) {
 			expectedDeployments: 1,
 		},
 		{
-			name: "destroy sfs not in stack",
+			name: "destroy dep not in stack",
 			stack: &model.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
@@ -171,7 +171,7 @@ func Test_destroyStatefulsets(t *testing.T) {
 			expectedDeployments: 0,
 		},
 		{
-			name: "destroy sfs which is not statefulset anymore",
+			name: "destroy dep which is not deployment anymore",
 			stack: &model.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
@@ -238,7 +238,7 @@ func Test_destroyJobs(t *testing.T) {
 			expectedDeployments: 1,
 		},
 		{
-			name: "destroy job not in stack",
+			name: "destroy dep not in stack",
 			stack: &model.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
@@ -252,7 +252,7 @@ func Test_destroyJobs(t *testing.T) {
 			expectedDeployments: 0,
 		},
 		{
-			name: "destroy job which is not job anymore",
+			name: "destroy dep which is not deployment anymore",
 			stack: &model.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",

@@ -35,7 +35,7 @@ type fakeDeployer struct {
 	tracked  bool
 }
 
-// Run implements the deployer interface
+// Deploy implements the devEnvEnvDeployStrategy interface
 func (f *fakeDeployer) Run(context.Context, *deploy.Options) error {
 	f.deployed = true
 	return f.err
@@ -98,7 +98,7 @@ func TestDeployIfNeeded(t *testing.T) {
 			expected: expected{isDeploymentExpected: true, expectedErr: assert.AnError},
 		},
 		{
-			name:     "must deploy: true // deploy returns ErrManifestFoundButNoDeployAndDependenciesCommands",
+			name:     "must deploy: false // isDeployedApp: false",
 			input:    input{isOkteto: true, mustDeploy: true, deployErr: oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands},
 			expected: expected{isDeploymentExpected: true, expectedErr: nil},
 		},

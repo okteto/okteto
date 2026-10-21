@@ -56,7 +56,7 @@ func NewIngressDeployer(client *ingresses.Client, stackName, namespace string) E
 }
 
 func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress) bool {
-	// err is not checked here, we just want to check if the ingress already exists for these labels
+	// err is not checked here, we just want to check if the ingress already exists for this labels
 	old, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace())
 	if err != nil {
 		oktetoLog.Infof("error getting ingress '%s': %s", ingress.GetName(), err)

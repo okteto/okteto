@@ -88,7 +88,7 @@ func GetSolveErrorMessage(err error) error {
 		}
 
 	// Usually, the failed to calculate checksum error happens when some file doesn't exist and the dockerfile
-	// has an instruction to copy it. In that case, the error contains "not found", which makes it look like
+	// has an instruction to copy it. In that case, the error contains "not found", what makes it look like
 	// a permission error. That is why we add also the extra check to make sure it is not a failed checksum error
 	case isImageIsNotAccessibleErr(err) && !isFailedChecksum(err):
 		err = oktetoErrors.UserError{
@@ -196,7 +196,7 @@ func isBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
 }
 
-// IsPullAccessDenied returns true when pulling an image fails because the user does not have permissions
+// IsPullAccessDenied returns true pulling an image fails because the user does not have permissions
 func isPullAccessDenied(err error) bool {
 	return strings.Contains(err.Error(), "pull access denied")
 }

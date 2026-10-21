@@ -32,7 +32,7 @@ type Command struct {
 	analyticsTracker previewAnalyticsTracker
 }
 
-// NewCommand creates a preview command
+// NewCommand creates a namespace command for previews
 func NewCommand(at previewAnalyticsTracker) (*Command, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {

@@ -432,14 +432,14 @@ dev:
 	marshalledD1Orig, err := yaml.Marshal(d1Orig.Spec.Template.Spec)
 	assert.NoError(t, err)
 	if !bytes.Equal(marshalledD1, marshalledD1Orig) {
-		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
+		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
 	}
 
 	// checking dev d1 state
 	devD1App, ok := tr1.DevApp.(*DeploymentApp)
 	assert.True(t, ok)
 	if !reflect.DeepEqual(devD1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}) {
-		t.Fatalf("dev d1 wrong strategy %v", devD1App.d.Spec.Strategy)
+		t.Fatalf("dev d1 wrong strategy %v", d1App.d.Spec.Strategy)
 	}
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev d1 is running %d replicas", tr1.DevApp.Replicas())
@@ -745,7 +745,7 @@ dev:
 
 	// checking dev d2 state
 
-	// There should be zero replicas if Deployment replicas are zero and replicas not specified in manifest
+	// There should be zero replica if Deployment replicas are zero and replicas not specified in manifest
 	if tr2.DevApp.Replicas() != 0 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}
@@ -1023,7 +1023,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	assert.NoError(t, err)
 
 	if !bytes.Equal(marshalledDev, marshalledDevOK) {
-		t.Fatalf("Wrong dev d generation.\nActual %+v, \nExpected %+v", string(marshalledDev), string(marshalledDevOK))
+		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDev), string(marshalledDevOK))
 	}
 }
 
@@ -1203,21 +1203,21 @@ func Test_translateSecurityContext(t *testing.T) {
 			c:    &apiv1.Container{},
 			s: &model.SecurityContext{
 				Capabilities: &model.Capabilities{
-					Add: []apiv1.Capability{"SYS_PTRACE"},
+					Add: []apiv1.Capability{"SYS_TRACE"},
 				},
 			},
-			expectedAdd: []apiv1.Capability{"SYS_PTRACE"},
+			expectedAdd: []apiv1.Capability{"SYS_TRACE"},
 		},
 		{
 			name: "add-drop",
 			c:    &apiv1.Container{},
 			s: &model.SecurityContext{
 				Capabilities: &model.Capabilities{
-					Add:  []apiv1.Capability{"SYS_PTRACE"},
+					Add:  []apiv1.Capability{"SYS_TRACE"},
 					Drop: []apiv1.Capability{"SYS_NICE"},
 				},
 			},
-			expectedAdd:  []apiv1.Capability{"SYS_PTRACE"},
+			expectedAdd:  []apiv1.Capability{"SYS_TRACE"},
 			expectedDrop: []apiv1.Capability{"SYS_NICE"},
 		},
 		{
@@ -1232,11 +1232,11 @@ func Test_translateSecurityContext(t *testing.T) {
 			},
 			s: &model.SecurityContext{
 				Capabilities: &model.Capabilities{
-					Add:  []apiv1.Capability{"SYS_PTRACE"},
+					Add:  []apiv1.Capability{"SYS_TRACE"},
 					Drop: []apiv1.Capability{"SYS_NICE"},
 				},
 			},
-			expectedAdd:  []apiv1.Capability{"SYS_FOO", "SYS_PTRACE"},
+			expectedAdd:  []apiv1.Capability{"SYS_FOO", "SYS_TRACE"},
 			expectedDrop: []apiv1.Capability{"SYS_BAR", "SYS_NICE"},
 		},
 		{
@@ -1248,10 +1248,10 @@ func Test_translateSecurityContext(t *testing.T) {
 			},
 			s: &model.SecurityContext{
 				Capabilities: &model.Capabilities{
-					Add: []apiv1.Capability{"SYS_PTRACE"},
+					Add: []apiv1.Capability{"SYS_TRACE"},
 				},
 			},
-			expectedAdd: []apiv1.Capability{"SYS_PTRACE"},
+			expectedAdd: []apiv1.Capability{"SYS_TRACE"},
 		},
 	}
 
@@ -1263,11 +1263,11 @@ func Test_translateSecurityContext(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(tt.c.SecurityContext.Capabilities.Add, tt.expectedAdd) {
-				t.Errorf("tt.c.SecurityContext.Capabilities.Add != tt.expectedAdd. Expected: %s, Got: %s", tt.expectedAdd, tt.c.SecurityContext.Capabilities.Add)
+				t.Errorf("tt.c.SecurityContext.Capabilities.Add != tt.expectedAdd. Expected: %s, Got; %s", tt.expectedAdd, tt.c.SecurityContext.Capabilities.Add)
 			}
 
 			if !reflect.DeepEqual(tt.c.SecurityContext.Capabilities.Drop, tt.expectedDrop) {
-				t.Errorf("tt.c.SecurityContext.Capabilities.Drop != tt.expectedDrop. Expected: %s, Got: %s", tt.expectedDrop, tt.c.SecurityContext.Capabilities.Drop)
+				t.Errorf("tt.c.SecurityContext.Capabilities.Drop != tt.expectedDrop. Expected: %s, Got; %s", tt.expectedDrop, tt.c.SecurityContext.Capabilities.Drop)
 			}
 
 			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
@@ -1323,7 +1323,7 @@ func Test_translateSecurityContextWithParams(t *testing.T) {
 			},
 			s: &model.SecurityContext{
 				Capabilities: &model.Capabilities{
-					Add: []apiv1.Capability{"SYS_PTRACE"},
+					Add: []apiv1.Capability{"SYS_TRACE"},
 				},
 			},
 		},
@@ -1336,11 +1336,11 @@ func Test_translateSecurityContextWithParams(t *testing.T) {
 			}
 
 			if tt.c.SecurityContext.AllowPrivilegeEscalation != tt.expectedAllowPrivilegeEscalation {
-				t.Errorf("tt.c.SecurityContext.AllowPrivilegeEscalation != tt.expectedAllowPrivilegeEscalation. Expected: %t, Got: %t", *tt.expectedAllowPrivilegeEscalation, *tt.c.SecurityContext.AllowPrivilegeEscalation)
+				t.Errorf("tt.c.SecurityContext.AllowPrivilegeEscalation != tt.expectedAllowPrivilegeEscalation. Expected: %t, Got; %t", *tt.expectedAllowPrivilegeEscalation, *tt.c.SecurityContext.AllowPrivilegeEscalation)
 			}
 
 			if tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot {
-				t.Errorf("tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot. Expected: %t, Got: %t", *tt.expectedRunAsNonRoot, *tt.c.SecurityContext.RunAsNonRoot)
+				t.Errorf("tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot. Expected: %t, Got; %t", *tt.expectedRunAsNonRoot, *tt.c.SecurityContext.RunAsNonRoot)
 			}
 
 			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {

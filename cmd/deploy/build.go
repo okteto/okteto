@@ -33,7 +33,7 @@ func buildImages(ctx context.Context, builder builderInterface, cmapHandler Conf
 	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.StackServicesToDeploy))
 	// We need to build:
 	// - All the services that have a build section defined in the *okteto* manifest, and are not overriding the build of a service defined in the stack
-	// - Services from *deployOptions.StackServicesToDeploy* that have a build section
+	// - Services from *deployOptions.servicesToDeploy* that have a build section
 
 	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
 

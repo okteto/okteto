@@ -110,7 +110,7 @@ func TestFoo_ConditionB(t *testing.T) {
 
 `internal/test/` contains reusable test utilities:
 
-- `internal/test/client/` - Fake Okteto API clients
+- `internal/test/client/` - Fake Kubernetes and Okteto clients
 - `internal/test/` - Context setup, test filesystem helpers
 
 ### Mock Pattern
@@ -168,6 +168,7 @@ Integration tests assume:
 
 **IMPORTANT for AI agents**: Before running integration tests, verify that the required environment variables are configured. If not available, ask the user to provide:
 
+- `OKTETO_USER` - Okteto username
 - `OKTETO_PATH` - Path to okteto binary (typically `bin/okteto`)
 - `OKTETO_APPS_SUBDOMAIN` - Apps subdomain
 - `OKTETO_TOKEN` - Authentication token
@@ -206,5 +207,5 @@ require.NoError(t, err)
 ## Coverage
 
 - Unit tests generate `coverage.txt`
-- View HTML coverage: `make codecov` (writes `coverage.html`)
+- View HTML coverage: `make codecov` (opens `coverage.html`)
 - Aim for meaningful coverage of business logic, not 100% line coverage

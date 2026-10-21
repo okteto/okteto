@@ -96,7 +96,7 @@ func Test_deleteContext(t *testing.T) {
 				t.Fatal(err)
 			}
 			if okteto.GetContextStore().CurrentContext != tt.afterContext {
-				t.Fatal("not deleted correctly")
+				t.Fatal("not delete correctly")
 			}
 		})
 	}

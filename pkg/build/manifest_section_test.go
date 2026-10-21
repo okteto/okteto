@@ -112,7 +112,7 @@ func TestGetListDiff(t *testing.T) {
 		expected []string
 	}{
 		{
-			name: "l2 greater than l1",
+			name: "l1 greater than l2",
 			input: struct {
 				l1 []string
 				l2 []string
@@ -123,7 +123,7 @@ func TestGetListDiff(t *testing.T) {
 			expected: []string{"c"},
 		},
 		{
-			name: "l1 greater than l2",
+			name: "l2 greater than l1",
 			input: struct {
 				l1 []string
 				l2 []string
@@ -142,7 +142,7 @@ func TestGetListDiff(t *testing.T) {
 	}
 }
 
-func TestGetSvcsToBuildFromList(t *testing.T) {
+func TestGetSvcsToBuildFromListf(t *testing.T) {
 	mb := &ManifestBuild{
 		"a": &Info{
 			DependsOn: DependsOn{

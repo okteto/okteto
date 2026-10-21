@@ -60,7 +60,7 @@ func NewCommandStateless(c *okteto.Client, ioCtrl *io.Controller) *Command {
 	}
 }
 
-// Namespace configures the default namespace of the Okteto Context and manages Okteto Namespaces
+// Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context, ioCtrl *io.Controller, at wakeAnalyticsTracker) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{

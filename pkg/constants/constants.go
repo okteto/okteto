@@ -14,7 +14,7 @@
 package constants
 
 const (
-	// OktetoNameEnvVar defines if the command is running inside okteto
+	// OktetoNameEnvVar defines if the command is running inside okteot
 	OktetoNameEnvVar = "OKTETO_NAME"
 
 	// DevLabel indicates the deployment is in dev mode
@@ -137,10 +137,10 @@ const (
 	// OktetoSyncModeFieldValue represents the sync mode field value
 	OktetoSyncModeFieldValue = "sync"
 
-	// OktetoConfigMapVariablesField represents the field name related to variables section in config map
+	// OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
 	OktetoConfigMapVariablesField = "variables"
 
-	// OktetoDependencyEnvsKey the key on the config map that will store OKTETO_ENV values
+	// OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 
 	// EnvironmentLabelKeyPrefix represents the prefix for the preview and pipeline labels
@@ -182,7 +182,7 @@ const (
 	// OktetoIsDependencyEnvVar defines if the command is executed inside a dependency
 	OktetoIsDependencyEnvVar = "OKTETO_IS_DEPENDENCY"
 
-	// OktetoManagedPodEnvVar defines if the pod is executed inside a ns managed by okteto
+	// OkteoManagedPodEnvVar defines if the pod is executed inside a ns managed by okteto
 	OktetoManagedPodEnvVar = "OKTETO_MANAGED_POD"
 
 	// OktetoHelm4EnabledEnvVar defines if Helm 4 should be used as the default helm binary

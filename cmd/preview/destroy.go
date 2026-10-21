@@ -55,15 +55,15 @@ type DestroyOptions struct {
 	timeout    time.Duration
 }
 
-// Destroy destroys a preview
+// Destroy destroy a preview
 func Destroy(ctx context.Context) *cobra.Command {
 	opts := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Destroy a Preview Environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
-		Example: `To destroy a Preview Environment without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
-okteto preview destroy <name> --wait=false`,
+		Example: `To destroy a Preview Environment without the Okteto CLI wait for its completion, use the '--wait=false' flag:
+okteto preview destroy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.name = getExpandedName(args[0])
 
@@ -148,7 +148,7 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string,
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		err := c.okClient.Stream().DestroyAllLogs(logsCtx, preview, timeout)
-		// Check if error is not canceled because in the case of a timeout waiting for the operation to complete,
+		// Check if error is not canceled because in the case of a timeout waiting the operation to complete,
 		// we cancel the context to stop streaming logs, but we should not display the warning
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			oktetoLog.Warning("final log output will appear once this action is complete")
@@ -196,7 +196,7 @@ func (c destroyPreviewCommand) waitForPreviewDestroyed(ctx context.Context, prev
 				oktetoLog.Debugf("namespace %q does not have label for status", preview)
 				continue
 			}
-			// We should also check "Active" status. If a dev environment fails to be destroyed, we set the preview status back
+			// We should also check "Active" status. If a dev environment fails to be destroyed, we go back the preview status
 			// to "Active" (okteto backend sets the status to deleting when starting the preview deletion)
 			if status == "DeleteFailed" || status == "Active" {
 				return errFailedDestroyPreview

@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// CommitString is the commit used to build the supervisor
+// CommitString is the commit used to build the server
 var CommitString string
 
 const (

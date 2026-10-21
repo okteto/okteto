@@ -63,7 +63,7 @@ func Test_validateNamespaceName(t *testing.T) {
 			nv := newNamespaceValidator()
 			err := nv.validate(tt.namespace, previewEnvObject)
 			if err != nil && !tt.expectedError {
-				t.Errorf("Expected no error but got one")
+				t.Errorf("Expected error but no error found")
 			}
 			if err != nil && !tt.expectedError {
 				if !strings.Contains(err.Error(), tt.errorMessage) {

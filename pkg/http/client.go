@@ -17,7 +17,7 @@ import (
 	"net/http"
 )
 
-// StrictSSLHTTPClient receives an *SSLTransportOption and returns an *http.Client with a StrictSSLTransport
+// StrictSSLHTTPClient receives multiple *x509.Certificate and returns an *http.Client with a StrictSSLTransport
 func StrictSSLHTTPClient(opts *SSLTransportOption) *http.Client {
 	transport := StrictSSLTransport(opts)
 

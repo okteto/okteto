@@ -41,7 +41,7 @@ func (nv namespaceValidator) validate(namespace, object string) error {
 			E: namespaceValidationError{
 				object: object,
 			},
-			Hint: fmt.Sprintf("%s name must be at most %d characters long.", object, nv.maxAllowedChars),
+			Hint: fmt.Sprintf("%s name must be shorter than %d characters.", object, nv.maxAllowedChars),
 		}
 	}
 

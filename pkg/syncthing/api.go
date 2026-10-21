@@ -50,7 +50,7 @@ func NewAPIClient() *http.Client {
 	}
 }
 
-// APICall calls the syncthing API and returns the response body or an error
+// APICall calls the syncthing API and returns the parsed json or an error
 func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool, maxRetries int) ([]byte, error) {
 	retries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)

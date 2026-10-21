@@ -96,7 +96,7 @@ func defaultKubetokenOptions() *Options {
 
 type kubetokenOption func(*Options)
 
-// NewKubetokenCmd returns a new kubetoken Cmd
+// NewKubetokenCmd returns a new cobra command
 func NewKubetokenCmd(optFunc ...kubetokenOption) *Cmd {
 	opts := defaultKubetokenOptions()
 	for _, o := range optFunc {

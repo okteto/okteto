@@ -30,7 +30,7 @@ type BuildkitConnectorMetadata struct {
 	// SessionID is a unique identifier for this connection session (for filtering in Mixpanel)
 	SessionID string
 
-	// ConnectorType identifies which connector was used (portforward, incluster)
+	// ConnectorType identifies which connector was used (ingress, portforward, incluster)
 	ConnectorType ConnectorType
 
 	// Success indicates if the connection was established successfully
@@ -51,7 +51,7 @@ type BuildkitConnectorMetadata struct {
 	// --- Error Tracking ---
 
 	// ErrReason is the reason for the connection failure
-	// Values: QueueTimeout, PortForwardCreation, ContextCancelled, BackendInternalError, IncompatibleBackend, etc.
+	// Values: QueueTimeout, PortForwardCreation, ConnectionLost, BackendInternalError, IncompatibleBackend, etc.
 	ErrReason string
 }
 

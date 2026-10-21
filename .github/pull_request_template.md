@@ -19,6 +19,6 @@ For both authors and reviewers:
 - Scrutinize for potential regressions
 - Ensure key automated tests are in place
 - Build the CLI and test using the validation steps
-- Assess Developer Experience impact (log messages, performance, etc)
+- Assess Developer Experience impact (log messages, performances, etc)
 - If too broad, consider breaking into smaller PRs
 - Adhere to our [code style](https://github.com/okteto/okteto/blob/master/docs/code-style.md) and [code review](https://github.com/okteto/okteto/blob/master/docs/code-review.md) guidelines

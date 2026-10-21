@@ -53,7 +53,7 @@ func newKubeconfigController(okClientProvider oktetoClientProvider) *KubeconfigC
 	}
 }
 
-// UpdateKubeconfigCMD returns the command that updates the kubeconfig file with the current okteto context
+// UpdateKubeconfigCMD all contexts managed by okteto
 func UpdateKubeconfigCMD(okClientProvider oktetoClientProvider) *cobra.Command {
 	kc := newKubeconfigController(okClientProvider)
 	cmd := &cobra.Command{
@@ -94,7 +94,7 @@ func (k *KubeconfigCMD) execute(okCtx *okteto.Context, kubeconfigPaths []string)
 		return err
 	}
 
-	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okCtx.Namespace, kubeconfigPaths[0])
+	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okCtx.Namespace, kubeconfigPaths)
 	return nil
 }
 

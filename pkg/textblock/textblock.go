@@ -23,7 +23,7 @@ type TextBlock struct {
 	start, end string
 }
 
-// NewTextBlock receives header and footer strings and initializes a new
+// NewTextBlock receives a footer and header strings and initializes a new
 // TextBlock instance with them.
 func NewTextBlock(start, end string) *TextBlock {
 	return &TextBlock{
@@ -41,7 +41,7 @@ func (b *TextBlock) WriteBlock(input string) string {
 	return strings.Join([]string{b.start, input, b.end}, "\n")
 }
 
-// FindBlocks receives an input string and returns an array of strings containing
+// FindBlocks receives an input string returns an array of strings containing
 // the text of each block found
 func (b *TextBlock) FindBlocks(input string) ([]string, error) {
 	blocks, startFound, startLine := []string{}, false, -1

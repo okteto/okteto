@@ -44,7 +44,7 @@ deploy:
 // TestDeployWithSmartBuildCloneCustomImage tests the following scenario:
 // - Build in another namespace to generate image in the global registry
 // - Deploy an application with a custom image
-// - Verify the image is not built and the one previously built is used
+// - Verify the image is not built and used the one previously built
 // - Check that the deployment is successful and the image is the one expected
 func TestDeployWithSmartBuildCloneCustomImage(t *testing.T) {
 	t.Parallel()

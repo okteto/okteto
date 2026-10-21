@@ -51,7 +51,7 @@ func NewAnalyticsTracker() *Tracker {
 }
 
 // Close flushes and shuts down every backend that holds resources.
-// Call this once before the process exits (e.g. at.Close() right after root.Execute() in main).
+// Call this once before the process exits (e.g. defer at.Close() in main).
 func (t *Tracker) Close() {
 	for _, b := range t.backends {
 		if c, ok := b.(closer); ok {

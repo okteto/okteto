@@ -26,7 +26,7 @@ type oktetoClientProvider interface {
 	Provide(...okteto.Option) (types.OktetoInterface, error)
 }
 
-// Kubeconfig fetches credentials for a cluster namespace
+// Kubeconfig fetch credentials for a cluster namespace
 func Kubeconfig(okClientProvider oktetoClientProvider) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",

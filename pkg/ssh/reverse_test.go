@@ -49,7 +49,7 @@ func TestReverseManager_Add(t *testing.T) {
 			}
 
 			if err := r.AddReverse(tt.add); (err != nil) != tt.wantErr {
-				t.Fatalf("ForwardManager.AddReverse() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("ReverseManager.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			f := r.reverses[8080]

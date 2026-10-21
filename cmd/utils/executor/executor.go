@@ -30,7 +30,7 @@ type ManifestExecutor interface {
 	CleanUp(err error)
 }
 
-// Executor implements ManifestExecutor with an executor displayer
+// Executor implements ManifestExecutor with a executor displayer
 type Executor struct {
 	displayer      executorDisplayer
 	outputMode     string

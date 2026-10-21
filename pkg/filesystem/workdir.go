@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 )
 
-// GetWorkdirFromManifestPath returns the working directory for a manifest path
+// GetWorkdirFromManifestPath sets the path
 func GetWorkdirFromManifestPath(manifestPath string) string {
 	dir := filepath.Dir(manifestPath)
 	if filepath.Base(dir) == ".okteto" {
@@ -36,7 +36,7 @@ func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
 	return mPath
 }
 
-// UpdateCWDtoManifestPath sets the current working directory to the manifest path
+// UpdateCWDtoManifestPath set the current working directory to the manifest path
 func UpdateCWDtoManifestPath(manifestPath string) (string, error) {
 	workdir := GetWorkdirFromManifestPath(manifestPath)
 	if err := os.Chdir(workdir); err != nil {

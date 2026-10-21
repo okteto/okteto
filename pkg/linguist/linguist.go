@@ -38,7 +38,7 @@ var (
 
 // this is all based on enry's main command https://github.com/src-d/enry
 
-// ProcessDirectory walks a directory and returns the best guess for the programming language
+// ProcessDirectory walks a directory and returns a list of guess for the programming language
 func ProcessDirectory(root string) (string, error) {
 	out := make(map[string][]string)
 	analysisTimeout := false
@@ -141,7 +141,7 @@ func refineJavaChoice(root string) string {
 		return Gradle
 	}
 
-	oktetoLog.Infof("didn't find %s : %s", p, err)
+	oktetoLog.Infof("didn't found %s : %s", p, err)
 	return Maven
 }
 

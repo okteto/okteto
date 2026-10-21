@@ -39,7 +39,7 @@ func TestValidate(t *testing.T) {
 			expectedError: ErrNoTestsDefined,
 		},
 		{
-			name: "one test without commands",
+			name: "one test",
 			tests: ManifestTests{
 				"one": &Test{},
 			},

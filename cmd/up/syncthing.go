@@ -81,7 +81,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	if time.Duration(elapsed.Minutes()) > maxDuration {
 		elapsedString := elapsed.String()
 		oktetoLog.Warning(`File synchronization took %s
-    Consider updating your '.stignore' to optimize the file synchronization
+    Consider to update your '.stignore' to optimize the file synchronization
     More information is available here: https://okteto.com/docs/reference/file-synchronization/`, elapsedString)
 	}
 

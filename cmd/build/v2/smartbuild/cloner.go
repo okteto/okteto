@@ -33,7 +33,7 @@ func NewCloner(registryController registryController, ioCtrl *io.Controller) *cl
 
 // CloneGlobalImageToDev clones the image from the global registry to the dev registry if needed
 // if the built image belongs to global registry we clone it to the dev registry
-// so that it can be used in dev containers (i.e. okteto up)
+// so that in can be used in dev containers (i.e. okteto up)
 func (c *cloner) CloneGlobalImageToDev(globalImage, svcImage string) (string, error) {
 	if c.registryController.IsGlobalRegistry(globalImage) {
 		c.ioCtrl.Logger().Debugf("Copying image '%s' from global to personal registry", globalImage)

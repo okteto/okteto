@@ -100,7 +100,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 	return result, nil
 }
 
-// LoadBoolean loads a boolean environment variable and returns its value
+// LoadBoolean loads a boolean environment variable and returns it value
 func LoadBoolean(k string) bool {
 	v := os.Getenv(k)
 	if v == "" {
@@ -145,7 +145,7 @@ func LoadTimeOrDefault(k string, defaultValue time.Duration) time.Duration {
 	return h
 }
 
-// LoadBooleanOrDefault loads a boolean environment variable and returns its value
+// LoadBooleanOrDefault loads a boolean environment variable and returns it value
 // If the variable is not defined, it returns the default value
 func LoadBooleanOrDefault(k string, d bool) bool {
 	v := os.Getenv(k)

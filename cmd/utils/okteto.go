@@ -91,7 +91,7 @@ func ShouldCreateNamespaceStateless(ctx context.Context, ns string, c *okteto.Cl
 			return false, err
 		}
 		if !create {
-			return false, fmt.Errorf("cannot use a namespace that doesn't exist. Please create %s and try again", ns)
+			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
 		}
 		return true, nil
 	}

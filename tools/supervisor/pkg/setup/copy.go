@@ -23,7 +23,7 @@ func copyFiles(src, dst string) error {
 		}
 	}
 	if !fs.IsDir() {
-		return fmt.Errorf("destination is not a directory: %s", dst)
+		return fmt.Errorf("source is not a directory: %s", dst)
 	}
 
 	files := []string{

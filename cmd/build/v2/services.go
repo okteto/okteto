@@ -42,7 +42,7 @@ func (bc *OktetoBuilder) GetServicesToBuildDuringExecution(ctx context.Context, 
 		return nil, nil
 	}
 
-	// create a spinner to be loaded before checking if images need to be built
+	// create a spinner to be loaded before checking if images needs to be built
 	sp := bc.ioCtrl.Out().Spinner("Checking images to build...")
 	sp.Start()
 	defer sp.Stop()
@@ -96,7 +96,7 @@ func (bc *OktetoBuilder) GetServicesToBuildDuringExecution(ctx context.Context, 
 }
 
 // checkServiceToBuildDuringDeploy looks for the service image reference at the registry and adds it to the buildCh
-// if it is not found. This function is called during deploy operations (up, deploy, destroy and compose) to check if
+// if is not found. This function is called during deploy operations (up, deploy, destroy and compose) to check if
 // images have to be built or not. In that case, we only check the existence of "okteto" tag in the dev registry
 func (bc *OktetoBuilder) checkServiceToBuildDuringDeploy(service string, manifest *model.Manifest, buildCh chan string) error {
 	buildInfo := manifest.Build[service].Copy()

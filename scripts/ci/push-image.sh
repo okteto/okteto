@@ -14,7 +14,7 @@
 
         # RELEASE_TAG is the release tag that we want to release
         RELEASE_TAG="${1}"
-        # PLATFORMS is the archs we want to release
+        # PLATFORMS is the arch's we want to release
         PLATFORMS="${2}"
 
         echo "DEBUG: RELEASE_TAG: ${RELEASE_TAG}"
@@ -61,7 +61,7 @@
                                 echo "  DEBUG: Beta tag already added, skipping"
                         fi
                 elif [ -n "$version" ]; then
-                        # It's a stable version because it has $version and it's not a prerelease
+                        # It's a stable version because it has $version and it's not a prerrelease
                         if [ "$stable_added" = false ]; then
                                 tags_array+=("okteto/okteto:stable" "okteto/okteto:latest")
                                 stable_added=true

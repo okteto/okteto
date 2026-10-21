@@ -59,7 +59,7 @@ func TestGetContext(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is a user context",
+			name: "graphql response is an action",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getContextQuery{
@@ -125,7 +125,7 @@ func TestGetContext(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is a user context with empty globalNS",
+			name: "graphql response is an action empty globalNS",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getContextQuery{
@@ -324,7 +324,7 @@ func TestGetClusterMetadata(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "skips error if schema does not match and returns default values",
+			name: "skips error if schema does not match and return default values",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					err: fmt.Errorf("Cannot query field \"metadata\" on type \"Query\""),

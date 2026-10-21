@@ -70,7 +70,7 @@ commands:
 			}
 
 			// We need to store the kubeconfig of the current Okteto context locally, so commands
-			// would use the expected cluster
+			// would use the expected
 			kubeconfigPath := getTempKubeConfigFile("test", options.Name)
 			if err := kubeconfig.Write(oktetoContext.GetCurrentCfg(), kubeconfigPath); err != nil {
 				return err
@@ -130,7 +130,7 @@ commands:
 					oktetoLog.Infof("error starting ssh forwarder %v", err)
 				}()
 			} else {
-				message := fmt.Sprintf("ssh forwarder not started because some mandatory configuration parameters are missing. %s=%s, %s=%s and %s=%s",
+				message := fmt.Sprintf("ssh forwarded not started because some mandatory configuration parameters are missing. %s=%s, %s=%s and %s=%s",
 					constants.OktetoSshAgentHostnameEnvVar,
 					sshAgentHostname,
 					constants.OktetoSshAgentPortEnvVar,

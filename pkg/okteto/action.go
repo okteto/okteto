@@ -42,7 +42,7 @@ type actionStruct struct {
 	Status graphql.String
 }
 
-// GetAction gets an installer job given its name
+// GetAction gets a installer job given its name
 func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) (*types.Action, error) {
 	oktetoLog.Infof("getting action '%s' on %s", name, namespace)
 	queryStruct := getActionQueryStruct{}
@@ -73,7 +73,7 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
-				pipelineName: pipelineName,
+				pipelineName: actionName,
 				timeout:      timeout,
 			}
 		case <-ticker.C:
@@ -108,7 +108,7 @@ func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineN
 		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't progress after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
-				pipelineName: pipelineName,
+				pipelineName: actionName,
 				timeout:      timeout,
 			}
 		case <-ticker.C:

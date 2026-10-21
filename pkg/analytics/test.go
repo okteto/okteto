@@ -22,7 +22,7 @@ const testEvent = "Test"
 // TestMetadata contains the metadata of a test command execution event
 type TestMetadata struct {
 	// Err is the error (if any) that occurred during test execution. Note that
-	// this is NOT an error in the test but rather an error encountered in the setup
+	// this is NOT an error in the test but rather a error encountered in the setup
 	Err error
 
 	// Duration is the total duration of the test execution. Note that this includes
@@ -63,7 +63,7 @@ type SingleTestMetadata struct {
 	Success bool `json:"success"`
 }
 
-// TrackTest sends a tracking event to mixpanel when the user runs tests through the command okteto test
+// TrackTest sends a tracking event to mixpanel when the user runs test through the command okteto test
 func (a *Tracker) TrackTest(metadata TestMetadata) {
 	props := map[string]any{
 		"duration":    metadata.Duration.Seconds(),

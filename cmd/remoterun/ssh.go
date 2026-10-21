@@ -49,8 +49,8 @@ func newTLSConfigWithSystemCA() *tls.Config {
 	return &tls.Config{}
 }
 
-// startSshForwarder This function starts the ssh-forwarder process expected to be run on remote-run commands.
-// This process just listens on a UNIX socket, and forwards the messages to the SSH Agent exposed in the hostname
+// startSshForwarder This functions starts the ssh-forwarded process expected to be run on remote-run commands.
+// This process just listens a UNIX socket, and forward the messages to the SSH Agent exposed in the hostname
 // and port received as parameters
 func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, sshAgentPort, sshSocket, userToken string) error {
 	// Remove existing socket if it exists
@@ -82,7 +82,7 @@ func (s *sshForwarder) startSshForwarder(ctx context.Context, sshAgentHostname, 
 		localConn, err := localListener.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
-				oktetoLog.Debugf("Listener closed, stop accepting new connections")
+				oktetoLog.Debugf("Listener closed, stopping accept new connections")
 				break
 			}
 			oktetoLog.Errorf("Failed to accept local connection: %v", err)
@@ -166,7 +166,7 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 
 	err = localConn.SetDeadline(time.Time{})
 	if err != nil {
-		oktetoLog.Infof("failed to reset timeout to the local socket connection: %v", err)
+		oktetoLog.Infof("failed to set timeout to the local socket connection: %v", err)
 	}
 
 	go func() {

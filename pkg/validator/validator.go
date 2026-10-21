@@ -39,7 +39,7 @@ func CheckReservedVariablesNameOption(variables []string) error {
 	return nil
 }
 
-// CheckReservedVarName returns an error when any of the variable names from the dependency manifest are reserved
+// CheckReservedVarName returns an error when any of the variable names from dependency manifest
 func CheckReservedVarName(variables []env.Var) error {
 	for _, v := range variables {
 		if isReservedVariableName(v.Name) {

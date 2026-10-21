@@ -33,7 +33,7 @@ import (
 
 // GetOktetoPath returns the okteto path used to run tests
 // set OKTETO_PATH to the bin you want to test otherwise it'll
-// use /usr/local/bin/okteto
+// use the one you have in your path
 func GetOktetoPath() (string, error) {
 	oktetoPath, ok := os.LookupEnv(model.OktetoPathEnvVar)
 	if !ok {
@@ -141,16 +141,16 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 	}
 }
 
-// SkipIfWindows skips a test if it is on a windows environment
+// SkipIfWindows skips a tests if is on a windows environment
 func SkipIfWindows(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping testing in windows CI environment")
 	}
 }
 
-// SkipIfNotOktetoCluster skips a test if it is not on an okteto cluster
+// SkipIfNotOktetoCluster skips a tests if is not on an okteto cluster
 func SkipIfNotOktetoCluster(t *testing.T) {
 	if !okteto.GetContext().IsOkteto {
-		t.Skip("Skipping because it is not on an okteto cluster")
+		t.Skip("Skipping because is not on an okteto cluster")
 	}
 }

@@ -624,7 +624,7 @@ func TestShouldRunInRemoteDestroy(t *testing.T) {
 			expected:      false,
 		},
 		{
-			Name: "Cluster default=remote, destroy.remote=false",
+			Name: "Cluster default=remote, deploy.remote=false",
 			opts: &Options{
 				Manifest: &model.Manifest{
 					Destroy: &model.DestroyInfo{
@@ -1081,8 +1081,8 @@ func TestDestroyHelmReleasesIfPresentWithErrorExecutingCommandWithForceDestroy(t
 	err := dc.destroyHelmReleasesIfPresent(ctx, opts, labelSelector)
 
 	require.NoError(t, err)
-	// As there is an error in the command execution and the force flag is set,
-	// the second command should still be executed
+	// As there is an error in the command execution and there is no force flag,
+	// the second command should not be executed
 	expectedExecutedCommands := []model.DeployCommand{
 		{
 			Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),

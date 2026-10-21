@@ -161,7 +161,7 @@ func TestGetBuildServiceFromImage(t *testing.T) {
 	}{
 		{
 			name:  "Exact match found",
-			image: "okteto.registry/ns/imageA:tag",
+			image: "okteto.dev/imageA:tag",
 			manifest: &model.Manifest{
 				Build: build.ManifestBuild{
 					"svcA": {Image: "okteto.registry/ns/imageA:tag"},
@@ -172,10 +172,10 @@ func TestGetBuildServiceFromImage(t *testing.T) {
 		},
 		{
 			name:  "Normalized image match found (okteto.dev in dev)",
-			image: "okteto.dev/imageA:latest",
+			image: "okteto.registry/ns/imageA:latest",
 			manifest: &model.Manifest{
 				Build: build.ManifestBuild{
-					"svcA": {Image: "okteto.registry/ns/imageA:latest"},
+					"svcA": {Image: "okteto.dev/imageA:latest"},
 					"svcB": {Image: "registry.com/repo/imageB:latest"},
 				},
 			},

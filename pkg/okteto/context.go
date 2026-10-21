@@ -103,7 +103,7 @@ type ContextViewer struct {
 	Current   bool   `json:"current" yaml:"current"`
 }
 
-// InitContextWithDeprecatedToken initializes the okteto context if an old-fashioned token exists and it matches the current kubernetes context
+// InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
 // this function is to make "okteto context" transparent to current Okteto Enterprise users, but it can be removed when people upgrade
 func InitContextWithDeprecatedToken() {
 	if !filesystem.FileExists(config.GetTokenPathDeprecated()) {
@@ -189,7 +189,7 @@ func UrlToKubernetesContext(uri string) string {
 // K8sContextToOktetoUrl translates k8s contexts like okteto_example_com to https://okteto.example.com
 func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
 	ctxStore := GetContextStore()
-	// check if it belongs to the okteto contexts
+	// check if belongs to the okteto contexts
 	for name, oCtx := range ctxStore.Contexts {
 		if oCtx.IsOkteto && UrlToKubernetesContext(name) == k8sContext {
 			return name
@@ -334,7 +334,7 @@ type ContextConfigWriterInterface interface {
 	Write() error
 }
 
-// ContextConfigWriter writes the information about the context config into the okteto context store file
+// ContextConfigWriter writes the information about the context config into stdout
 type ContextConfigWriter struct{}
 
 func NewContextConfigWriter() *ContextConfigWriter {
@@ -370,7 +370,7 @@ func (*ContextConfigWriter) Write() error {
 
 // AddOktetoCredentialsToCfg populates the provided kubernetes config using the provided credentials obtained from the Okteto API
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName string, oktetoContext Context) error {
-	// If the context is being initialized within the execution of `okteto deploy` command it should not
+	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
 	if os.Getenv(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
 		return nil
@@ -385,7 +385,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 
 	// If the certificate included in the credentials is empty, it means that the server is kubernetes.subdomain.
 	// In that case, if the okteto context is insecure, we need to specify the certificate we have in our context.
-	// If it is not insecure it means that it is a public CA or a private one already installed in the machine
+	// If it is not insecure it means that is a public CA or a private one already installed in the machine
 	cert := cred.Certificate
 	if cred.Certificate == "" && oktetoContext.IsStoredAsInsecure {
 		certPEM, err := base64.StdEncoding.DecodeString(oktetoContext.Certificate)
@@ -460,7 +460,7 @@ func GetDynamicClient() (dynamic.Interface, *rest.Config, error) {
 	return getDynamicClient(GetContext().Cfg)
 }
 
-// GetDiscoveryClient returns a kubernetes discovery client for the current okteto context
+// GetDiscoveryClient return a kubernetes discovery client for the current okteto context
 func GetDiscoveryClient() (discovery.DiscoveryInterface, *rest.Config, error) {
 	if GetContext().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
@@ -591,7 +591,7 @@ func GetContextCertificate() (*x509.Certificate, error) {
 	block, _ := pem.Decode(certPEM)
 
 	if block == nil {
-		oktetoLog.Debugf("couldn't decode context certificate from pem")
+		oktetoLog.Debugf("couldn't decode context certificate from pem: %s", err)
 		return nil, fmt.Errorf("couldn't decode pem")
 	}
 
@@ -613,11 +613,11 @@ func GetContextCertificate() (*x509.Certificate, error) {
 				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
 				switch {
 				case hoursSinceInstall <= hoursInADay: // less than 1 day
-					oktetoLog.Information("Your Okteto installation is using self-signed certificates. Please switch to your own certificates before production use.")
+					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
 				case hoursSinceInstall <= hoursInAWeek: // less than 1 week
-					oktetoLog.Warning("Your Okteto installation has been using self-signed certificates for more than a day. It's important to use your own certificates before production use.")
+					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
 				default: // more than 1 week
-					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using self-signed certificates for more than a week. It's important to use your own certificates before production use.")
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
 				}
 			}
 		})
@@ -637,7 +637,7 @@ func GetContextCertificateStateless(certB64 string) (*x509.Certificate, error) {
 	block, _ := pem.Decode(certPEM)
 
 	if block == nil {
-		oktetoLog.Debugf("couldn't decode context certificate from pem")
+		oktetoLog.Debugf("couldn't decode context certificate from pem: %s", err)
 		return nil, fmt.Errorf("couldn't decode pem")
 	}
 
@@ -661,11 +661,11 @@ func GetContextCertificateStateless(certB64 string) (*x509.Certificate, error) {
 				hoursInAWeek := 168
 				switch {
 				case hoursSinceInstall <= float64(hoursInADay): // less than 1 day
-					oktetoLog.Information("Your Okteto installation is using self-signed certificates. Please switch to your own certificates before production use.")
+					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
 				case hoursSinceInstall <= float64(hoursInAWeek): // less than 1 week
-					oktetoLog.Warning("Your Okteto installation has been using self-signed certificates for more than a day. It's important to use your own certificates before production use.")
+					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
 				default: // more than 1 week
-					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using self-signed certificates for more than a week. It's important to use your own certificates before production use.")
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
 				}
 			}
 		})

@@ -118,7 +118,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 
 	cwd, err := workdirCtrl.Get()
 	if err != nil {
-		return fmt.Errorf("failed to resolve working directory for remote destroy: %w", err)
+		return fmt.Errorf("failed to resolve working directory for remote deploy: %w", err)
 	}
 
 	ctxPath := cwd
@@ -158,16 +158,16 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
-	// executed in the destroy command.
+	// executed in the deploy command.
 	if err := rd.runner.Run(ctx, &runParams); err != nil {
 		var cmdErr buildkit.CommandErr
 		if errors.As(err, &cmdErr) {
 			oktetoLog.SetStage(cmdErr.Stage)
 			return oktetoErrors.UserError{
-				E: fmt.Errorf("error during destroy of the development environment: %w", cmdErr.Err),
+				E: fmt.Errorf("error during development environment deployment: %w", cmdErr.Err),
 			}
 		}
-		oktetoLog.SetStage("remote destroy")
+		oktetoLog.SetStage("remote deploy")
 		var userErr oktetoErrors.UserError
 		if errors.As(err, &userErr) {
 			return userErr

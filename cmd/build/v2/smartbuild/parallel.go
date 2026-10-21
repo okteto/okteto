@@ -54,9 +54,9 @@ type node struct {
 
 func (s *ParallelCheckStrategy) CheckServicesCache(ctx context.Context, manifestName string, buildManifest build.ManifestBuild, svcsToBuild []*buildTypes.BuildInfo) (cachedSvcs []*buildTypes.BuildInfo, notCachedSvcs []*buildTypes.BuildInfo, err error) {
 	// svcsToBuild is already ordered by dependencies (from DAG.Ordered())
-	// cachedSvcs and notCachedSvcs need to follow the same order as svcsToBuild
+	// cachedSvcs and notCachedSvcs needs to follow the same order as svcsToBuild
 
-	// Build dependantMap: for each service, track which services it depends on
+	// Build dependantMap: for each service, track which services depend on it
 	dependantMap := make(map[string][]string)
 	for svcName, buildInfo := range buildManifest {
 		for _, dep := range buildInfo.DependsOn {

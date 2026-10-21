@@ -214,4 +214,4 @@ LABEL org.opencontainers.image.created="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 # Disable spinner for cleaner logs in container environments
 ENV OKTETO_DISABLE_SPINNER=true
 # Set a colorful and informative prompt
-ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\[\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "
+ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "

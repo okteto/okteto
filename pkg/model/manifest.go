@@ -44,26 +44,26 @@ type Archetype string
 var (
 	// StackType represents a stack manifest type
 	StackType Archetype = "compose"
-	// OktetoType represents an okteto manifest type
+	// OktetoType represents a okteto manifest type
 	OktetoType Archetype = "okteto"
-	// OktetoManifestType represents an okteto manifest type
+	// OktetoManifestType represents a okteto manifest type
 	OktetoManifestType Archetype = "manifest"
-	// PipelineType represents an okteto pipeline manifest type
+	// PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
 )
 
 const (
-	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
+	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#build"
 	buildExample     = `build:
   my-service:
     context: .`
 	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_SHA: image tag sha256"
-	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"
+	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#deploy"
 	deployExample     = `deploy:
   commands:
   - name: Deploy
     command: echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'`
-	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"
+	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
 	devExample     = `dev:
   sample:
     image: okteto/dev:latest
@@ -75,7 +75,7 @@ const (
       - name=$USER
     forward:
       - 8080:80`
-	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional"
+	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies"
 	dependenciesExample     = `dependencies:
   - https://github.com/okteto/sample`
 
@@ -264,7 +264,7 @@ func pathExistsAndDir(path string) bool {
 	return info.IsDir()
 }
 
-// GetManifestV2 gets a manifest from a path or searches for the files to generate it
+// GetManifestV2 gets a manifest from a path or search for the files to generate it
 func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -335,7 +335,7 @@ func GetManifestV2(manifestPath string, fs afero.Fs) (*Manifest, error) {
 func getManifestFromFile(cwd, manifestPath string, fs afero.Fs) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
-		oktetoLog.Info("devManifest err, fallback to stack unmarshal")
+		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
 		stackManifest := &Manifest{
 			Type: StackType,
 			Deploy: &DeployInfo{
@@ -512,7 +512,7 @@ func isEmptyManifestFile(bytes []byte) bool {
 	return false
 }
 
-// Read reads an okteto manifest
+// Read reads an okteto manifests
 func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
 
@@ -558,7 +558,7 @@ func (s *Secret) validate() error {
 	return nil
 }
 
-// SanitizeSvcNames sanitizes service names in 'dev', 'build' and 'global forward' sections
+// SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections
 func (m *Manifest) SanitizeSvcNames() error {
 	sanitizedServicesNames := make(map[string]string)
 	for devKey, dev := range m.Dev {
@@ -619,7 +619,7 @@ func (m *Manifest) validateDivert() error {
 			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the nginx driver")
 		}
 		if len(m.Deploy.Divert.Hosts) > 0 {
-			return fmt.Errorf("the field 'deploy.divert.hosts' is not supported with the nginx driver")
+			return fmt.Errorf("the field 'deploy.divert.host' is not supported with the nginx driver")
 		}
 	case constants.OktetoDivertIstioDriver:
 		if m.Deploy.Divert.DeprecatedService != "" {
@@ -935,7 +935,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			}
 		}
 	}
-	// Marshal with yaml v2 because we have the marshal with yaml v2
+	// Unmarshal with yamlv2 because we have the marshal with yaml v2
 	b, err := yaml.Marshal(m)
 	if err != nil {
 		return err
@@ -984,7 +984,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	out := addEmptyLineBetweenSections(buffer.Bytes())
 	if err := os.WriteFile(filePath, out, 0600); err != nil {
-		oktetoLog.Infof("failed to write okteto manifest: %s", err)
+		oktetoLog.Infof("failed to write stignore file: %s", err)
 		return err
 	}
 	return nil
@@ -1196,7 +1196,7 @@ func (m *Manifest) HasDeploySection() bool {
 //     We use GetWorkdirFromManifestPath because it takes care of the case of .okteto directory
 //   - If there is any compose info, we should use the directory where the first compose is located.
 //     We use GetWorkdirFromManifestPath because it takes care of the case of .okteto directory
-//   - If none of the other conditions is met, we just use the current directory
+//   - If none of the other condition is met, we just use the current directory
 func getBuildContextForComposeWithVolumeMounts(m *Manifest) (string, error) {
 	context, err := filepath.Abs(".")
 	if err != nil {
@@ -1289,7 +1289,7 @@ func (m *Manifest) ValidateForCLIOnly() error {
 	return nil
 }
 
-// IsEmpty returns true if the divert section is empty
+// IsEmpty returns true if the manifest is empty
 func (d *DivertDeploy) IsEmpty() bool {
 	return d == nil ||
 		d.Driver == "" &&

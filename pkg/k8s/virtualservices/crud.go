@@ -21,24 +21,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Create creates an istio virtual service
+// Create creates an istio virtual services
 func Create(ctx context.Context, vs *istioV1beta1.VirtualService, c istioclientset.Interface) error {
 	_, err := c.NetworkingV1beta1().VirtualServices(vs.Namespace).Create(ctx, vs, metav1.CreateOptions{})
 	return err
 }
 
-// Update updates an istio virtual service
+// Update updates an istio virtual services
 func Update(ctx context.Context, vs *istioV1beta1.VirtualService, c istioclientset.Interface) error {
 	_, err := c.NetworkingV1beta1().VirtualServices(vs.Namespace).Update(ctx, vs, metav1.UpdateOptions{})
 	return err
 }
 
-// Get gets an istio virtual service by name
+// Get get an istio virtual services by name
 func Get(ctx context.Context, name, namespace string, c istioclientset.Interface) (*istioV1beta1.VirtualService, error) {
 	return c.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-// List lists istio virtual services
+// List list istio virtual services
 func List(ctx context.Context, namespace string, c istioclientset.Interface) ([]*istioV1beta1.VirtualService, error) {
 	vsList, err := c.NetworkingV1beta1().VirtualServices(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {

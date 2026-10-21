@@ -36,14 +36,14 @@ deploy:
 deploy:
   image: aquasec/trivy:canary
   commands:
-    - name: trivy help
+    - name: trivy helm
       command: trivy help
     - name: echo testing variable
       command: echo "inner var ${INNER_VAR}"`
 )
 
-// TestDeployInDeployRemote tests the scenario where an okteto deploy is run inside an okteto deploy in remote
-// base image for the child deploy should be the one specified at the child manifest and not the parent
+// TestDeployInDeployRemote test the scenario where an okteto deploy is run inside an okteto deploy in remote
+// image base for the child deploy should be the specified at the child manifest and not the parent
 func TestDeployInDeployRemote(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)

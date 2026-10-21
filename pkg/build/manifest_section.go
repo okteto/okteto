@@ -37,7 +37,7 @@ func (b *ManifestBuild) Validate() error {
 		return fmt.Errorf("manifest build validation failed: image '%s' is referenced on its dependencies", cycle[0])
 	} else if len(cycle) > 1 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
-		return fmt.Errorf("manifest validation failed: cyclic dependency found between %s", svcsDependents)
+		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
 	}
 
 	imageNames := map[string]bool{}

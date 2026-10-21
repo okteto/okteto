@@ -162,7 +162,7 @@ func Test_connectionHandler(t *testing.T) {
 			name:    "bad-command-with-shell",
 			command: `sh -c "badcommand"`,
 			stdout:  "",
-			// we don't check it because the output is different between OSes
+			// we don't check if it because the output is different between OSes
 			//stderr: `sh: badcommand: command not found`
 			expectErr: true,
 		},

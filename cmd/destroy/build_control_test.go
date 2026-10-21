@@ -117,7 +117,7 @@ func TestBuildNecessaryImages(t *testing.T) {
 			expected: assert.AnError,
 		},
 		{
-			name: "image is okteto variable/is already built",
+			name: "image is okteto variable/is already build",
 			input: input{
 				manifest: &model.Manifest{
 					Build: build.ManifestBuild{

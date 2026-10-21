@@ -34,7 +34,7 @@ func Test_UrlToKubernetesContext(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "is-url-with-protocol", in: "https://okteto.example.com", want: "okteto_example_com"},
+		{name: "is-url-with-protocol", in: "https://okteto_example.com", want: "okteto_example_com"},
 		{name: "is-k8scontext", in: "minikube", want: ""},
 	}
 

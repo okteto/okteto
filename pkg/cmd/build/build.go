@@ -295,7 +295,7 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 	if manifest != nil && manifest.Name != "" {
 		name = manifest.Name
 	}
-	// manifestName may not be sanitized when option name is used at deploy
+	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(name)
 	if okCtx.IsOktetoCluster() && b.Image == "" {
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", constants.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)

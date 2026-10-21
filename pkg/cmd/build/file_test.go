@@ -75,7 +75,7 @@ func Test_translateOktetoRegistryImage(t *testing.T) {
 			}
 
 			if got := translateOktetoRegistryImage(tt.input, okCtx); got != tt.want {
-				t.Errorf("build.translateOktetoRegistryImage = %v,  want %v", got, tt.want)
+				t.Errorf("registry.translateOktetoRegistryImage = %v,  want %v", got, tt.want)
 			}
 		})
 	}

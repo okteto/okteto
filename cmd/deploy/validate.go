@@ -18,7 +18,7 @@ import (
 	"github.com/okteto/okteto/pkg/validator"
 )
 
-// validateAndSet returns error when variables don't have expected format NAME=VALUE or NAME is not allowed
+// validateAndSet returns error when variables dont have expected format NAME=VALUE or NAME is not allowed
 // when variable is valid, it sets its value as env variable
 func validateAndSet(variables []string, setEnv func(key, value string) error) error {
 	if err := validator.CheckReservedVariablesNameOption(variables); err != nil {

@@ -59,7 +59,7 @@ func add(path, name, iface string, port int) error {
 	return save(cfg, path)
 }
 
-// RemoveEntry removes the entry from the user's sshconfig if found
+// RemoveEntry removes the entry to the user's sshconfig if found
 func RemoveEntry(name string) error {
 	return remove(getSSHConfigPath(), buildHostname(name))
 }

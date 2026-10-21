@@ -44,7 +44,7 @@ type repositoryURL struct {
 	url.URL
 }
 
-// String is a custom implementation for the url where User is removed and the scheme is forced to https
+// String is a custom implementation for the url where User is removed and the schema is forced to https
 func (r repositoryURL) String() string {
 	repo := r.URL
 	repo.User = nil
@@ -54,7 +54,7 @@ func (r repositoryURL) String() string {
 		repo.Scheme = "https"
 	case "https":
 	default:
-		oktetoLog.Infof("retrieved scheme for %s - %s", repo.String(), r.Scheme)
+		oktetoLog.Infof("retrieved schema for %s - %s", repo.String(), r.Scheme)
 	}
 	repo.Path = strings.TrimSuffix(repo.Path, ".git")
 	return repo.String()
@@ -86,7 +86,7 @@ func NewRepository(path string) Repository {
 	}
 }
 
-// IsClean checks if the repository has changes over the commit
+// IsClean checks if the repository have changes over the commit
 func (r Repository) IsClean() (bool, error) {
 	return r.control.isClean(context.TODO())
 }
@@ -100,7 +100,7 @@ func (r Repository) GetCurrentBranch() (string, error) {
 	return r.control.getCurrentBranch()
 }
 
-// IsEqual checks if another repository is the same as the one calling the function
+// IsEqual checks if another repository is the same from the one calling the function
 func (r Repository) IsEqual(otherRepo Repository) bool {
 	if r.url == nil || otherRepo.url == nil {
 		return false
@@ -122,7 +122,7 @@ func cleanPath(path string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(path, "/"), ".git")
 }
 
-// GetAnonymizedRepo returns a clean repo url string without sensitive information
+// GetAnonymizedRepo returns a clean repo url string without sensible information
 func (r Repository) GetAnonymizedRepo() string {
 	if r.url.String() == "file:" {
 		return ""

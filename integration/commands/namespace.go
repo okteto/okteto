@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-// NamespaceOptions defines the options that can be added to a namespace command
+// NamespaceOptions defines the options that can be added to a build command
 type NamespaceOptions struct {
 	Namespace  string
 	OktetoHome string

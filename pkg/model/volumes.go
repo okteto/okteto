@@ -27,7 +27,7 @@ import (
 const (
 	defaultVolumeSize = "5Gi"
 
-	// devPersistentVolumeSizeEnvVar is the name of the environment variable to change the defaultVolumeSize value
+	// devPersistentVolumeEnabledEnvVar is the name of the environment variable to change the defaultVolumeSize value
 	devPersistentVolumeSizeEnvVar = "OKTETO_DEV_PERSISTENT_VOLUME_SIZE"
 )
 

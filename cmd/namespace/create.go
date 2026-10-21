@@ -65,7 +65,7 @@ func Create(ctx context.Context, ioCtrl *io.Controller) *cobra.Command {
 		Args: utils.ExactArgsAccepted(1, ""),
 	}
 
-	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the Okteto Namespace, it can be a username or email")
+	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the Okteto Namespace, it can by username or email")
 	cmd.Flags().BoolVarP(&options.SetCurrentNs, "use", "", true, "use the newly created Okteto Namespace as the current namespace")
 	return cmd
 }

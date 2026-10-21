@@ -643,7 +643,7 @@ func TestGetPipelineResourcesStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "no error - devenv owns all resources - return all the resources",
+			name: "no error - empty devenv - return all the resources",
 			input: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getPipelineResources{

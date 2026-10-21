@@ -25,7 +25,7 @@
 // Usage:
 // ```go
 //
-//	  // testNode is a custom implementation for resolving dependencies
+//	  // testNode is an custom implementation for resolving dependencies
 //		 type testNode struct {
 //			  id        string
 //			  dependsOn []string

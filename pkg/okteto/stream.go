@@ -58,12 +58,12 @@ func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, action
 	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerPipelineLogLine, timeout)
 }
 
-// handlerPipelineLogLine prints a line with the Message unmarshalled from line
+// handlerPipelineLog prints a line with the Message unmarshalled from line
 // returns true when stream has to stop
 func handlerPipelineLogLine(line string) bool {
 	pipelineLogList := []pipelineLogFormat{}
 	if err := json.Unmarshal([]byte(line), &pipelineLogList); err != nil {
-		// if not slice, try to unmarshal to log format
+		// if not slice, try to unmarshall to log format
 		pLog := pipelineLogFormat{}
 		if err := json.Unmarshal([]byte(line), &pLog); err != nil {
 			oktetoLog.Infof("error unmarshalling pipelineLog: %v", err)
@@ -85,7 +85,7 @@ func handlerPipelineLogLine(line string) bool {
 	return false
 }
 
-// DestroyAllLogs retrieves the destroy-all logs of the namespace provided and prints them, returns error
+// DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string, timeout time.Duration) error {
 	// GetContext().Name represents baseURL for SSE subscription endpoints
 	streamURL := fmt.Sprintf(destroyAllUrlTempleate, GetContext().Name, namespace)
@@ -96,7 +96,7 @@ func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string, tim
 	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog, timeout)
 }
 
-// handlerDestroyAllLog prints a line with the Line unmarshalled from line
+// handlerDestroyAllLog prints a line with the Message unmarshalled from line
 // returns true when line message is `Done` to break the scanner
 func handlerDestroyAllLog(line string) bool {
 	destroyAllLogList := []destroyAllLogFormat{}
@@ -106,7 +106,7 @@ func handlerDestroyAllLog(line string) bool {
 			oktetoLog.Infof("error unmarshalling destroyAllLogFormat: %v", err)
 			return false
 		}
-		// stop when the event log line is "Done"
+		// skip when the event log line is "Done"
 		if dLog.Line == "Done" {
 			return true
 		}
@@ -114,7 +114,7 @@ func handlerDestroyAllLog(line string) bool {
 		return false
 	}
 	for _, dLog := range destroyAllLogList {
-		// stop when the event log line is "Done"
+		// skip when the event log line is "Done"
 		if dLog.Line == "Done" {
 			return true
 		}

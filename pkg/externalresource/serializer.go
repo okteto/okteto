@@ -65,7 +65,7 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 		}
 		url, err := envsubst.String(endpoint.Url)
 		if err != nil {
-			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Url, err)
+			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
 		}
 		er.Endpoints = append(er.Endpoints, &ExternalEndpoint{
 			Name: name,

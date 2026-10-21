@@ -23,7 +23,7 @@ var (
 	// ErrGithubMissingBusinessEmail is raised when the user does not have a business email
 	ErrGithubMissingBusinessEmail = errors.New("github-missing-business-email")
 
-	// ErrUnauthorizedGlobalCreation is raised when the user tries to create a global preview without permission
+	// ErrUnauthorizedGlobalCreation is raised when the user try to create a global preview without permission
 	ErrUnauthorizedGlobalCreation = errors.New("you are not authorized to create a global preview env")
 )
 
@@ -65,7 +65,7 @@ func IsErrGithubMissingBusinessEmail(err error) bool {
 	return err.Error() == ErrGithubMissingBusinessEmail.Error()
 }
 
-// TranslateAuthError returns a legible error text depending on whether it is a custom error
+// TranslateAuthError returns a legible error text depending if is custom error
 func TranslateAuthError(err error) error {
 	switch {
 	case IsErrGithubMissingBusinessEmail(err):

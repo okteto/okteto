@@ -20,7 +20,7 @@ endif
 
 .DEFAULT_GOAL := build
 
-.PHONY: build-all
+.PHONY: release
 build-all: $(PLATFORMS)
 $(PLATFORMS):
 	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -tags "$(tags)" -o "bin/$(label)"

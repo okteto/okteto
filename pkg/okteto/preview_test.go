@@ -124,7 +124,7 @@ func TestDeployPreview(t *testing.T) {
 			},
 		},
 		{
-			name: "with labels - feature not enabled",
+			name: "with variables - feature not enabled",
 			input: input{
 				client: &fakeGraphQLClient{
 					err: errors.New("Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\""),
@@ -675,7 +675,7 @@ func TestGetResourcesStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "no error - devenv owns all resources - return all the resources",
+			name: "no error - empty devenv - return all the resources",
 			input: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getPreviewResources{
@@ -981,7 +981,7 @@ func TestGetPreview(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is a preview",
+			name: "graphql response is an preview",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getPreviewQuery{
