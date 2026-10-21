@@ -486,7 +486,12 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	if deployOptions.Manifest.Deploy == nil {
-		return nil
+		// a manifest with only dependencies is deployed when all of them are
+		oktetoLog.SetStage("done")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
+		oktetoLog.SetStage("")
+		data.Status = pipeline.DeployedStatus
+		return dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, nil)
 	}
 
 	if err := buildImages(ctx, dc.Builder, dc.CfgMapHandler, deployOptions); err != nil {
