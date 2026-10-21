@@ -16,11 +16,16 @@ ARG BUSYBOX_VERSION=1.36.1
 ARG BUSYBOX_SHA=sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
 ARG DEBIAN_BOOKWORM_SLIM_SHA=sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
 ARG GIT_VERSION=2.42.0
+# Minimum ca-certificates: 20261020-r0 drops the emSign roots behind the eMudhra compromise (CVE-2026-111943)
+ARG CA_CERTIFICATES_MIN_VERSION=20261020-r0
 
 # Stage 1: Prepare base components
 # SSL certificates for secure connections
 FROM alpine:${ALPINE_VERSION}@${ALPINE_SHA} AS certs
-RUN apk add --no-cache --upgrade ca-certificates ca-certificates-bundle
+ARG CA_CERTIFICATES_MIN_VERSION
+RUN apk add --no-cache --upgrade \
+    "ca-certificates>=${CA_CERTIFICATES_MIN_VERSION}" \
+    "ca-certificates-bundle>=${CA_CERTIFICATES_MIN_VERSION}"
 
 # Stage 2: Prepare Okteto components to be copied to the final image
 # File synchronization tool
