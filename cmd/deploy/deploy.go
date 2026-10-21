@@ -536,12 +536,20 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	result, mainErr := dc.deployMain(ctx, deployOptions, cwd, c)
+	// when the main deploy fails, its error belongs to the stage it was running
+	mainStage := oktetoLog.GetStage()
 	if mainErr != nil {
 		// no new dependency starts, but the running ones are allowed to finish
 		scheduler.Stop()
 	}
 	depsErr := scheduler.Wait()
 	recordDependencyFailures(scheduler)
+	if mainErr != nil && !errors.Is(mainErr, oktetoErrors.ErrIntSig) && mainStage != "" && scheduler.OverlapsMainDeploy() {
+		// dependencies may have logged under their stages after the main deploy failed. Its error is written again
+		// under its stage so that it is the last one before the end, which is where the installer reports the failure
+		oktetoLog.SetStage(mainStage)
+		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", mainErr.Error())
+	}
 	// when only dependencies failed, their error is reported under their stage without the end marker, as when
 	// they fail before the main deploy
 	if result.deployRan && (mainErr != nil || depsErr == nil) {

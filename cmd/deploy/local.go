@@ -18,7 +18,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/externalresource"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -61,16 +60,9 @@ func (ld *localDeployer) Deploy(ctx context.Context, deployOptions *Options) err
 		},
 	}
 
-	err := ld.runner.RunDeploy(ctx, params)
-	// If this returns in error, we need to set the stage to "done" as the error was already logged
-	// and prevent duplication of messages when the error is handled. This is a special case when
-	// the execution is happening locally. This has to be revisited when we improve the logs
-	if err != nil {
-		oktetoLog.SetStage("done")
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-	}
-
-	return err
+	// on an error, the deploy command (Command.Run) sets the "done" stage and the end of the output once the
+	// dependencies have finished, so that the lines they log meanwhile are not left after the end
+	return ld.runner.RunDeploy(ctx, params)
 }
 
 func (ld *localDeployer) CleanUp(ctx context.Context, err error) {

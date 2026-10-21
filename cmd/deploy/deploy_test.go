@@ -1095,6 +1095,51 @@ func TestRunRecordsFailedDependenciesWhenTheMainDeployFails(t *testing.T) {
 	require.Contains(t, deployOutput(t, c), `"level":"error","stage":"Deploying dependency reports","message":"dependency 'reports' failed: reports exploded"`)
 }
 
+// lateLoggingPipelineDeployer deploys a dependency once the main deploy has failed, logging a line under its stage
+type lateLoggingPipelineDeployer struct {
+	mainFailed chan struct{}
+}
+
+func (d *lateLoggingPipelineDeployer) ExecuteDeployPipeline(_ context.Context, opts *pipelineCMD.DeployOptions) error {
+	<-d.mainFailed
+	oktetoLog.PrintlnWithStage(pipelineCMD.DependencyStage(opts.Name), "late line")
+	return nil
+}
+
+// lastLineIndex returns the index of the last line that contains text, or -1
+func lastLineIndex(lines []string, text string) int {
+	for i := len(lines) - 1; i >= 0; i-- {
+		if strings.Contains(lines[i], text) {
+			return i
+		}
+	}
+	return -1
+}
+
+func TestRunMainDeployFailureEndsTheOutputUnderItsStage(t *testing.T) {
+	mainFailed := make(chan struct{})
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		oktetoLog.SetStage("echo")
+		close(mainFailed)
+	}).Return(errors.New("main exploded"))
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, &capturingPipelineDeployer{}, deployer)
+	c.PipelineCMD = &lateLoggingPipelineDeployer{mainFailed: mainFailed}
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorContains(t, err, "main exploded")
+	lines := strings.Split(strings.TrimSpace(deployOutput(t, c)), "\n")
+	end := lastLineIndex(lines, `"stage":"done","message":"EOF"`)
+	// the line the dependency logged after the main deploy failed is not left after the end
+	require.Less(t, lastLineIndex(lines, `"message":"late line"`), end)
+	// and the last stage before the end is the one of the main deploy, with its error
+	require.Contains(t, lines[end-1], `"level":"error","stage":"echo","message":"main exploded"`)
+}
+
 func TestRunMainDeployFailureWaitsForDependencies(t *testing.T) {
 	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": errors.New("reports failed")}}
 	deployer := &fakeDeployer{}
