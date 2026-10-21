@@ -20,7 +20,7 @@ import (
 	"os/exec"
 )
 
-// CloneGitRepo clones a repo from an URL
+// CloneGitRepo clones a repo from a URL
 func CloneGitRepo(url string) error {
 	log.Printf("cloning git repo %s", url)
 	cmd := exec.Command("git", "clone", url)
@@ -32,7 +32,7 @@ func CloneGitRepo(url string) error {
 	return nil
 }
 
-// CloneGitRepoWithBranch clones a repo by its URL in an specific branch
+// CloneGitRepoWithBranch clones a repo by its URL in a specific branch
 func CloneGitRepoWithBranch(url, branch string) error {
 	log.Printf("cloning git repo %s on branch %s", url, branch)
 	cmd := exec.Command("git", "clone", "--branch", branch, url)

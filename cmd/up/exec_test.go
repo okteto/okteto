@@ -96,7 +96,7 @@ func TestGetEnvs(t *testing.T) {
 			},
 		},
 		{
-			name:                    "only envs from secrets",
+			name:                    "only envs from platform variables",
 			fakeConfigMapEnvsGetter: fakeGetter{},
 			fakeSecretEnvsGetter:    fakeGetter{envs: []string{"FROMSECRET=VALUE1"}},
 			expectedEnvs:            []string{"FROMSECRET=VALUE1"},
@@ -304,7 +304,7 @@ func TestGetEnvsError(t *testing.T) {
 			}),
 		},
 		{
-			name:                    "error retrieving envs from secrets",
+			name:                    "error retrieving envs from platform variables",
 			fakeConfigMapEnvsGetter: fakeGetter{},
 			fakeSecretEnvsGetter:    fakeGetter{err: assert.AnError},
 			client: fake.NewSimpleClientset(&appsv1.StatefulSet{
@@ -400,7 +400,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	}
 
 	// according to exec.Cmd.Env docs, if cmd.Env contains duplicate environment keys, only the last
-	// value in the slice for each duplicate key is used so most priority values needs to be add
+	// value in the slice for each duplicate key is used so highest-priority values need to be added
 	// at the end of the list
 	expectedEnvsSortedByPriority := []string{
 		"ENVFROMIMAGE=FROMIMAGEVALUE",

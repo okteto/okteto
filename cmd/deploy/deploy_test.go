@@ -786,7 +786,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(fakeDeployer, nil)
-	divert.On("Deploy", mock.Anything).Return(fmt.Errorf("error getting deploying driver"))
+	divert.On("Deploy", mock.Anything).Return(fmt.Errorf("error deploying divert driver"))
 
 	expectedOpts := &Options{
 		Name:         "movies",
@@ -800,7 +800,7 @@ func TestDeployWithErrorDeployingDivertDriver(t *testing.T) {
 	err := c.Run(ctx, opts)
 
 	assert.Error(t, err)
-	assert.Equal(t, "error getting deploying driver", err.Error())
+	assert.Equal(t, "error deploying divert driver", err.Error())
 
 	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
@@ -1409,6 +1409,42 @@ func TestDeployOnlyDependencies(t *testing.T) {
 			require.ErrorIs(t, err, tc.expecterErr)
 		})
 	}
+}
+
+func TestDeployOnlyDependenciesSetsDeployedStatus(t *testing.T) {
+	oktetoLog.Init(logrus.WarnLevel)
+	fakeK8sClientProvider := test.NewFakeK8sProvider()
+	c := &Command{
+		AnalyticsTracker:  &fakeTracker{},
+		PipelineCMD:       &capturingPipelineDeployer{},
+		GetManifest:       getFakeManifestWithDependency,
+		K8sClientProvider: fakeK8sClientProvider,
+		Fs:                afero.NewMemMapFs(),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sClientProvider, nil),
+		IoCtrl:            io.NewIOController(),
+	}
+	okteto.CurrentStore = &okteto.ContextStore{
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+				Cfg:       &api.Config{},
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.NoError(t, err)
+	fakeClient, _, err := fakeK8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	require.NoError(t, err)
+	cfg, err := configmaps.Get(context.Background(), pipeline.TranslatePipelineName("movies"), "test", fakeClient)
+	require.NoError(t, err)
+	require.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
+	output, err := base64.StdEncoding.DecodeString(cfg.Data["output"])
+	require.NoError(t, err)
+	require.Contains(t, string(output), `"stage":"done","message":"EOF"`)
 }
 
 type fakeTracker struct{}

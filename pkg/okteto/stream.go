@@ -78,7 +78,7 @@ func pipelineLogLineHandler(printLine func(line string)) func(line string) bool 
 	return func(line string) bool {
 		pipelineLogList := []pipelineLogFormat{}
 		if err := json.Unmarshal([]byte(line), &pipelineLogList); err != nil {
-			// if not slice, try to unmarshall to log format
+			// if not slice, try to unmarshal to log format
 			pLog := pipelineLogFormat{}
 			if err := json.Unmarshal([]byte(line), &pLog); err != nil {
 				oktetoLog.Infof("error unmarshalling pipelineLog: %v", err)
@@ -101,7 +101,7 @@ func pipelineLogLineHandler(printLine func(line string)) func(line string) bool 
 	}
 }
 
-// DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
+// DestroyAllLogs retrieves the destroy-all logs of the namespace provided and prints them, returns error
 func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string, timeout time.Duration) error {
 	// GetContext().Name represents baseURL for SSE subscription endpoints
 	streamURL := fmt.Sprintf(destroyAllUrlTempleate, GetContext().Name, namespace)
@@ -112,7 +112,7 @@ func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string, tim
 	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog, printStreamWarning, timeout)
 }
 
-// handlerDestroyAllLog prints a line with the Message unmarshalled from line
+// handlerDestroyAllLog prints a line with the Line unmarshalled from line
 // returns true when line message is `Done` to break the scanner
 func handlerDestroyAllLog(line string) bool {
 	destroyAllLogList := []destroyAllLogFormat{}
@@ -122,7 +122,7 @@ func handlerDestroyAllLog(line string) bool {
 			oktetoLog.Infof("error unmarshalling destroyAllLogFormat: %v", err)
 			return false
 		}
-		// skip when the event log line is "Done"
+		// stop when the event log line is "Done"
 		if dLog.Line == "Done" {
 			return true
 		}
@@ -130,7 +130,7 @@ func handlerDestroyAllLog(line string) bool {
 		return false
 	}
 	for _, dLog := range destroyAllLogList {
-		// skip when the event log line is "Done"
+		// stop when the event log line is "Done"
 		if dLog.Line == "Done" {
 			return true
 		}

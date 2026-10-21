@@ -81,7 +81,7 @@ func (d *TTYDecorator) Warning(msg string) string {
 // PlainDecorator is the decorator for the plain output
 type PlainDecorator struct{}
 
-// NewPlainDecorator returns a new plain decorator
+// newPlainDecorator returns a new plain decorator
 func newPlainDecorator() *PlainDecorator {
 	return &PlainDecorator{}
 }

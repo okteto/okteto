@@ -38,7 +38,7 @@ Flags can carry integer, string, or enum values when the behavior has more than 
 const MyFeatureEnvVar string = "OKTETO_MY_FEATURE"
 
 func createStrategy() strategyInterface {
-    switch env.LoadOrDefault(MyFeatureEnvVar, "v1") {
+    switch os.Getenv(MyFeatureEnvVar) {
     case "v2":
         return v2Behavior{}
     case "v3":
@@ -49,7 +49,7 @@ func createStrategy() strategyInterface {
 }
 ```
 
-Use `env.LoadBooleanOrDefault`, `env.LoadIntOrDefault`, or raw `os.Getenv` / `env.LoadOrDefault` as appropriate.
+Use `env.LoadBooleanOrDefault`, `env.LoadIntOrDefault`, or raw `os.Getenv` as appropriate.
 
 ### Defaults are context-dependent
 

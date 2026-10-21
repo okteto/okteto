@@ -51,7 +51,7 @@ func (ip *Publisher) TrackTest(ctx context.Context, meta *analytics.SingleTestMe
 	ip.trackEvent(ctx, meta.Namespace, testInsightType, string(eventJSON))
 }
 
-// convertTestMetadataToEvent converts an SingleTestMetadata to a testEventJSON
+// convertTestMetadataToEvent converts a SingleTestMetadata to a testEventJSON
 func (*Publisher) convertTestMetadataToEvent(metadata *analytics.SingleTestMetadata) testEventJSON {
 	return testEventJSON{
 		DevenvName:    metadata.DevenvName,

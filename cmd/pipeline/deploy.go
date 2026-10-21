@@ -108,7 +108,7 @@ func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
 		Use:   "deploy",
 		Short: "Runs a job in the cluster that clones a repository and executes okteto deploy on it",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/okteto-cli/#deploy-1"),
-		Example: `To run the deploy without the Okteto CLI wait for its completion, use the '--wait=false' flag:
+		Example: `To run the deploy without the Okteto CLI waiting for its completion, use the '--wait=false' flag:
 okteto pipeline deploy --wait=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dependenciesIsSet := cmd.Flags().Changed("dependencies")
@@ -393,7 +393,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out 
 }
 
 func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration, out deployOutput) error {
-	// wait to Action be progressing
+	// wait for the Action to be progressing
 	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
 		return err
 	}
@@ -660,7 +660,7 @@ func parseVariablesListFromCfgVariablesString(vEncodedString string) ([]string, 
 	return vListString, nil
 }
 
-// cfgDataToDeployOptions translates configmap labels and data into DeployOptions
+// cfgToDeployOptions translates configmap labels and data into DeployOptions
 func cfgToDeployOptions(cfg *v1.ConfigMap) *DeployOptions {
 	if cfg == nil || cfg.Data == nil {
 		return nil

@@ -85,7 +85,7 @@ func TrackNamespace(success, withArg bool) {
 	track(namespaceEvent, success, props)
 }
 
-// TrackCreateNamespace sends a tracking event to mixpanel when the creates a namespace
+// TrackCreateNamespace sends a tracking event to mixpanel when the user creates a namespace
 func TrackCreateNamespace(success bool) {
 	track(namespaceCreateEvent, success, nil)
 }
@@ -95,7 +95,7 @@ func TrackDeleteNamespace(success bool) {
 	track(namespaceDeleteEvent, success, nil)
 }
 
-// TrackPreviewDeploy sends a tracking event to mixpanel when the creates a preview environment
+// TrackPreviewDeploy sends a tracking event to mixpanel when the user creates a preview environment
 func TrackPreviewDeploy(success bool, scope string) {
 	props := map[string]any{
 		"scope": scope,
@@ -103,7 +103,7 @@ func TrackPreviewDeploy(success bool, scope string) {
 	track(previewDeployEvent, success, props)
 }
 
-// TrackPreviewDestroy sends a tracking event to mixpanel when the deletes a preview environment
+// TrackPreviewDestroy sends a tracking event to mixpanel when the user deletes a preview environment
 func TrackPreviewDestroy(success bool) {
 	track(previewDestroyEvent, success, nil)
 }
@@ -201,7 +201,7 @@ func TrackSignup(success bool, userID string) {
 	track(signupEvent, success, nil)
 }
 
-// TrackContext sends a tracking event to mixpanel when the user use context in
+// TrackContext sends a tracking event to mixpanel when the user uses okteto context
 func TrackContext(success bool) {
 	if config.RunningInInstaller() {
 		return
@@ -223,12 +223,12 @@ func TrackStackWarnings(warnings []string) {
 	}
 }
 
-// TrackBuildPullError sends a tracking event to mixpanel when the build was success but the image can't be pulled from registry
+// TrackBuildPullError sends a tracking event to mixpanel when the build was successful but the image can't be pulled from registry
 func TrackBuildPullError(success bool) {
 	track(buildPullErrorEvent, success, nil)
 }
 
-// TrackContextDelete sends a tracking event to mixpanel indicating one or more context have been deleted
+// TrackContextDelete sends a tracking event to mixpanel indicating one or more contexts have been deleted
 func TrackContextDelete(ctxs int, success bool) {
 	props := map[string]any{
 		"totalContextsDeleted": ctxs,
@@ -241,7 +241,7 @@ func track(event string, success bool, props map[string]any) {
 		return
 	}
 
-	// skip events from nested okteto deploys and manifest dependencies
+	// record the origin so events from nested okteto deploys and manifest dependencies ("okteto-deploy") can be told apart
 	origin := config.GetDeployOrigin()
 
 	mpOS := ""

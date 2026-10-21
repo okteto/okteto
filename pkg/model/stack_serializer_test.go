@@ -245,7 +245,7 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			},
 		},
 		{
-			name: "deprecated-volumes-not-set-if-they-already-set",
+			name: "deprecated-resources-not-set-if-already-set",
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
@@ -274,7 +274,7 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			},
 		},
 		{
-			name:           "set-deprecated-volumes-if-they-already-set",
+			name:           "set-deprecated-resources-if-not-already-set",
 			deployRaw:      nil,
 			resources:      nil,
 			cpu_count:      Quantity{resource.MustParse("3")},
@@ -396,7 +396,7 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "healthcheck readiness=false unset",
+			name:          "healthcheck readiness=false liveness unset",
 			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      x-okteto-readiness: false\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl --fail 0.0.0.0:8080\n    image: okteto/vote:1"),
 			expected:      nil,
 			expectedError: true,
@@ -543,7 +543,7 @@ func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 			},
 		},
 		{
-			name:  "image direct",
+			name:  "context direct",
 			bytes: []byte(`nginx`),
 			expected: &composeBuildInfo{
 				Context: "nginx",
@@ -778,7 +778,7 @@ func Test_DurationUnmarshalling(t *testing.T) {
 			expected: 12,
 		},
 		{
-			name:     "string-no-units",
+			name:     "string-with-units",
 			duration: []byte("12s"),
 			expected: 12,
 		},
@@ -816,7 +816,7 @@ func Test_GroupNotSupportedFields(t *testing.T) {
 			expected: []string{"volumes", "networks", "service[app].cpus"},
 		},
 		{
-			name:     "string-no-units",
+			name:     "group-two-services",
 			input:    []string{"volumes", "networks", "service[app].cpus", "service[db].cpus"},
 			expected: []string{"volumes", "networks", "service[app, db].cpus"},
 		},
@@ -1031,7 +1031,7 @@ func Test_validateCommandArgs(t *testing.T) {
 						t.Fatalf("Expected %v but got %v", tt.Command, svc.Command)
 					}
 					if !reflect.DeepEqual(svc.Entrypoint, tt.Entrypoint) {
-						t.Fatalf("Expected %v but got %v", tt.Command, svc.Command)
+						t.Fatalf("Expected %v but got %v", tt.Entrypoint, svc.Entrypoint)
 					}
 				}
 			}
@@ -1224,7 +1224,7 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			ports:    []Port{{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP}},
 		},
 		{
-			name:     "not-public-service",
+			name:     "not-public-service-with-range",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    image: okteto/vote:1"),
 			isPublic: false,
 			ports: []Port{
@@ -1502,7 +1502,7 @@ func Test_UnmarshalRestart(t *testing.T) {
 			throwErr: false,
 		},
 		{
-			name:     "restart-always",
+			name:     "restart-on-failure",
 			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: on-failure"),
 			result:   apiv1.RestartPolicyOnFailure,
 			throwErr: false,
@@ -1514,7 +1514,7 @@ func Test_UnmarshalRestart(t *testing.T) {
 			throwErr: false,
 		},
 		{
-			name:     "restart-always",
+			name:     "restart-never",
 			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: never"),
 			result:   apiv1.RestartPolicyNever,
 			throwErr: false,
@@ -1542,7 +1542,7 @@ func Test_UnmarshalRestart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := ReadStack(tt.manifest, false)
 			if tt.throwErr && err == nil {
-				t.Fatal("Not threw error")
+				t.Fatal("Error not thrown")
 			} else if err != nil && !tt.throwErr {
 				t.Fatalf("Threw error when no error needed: %s", err.Error())
 			}
@@ -1597,7 +1597,7 @@ func Test_UnmarshalSvcName(t *testing.T) {
 				t.Fatal("Service name not sanitized")
 			}
 			if tt.isSvcNameChange && len(s.Warnings.SanitizedServices) == 0 {
-				t.Fatal("Warning have not been recovered")
+				t.Fatal("Warnings have not been recovered")
 			}
 		})
 	}
@@ -1924,12 +1924,12 @@ func Test_validateEnvFiles(t *testing.T) {
 		EnvFiles env.Files
 	}{
 		{
-			name:     "sneak case single file",
+			name:     "snake case single file",
 			manifest: []byte("services:\n  app:\n    env_file: .testEnv\n    public: true\n    image: okteto/vote:1"),
 			EnvFiles: env.Files{".testEnv"},
 		},
 		{
-			name:     "sneak case list",
+			name:     "snake case list",
 			manifest: []byte("services:\n  app:\n    env_file:\n    - .testEnv\n    - .env2\n    image: okteto/vote:1"),
 			EnvFiles: env.Files{".testEnv", ".env2"},
 		},
@@ -2039,7 +2039,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 			svcPublic: true,
 		},
 		{
-			name:     "two-port-that-should-not-be-skipped",
+			name:     "two-ports-that-should-not-be-skipped",
 			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 80:8081"),
 			expectedStack: &Stack{
 				Services: map[string]*Service{
@@ -2178,7 +2178,7 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:     "extension not anchor result in no error",
+			name:     "extension not anchor results in no error",
 			manifest: []byte("x-endpoints:\n  path: /\n  port: 8080\n  service: app\nservices:\n  app:\n    command: bash"),
 			expected: &Service{
 				Command: Command{
@@ -2253,7 +2253,7 @@ func Test_UnmarshalStackUser(t *testing.T) {
 				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
 			}
 			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("didn't unmarshal correctly healthcheck test. Actual %v, Expected %v", result, tt.expected)
+				t.Errorf("didn't unmarshal correctly stack user. Actual %v, Expected %v", result, tt.expected)
 			}
 		})
 	}
@@ -2612,6 +2612,22 @@ services:
 	}
 }
 
+func TestComposeRestartPolicyNotSupportedFields(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    deploy:
+      restart_policy:
+        delay: 5s
+        window: 120s`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{
+		"services[app].deploy.restart_policy.delay",
+		"services[app].deploy.restart_policy.window",
+	}, s.Warnings.NotSupportedFields)
+}
+
 func TestSecretsExtensionValidation(t *testing.T) {
 	invalidYAML := `
 secrets:
@@ -2662,7 +2678,7 @@ services:
 `,
 		},
 		{
-			name: "top-level secret with both file and environment returns error",
+			name: "top-level secret with unknown field returns error",
 			yaml: `
 secrets:
   npm_token:

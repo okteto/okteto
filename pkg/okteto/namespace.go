@@ -170,10 +170,10 @@ func (c *namespaceClient) Sleep(ctx context.Context, namespace string) error {
 	return nil
 }
 
-// DestroyAll deletes a namespace
+// DestroyAll destroys all the resources in a namespace
 func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error {
 	var mutation namespaceDestroyAllMutation
-	// includingVolumes so everything is cleaned up by default with this cmd
+	// includeVolumes so everything is cleaned up by default with this cmd
 	variables := map[string]interface{}{
 		"id":             graphql.String(namespace),
 		"includeVolumes": graphql.Boolean(destroyVolumes),

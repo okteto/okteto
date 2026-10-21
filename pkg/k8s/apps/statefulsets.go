@@ -113,7 +113,7 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	if manifest == "" {
 		return nil
 	}
-	oktetoLog.Info("depreccated devmodeoff behavior")
+	oktetoLog.Info("deprecated devmodeoff behavior")
 	sfsOrig := &appsv1.StatefulSet{}
 	if err := json.Unmarshal([]byte(manifest), sfsOrig); err != nil {
 		return fmt.Errorf("malformed manifest: %w", err)
@@ -170,7 +170,7 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 				}
 			}
 		case err := <-ctx.Done():
-			oktetoLog.Debugf("call to up.applyToApp cancelled: %v", err)
+			oktetoLog.Debugf("call to up.applyToApps cancelled: %v", err)
 			return
 		}
 	}

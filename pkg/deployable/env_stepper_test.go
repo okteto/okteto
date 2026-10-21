@@ -35,14 +35,14 @@ func TestEnvStepper(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("ENV%02v", i)
 		value := fmt.Sprintf("%v", i)
-		keyVal := fmt.Sprintf("%0s=%s", key, value)
+		keyVal := fmt.Sprintf("%s=%s", key, value)
 
 		f.WriteString(keyVal + "\n")
 
 		envvar, err := stepper.Step()
 		require.NoError(t, err)
 
-		// sort first. Order is not guaranteeed
+		// sort first. Order is not guaranteed
 		sort.Strings(envvar)
 		require.Equal(t, keyVal, envvar[i])
 	}

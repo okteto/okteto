@@ -75,7 +75,7 @@ func TestRemoteTest(t *testing.T) {
 		config   config
 	}{
 		{
-			name: "OS can't access to the working directory",
+			name: "OS can't access the working directory",
 			config: config{
 				wd: filesystem.FakeWorkingDirectoryCtrlErrors{
 					Getter: assert.AnError,
@@ -86,7 +86,7 @@ func TestRemoteTest(t *testing.T) {
 			expected: assert.AnError,
 		},
 		{
-			name: "OS can't create temporal directory",
+			name: "OS can't create temporary directory",
 			config: config{
 				params:        &Params{},
 				tempFsCreator: assert.AnError,
@@ -271,7 +271,7 @@ func TestCreateDockerfile(t *testing.T) {
 				params: &Params{
 					BaseImage:           "test-image",
 					Manifest:            fakeManifest,
-					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
+					BuildEnvVars:        map[string]string{"OKTETO_BUILD_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.OktetoIsPreviewEnvVar: "true",
@@ -315,7 +315,7 @@ WORKDIR /okteto/src
 
 ENV OKTETO_BUILD_SVC2_IMAGE="TWO_VALUE"
 
-ENV OKTETO_BUIL_SVC_IMAGE="ONE_VALUE"
+ENV OKTETO_BUILD_SVC_IMAGE="ONE_VALUE"
 
 
 ENV OKTETO_IS_PREVIEW_ENVIRONMENT=true
@@ -349,7 +349,7 @@ FROM scratch
 COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 
 `,
-				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
+				buildEnvVars:      map[string]string{"OKTETO_BUILD_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 			},
 		},
@@ -359,7 +359,7 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 				params: &Params{
 					BaseImage:           "test-image",
 					Manifest:            fakeManifest,
-					BuildEnvVars:        map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
+					BuildEnvVars:        map[string]string{"OKTETO_BUILD_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 					DependenciesEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.CIEnvVar:                    "true",
@@ -415,7 +415,7 @@ WORKDIR /okteto/src
 
 ENV OKTETO_BUILD_SVC2_IMAGE="TWO_VALUE"
 
-ENV OKTETO_BUIL_SVC_IMAGE="ONE_VALUE"
+ENV OKTETO_BUILD_SVC_IMAGE="ONE_VALUE"
 
 
 ENV CI=true
@@ -464,7 +464,7 @@ FROM scratch
 COPY --from=runner /okteto/artifacts/ /
 
 `,
-				buildEnvVars:      map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
+				buildEnvVars:      map[string]string{"OKTETO_BUILD_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUILD_SVC2_IMAGE": "TWO_VALUE"},
 				dependencyEnvVars: map[string]string{"OKTETO_DEPENDENCY_DATABASE_VARIABLE_PASSWORD": "dependency_pass", "OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME": "dependency_user"},
 			},
 		},
@@ -606,7 +606,7 @@ func TestDockerfileWithCache(t *testing.T) {
 	d, err := afero.ReadFile(fs, dockerfileName)
 	require.NoError(t, err)
 
-	// Verify that each cache has a unique ID based on manifest name, test name, and cache index
+	// Verify that each cache has a unique ID based on manifest name, test name, and cache path
 	for _, cache := range caches {
 		pattern := fmt.Sprintf("--mount=type=cache,id=\\w+,target=%s", cache)
 		ok, err := regexp.MatchString(pattern, string(d))
@@ -699,9 +699,9 @@ func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 		require.NotEmpty(t, id1, "Cache ID for dockerfile1, cache %s should not be empty", cache)
 		require.NotEmpty(t, id2, "Cache ID for dockerfile2, cache %s should not be empty", cache)
 		require.NotEmpty(t, id3, "Cache ID for dockerfile3, cache %s should not be empty", cache)
-		require.Greater(t, len(id1), 8, "Cache ID should be at least 8 characters long")
-		require.Greater(t, len(id2), 8, "Cache ID should be at least 8 characters long")
-		require.Greater(t, len(id3), 8, "Cache ID should be at least 8 characters long")
+		require.Greater(t, len(id1), 8, "Cache ID should be more than 8 characters long")
+		require.Greater(t, len(id2), 8, "Cache ID should be more than 8 characters long")
+		require.Greater(t, len(id3), 8, "Cache ID should be more than 8 characters long")
 	}
 }
 
@@ -809,7 +809,7 @@ func TestGetContextPath(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("Manifest path is a absolute path and directory", func(t *testing.T) {
+	t.Run("Manifest path is an absolute path and directory", func(t *testing.T) {
 		manifestPath := filepath.Clean("/path/to/current/directory")
 		expected := manifestPath
 		rd.fs = afero.NewMemMapFs()
@@ -902,7 +902,7 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 		useDeployIgnore bool
 	}{
 		{
-			name: "dockerignore present copy .oktetodeployignore to .dockerignore without manifest",
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore without rules",
 			config: config{
 				wd: dockerignoreWd,
 			},
@@ -925,7 +925,7 @@ func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 			useDeployIgnore: true,
 		},
 		{
-			name: "dockerignore present copy .oktetodeployignore to .dockerignore with rules",
+			name: "oktetodeployignore disabled only rules are copied to .dockerignore",
 			config: config{
 				wd: dockerignoreWd,
 			},

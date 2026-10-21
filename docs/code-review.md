@@ -51,11 +51,10 @@ We believe our code review process is foundational in ensuring that:
 ### As an Author:
 
 - **Clarity & Context**: Ensure PRs have a clear title, description, and details on any alternative approaches considered.
-- description.
 - **Drafts**: Use Draft status to signal ongoing work.
 - **Self-review**: Inspect your PR before opening it for team review.
 - **Testing**: Provide detailed testing steps.
-- **Critical** Paths: Notify if crucial parts of the system are affected, urging extra testing.
+- **Critical Paths**: Notify if crucial parts of the system are affected, urging extra testing.
 - **Scope**: Keep PRs focused and narrow.
 - **Tests**: Always include unit and integration tests for changes.
 
@@ -83,7 +82,7 @@ Here is a summary of the things every reviewer should be aware of while doing a 
 - [ ] Does it need to add analytics?
   *We need to add analytics to know the adoption of new features and how the users use the product*
 - [ ] Does the code have any code smells?
-  we should develop clean code so that if a new developer starts working on the project, he/she can understand the code as soon as possible*
+  *we should develop clean code so that if a new developer starts working on the project, he/she can understand the code as soon as possible*
 
 ### PR Description
 
@@ -103,7 +102,7 @@ We prefer giving unambiguous, actionable feedback in our comments. "Nice-to-have
 
 The logic introduced/modified in the pull request should be just enough to close the issue with the minimum acceptable quality. If during the implementation of the PR the developer encounters new issues not directly related to the current one, a new issue should be created. In this way, developers are totally focused on solving the issue they are working on, we avoid possible confusion to the reviewers (with less context than the developer) and we can locate more clearly possible bugs introduced.
 
-This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the minimum amount of change/scope possible that is needed to address, in accordance to internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
+This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the minimum amount of change/scope possible that is needed to address, in accordance with internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
 
 If the developer decides to open a new issue from the current one or is not completely sure whether it is necessary to create a new issue or not, this must be commented in the original issue/PR.
 
@@ -163,7 +162,7 @@ func Test_FunctionNameWithError(t *testing.T) {
 func Test_FunctionNameThenNoError(t *testing.T) {
     t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
     testDir := t.TempDir()
-    err := functionName(MalformedResource{})
+    err := functionName(testDir)
     assert.NoError(t, err)
 }
 ```
@@ -280,7 +279,6 @@ oktetoLog.Hint(format string, args ...interface{})
 oktetoLog.Println(args ...interface{})
 oktetoLog.FPrintln(w io.Writer, args ...interface{})
 oktetoLog.Print(args ...interface{})
-oktetoLog.Fprintf(w io.Writer, format string, a ...interface{})
 oktetoLog.Printf(format string, a ...interface{})
 ```
 
@@ -297,13 +295,13 @@ Through these, you should be able to follow the execution of the okteto command 
 
 ### New dependencies
 
-It is ok to add new dependencies, as long as we know the reason why they are added and the implications of adding a dependency ( when they update it, check if it has any vulnerability). So if a PR imports a new dependency, we need to agree that is necessary to add it.
+It is ok to add new dependencies, as long as we know the reason why they are added and the implications of adding a dependency ( when they update it, check if it has any vulnerability). So if a PR imports a new dependency, we need to agree that it is necessary to add it.
 
 ### Analytics
 
-With each release we fix bugs, and release new features and the only way to see how all these changes are adopted is by analyzing the data collected by the users, so we should collect as much useful data as possible to see how many people use new features if the percentage of bugs per user and command is decreasing.
+With each release we fix bugs, and release new features and the only way to see how all these changes are adopted is by analyzing the data collected by the users, so we should collect as much useful data as possible to see how many people use new features and whether the percentage of bugs per user and command is decreasing.
 
-Usually, new properties will be added to existing events, but if there is new functionality and we need to track a new event, for example, this is how new command analytics could look like:
+Usually, new properties will be added to existing events, but if there is new functionality and we need to track a new event, for example, this is what new command analytics could look like:
 
 ```json
 {
@@ -396,7 +394,7 @@ if err != nil {
 
 #### Variable Names
 
-Variable names in Go should be short rather than long. This is especially true for local variables with limited scope. Prefer `c` to `lineCount`. Prefer `i`to`sliceIndex`.
+Variable names in Go should be short rather than long. This is especially true for local variables with limited scope. Prefer `c` to `lineCount`. Prefer `i` to `sliceIndex`.
 
 The basic rule: the further from its declaration that a name is used, the more descriptive the name must be. For a method receiver, one or two letters are sufficient. Common variables such as loop indices and readers can be a single letter (`i`, `r`). More unusual things and global variables need more descriptive names.
 

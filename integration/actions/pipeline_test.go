@@ -73,7 +73,7 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	t.Setenv("GITHUB_HEAD_REF", "cli-e2e")
 	t.Setenv("GITHUB_EVENT_NAME", "pull_request")
 
-	log.Printf("deploying pipeline %s", namespace)
+	log.Printf("deploying pipeline in namespace %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 	args := []string{"go-getting-started", namespace}
 
@@ -91,7 +91,7 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	}
 	pipeline, err := oktetoClient.Pipeline().GetByName(context.Background(), "go-getting-started", namespace)
 	if err != nil || pipeline == nil {
-		return fmt.Errorf("Could not get deployment %s", namespace)
+		return fmt.Errorf("Could not get pipeline in namespace %s", namespace)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func executeDestroyPipelineAction(namespace string) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)
 
-	log.Printf("Deleting pipeline %s", namespace)
+	log.Printf("Deleting pipeline in namespace %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 	args := []string{"go-getting-started", namespace}
 	cmd := exec.Command(command, args...)

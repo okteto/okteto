@@ -145,7 +145,7 @@ func Test_parseOktetoURL(t *testing.T) {
 			want: "https://okteto.example.com/graphql",
 		},
 		{
-			name: "no-schema",
+			name: "no-scheme",
 			u:    "okteto.example.com",
 			want: "https://okteto.example.com/graphql",
 		},

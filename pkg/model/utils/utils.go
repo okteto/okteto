@@ -121,7 +121,7 @@ func GetDependentCyclic(g Graph) []string {
 	return []string{}
 }
 
-// dfs executes deep first search algorithm from svcName, and returns the first cycle it finds. path holds the
+// dfs executes depth-first search algorithm from svcName, and returns the first cycle it finds. path holds the
 // nodes from the start to svcName: when one of its dependencies is already on it, the nodes from that one on
 // are a cycle.
 // More information can be found at https://en.wikipedia.org/wiki/Depth-first_search

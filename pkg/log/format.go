@@ -83,7 +83,7 @@ func (l *logger) getWriter(format string) OktetoWriter {
 		l.outputMode = SilentFormat
 		return newSilentWriter(l.out, l.file)
 	default:
-		Debugf("could not load %s. Callback to 'tty'", format)
+		Debugf("could not load %s. Falling back to 'tty'", format)
 		l.outputMode = TTYFormat
 		return newTTYWriter(l.out, l.file)
 	}

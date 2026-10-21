@@ -66,7 +66,7 @@ func init() {
 	_, err := cryptoRand.Read(b[:])
 	seed := int64(binary.LittleEndian.Uint64(b[:]))
 	if err != nil {
-		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
+		oktetoLog.Info("cannot use crypto/rand. Fallback to timestamp seed generator") // TODO: Remove when we fully move to ioController
 		seed = time.Now().UnixNano()
 	}
 	rand.Seed(seed)

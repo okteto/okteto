@@ -130,7 +130,7 @@ func Test_deleteNamespace(t *testing.T) {
 		name           string
 		// toDeleteNs the namespace to delete
 		toDeleteNs string
-		// finalNs the namespace user should finally be
+		// finalNs the namespace the user should finally be in
 		finalNs string
 	}{
 		{

@@ -222,7 +222,7 @@ func Test_checkPVCValues(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name: "pvc-with-different-access-mode",
+			name: "pvc-with-different-volume-mode",
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					StorageClassName: &className,
@@ -277,7 +277,7 @@ func TestDestroyWithoutTimeout(t *testing.T) {
 	assert.Equal(t, 0, len(pvcList.Items))
 }
 
-func TestDestroyWithoutTimeoutNoExistentVolumen(t *testing.T) {
+func TestDestroyWithoutTimeoutNonExistentVolume(t *testing.T) {
 	ctx := context.Background()
 	pvcName := "pvc-1"
 	ns := "test"

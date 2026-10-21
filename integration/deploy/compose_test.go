@@ -252,6 +252,14 @@ const composeTemplateWithServiceAccount = `services:
       - 80
 `
 
+const composeTemplateWithMissingServiceAccount = `services:
+  app:
+    image: nginx:latest
+    ports:
+      - 80
+    x-okteto-service-account: e2e-missing-sa
+`
+
 // TestDeployPipelineFromCompose tests the following scenario:
 // - Deploying a pipeline manifest locally from a compose file
 // - The endpoints generated are accessible
@@ -295,7 +303,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the nginx image has been created correctly
+	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Equal(t, appDeployment.ObjectMeta.Labels["dev.okteto.com/annotation-1"], "value-annotation-1")
@@ -313,7 +321,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
-	// Test that the k8s services has been created correctly
+	// Test that the k8s services have been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -416,7 +424,7 @@ func TestDeployPipelineFromComposeWithVolumeMounts(t *testing.T) {
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-1"], "volume-label-1")
 	require.Equal(t, appVolume.ObjectMeta.Annotations["dev.okteto.com/label-2"], "volume-label-2")
 
-	// Test that the k8s services has been created correctly
+	// Test that the k8s services have been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -492,13 +500,13 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the nginx image has been created correctly
+	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the k8s services has been created correctly
+	// Test that the k8s services have been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -535,7 +543,7 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 }
 
 // TestDeployPipelineFromOktetoStacks tests the following scenario:
-// - Deploying a pipeline manifest locally from a compose file
+// - Deploying a pipeline manifest locally from an okteto stack file
 // - The endpoints generated are accessible
 // - Depends on
 // - Test secret injection
@@ -656,13 +664,13 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto", okteto.GetContext().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the nginx image has been created correctly
+	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/app:okteto", okteto.GetContext().Registry, testNamespace)
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the k8s services has been created correctly
+	// Test that the k8s services have been created correctly
 	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
@@ -1007,4 +1015,53 @@ func TestDeployComposeWithServiceAccount(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+}
+
+// TestDeployComposeWithMissingServiceAccount tests the following scenario (DEV-1490):
+//   - A compose file is deployed (without --wait) where a service declares x-okteto-service-account
+//     with a ServiceAccount that doesn't exist in the namespace.
+//   - The deploy fails right before the service's workload is created, with an error naming the missing
+//     ServiceAccount and a hint, instead of reporting success while the service can't create pods.
+//   - No Deployment is created for the service.
+func TestDeployComposeWithMissingServiceAccount(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	require.NoError(t, os.WriteFile(composePath, []byte(composeTemplateWithMissingServiceAccount), 0600))
+
+	testNamespace := integration.GetTestNamespace(t.Name())
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	// the deploy is expected to fail, so clean up even if an assertion below fails
+	t.Cleanup(func() {
+		require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
+	})
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, &commands.KubeconfigOpts{
+		OktetoHome: dir,
+	}))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		LogOutput:  "info",
+	}
+	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+	require.Error(t, err)
+	require.Contains(t, output, fmt.Sprintf("ServiceAccount 'e2e-missing-sa' used by service 'app' doesn't exist in namespace '%s'", testNamespace))
+	// the hint is only printed when the UserError reaches the CLI entrypoint unwrapped
+	require.Contains(t, output, "remove 'x-okteto-service-account'")
+
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.Truef(t, k8sErrors.IsNotFound(err), "expected no 'app' Deployment, got: %v", err)
 }

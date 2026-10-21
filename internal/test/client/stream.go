@@ -55,7 +55,7 @@ func (c *FakeStreamClient) PipelineLogsTo(_ context.Context, _, _, _ string, _ t
 	return c.response.StreamErr
 }
 
-// DestroyAllLogs starts the streaming of pipeline logs
+// DestroyAllLogs starts the streaming of destroy-all logs
 func (c *FakeStreamClient) DestroyAllLogs(_ context.Context, _ string, _ time.Duration) error {
 	return c.response.StreamErr
 }

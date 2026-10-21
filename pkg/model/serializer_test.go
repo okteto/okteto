@@ -90,7 +90,7 @@ func TestReverseMarshalling(t *testing.T) {
 			outStr = strings.TrimSuffix(outStr, "\n")
 
 			if !reflect.DeepEqual(outStr, tt.data) {
-				t.Errorf("didn't unmarshal correctly. Actual '%+v', Expected '%+v'", outStr, tt.data)
+				t.Errorf("didn't marshal correctly. Actual '%+v', Expected '%+v'", outStr, tt.data)
 			}
 		})
 	}
@@ -540,17 +540,17 @@ func TestDevMarshalling(t *testing.T) {
 		dev      Dev
 	}{
 		{
-			name:     "healtcheck-not-defaults",
+			name:     "healthcheck-not-defaults",
 			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true}},
 			expected: "probes:\n  liveness: true\nname: name-test\n",
 		},
 		{
-			name:     "healtcheck-all-true-by-probes",
+			name:     "healthcheck-all-true-by-probes",
 			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true, Readiness: true, Startup: true}},
 			expected: "probes: true\nname: name-test\n",
 		},
 		{
-			name:     "pv-enabled-not-show-after-marshall",
+			name:     "pv-enabled-not-show-after-marshal",
 			dev:      Dev{Name: "name-test", PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true}},
 			expected: "name: name-test\n",
 		},
@@ -1054,7 +1054,7 @@ services:
 			isErrorExpected: true,
 		},
 		{
-			name: "manifest with namespace and context",
+			name: "manifest with deploy",
 			manifest: []byte(`
 deploy:
 - okteto stack deploy`),
@@ -2496,7 +2496,7 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 	}
 }
 
-func TestDependencyUnmashalling(t *testing.T) {
+func TestDependencyUnmarshalling(t *testing.T) {
 	tests := []struct {
 		expected *deps.Dependency
 		name     string

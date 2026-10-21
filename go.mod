@@ -1,6 +1,6 @@
 module github.com/okteto/okteto
 
-go 1.26.8
+go 1.26.10
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.1
@@ -26,7 +26,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/moby/buildkit v0.34.0
+	github.com/moby/buildkit v0.34.1
 	github.com/moby/term v0.5.2
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -161,7 +161,7 @@ require (
 	github.com/moby/patternmatcher v0.6.1
 	github.com/posthog/posthog-go v1.23.0
 	github.com/samber/slog-logrus/v2 v2.1.0
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/vbauerster/mpb/v7 v7.5.3
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
@@ -292,4 +292,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260825221802-da73d73af1c5 // indirect
 )
 
-replace github.com/moby/buildkit => github.com/okteto/buildkit v0.34.1-0.20261008103754-06b797dcbc17 // v0.34.0-okteto1
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.34.2-0.20261020221304-94a56f5e96dd // v0.34.1-okteto1

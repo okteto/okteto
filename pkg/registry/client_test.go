@@ -231,7 +231,7 @@ func TestGetDigest(t *testing.T) {
 			},
 		},
 		{
-			name: "unauthorised error",
+			name: "not found error",
 			input: input{
 				config: fakeClientConfig{
 					cert: &x509.Certificate{},

@@ -167,7 +167,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 
 	if options.ManifestPath != "" {
-		// if path is absolute, its transformed to rel from root
+		// if path is absolute, it's transformed to rel from root
 		initialCWD, err := os.Getwd()
 		if err != nil {
 			return analytics.TestMetadata{}, fmt.Errorf("failed to get the current working directory: %w", err)
@@ -284,7 +284,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 				return divert.New(d, name, namespace, c, ioCtrl)
 			},
 		}
-		// runInRemote is not set at init, its left default to false and calculated by deployCMD.ShouldRunInRemote
+		// runInRemote is not set at init, it's left default to false and calculated by deployCMD.ShouldRunInRemote
 		opts := &deployCMD.Options{
 			Manifest:         manifest,
 			ManifestPathFlag: options.ManifestPathFlag,
@@ -417,7 +417,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		testMetadata.Success = err == nil
 		testAnalytics = append(testAnalytics, &testMetadata)
 		if err != nil {
-			// If it is a commandErr, it means that there were an error on the tests itself, so we should return that error directly
+			// If it is a commandErr, it means that there was an error in the tests themselves, so we should return that error directly
 			var cmdErr buildkit.CommandErr
 			if errors.As(err, &cmdErr) {
 				return metadata, err

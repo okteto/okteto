@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_isYamlErrorWithoutLinkToDocs(t *testing.T) {
@@ -84,4 +85,16 @@ yaml: some random error
 			assert.Equal(t, tt.expected, err.Error())
 		})
 	}
+}
+
+func TestUserFriendlyError_InvalidBuildSection(t *testing.T) {
+	_, err := Read([]byte("build: [api]\n"))
+	require.Error(t, err)
+
+	friendlyErr := NewManifestFriendlyError(err)
+
+	expected := `your Okteto Manifest is not valid, please check the following errors:
+     - line 1: cannot unmarshal list into a 'build' object
+    Check out the Okteto Manifest docs at: https://www.okteto.com/docs/reference/okteto-manifest`
+	assert.Equal(t, expected, friendlyErr.Error())
 }

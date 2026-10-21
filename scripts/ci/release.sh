@@ -3,8 +3,8 @@
 # release.sh is the release script to make Okteto CLI versions publicly
 # available.
 #
-# This scripts is meant to be executed by circleci and makes a few assumptions about
-# the environment it runs on. It assumes the golangci executor which has a few
+# This script is meant to be executed by circleci and makes a few assumptions about
+# the environment it runs on. It assumes the golang-ci executor which has a few
 # binaries required by this script.
 # TODO: parameterize this script to make it able to run locally
 #
@@ -13,8 +13,8 @@
 # Releases are represented by git annotated tags in semver version and have their
 # respective Github release.
 # Releases from the stable channel have the format: MAJOR.MINOR.PATCH
-# Releases from the beta channel have the MAJOR.MINOR.PATCH-beta.n
-# Releases from the dev channel have the MAJOR.MINOR.PATCH-dev.n
+# Releases from the beta channel have the format: MAJOR.MINOR.PATCH-beta.n
+# Releases from the dev channel are untagged and use the short commit SHA as their version
 #
 
 # run in a subshell
@@ -55,21 +55,21 @@
         ################################################################################
 
         if ! semver --version >/dev/null 2>&1; then
-                echo "Binary \"semver\" does is required from running this scripts"
+                echo "Binary \"semver\" is required to run this script"
                 echo "Please install it and try again:"
                 echo "  $ curl -o /usr/local/bin/semver https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver"
                 exit 1
         fi
 
         if ! command -v okteto-ci-utils >/dev/null 2>&1; then
-                echo "Binary \"okteto-ci-utils\" from the golangci circleci executor is required to run this script"
+                echo "Binary \"okteto-ci-utils\" from the golang-ci circleci executor is required to run this script"
                 echo "If you are running this locally you can go into the golang-ci executor repo and build the script from source:"
                 echo "  $ go build -o /usr/local/bin/okteto-ci-utils ."
                 exit 1
         fi
 
         if ! command -v gsutil >/dev/null 2>&1; then
-                echo "Binary \"gsutils\" from Google Cloud is required to run this script. Find installation instructions at https://cloud.google.com/sdk/docs/install"
+                echo "Binary \"gsutil\" from Google Cloud is required to run this script. Find installation instructions at https://cloud.google.com/sdk/docs/install"
                 exit 1
         fi
 
@@ -80,7 +80,7 @@
         fi
 
         if [ ! -d "$BIN_PATH" ]; then
-                echo "Release artifacts should be stored in $BIN_PATH but the directory does no exist"
+                echo "Release artifacts should be stored in $BIN_PATH but the directory does not exist"
                 exit 1
         elif [ -z "$(ls -A "$BIN_PATH")" ]; then
                 echo "Release artifacts should be stored in $BIN_PATH but the directory is empty"
@@ -111,7 +111,7 @@
                 beta_prerel_regex="^beta\.[0-9]+"
                 prerel="$(semver get prerel "${RELEASE_TAG}")"
 
-                # Stable releases are added to all channel
+                # Stable releases are added to all channels
                 if [ -z "$prerel" ]; then
                         CHANNELS=("stable" "beta" "dev")
                         is_oficial_release=true
@@ -168,7 +168,7 @@
 
                 printf "%s\n" "${tag}" >>"$version_file_tmp"
 
-                # dont sort the dev channel. Not all tags are semver and it's
+                # don't sort the dev channel. Not all tags are semver and it's
                 # safe to assume linear history
                 if [ "${chan}" = "dev" ]; then
                         awk '!seen[$0]++' "$version_file_tmp" >"${version_file}"

@@ -81,7 +81,7 @@ func (o *OktetoClusterHelper) Get(serverURL string) (string, string, error) {
 	return o.getter.GetRegistryCredentials(serverURL)
 }
 
-// List returns the stored serverURLs and their associated usernames.
+// List is not implemented: it always returns ErrNotImplemented.
 func (*OktetoClusterHelper) List() (map[string]string, error) {
 	return nil, ErrNotImplemented
 }

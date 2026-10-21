@@ -43,7 +43,7 @@ Also read `.claude/context/conventions.md` for Go conventions specific to this p
 
 - Commands must use `Options` struct pattern (not function-level vars)
 - Entry point must be `RunE` (not `Run`) — enables error propagation
-- Flags defined in `addFlags(cmd *cobra.Command, opts *Options)` pattern
+- Flags defined via `cmd.Flags()` in the command constructor
 - No `os.Exit()` calls inside command logic — return errors
 
 ### 4. Test Coverage

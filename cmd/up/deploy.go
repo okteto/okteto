@@ -61,7 +61,7 @@ type deployParams struct {
 	manifest                       *model.Manifest
 }
 
-// NewDevEnvDeployerManager creates a new DevEnvDeployer
+// NewDevEnvDeployerManager creates a new devEnvDeployerManager
 func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *io.K8sLogger) *devEnvDeployerManager {
 	return &devEnvDeployerManager{
 		ioCtrl:            ioCtrl,
@@ -101,7 +101,7 @@ func NewDevEnvDeployerManager(up *upContext, ioCtrl *io.Controller, k8sLogger *i
 // DeployIfNeeded deploys the app if it's not already deployed or if the user has set the auto deploy env var or the --deploy flag
 func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params deployParams, analyticsMeta *analytics.UpMetricsMetadata) error {
 	if !params.okCtx.IsOkteto {
-		dd.ioCtrl.Logger().Infof("Deploy is skipped because is not okteto context")
+		dd.ioCtrl.Logger().Infof("Deploy is skipped because it is not an okteto context")
 		return nil
 	}
 	k8sClient, _, err := dd.k8sClientProvider.Provide(params.okCtx.Cfg)
@@ -134,7 +134,7 @@ func (dd *devEnvDeployerManager) DeployIfNeeded(ctx context.Context, params depl
 		err = deployer.Run(ctx, deployOpts)
 		go analyticsMeta.HasRunDeploy()
 		deployer.TrackDeploy(params.manifest, deploy.ShouldRunInRemote(deployOpts), startTime, err, params.ns)
-		// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
+		// only allow oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 			return err
 		}

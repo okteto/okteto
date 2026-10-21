@@ -45,7 +45,7 @@ type PodInfo struct {
 	Conditions []apiv1.PodCondition `yaml:"conditions,omitempty"`
 }
 
-// Run runs the "okteto status" sequence
+// Run runs the "okteto doctor" sequence
 func Run(ctx context.Context, dev *model.Dev, devPath string, namespace string, c *kubernetes.Clientset) (string, error) {
 	z := archives.Zip{
 		SelectiveCompression: true,

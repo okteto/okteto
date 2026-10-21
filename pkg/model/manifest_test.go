@@ -207,7 +207,7 @@ func TestManifestExpandEnvs(t *testing.T) {
 		expectedErr     bool
 	}{
 		{
-			name: "expand envs on command",
+			name: "does not expand envs on command",
 			envs: map[string]string{
 				"OKTETO_GIT_COMMIT": "dev",
 			},
@@ -220,7 +220,7 @@ deploy:
 			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api",
 		},
 		{
-			name: "expand envs on command without env var set",
+			name: "does not expand envs on command without env var set",
 			envs: map[string]string{},
 			manifest: []byte(`icon: https://apps.okteto.com/movies/icon.png
 deploy:
@@ -855,7 +855,7 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	err = fs.MkdirAll(oktetoHome, 0700)
 	require.NoError(t, err)
 
-	// Set the Okteto home to facilitate where the dockerfile will be created
+	// Set the Okteto home to control where the dockerfile will be created
 	t.Setenv(constants.OktetoFolderEnvVar, oktetoHome)
 
 	expectedContext, err := filepath.Abs(".")
@@ -994,7 +994,7 @@ func Test_getManifestFromFile(t *testing.T) {
         image: test`),
 		},
 		{
-			name:          "manifestPath to a invalid compose file with empty service",
+			name:          "manifestPath to an invalid compose file with empty service",
 			manifestBytes: nil,
 			composeBytes: []byte(`services:
     test:
@@ -1030,7 +1030,7 @@ sync:
 			composeBytes: nil,
 		},
 		{
-			name:          "manifestPath to not existent okteto manifest, no compose file",
+			name:          "manifestPath to non-existent okteto manifest, no compose file",
 			manifestBytes: nil,
 			composeBytes:  nil,
 			expectedErr:   discovery.ErrOktetoManifestNotFound,
@@ -1744,7 +1744,7 @@ func TestPathExistsAndDirError(t *testing.T) {
 		expected   bool
 	}{
 		{
-			name:       "error: path doesn't exits",
+			name:       "error: path doesn't exist",
 			createFile: false,
 			expected:   false,
 		},

@@ -72,7 +72,7 @@ Inferred tag is constructed using the following:
 [tag] it is the default okteto tag "okteto".
 */
 func (it imageTagger) getServiceDevImageReference(manifestName, svcName string, b *build.Info) string {
-	// when b.Image is set or services does not have dockerfile then no infer reference and return what is set on the manifest
+	// when b.Image is set or the service does not have a Dockerfile then no infer reference and return what is set on the manifest
 	if b.Image != "" || !serviceHasDockerfile(b) {
 		return b.Image
 	}
@@ -108,7 +108,7 @@ func (it imageTagger) GetGlobalTagFromDevIfNeccesary(tags, namespace, registryUR
 	return globalWithHash
 }
 
-// GetImageReferencesForTag returns all the possible images references that can be used for build with the given tag
+// GetImageReferencesForTag returns all the possible image references that can be used for build with the given tag
 func (it imageTagger) GetImageReferencesForTag(manifestName, svcToBuildName, tag string) []string {
 	if tag == "" {
 		return []string{}
@@ -124,7 +124,7 @@ func (it imageTagger) GetImageReferencesForTag(manifestName, svcToBuildName, tag
 	return referencesToCheck
 }
 
-// GetImageReferencesForDeploy returns the list of images references for a service when deploying it. In case of deploy,
+// GetImageReferencesForDeploy returns the list of image references for a service when deploying it. In case of deploy,
 // we only have to check if the image is present with the okteto tag. We don't check anything related to the hash
 func (imageTagger) GetImageReferencesForDeploy(manifestName, svcToBuildName string) []string {
 	sanitizedName := format.ResourceK8sMetaString(manifestName)

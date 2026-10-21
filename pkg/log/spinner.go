@@ -43,7 +43,7 @@ type spinnerLogger struct {
 	mu sync.Mutex
 }
 
-// hold is used within the TTYWritter to pause the spinner to display the log
+// hold is used within the TTYWriter to pause the spinner to display the log
 // if the spinner is Active (running) it will stop
 func (sl *spinnerLogger) hold() {
 	sl.mu.Lock()
@@ -59,7 +59,7 @@ func (sl *spinnerLogger) hold() {
 	sl.stop()
 }
 
-// unhold is used within the TTYWritter to restart the spinner after display the log.
+// unhold is used within the TTYWriter to restart the spinner after displaying the log.
 // The spinner runs again when the last print that paused it has finished, unless it was stopped meanwhile
 func (sl *spinnerLogger) unhold() {
 	sl.mu.Lock()

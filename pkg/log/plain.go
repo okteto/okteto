@@ -50,7 +50,7 @@ func (*PlainWriter) Debugf(format string, args ...interface{}) {
 	}
 }
 
-// Info writes a info-level log
+// Info writes an info-level log
 func (*PlainWriter) Info(args ...interface{}) {
 	log.out.Info(args...)
 	if log.file != nil {
@@ -58,7 +58,7 @@ func (*PlainWriter) Info(args ...interface{}) {
 	}
 }
 
-// Infof writes a info-level log with a format
+// Infof writes an info-level log with a format
 func (*PlainWriter) Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	if log.file != nil {
@@ -66,7 +66,7 @@ func (*PlainWriter) Infof(format string, args ...interface{}) {
 	}
 }
 
-// Error writes a error-level log
+// Error writes an error-level log
 func (*PlainWriter) Error(args ...interface{}) {
 	log.out.Error(args...)
 	if log.file != nil {
@@ -74,7 +74,7 @@ func (*PlainWriter) Error(args ...interface{}) {
 	}
 }
 
-// Errorf writes a error-level log with a format
+// Errorf writes an error-level log with a format
 func (*PlainWriter) Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
@@ -82,7 +82,7 @@ func (*PlainWriter) Errorf(format string, args ...interface{}) {
 	}
 }
 
-// Fatalf writes a error-level log with a format
+// Fatalf writes an error-level log with a format
 func (*PlainWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
@@ -103,13 +103,13 @@ func (w *PlainWriter) Yellow(format string, args ...interface{}) {
 	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
-// Success prints a message with the success symbol first, and the text in green
+// Success prints a message prefixed with 'SUCCESS:'
 func (w *PlainWriter) Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	w.Fprintf(w.out.Out, "SUCCESS: %s\n", fmt.Sprintf(format, args...))
 }
 
-// Information prints a message with the information symbol first, and the text in blue
+// Information prints a message prefixed with 'INFO:'
 func (w *PlainWriter) Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	w.Fprintf(w.out.Out, "INFO: %s\n", fmt.Sprintf(format, args...))
@@ -122,25 +122,25 @@ func (w *PlainWriter) Question(format string, args ...interface{}) error {
 	return nil
 }
 
-// Warning prints a message with the warning symbol first, and the text in yellow
+// Warning prints a message prefixed with 'WARNING:'
 func (w *PlainWriter) Warning(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	w.Fprintf(w.out.Out, "WARNING: %s\n", fmt.Sprintf(format, args...))
 }
 
-// FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
+// FWarning prints a message prefixed with 'WARNING:' into a specific writer
 func (w *PlainWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	w.Fprintf(writer, "WARNING: %s\n", fmt.Sprintf(format, args...))
 }
 
-// Hint prints a message with the text in blue
+// Hint prints a message as plain text
 func (w *PlainWriter) Hint(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	w.Fprintf(w.out.Out, "%s\n", fmt.Sprintf(format, args...))
 }
 
-// Fail prints a message with the error symbol first, and the text in red
+// Fail prints a message prefixed with 'ERROR:'
 func (w *PlainWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	log.out.Info(msg)
@@ -180,7 +180,7 @@ func (w *PlainWriter) fprintfWithStage(writer io.Writer, stage, format string, a
 	}
 }
 
-// FPrintln prints a line with format
+// FPrintln prints a line to the given writer
 func (w *PlainWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	w.fprintlnWithStage(writer, log.getStage(), args...)
 }
@@ -229,7 +229,7 @@ func (*PlainWriter) AddToBuffer(level, format string, a ...interface{}) {
 	}
 }
 
-// Write logs into the buffer but does not print anything
+// Write writes to the output without adding to the buffer
 func (w *PlainWriter) Write(p []byte) (n int, err error) {
 	return w.out.Out.Write(p)
 }

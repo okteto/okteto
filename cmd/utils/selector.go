@@ -74,7 +74,7 @@ type SelectorItem struct {
 	Enable bool
 }
 
-// NewOktetoSelector returns a selector set up with the label and options from the input
+// NewOktetoSelector returns a selector set up with the label and selected template from the input
 func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
@@ -92,14 +92,14 @@ func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
 	}
 }
 
-// AskForOptionsOkteto given some options ask the user to select one
+// AskForOptionsOkteto given some options asks the user to select one
 func (s *OktetoSelector) AskForOptionsOkteto(options []SelectorItem, initialPosition int) (string, error) {
 	s.Items = options
 	s.Size = len(options)
 	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 	optionSelected, err := s.run(initialPosition)
 	if err != nil || !isValidOption(s.Items, optionSelected) {
-		oktetoLog.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid option: %s", err)
 		return "", ErrInvalidOption
 	}
 
@@ -385,7 +385,7 @@ func (s *OktetoSelector) prepareTemplates() error {
 
 	tpls.help = tpl
 
-	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context <URL>' to add a new cluster context" | oktetoblue }}`)
+	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context use <URL>' to add a new cluster context" | oktetoblue }}`)
 
 	tpl, err = template.New("").Funcs(tpls.FuncMap).Parse(extraInfo)
 	if err != nil {
@@ -483,7 +483,7 @@ func render(tpl *template.Template, data interface{}) []byte {
 
 type stdout struct{}
 
-// Write implements an io.WriterCloser over os.Stderr, but it skips the terminal
+// Write implements an io.WriteCloser over os.Stderr, but it skips the terminal
 // bell character.
 func (*stdout) Write(b []byte) (int, error) {
 	if len(b) == 1 && b[0] == readline.CharBell {
@@ -492,7 +492,7 @@ func (*stdout) Write(b []byte) (int, error) {
 	return os.Stderr.Write(b)
 }
 
-// Close implements an io.WriterCloser over os.Stderr.
+// Close implements an io.WriteCloser over os.Stderr.
 func (*stdout) Close() error {
 	return os.Stderr.Close()
 }

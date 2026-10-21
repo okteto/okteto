@@ -64,7 +64,7 @@
                         elif cmd_exists su; then
                                 sh_c='su -c'
                         else
-                                echo 'This script requires to run commands as sudo. We are unable to find either "sudo" or "su".'
+                                echo 'This script requires running commands as sudo. We are unable to find either "sudo" or "su".'
                                 exit 1
                         fi
                 fi

@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	apiv1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -119,7 +120,7 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 	}
 	if endpointType == "gateway" {
 		if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
-			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoDefaultGatewayTypeEnvVar)
+			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoComposeEndpointsTypeEnvVar)
 		}
 		oktetoLog.Infof("Using HTTPRoute for endpoints with the configured gateway %s/%s (forced by %s=gateway)", metadata.GatewayNamespace, metadata.GatewayName, oktetoComposeEndpointsTypeEnvVar)
 		return true, metadata, nil
@@ -171,7 +172,7 @@ func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployO
 	return nil
 }
 
-// Deploy deploys a stack
+// deployCompose deploys a stack
 func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	if err := validateServicesToDeploy(ctx, s, options, sd.K8sClient); err != nil {
@@ -378,6 +379,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	// show an informational warning per service once
 	serviceWarnings := make(map[string]string)
 	restartsPerSvc := map[string]int{}
+	checkedServiceAccounts := map[string]bool{}
 	for {
 		select {
 		case <-to.C:
@@ -420,6 +422,9 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 							return err
 						}
 						continue
+					}
+					if err := checkServiceAccountExists(ctx, stack, svcName, k8sClient, checkedServiceAccounts); err != nil {
+						return err
 					}
 					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
 					err := deploySvc(ctx, stack, svcName, k8sClient, divert)
@@ -653,7 +658,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	if old.GetLabels()[model.StackNameLabel] != svcK8s.GetLabels()[model.StackNameLabel] {
-		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
+		oktetoLog.Warning("skipping creation of kubernetes service '%s' due to name collision with service in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
 		return nil
 	}
 
@@ -833,7 +838,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, servicesToDeplo
 
 	for name, svc := range s.Services {
 		// If there is a subset of services to deploy, and the service is not there, skip it
-		// Otherwise (the services is among the subset to deploy, or there is no subset and everything was deployed),
+		// Otherwise (the service is among the subset to deploy, or there is no subset and everything was deployed),
 		// count it
 		if len(cacheServicesToDeploy) > 0 && !cacheServicesToDeploy[name] {
 			continue
@@ -894,7 +899,7 @@ func DisplayVolumeMountWarnings(warnings []string) {
 
 func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	for previousName, newName := range previousToNewNameMap {
-		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
+		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect service discovery.", previousName, newName)
 	}
 }
 
@@ -936,6 +941,37 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Depl
 	return nil
 }
 
+// checkServiceAccountExists checks that the ServiceAccount set with x-okteto-service-account for a service exists.
+// It runs right before the service's workload is created, once its depends_on are satisfied, so a ServiceAccount
+// created earlier in the same deploy (by the deploy commands, a dependency or a service it depends on) is found, while
+// a missing one fails with a clear error instead of leaving the workload unable to create pods. ServiceAccounts that exist, or that can't be verified, are recorded in
+// checked so each one is fetched once
+func checkServiceAccountExists(ctx context.Context, stack *model.Stack, svcName string, c kubernetes.Interface, checked map[string]bool) error {
+	sa := stack.Services[svcName].ServiceAccount
+	if sa == "" || checked[sa] {
+		return nil
+	}
+
+	_, err := c.CoreV1().ServiceAccounts(stack.Namespace).Get(ctx, sa, metav1.GetOptions{})
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		// check the API status reason instead of oktetoErrors.IsNotFound: a false positive from matching the error
+		// text would block a deploy that works
+		if k8sErrors.IsNotFound(err) {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("ServiceAccount '%s' used by service '%s' doesn't exist in namespace '%s'", sa, svcName, stack.Namespace),
+				Hint: "Create it (for example in your deploy commands), or remove 'x-okteto-service-account' to use the namespace's default ServiceAccount",
+			}
+		}
+		// e.g. the user can't get ServiceAccounts: don't block a deploy that might work
+		oktetoLog.Warning("Could not verify that ServiceAccount '%s' used by service '%s' exists: %s", sa, svcName, err)
+	}
+	checked[sa] = true
+	return nil
+}
+
 // ValidateDefinedServices checks that the services to deploy are in the compose file
 func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	for _, svcToDeploy := range servicesToDeploy {
@@ -953,7 +989,7 @@ func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-// AddDependentServicesIfNotPresent adds dependands services to deploy
+// AddDependentServicesIfNotPresent adds dependent services to deploy
 func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
 	initialSvcsToDeploy := svcsToDeploy
 	svcsToDeployWithDependencies := addDependentServices(ctx, s, svcsToDeploy, c)

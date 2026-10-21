@@ -419,7 +419,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 		},
 		{
-			name:        "has-platform-option",
+			name:        "has-build-args-option",
 			serviceName: "service",
 			buildInfo:   &build.Info{},
 			initialOpts: &types.BuildOptions{
@@ -847,13 +847,13 @@ func Test_setOutputMode(t *testing.T) {
 			expected:                 "tty",
 		},
 		{
-			name:                     "empty input and plain env BUILDKIT_PROGRESS  - default output",
+			name:                     "empty input and plain env BUILDKIT_PROGRESS  - plain output",
 			input:                    "",
 			envBuildkitProgressValue: "plain",
 			expected:                 "plain",
 		},
 		{
-			name:                     "empty input and json env BUILDKIT_PROGRESS  - default output",
+			name:                     "empty input and json env BUILDKIT_PROGRESS  - plain output",
 			input:                    "",
 			envBuildkitProgressValue: "json",
 			expected:                 "plain",
