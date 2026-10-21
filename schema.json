@@ -160,7 +160,7 @@
                   "enum": [
                     "istio"
                   ],
-                  "description": "The backend for divert. Currently, only 'istio' is supported"
+                  "description": "The backend for divert. Supported values are 'nginx' (default) and 'istio'"
                 },
                 "namespace": {
                   "type": "string",
@@ -514,7 +514,7 @@
               "additionalProperties": false,
               "type": "object",
               "title": "metadata",
-              "description": "The metadata field allows to inject labels and annotations into your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#metadata-object-optional"
+              "description": "The metadata field allows you to inject labels and annotations into your development container.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#metadata-object-optional"
             },
             "mode": {
               "type": "string",
@@ -627,7 +627,7 @@
                 }
               ],
               "title": "probes",
-              "description": "Used to enable or disable the Kubernetes probes of your development container. If set to 'true' \nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#probes-boolean-optional"
+              "description": "Used to enable or disable the Kubernetes probes of your development container. If set to 'true', the liveness, readiness and startup probes are enabled.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#probes-boolean-optional"
             },
             "remote": {
               "type": "integer",
@@ -775,7 +775,7 @@
               },
               "type": "array",
               "title": "services",
-              "description": "A list of services that you want to put on developer mode along your development container. The services work just like the development container, with one exception: they won't be able to start an interactive session.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional"
+              "description": "A list of services that you want to put on development mode alongside your development container. The services work just like the development container, with one exception: they won't be able to start an interactive session.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#services-object-optional"
             },
             "sync": {
               "oneOf": [
@@ -932,7 +932,7 @@
             "type": "string",
             "pattern": "^\\d+:[^:]+:\\d+$|^\\d+:\\d+$",
             "title": "forward",
-            "description": "Port forward in the format localPort:service:remotePort or localPort:remotePort"
+            "description": "Port forward in the format localPort:service:remotePort"
           },
           {
             "oneOf": [
@@ -1141,7 +1141,7 @@
           },
           "additionalProperties": false,
           "type": "object",
-          "description": "A list of images to build as part of your development environment.\n\n\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
+          "description": "An image to build as part of your development environment.\n\n\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
         }
       },
       "additionalProperties": false,
@@ -1159,7 +1159,7 @@
               },
               "type": "array",
               "title": "artifacts",
-              "description": "A list of files and/or folder to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#artifacts-string-optional"
+              "description": "A list of files and/or folders to be exported after the execution of the tests. They will be added relative to root context of the tests. If you want to export coverage reports and test results this is where they should go.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#artifacts-string-optional"
             },
             "caches": {
               "items": {

@@ -47,7 +47,7 @@ import (
 )
 
 const (
-	// TestCommand is the command to run test remotely
+	// TestCommand is the command to run tests remotely
 	TestCommand = "test"
 	// DeployCommand is the command to deploy a dev environment remotely
 	DeployCommand = "deploy"
@@ -159,7 +159,7 @@ type Params struct {
 	OktetoCommandSpecificEnvVars map[string]string
 	Manifest                     *model.Manifest
 	Command                      string
-	// CacheInvalidationKey is the value use to invalidate the cache. Defaults
+	// CacheInvalidationKey is the value used to invalidate the cache. Defaults
 	// to a random value which essentially means no-cache. Setting this to a
 	// static or known value will reuse the build cache
 	CacheInvalidationKey string
@@ -167,7 +167,7 @@ type Params struct {
 	DockerfileName       string
 	BaseImage            string
 	// ContextAbsolutePathOverride is the absolute path for the build context. Optional.
-	// If this values is not defined it will default to the folder location of the
+	// If this value is not defined it will default to the folder location of the
 	// okteto manifest which is resolved through params.ManifestPathFlag
 	ContextAbsolutePathOverride string
 	ManifestPathFlag            string
@@ -185,8 +185,8 @@ type Params struct {
 	// Rules follow the .dockerignore syntax as defined in:
 	// https://docs.docker.com/build/building/context/#syntax
 	IgnoreRules []string
-	// Artifacts are the files and or folder to export from this build operation.
-	// They are the path INSIDE the build container relative to /okteto/src. They
+	// Artifacts are the files and/or folders to export from this build operation.
+	// They are the paths INSIDE the build container relative to /okteto/src. They
 	// will be exported to "{context_dir}/{artifact}"
 	Artifacts []model.Artifact
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
@@ -424,7 +424,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		}
 	}
 
-	// Fallback to user's local known_hosts if API didn't provide content
+	// Fallback to user's local known_hosts if known hosts from the API are disabled or unavailable
 	if knownHostEnabled {
 		tmpKnownHostsFile, err := r.fs.Create(filepath.Join(tmpDir, "known_hosts"))
 		if err == nil {
@@ -442,7 +442,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
 		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
 		if _, err := os.Stat(knownHostsPath); err != nil {
-			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+			oktetoLog.Debugf("No known_hosts file. Error reading file: %s", err.Error())
 		} else {
 			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
 			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
@@ -457,7 +457,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	// we need to call Run() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
-	// executed in the deploy command.
+	// executed in the deploy, destroy and test commands.
 	return r.builder.Run(ctx, buildOptions, r.ioCtrl)
 }
 
@@ -574,7 +574,7 @@ func (r *Runner) getContextPath(cwd, manifestPath string) string {
 func (r *Runner) fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	c, err := r.oktetoClientProvider.Provide()
 	if err != nil {
-		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %w", err)
+		return nil, fmt.Errorf("failed to provide okteto client for fetching cluster metadata: %w", err)
 	}
 	uc := c.User()
 
@@ -591,7 +591,7 @@ func (r *Runner) fetchClusterMetadata(ctx context.Context) (*types.ClusterMetada
 }
 
 // createDockerignoreFileWithFilesystem creates a .dockerignore file in the tmpDir with the content of the
-// .dockerignore file in the cwd
+// .oktetodeployignore file in the cwd (when enabled) plus the given rules
 func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, useOktetoDeployIgnoreFile bool, fs afero.Fs) error {
 	dockerignoreContent := []byte(``)
 
@@ -625,7 +625,7 @@ func createDockerignoreFileWithFilesystem(cwd, tmpDir string, rules []string, us
 	return afero.WriteFile(fs, filename, dockerignoreContent, 0600)
 }
 
-// getExtraHosts returns the extra hosts to be added to the Dockerfile
+// getExtraHosts returns the extra hosts to be added to the build
 func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMetadata) []types.HostMap {
 	extraHosts := []types.HostMap{
 		{Hostname: registryURL, IP: ip},

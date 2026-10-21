@@ -120,7 +120,7 @@ func ShouldUseHTTPRoute() (bool, types.ClusterMetadata, error) {
 	}
 	if endpointType == "gateway" {
 		if metadata.GatewayName == "" || metadata.GatewayNamespace == "" {
-			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoDefaultGatewayTypeEnvVar)
+			return false, types.ClusterMetadata{}, fmt.Errorf("gateway type requested via %s=gateway but gateway is not configured in the cluster", oktetoComposeEndpointsTypeEnvVar)
 		}
 		oktetoLog.Infof("Using HTTPRoute for endpoints with the configured gateway %s/%s (forced by %s=gateway)", metadata.GatewayNamespace, metadata.GatewayName, oktetoComposeEndpointsTypeEnvVar)
 		return true, metadata, nil
@@ -172,7 +172,7 @@ func (sd *Stack) RunDeploy(ctx context.Context, s *model.Stack, options *DeployO
 	return nil
 }
 
-// Deploy deploys a stack
+// deployCompose deploys a stack
 func (sd *Stack) deployCompose(ctx context.Context, s *model.Stack, options *DeployOptions) error {
 
 	if err := validateServicesToDeploy(ctx, s, options, sd.K8sClient); err != nil {
@@ -658,7 +658,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	if old.GetLabels()[model.StackNameLabel] != svcK8s.GetLabels()[model.StackNameLabel] {
-		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
+		oktetoLog.Warning("skipping creation of kubernetes service '%s' due to name collision with service in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
 		return nil
 	}
 
@@ -838,7 +838,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, servicesToDeplo
 
 	for name, svc := range s.Services {
 		// If there is a subset of services to deploy, and the service is not there, skip it
-		// Otherwise (the services is among the subset to deploy, or there is no subset and everything was deployed),
+		// Otherwise (the service is among the subset to deploy, or there is no subset and everything was deployed),
 		// count it
 		if len(cacheServicesToDeploy) > 0 && !cacheServicesToDeploy[name] {
 			continue
@@ -899,7 +899,7 @@ func DisplayVolumeMountWarnings(warnings []string) {
 
 func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	for previousName, newName := range previousToNewNameMap {
-		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
+		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect service discovery.", previousName, newName)
 	}
 }
 
@@ -989,7 +989,7 @@ func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-// AddDependentServicesIfNotPresent adds dependands services to deploy
+// AddDependentServicesIfNotPresent adds dependent services to deploy
 func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
 	initialSvcsToDeploy := svcsToDeploy
 	svcsToDeployWithDependencies := addDependentServices(ctx, s, svcsToDeploy, c)

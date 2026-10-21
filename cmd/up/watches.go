@@ -38,14 +38,14 @@ func checkLocalWatchesConfiguration() {
 	w := "/proc/sys/fs/inotify/max_user_watches"
 	f, err := os.ReadFile(w)
 	if err != nil {
-		oktetoLog.Infof("Fail to read %s: %s", w, err)
+		oktetoLog.Infof("Failed to read %s: %s", w, err)
 		return
 	}
 
 	if isWatchesConfigurationTooLow(string(f)) {
 		oktetoLog.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low.")
 		oktetoLog.Yellow("This can affect Okteto's file synchronization performance.")
-		oktetoLog.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
+		oktetoLog.Yellow("We recommend raising it to at least 524288 to ensure proper performance.")
 		if err := utils.SetWarningState(warningFolder, "localwatcher", "true"); err != nil {
 			oktetoLog.Infof("failed to set warning localwatcher state: %s", err.Error())
 		}

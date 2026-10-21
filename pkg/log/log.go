@@ -166,7 +166,7 @@ func SetOutputFormat(format string) {
 	log.spinner.spinnerSupport = !loadBool(OktetoDisableSpinnerEnvVar) && IsInteractive()
 }
 
-// GetOutputWriter sets the output format
+// GetOutputWriter returns the output writer
 func GetOutputWriter() OktetoWriter {
 	return log.writer
 }
@@ -191,27 +191,27 @@ func Debugf(format string, args ...interface{}) {
 	log.writer.Debugf(format, args...)
 }
 
-// Info writes a info-level log
+// Info writes an info-level log
 func Info(args ...interface{}) {
 	log.writer.Info(args...)
 }
 
-// Infof writes a info-level log with a format
+// Infof writes an info-level log with a format
 func Infof(format string, args ...interface{}) {
 	log.writer.Infof(format, args...)
 }
 
-// Error writes a error-level log
+// Error writes an error-level log
 func Error(args ...interface{}) {
 	log.writer.Error(args...)
 }
 
-// Errorf writes a error-level log with a format
+// Errorf writes an error-level log with a format
 func Errorf(format string, args ...interface{}) {
 	log.writer.Errorf(format, args...)
 }
 
-// Fatalf writes a error-level log with a format
+// Fatalf writes an error-level log with a format
 func Fatalf(format string, args ...interface{}) {
 	log.writer.Fatalf(format, args...)
 }
@@ -231,7 +231,7 @@ func BlueString(format string, args ...interface{}) string {
 	return blueString(format, args...)
 }
 
-// RedString returns a string in blue
+// RedString returns a string in red
 func RedString(format string, args ...interface{}) string {
 	return redString(format, args...)
 }
@@ -347,7 +347,7 @@ func EnableMasking() {
 	log.replacer = strings.NewReplacer(oldnew...)
 }
 
-// DisableMasking will stop showing secrets and vars
+// DisableMasking will stop redacting secrets and vars
 func DisableMasking() {
 	log.isMasked = false
 }

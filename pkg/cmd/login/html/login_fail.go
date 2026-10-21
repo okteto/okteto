@@ -67,7 +67,7 @@ const (
 </svg>`)
 
 	failContent = template.HTML(`<h1 class="error">Authorization failed</h1>
-<h2>There was an error trying to login in.<br>Please try again later or use a different account.</h2>`)
+<h2>There was an error trying to log in.<br>Please try again later or use a different account.</h2>`)
 )
 
 func failData() *templateData {

@@ -46,7 +46,7 @@ func TestCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(retrieved, job) {
-		t.Fatalf("Didn't created correctly")
+		t.Fatalf("Didn't create correctly")
 	}
 }
 
@@ -81,7 +81,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(retrieved, updatedJob) {
-		t.Fatalf("Didn't updated correctly")
+		t.Fatalf("Didn't update correctly")
 	}
 }
 
@@ -166,7 +166,7 @@ func TestIsSuccedded(t *testing.T) {
 
 	succeedjob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "succededtest",
+			Name:      "succeededtest",
 			Namespace: "test",
 		},
 		Spec: batchv1.JobSpec{
@@ -204,7 +204,7 @@ func TestIsFailed(t *testing.T) {
 
 	succeedjob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "succededtest",
+			Name:      "succeededtest",
 			Namespace: "test",
 		},
 		Spec: batchv1.JobSpec{

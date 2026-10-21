@@ -42,7 +42,7 @@ var (
 	re           = regexp.MustCompile(ansi)
 )
 
-// TTYCollapseDisplayer displays with a screenbuff
+// TTYCollapseDisplayer displays with a screenbuf
 type TTYCollapseDisplayer struct {
 	err                   error
 	commandContext        context.Context
@@ -57,7 +57,7 @@ type TTYCollapseDisplayer struct {
 	isBuilding            bool
 }
 
-// Display displays a
+// Display displays the command output
 func (d *TTYCollapseDisplayer) Display(commandName string) {
 	d.command = commandName
 
@@ -193,7 +193,7 @@ func isTopDisplay(line string) bool {
 	return strings.Contains(line, fmt.Sprintf("%s%s", cursorUp, resetLine))
 }
 
-// CleanUp collapses and stop displaying
+// CleanUp collapses and stops displaying
 func (d *TTYCollapseDisplayer) CleanUp(err error) {
 	if d.screenbuf == nil {
 		return

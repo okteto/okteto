@@ -121,7 +121,7 @@ func Test_needsDatabaseReset(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.wfc.needsDatabaseReset()
 			if result != tt.want {
-				t.Errorf("test '%s' wrong completed: %t vs %t", tt.name, result, tt.want)
+				t.Errorf("test '%s' wrong needsDatabaseReset: %t vs %t", tt.name, result, tt.want)
 			}
 			if tt.wfc.previousLocalGlobalBytes != tt.previousLocalGlobalBytes {
 				t.Errorf("test '%s' wrong previousLocalGlobalBytes: %d vs %d", tt.name, tt.wfc.previousLocalGlobalBytes, tt.previousLocalGlobalBytes)

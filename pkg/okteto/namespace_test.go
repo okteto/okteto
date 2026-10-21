@@ -47,7 +47,7 @@ func TestCreateNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					mutationResult: &createNamespaceMutation{
@@ -101,7 +101,7 @@ func TestDeleteNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					mutationResult: &deleteNamespaceMutation{
@@ -154,7 +154,7 @@ func TestAddMembers(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					mutationResult: &addMembersMutation{
@@ -207,7 +207,7 @@ func TestListNamespaces(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a list of namespaces",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &listNamespacesQuery{
@@ -277,7 +277,7 @@ func TestWakeNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					mutationResult: &wakeNamespaceMutation{
@@ -330,7 +330,7 @@ func TestDestroyAllNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					mutationResult: &namespaceDestroyAllMutation{
@@ -383,7 +383,7 @@ func TestSleepNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an action",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					mutationResult: &sleepNamespaceMutation{
@@ -435,7 +435,7 @@ func TestGetNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "graphql response is an namespace",
+			name: "graphql response is a namespace",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getNamespaceQuery{

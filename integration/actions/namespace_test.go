@@ -122,7 +122,7 @@ func executeChangeNamespaceAction(namespace string) error {
 func executeDeleteNamespaceAction(namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deleteNamespacePath)
 	actionFolder := strings.Split(deleteNamespacePath, "/")[1]
-	log.Printf("cloning changing namespace repository: %s", actionRepo)
+	log.Printf("cloning delete namespace repository: %s", actionRepo)
 	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
 		if err := integration.CloneGitRepo(actionRepo); err != nil {
 			return err

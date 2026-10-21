@@ -8,7 +8,7 @@ import (
 )
 
 func addPermissions(configPath string) error {
-	// Define the files to set permissions
+	// Define the files to set permissions on
 	files := []string{
 		filepath.Join(configPath, "cert.pem"),
 		filepath.Join(configPath, "config.xml"),

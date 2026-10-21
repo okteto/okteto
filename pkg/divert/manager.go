@@ -70,7 +70,7 @@ func (dm *Manager) List(ctx context.Context, namespace string) ([]*k8s.Divert, e
 // Delete removes a Divert resource from Kubernetes by its name and namespace. If the resource is not found,
 // it does not return an error.
 func (dm *Manager) Delete(ctx context.Context, name, namespace string) error {
-	oktetoLog.Debugf("divert '%s' deleted successfully", name)
+	oktetoLog.Debugf("deleting divert '%s'", name)
 	err := dm.Client.Diverts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return err

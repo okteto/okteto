@@ -138,7 +138,7 @@ func TestBuildCommandV1(t *testing.T) {
 }
 
 // TestBuildInferredDockerfile tests the following scenario:
-// - building having a no manifest v2 in the folder but a Dockerfile
+// - building having no manifest v2 in the folder but a Dockerfile
 func TestBuildInferredDockerfile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -247,7 +247,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 
 // TestBuildCommandV2SpecifyingServices tests the following scenario:
 // - building having a manifest v2 with build section
-// - okteto build with several service as argument
+// - okteto build with several services as arguments
 func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -318,7 +318,7 @@ func TestBuildCommandV2FromCompose(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestBuildCommandV2FromCompose tests the following scenario:
+// TestBuildCommandV2WithVolumeMounts tests the following scenario:
 // - building having a compose file specifying an image and volume mounts
 func TestBuildCommandV2WithVolumeMounts(t *testing.T) {
 	t.Parallel()
@@ -357,7 +357,7 @@ func TestBuildCommandV2WithVolumeMounts(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestTestBuildCommandV2Secrets tests the following scenario:
+// TestBuildCommandV2Secrets tests the following scenario:
 // - build having an okteto manifest v2
 // - inject secrets from manifest to build
 func TestBuildCommandV2Secrets(t *testing.T) {

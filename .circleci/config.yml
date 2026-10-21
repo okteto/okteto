@@ -164,7 +164,7 @@ jobs:
             - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./artifacts
-      # Install the latest CLI public available, as the actions tests uses the installed version to checkout the action branch to test
+      # Install the latest publicly available CLI, as the actions tests use the installed version to checkout the action branch to test
       - run: *install-cli
       - run:
           name: Run actions integration tests
@@ -303,8 +303,8 @@ jobs:
           at: ./artifacts
       - run:
           # As the integration test running the okteto deploy needs the CLI which we are testing, we build the current
-          # CLI to the okteto.dev registry, so it is available for the user running the tests. Then, in the step
-          # which run the deploy, we set the env var OKTETO_CLI_IMAGE to the one we are building
+          # CLI to the okteto.global registry, so it is available for the user running the tests. Then, in the step
+          # which runs the deploy, we set the env var OKTETO_CLI_IMAGE to the one we are building
           name: Build Dockerfile for current commit
           command: |
             $(pwd)/artifacts/bin/okteto-Linux-x86_64 context use $OKTETO_CONTEXT --token ${OKTETO_API_INTEGRATION_TOKEN}
@@ -611,7 +611,7 @@ workflows:
     jobs:
       - upload-static-job:
           context: GKE
-  # lint-build-test runs on every push to a branch and when merge to master
+  # lint-build-test runs on every push to a branch and when merging to master
   # unit tests are run on every push and e2e is run when merging to master
   lint-build-test:
     when:
@@ -905,8 +905,8 @@ workflows:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
-  # run-e2e is triggered by okteto-bot via Github Actions when adding the e2e label to the PR
-  # e2e tests are run for both platformas, windows and unix
+  # run-e2e is triggered by oktetobot (GitHub Account) via GitHub Actions when adding the run-e2e label to the PR
+  # e2e tests are run for both platforms, windows and unix
   run-e2e:
     when:
       equal: ["run-e2e", << pipeline.parameters.GHA_Meta >>]
@@ -952,8 +952,8 @@ workflows:
           requires:
             - test-e2e-setup
 
-  # run-e2e-unix is triggered by okteto-bot via Github Actions when adding the run-e2e-unix label to the PR
-  # e2e test for unix platform are run
+  # run-e2e-unix is triggered by oktetobot (GitHub Account) via GitHub Actions when adding the run-e2e-unix label to the PR
+  # e2e tests for unix platform are run
   run-e2e-unix:
     when:
       equal: ["run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
@@ -984,8 +984,8 @@ workflows:
           requires:
             - test-e2e-setup
 
-  # run-e2e-windows is triggered by okteto-bot via Github Actions when adding the run-e2e-windows label to the PR
-  # e2e test for windows platform are run
+  # run-e2e-windows is triggered by oktetobot (GitHub Account) via GitHub Actions when adding the run-e2e-windows label to the PR
+  # e2e tests for windows platform are run
   run-e2e-windows:
     when:
       equal: ["run-e2e-windows", << pipeline.parameters.GHA_Meta >>]

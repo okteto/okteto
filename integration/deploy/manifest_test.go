@@ -119,7 +119,7 @@ spec:
 )
 
 // TestDeployOktetoManifest tests the following scenario:
-// - Deploying a okteto manifest locally
+// - Deploying an okteto manifest locally
 // - The endpoints generated are accessible
 func TestDeployOktetoManifest(t *testing.T) {
 	t.Parallel()
@@ -173,10 +173,10 @@ func TestDeployOktetoManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestDeployOktetoManifest tests the following scenario:
-// - Deploying a okteto manifest locally
+// TestRedeployOktetoManifestForImages tests the following scenario:
+// - Deploying an okteto manifest locally
 // - The endpoints generated are accessible
-// - Images are only build if
+// - Images are only built if
 func TestRedeployOktetoManifestForImages(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -247,7 +247,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 }
 
 // TestDeployOktetoManifestWithDestroy tests the following scenario:
-// - Deploying a okteto manifest locally
+// - Deploying an okteto manifest locally
 // - The endpoints generated are accessible
 // - Redeploy with okteto deploy
 // - Checks that configmap is still there
@@ -318,7 +318,7 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 }
 
 // TestDeployOktetoManifestExportCache tests the following scenario:
-// - Deploying a okteto manifest locally with a build that has a export cache
+// - Deploying an okteto manifest locally with a build that has an export cache
 func TestDeployOktetoManifestExportCache(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -368,7 +368,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 }
 
 // TestDeployRemoteOktetoManifest tests the following scenario:
-// - Deploying a okteto manifest in remote with a build locally
+// - Deploying an okteto manifest in remote with a build locally
 func TestDeployRemoteOktetoManifest(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
@@ -422,8 +422,8 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts))
 }
 
-// TestDeployRemoteOktetoManifest tests the following scenario:
-// - Deploying a okteto manifest in remote with a build locally
+// TestDeployRemoteOktetoManifestFromParentFolder tests the following scenario:
+// - Deploying an okteto manifest in remote with a build locally
 func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -475,7 +475,7 @@ func TestDeployRemoteOktetoManifestFromParentFolder(t *testing.T) {
 }
 
 // TestDeployOktetoManifestWithinRepository tests the following scenario:
-// - Deploying a okteto manifest locally within a repository from different subdirectories to check it stores it successfully
+// - Deploying an okteto manifest locally within a repository from different subdirectories to check it stores it successfully
 func TestDeployOktetoManifestWithinRepository(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

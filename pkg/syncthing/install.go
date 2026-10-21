@@ -102,7 +102,7 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to write %s: %w", i, err)
 	}
 
-	oktetoLog.Infof("downloaded syncthing %s to %s", syncthingVersion, i)
+	oktetoLog.Infof("downloaded syncthing %s to %s", minimum, i)
 	return nil
 }
 

@@ -100,9 +100,9 @@ func (s *Ctrl) IsEnabled() bool {
 	return s.config.isEnabled
 }
 
-// GetBuildHash returns the hash of the build based on the env vars
+// GetBuildHash returns the hash of the build based on the build context
 func (s *Ctrl) GetBuildHash(buildInfo *build.Info, service string) string {
-	s.ioCtrl.Logger().Debugf("getting hash based on the buildContext env var")
-	s.ioCtrl.Logger().Info("getting hash using build context due to env var")
+	s.ioCtrl.Logger().Debugf("getting hash based on the build context")
+	s.ioCtrl.Logger().Info("getting hash using build context")
 	return s.hasher.hashWithBuildContext(buildInfo, service)
 }

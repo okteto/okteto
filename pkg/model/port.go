@@ -43,7 +43,7 @@ func GetAvailablePort(iface string) (int, error) {
 
 }
 
-// IsPortAvailable returns true if the port is already taken
+// IsPortAvailable returns true if the port is available
 func IsPortAvailable(iface string, port int) bool {
 	address := net.JoinHostPort(iface, strconv.Itoa(port))
 	listener, err := net.Listen("tcp", address)
@@ -54,7 +54,7 @@ func IsPortAvailable(iface string, port int) bool {
 
 	defer func() {
 		if err := listener.Close(); err != nil {
-			oktetoLog.Debugf("Error closing file %s: %s", listener, err)
+			oktetoLog.Debugf("Error closing listener %s: %s", listener, err)
 		}
 	}()
 	return true

@@ -35,7 +35,7 @@ type DeployPreviewOptions struct {
 	Wait       bool
 }
 
-// DestroyPreviewOptions defines the options that can be added to a deploy command
+// DestroyPreviewOptions defines the options that can be added to a destroy command
 type DestroyPreviewOptions struct {
 	Workdir    string
 	Namespace  string
@@ -43,7 +43,7 @@ type DestroyPreviewOptions struct {
 	Token      string
 }
 
-// RunOktetoDeployPreview runs an okteto deploy command
+// RunOktetoDeployPreview runs an okteto preview deploy command
 func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptions) error {
 	cmd := exec.Command(oktetoPath, "preview", "deploy", deployOptions.Namespace)
 	if deployOptions.Workdir != "" {
@@ -86,9 +86,9 @@ func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptio
 	return nil
 }
 
-// RunOktetoPreviewDestroy runs an okteto destroy command
+// RunOktetoPreviewDestroy runs an okteto preview destroy command
 func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOptions) error {
-	log.Printf("okteto destroy %s", oktetoPath)
+	log.Printf("okteto preview destroy %s", oktetoPath)
 	cmd := exec.Command(oktetoPath, "preview", "destroy", destroyOptions.Namespace)
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
@@ -105,8 +105,8 @@ func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOp
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto deploy failed: %s - %w", string(o), err)
+		return fmt.Errorf("okteto preview destroy failed: %s - %w", string(o), err)
 	}
-	log.Printf("okteto destroy success")
+	log.Printf("okteto preview destroy success")
 	return nil
 }

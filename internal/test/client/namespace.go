@@ -39,7 +39,7 @@ func (c *FakeNamespaceClient) Create(_ context.Context, namespace string) (strin
 	return namespace, c.err
 }
 
-// List list namespaces
+// List lists namespaces
 func (c *FakeNamespaceClient) List(_ context.Context) ([]types.Namespace, error) {
 	return c.namespaces, c.err
 }
@@ -66,12 +66,12 @@ func (c *FakeNamespaceClient) Delete(_ context.Context, namespace string) error 
 	return nil
 }
 
-// Sleep deletes a namespace
+// Sleep sleeps a namespace
 func (c *FakeNamespaceClient) Sleep(_ context.Context, _ string) error {
 	return c.err
 }
 
-// DestroyAll deletes a namespace
+// DestroyAll destroys all resources in a namespace
 func (*FakeNamespaceClient) DestroyAll(_ context.Context, _ string, _ bool) error {
 	return nil
 }

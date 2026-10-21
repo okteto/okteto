@@ -52,7 +52,7 @@ func (es *ServiceEnvVarsHandler) SetEnvVar(key, value string) {
 	es.lock.Unlock()
 }
 
-// SetServiceEnvVars set okteto build env vars
+// SetServiceEnvVars sets okteto build env vars
 func (es *ServiceEnvVarsHandler) SetServiceEnvVars(service, reference string) {
 	ref, err := es.imageReferenceGetter.GetImageReference(reference)
 	if err != nil {

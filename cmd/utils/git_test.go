@@ -122,12 +122,12 @@ func Test_isOktetoRepoFromURL(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "ssh from okteto",
+			name:     "scp-like ssh from okteto",
 			url:      "git@github.com:okteto/movies.git",
 			expected: true,
 		},
 		{
-			name:     "ssh from okteto",
+			name:     "scp-like ssh not from okteto",
 			url:      "git@github.com:test/test.git",
 			expected: false,
 		},
@@ -137,17 +137,17 @@ func Test_isOktetoRepoFromURL(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "https from okteto",
+			name:     "https not from okteto",
 			url:      "https://github.com/test/test.git",
 			expected: false,
 		},
 		{
-			name:     "ssh from okteto",
+			name:     "ssh url from okteto",
 			url:      "ssh://git@github.com/okteto/test",
 			expected: true,
 		},
 		{
-			name:     "https from okteto",
+			name:     "ssh url not from okteto",
 			url:      "ssh://git@github.com/test/test",
 			expected: false,
 		},

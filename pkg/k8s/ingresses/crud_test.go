@@ -53,7 +53,7 @@ func TestCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(retrieved, i.V1) {
-		t.Fatalf("Didn't created correctly")
+		t.Fatalf("Didn't create correctly")
 	}
 }
 
@@ -96,7 +96,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(retrieved, updatedIngress.V1) {
-		t.Fatalf("Didn't updated correctly")
+		t.Fatalf("Didn't update correctly")
 	}
 }
 

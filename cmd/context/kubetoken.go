@@ -57,7 +57,7 @@ func newStaticKubetokenController() *staticKubetokenController {
 	}
 }
 
-// updateOktetoContext when the dynamic kubetoken is disabled removes the exec from the kubeconfig stored in the okteto context
+// updateOktetoContextExec when the dynamic kubetoken is disabled removes the exec from the kubeconfig stored in the okteto context
 // so okteto can still use the old kubeconfig auth method (by static token) to connect to the cluster.
 func (kc *staticKubetokenController) updateOktetoContextExec(okCtx *okteto.Context) error {
 	kc.staticKubetokenWarner.warn()
@@ -89,7 +89,7 @@ func newDynamicKubetokenController(okClientProvider oktetoClientProvider) *dynam
 	}
 }
 
-// updateOktetoContext when the dynamic kubetoken is enabled configures the kubeconfig auth method to be executed by okteto kubetoken
+// updateOktetoContextExec when the dynamic kubetoken is enabled configures the kubeconfig auth method to be executed by okteto kubetoken
 // which returns a dynamic token to connect to the cluster.
 func (dkc *dynamicKubetokenController) updateOktetoContextExec(okCtx *okteto.Context) error {
 	okClient, err := dkc.oktetoClientProvider.Provide()

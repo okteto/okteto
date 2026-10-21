@@ -257,23 +257,23 @@ func TestExtractImageTagFromPullAccessDeniedError(t *testing.T) {
 			expected: "",
 		},
 		{
-			err:      errors.New("failed to solve: registry/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			err:      errors.New("failed to solve: registry/myimage: pull access denied, repository does not exist or may require authorization"),
 			expected: "registry/myimage",
 		},
 		{
-			err:      errors.New("failed to solve: myimage: pull access denied, repository does not exist or may require authorizatio"),
+			err:      errors.New("failed to solve: myimage: pull access denied, repository does not exist or may require authorization"),
 			expected: "myimage",
 		},
 		{
-			err:      errors.New("failed to solve: okteto.dev/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			err:      errors.New("failed to solve: okteto.dev/myimage: pull access denied, repository does not exist or may require authorization"),
 			expected: "okteto.dev/myimage",
 		},
 		{
-			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: pull access denied, repository does not exist or may require authorizatio"),
+			err:      errors.New("failed to solve: myregistry.com/my-namespace/myimage: pull access denied, repository does not exist or may require authorization"),
 			expected: "myregistry.com/my-namespace/myimage",
 		},
 		{
-			err:      errors.New("failed to solve: registry/my-namespace:my-tag: pull access denied, repository does not exist or may require authorizatio"),
+			err:      errors.New("failed to solve: registry/my-namespace:my-tag: pull access denied, repository does not exist or may require authorization"),
 			expected: "registry/my-namespace:my-tag",
 		},
 	}

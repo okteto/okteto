@@ -69,7 +69,7 @@ func NewLevenshteinRule(pattern string, target string, targetGroupIndex int) *Ru
 
 	threshold := 3
 
-	// if the target is shorter than the threshold, we set the threshold to 1
+	// if the target is not longer than the threshold, we set the threshold to 1
 	if len(target) <= threshold {
 		threshold = 1
 	}

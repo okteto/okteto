@@ -73,7 +73,7 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	}
 
 	if err := d.deleteOrphanDiverts(ctx); err != nil {
-		return fmt.Errorf("error deleting orphan diverts resources: %w", err)
+		return fmt.Errorf("error deleting orphan divert resources: %w", err)
 	}
 
 	for name, in := range d.cache.divertIngresses {
@@ -95,7 +95,7 @@ func (d *Driver) Deploy(ctx context.Context) error {
 	return nil
 }
 
-// Destroy implements from the interface diver.Driver
+// Destroy implements the interface divert.Driver
 // nolint:unparam
 func (d *Driver) Destroy(_ context.Context) error {
 	oktetoLog.Success("Divert from '%s' successfully destroyed", d.divert.Namespace)
@@ -150,7 +150,7 @@ func (d *Driver) deployDivertResources(ctx context.Context) error {
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			// If the service doesn't have the divert namespace annotation, we don't have to create or update
+			// If the service has the divert namespace annotation, we don't have to create or update
 			// the divert resource as they are just a copy from the base namespace
 			if svc.Annotations[model.OktetoDivertedNamespaceAnnotation] != "" {
 				continue
@@ -186,7 +186,7 @@ func (d *Driver) deployDivertResources(ctx context.Context) error {
 			oktetoLog.Debugf("creating or updating divert resource for service '%s/%s'", svc.Namespace, svc.Name)
 			if err := d.divertManager.CreateOrUpdate(ctx, div); err != nil {
 				oktetoLog.Infof("error creating or updating divert resource '%s/%s': %s", div.Namespace, div.Name, err)
-				return fmt.Errorf("error diverting service %s/%s: %w", div.Namespace, div.Name, err)
+				return fmt.Errorf("error diverting service %s/%s: %w", svc.Namespace, svc.Name, err)
 			}
 			oktetoLog.Debugf("Divert resource '%s/%s' created or updated", div.Namespace, div.Name)
 		}

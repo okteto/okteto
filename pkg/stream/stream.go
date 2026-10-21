@@ -91,11 +91,11 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 	}
 }
 
-// handleLineFn represents the function that prints the log message, returns true when is "done" message
+// handleLineFn represents the function that prints the log message, returns true when it is the "done" message
 type handleLineFn func(line string) bool
 
 // GetLogsFromURL makes a request to the url provided and reads the content of the body
-// the client will try to retry connection if fails
+// the client will retry the connection if it fails
 // the handler will handle the content of the streaming events coming from the request body
 func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler handleLineFn, timeout time.Duration) error {
 	resp, err := requestWithRetry(ctx, c, url, timeout)

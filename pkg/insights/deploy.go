@@ -48,7 +48,7 @@ type phaseJSON struct {
 	Duration float64 `json:"duration"`
 }
 
-// TrackDeploy tracks an image build event
+// TrackDeploy tracks a deploy event
 func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, success bool) {
 	k8sClient, _, err := ip.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
@@ -63,7 +63,7 @@ func (ip *Publisher) TrackDeploy(ctx context.Context, name, namespace string, su
 	}
 
 	val, ok := cmap.Data[pipeline.PhasesField]
-	// If there is no phases, we don't track the event
+	// If there are no phases, we don't track the event
 	if !ok {
 		ip.ioCtrl.Logger().Infof("no phases found in pipeline configmap. Skipping event tracking")
 		return

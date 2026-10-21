@@ -74,7 +74,7 @@ type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the path to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used through the command execution.
 	// This might change its value during execution
 	ManifestPath          string
 	Name                  string
@@ -324,13 +324,13 @@ $ okteto deploy --no-build=true`,
 	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "run the deploy commands using Remote Execution")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the deployment finishes and pods are healthy")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "when using `wait`, the maximum time to wait for the resources of the deployment to be healthy")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "when using --wait, the maximum time to wait for the resources of the deployment to be healthy")
 
 	return cmd
 }
 
 // calculateManifestPathToBeStored calculates the manifest path that has to be stored in the config map for UI operations.
-// It calculates the absolute path from the received path and then, it gets the relative path the top level git dir (repo root)
+// It calculates the absolute path from the received path and then, it gets the relative path to the top level git dir (repo root)
 func (dc *Command) calculateManifestPathToBeStored(topLevelGitDir, manifestPath string) string {
 	absoluteManifestPath, err := filepath.Abs(manifestPath)
 	if err != nil {
@@ -442,7 +442,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	//   |- dirB
 	//    |- okteto.yml
 	// If the command executed is okteto deploy from "dirB", we should store the manifest path as "dirA/dirB/okteto.yml"
-	// NOTE: This is only stored if ManifestPathFlag (-f options) is passed
+	// NOTE: This is only stored if ManifestPathFlag (-f option) is passed
 	manifestPathForConfigMap := ""
 	if topLevelGitDir != "" && deployOptions.ManifestPathFlag != "" {
 		// If deployOptions.ManifestPath is set, means that we have changed the working directory to the one storing the manifest, so we need to take the absolute path from ManifestPath
@@ -699,7 +699,7 @@ func ShouldRunInRemote(opts *Options) bool {
 }
 
 // GetDeployer returns a remote or a local deployer
-// k8sProvider, kubeconfig and portGetter should not be nil values
+// k8sProvider should not be nil
 func GetDeployer(ctx context.Context,
 	opts *Options,
 	buildEnvVarsGetter buildEnvVarsGetter,
@@ -745,7 +745,7 @@ func GetDeployer(ctx context.Context,
 	return newLocalDeployer(runner), nil
 }
 
-// isRemoteDeployer should be considered remote when flag RunInRemote is active OR deploy.image is fulfilled OR remote flag in manifest is set
+// isRemoteDeployer should be considered remote when flag RunInRemote is active OR deploy.image is set OR remote flag in manifest is set
 func isRemoteDeployer(runInRemoteFlag bool, deployImage string, manifestRemoteFlag bool) bool {
 	return runInRemoteFlag || deployImage != "" || manifestRemoteFlag
 }
@@ -780,7 +780,7 @@ func deployRepoURL(manifestPath string) string {
 	return repoURL
 }
 
-// resolveIsRedeploy determines whether this deploy is a redeploy of an existing development
+// resolveIsRedeploy determines whether this deploy is a redeploy of an existing development environment
 func resolveIsRedeploy(ctx context.Context, name, namespace string, c kubernetes.Interface) bool {
 	if _, ok := os.LookupEnv(constants.OktetoIsRedeployEnvVar); ok {
 		return env.LoadBoolean(constants.OktetoIsRedeployEnvVar)
@@ -799,7 +799,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 	parentWorkflowID := uuid.New().String()
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency  '%s'", depName)
+		oktetoLog.Information("Deploying dependency '%s'", depName)
 		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
 		if err := validator.CheckReservedVarName(dep.Variables); err != nil {
 			return err
@@ -1036,7 +1036,7 @@ func GetDependencyEnvVars(environGetter environGetter) map[string]string {
 	for _, e := range environGetter() {
 		pair := strings.SplitN(e, "=", varsParts)
 		if len(pair) != varsParts {
-			// If a variables doesn't have left and right side we just skip it
+			// If a variable doesn't have left and right side we just skip it
 			continue
 		}
 
@@ -1053,7 +1053,7 @@ func checkOktetoManifestPathFlag(options *Options, fs afero.Fs) error {
 		return nil
 	}
 
-	// if path is absolute, its transformed from root path to a rel path
+	// if path is absolute, it's transformed from root path to a rel path
 	initialCWD, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)

@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestKubetokenHasExpiration test that kubernetes returns a dynamic token with a set expiration
+// TestKubetokenHasExpiration tests that kubernetes returns a dynamic token with a set expiration
 func TestKubetokenHasExpiration(t *testing.T) {
 	t.Parallel()
 

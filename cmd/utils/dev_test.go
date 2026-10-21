@@ -43,7 +43,7 @@ func Test_CheckIfDirectory(t *testing.T) {
 			want: fmt.Errorf("'dev.go' is not a directory"),
 		},
 		{
-			name: "file",
+			name: "not-exists",
 			path: "no.go",
 			want: fmt.Errorf("'no.go' does not exist"),
 		},
@@ -101,7 +101,7 @@ func Test_GetDevFromManifest(t *testing.T) {
 			err:     fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, wrongDevName),
 		},
 		{
-			name: "manifest has several dev section user introduces wrong one",
+			name: "manifest has several dev sections user introduces wrong one",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
 					"test":   &model.Dev{},
@@ -113,7 +113,7 @@ func Test_GetDevFromManifest(t *testing.T) {
 			err:     fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, wrongDevName),
 		},
 		{
-			name: "manifest has several dev section user introduces correct one",
+			name: "manifest has several dev sections user introduces correct one",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
 					"test":   &model.Dev{},
@@ -136,7 +136,7 @@ func Test_GetDevFromManifest(t *testing.T) {
 			err:     nil,
 		},
 		{
-			name: "manifest has several dev section user introduces empty devName",
+			name: "manifest has several dev sections user introduces empty devName",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
 					"test":   &model.Dev{},

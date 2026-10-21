@@ -62,7 +62,7 @@ type K8sClientProviderWithLogger interface {
 	ProvideWithLogger(clientApiConfig *clientcmdapi.Config, k8sLogger *ioCtrl.K8sLogger) (kubernetes.Interface, *rest.Config, error)
 }
 
-// tokenRotationTransport updates the token of the config when the token is outdated
+// tokenRotationTransport returns ErrK8sUnauthorised when the API server responds with a 401
 type tokenRotationTransport struct {
 	rt        http.RoundTripper
 	k8sLogger *ioCtrl.K8sLogger

@@ -60,7 +60,7 @@ func Test_ExpandEnv(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name:        "only bar not expand if empty",
+			name:        "unset foo expands to empty",
 			value:       "${FOO}",
 			result:      "",
 			expectedErr: nil,
@@ -119,7 +119,7 @@ func Test_ExpandEnvIfNotEmpty(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name:        "only bar not expand if empty",
+			name:        "only foo not expanded if empty",
 			value:       "${FOO}",
 			result:      "${FOO}",
 			expectedErr: nil,

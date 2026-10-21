@@ -87,16 +87,16 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 		// If the manifestPath is not the default one, we compare it with the one in the configmap
 		if manifestPath != cmapFilename {
 			if manifestPath == "" {
-				// If manifestPath is empty and filename is not equal to one of the default okteto name,
+				// If manifestPath is empty and filename is not equal to one of the default okteto names,
 				// log a message indicating the mismatch between the configmap and the provided manifest.
 				if cmapFilename != discoveredFile {
-					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmapFilename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmap.Name, cmapFilename, discoveredFile)
 					continue
 				}
 			} else {
 				// If manifestPath is not empty and filename is not the same as manifestPath,
 				// log a message indicating the mismatch between the configmap and the provided manifest.
-				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmapFilename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmap.Name, cmapFilename, manifestPath)
 				continue
 			}
 		}
@@ -109,9 +109,9 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 		return utils.TranslateURLToName(repoURL)
 	}
 
-	// If more than 1 name is found, we print a message to the user know the name that was inferred
+	// If more than 1 name is found, we print a message to let the user know the name that was inferred
 	if len(possibleNames) > 1 {
-		oktetoLog.Warning("found several dev environments candidates to infer the name: %s. Using '%s'", strings.Join(possibleNames, ", "), possibleNames[0])
+		oktetoLog.Warning("found several dev environment candidates to infer the name: %s. Using '%s'", strings.Join(possibleNames, ", "), possibleNames[0])
 	}
 
 	oktetoLog.Infof("inferred name from dev environment '%s'", possibleNames[0])
@@ -120,7 +120,7 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 
 // InferName infers the dev environment name from the folder received as parameter. It has the following preference:
 //   - If cwd (current working directory) contains a repo, we look for a dev environment deployed with the same repository and the same
-//     manifest path, and we took the name from the config map
+//     manifest path, and we take the name from the config map
 //   - If current working directory doesn't have a repository, we check if OKTETO_NAME env var is set
 //   - If no repository and no OKTETO_NAME env var is set, we take the name from the CWD
 //
@@ -128,7 +128,7 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath string) string {
 	repoURL, err := n.getRepositoryURL(cwd)
 	if err != nil {
-		// We give priority to OKTETO_NAME env var to use it on cases where the okteto commands are executed as part
+		// We give priority to OKTETO_NAME env var to use it in cases where the okteto commands are executed as part
 		// of other deploy/destroy commands
 		if name := n.getEnv(constants.OktetoNameEnvVar); name != "" {
 			oktetoLog.Info("inferring name from OKTETO_NAME env var")

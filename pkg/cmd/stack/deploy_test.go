@@ -505,7 +505,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app", "job-failed"},
 		},
 		{
-			name: "dependent service is job finished successful",
+			name: "dependent service is job finished successfully",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -559,7 +559,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app"},
 		},
 		{
-			name: "dependent service is already on to be deployed",
+			name: "dependent service is already in services to be deployed",
 			stack: &model.Stack{
 				Services: map[string]*model.Service{
 					"db": {},

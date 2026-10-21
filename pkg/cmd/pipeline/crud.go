@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// IsDeployed checks if a pipeline has been
+// IsDeployed checks if a pipeline has been deployed
 func IsDeployed(ctx context.Context, name, namespace string, c kubernetes.Interface) bool {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if (err != nil && k8sErrors.IsNotFound(err)) || cmap == nil {

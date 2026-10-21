@@ -141,7 +141,7 @@ func (p *Proxy) Start() {
 	}()
 
 	go func(s *http.Server) {
-		// Path to cert and key files are empty because cert is provisioned on the tls config struct
+		// Paths to cert and key files are empty because cert is provisioned on the tls config struct
 		if err := s.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 			oktetoLog.Infof("could not start proxy server: %s", err)
 		}
@@ -262,7 +262,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 	handler.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
 		requestToken := r.Header.Get("Authorization")
 		expectedToken := fmt.Sprintf("Bearer %s", token)
-		// Validate token with the generated for the local kubeconfig file
+		// Validate token with the one generated for the local kubeconfig file
 		if requestToken != expectedToken {
 			rw.WriteHeader(http.StatusUnauthorized)
 			return
@@ -282,7 +282,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
 			t, err := newProtocolTransport(clusterConfig, true)
 			if err != nil {
-				oktetoLog.Infof("could not disabled HTTP/2: %s", err)
+				oktetoLog.Infof("could not disable HTTP/2: %s", err)
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -339,7 +339,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			r.Body = io.NopCloser(&buf)
 		}
 
-		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
+		// Redirect request to the k8s server (based on the HTTP transport generated from the config)
 		reverseProxy.ServeHTTP(rw, r)
 	})
 
