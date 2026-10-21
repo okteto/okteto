@@ -1063,6 +1063,38 @@ func TestRunWithDependenciesSucceeds(t *testing.T) {
 	require.Empty(t, os.Getenv("OKTETO_DEPENDENCY_REPORTS_VARIABLE_DEP_VAR"))
 }
 
+func TestRunRecordsEveryFailedDependencyUnderItsStage(t *testing.T) {
+	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{
+		"db":      errors.New("db exploded"),
+		"reports": errors.New("reports exploded"),
+	}}
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"db":      &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, pipelineDeployer, &fakeDeployer{})
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.Error(t, err)
+	output := deployOutput(t, c)
+	require.Contains(t, output, `"level":"error","stage":"Deploying dependency db","message":"dependency 'db' failed: db exploded"`)
+	require.Contains(t, output, `"level":"error","stage":"Deploying dependency reports","message":"dependency 'reports' failed: reports exploded"`)
+}
+
+func TestRunRecordsFailedDependenciesWhenTheMainDeployFails(t *testing.T) {
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(errors.New("main exploded"))
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, &capturingPipelineDeployer{errs: map[string]error{"reports": errors.New("reports exploded")}}, deployer)
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorContains(t, err, "main exploded")
+	require.Contains(t, deployOutput(t, c), `"level":"error","stage":"Deploying dependency reports","message":"dependency 'reports' failed: reports exploded"`)
+}
+
 func TestRunMainDeployFailureWaitsForDependencies(t *testing.T) {
 	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": errors.New("reports failed")}}
 	deployer := &fakeDeployer{}

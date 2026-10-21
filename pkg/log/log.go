@@ -186,6 +186,11 @@ func SetStage(stage string) {
 	log.stage = stage
 }
 
+// GetStage returns the stage of the logger
+func GetStage() string {
+	return log.getStage()
+}
+
 func (l *logger) getStage() string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

@@ -69,6 +69,7 @@ type dependencyScheduler struct {
 	mainReadyErr     error
 	err              error
 	failed           []string
+	failures         map[string]error
 	mainReadyOnce    sync.Once
 	startOnce        sync.Once
 	// stopMu is held while a dependency starts, so none starts after Stop returns
@@ -115,6 +116,12 @@ func (s *dependencyScheduler) MainPredecessors() []string {
 func (s *dependencyScheduler) Failed() []string {
 	<-s.done
 	return s.failed
+}
+
+// FailureOf blocks until every started dependency has finished and returns the error of the dependency, if it failed
+func (s *dependencyScheduler) FailureOf(name string) error {
+	<-s.done
+	return s.failures[name]
 }
 
 // OverlapsMainDeploy returns true when some dependencies can run at the same time as the main deploy:
@@ -233,6 +240,7 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 			s.failed = append(s.failed, name)
 		}
 	}
+	s.failures = failures
 	notStarted := notStartedDependencies(names, started)
 	switch {
 	case cancelled:

@@ -502,6 +502,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		if depsErr := scheduler.Wait(); depsErr != nil {
 			err = depsErr
 		}
+		recordDependencyFailures(scheduler)
 		setFailedDependencyStage(scheduler)
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
@@ -512,6 +513,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if err := dc.exportDependencyEnvVars(ctx, scheduler.MainPredecessors(), deployOptions.Namespace); err != nil {
 		scheduler.Stop()
 		err = errors.Join(err, scheduler.Wait())
+		recordDependencyFailures(scheduler)
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
@@ -523,6 +525,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	if deployOptions.Manifest.Deploy == nil {
 		if err := scheduler.Wait(); err != nil {
+			recordDependencyFailures(scheduler)
 			setFailedDependencyStage(scheduler)
 			if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 				return errStatus
@@ -538,6 +541,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		scheduler.Stop()
 	}
 	depsErr := scheduler.Wait()
+	recordDependencyFailures(scheduler)
 	// when only dependencies failed, their error is reported under their stage without the end marker, as when
 	// they fail before the main deploy
 	if result.deployRan && (mainErr != nil || depsErr == nil) {
@@ -893,6 +897,18 @@ func (dc *Command) recordInterruption(cfg *apiv1.ConfigMap, data pipeline.CfgDat
 			oktetoLog.Infof("could not record the interruption of the deploy: %s", errStatus)
 		}
 	}
+}
+
+// recordDependencyFailures writes the error of every dependency that failed under its own stage, so that all of
+// them are shown as failed: the lines of a dependency are recorded at info level, and the error of the deploy is
+// reported under one stage only. The stage is left as it was
+func recordDependencyFailures(scheduler *dependencyScheduler) {
+	stage := oktetoLog.GetStage()
+	for _, name := range scheduler.Failed() {
+		oktetoLog.SetStage(pipelineCMD.DependencyStage(name))
+		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "dependency '%s' failed: %s", name, scheduler.FailureOf(name))
+	}
+	oktetoLog.SetStage(stage)
 }
 
 // setFailedDependencyStage sets the stage of the first dependency that failed, if any, so that the error is
