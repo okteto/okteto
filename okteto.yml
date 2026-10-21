@@ -22,7 +22,7 @@ dev:
     autocreate: true
 test:
   unit:
-    image: okteto/golang-ci:2.10.2@sha256:70110959a4abc29e805470a1f67840bb0f5edbc4dd50e7dc80a970049d7c8c8a
+    image: okteto/golang-ci:2.10.5@sha256:ca0da30ad764a002f7b34e66bbad8329d0b4b3931f92ff621faba71581fb0e01
     artifacts:
       - coverage.txt
       - coverage.html
