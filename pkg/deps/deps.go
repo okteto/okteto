@@ -15,6 +15,7 @@ package deps
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sort"
 	"strings"
@@ -113,7 +114,15 @@ func (d *Dependency) ExpandVarsFrom(environ, variables []string) error {
 			v.Name = expandedVarName
 		}
 
-		expandedVarValue, err := parser.Parse(v.Value)
+		// the values are not expanded when the manifest is read (see unexpandedVariables), so the first pass is the
+		// expansion they used to get then, now with the env vars of the dependencies in depends_on. The second one
+		// is the expansion they already had here, which resolves the escaped $${VAR}
+		value, err := parser.Parse(v.Value)
+		if err != nil {
+			return fmt.Errorf("error expanding variable value: %w", err)
+		}
+		v.Value = value
+		expandedVarValue, err := parser.Parse(value)
 		if err != nil {
 			return fmt.Errorf("error expanding variable value: %w", err)
 		}
@@ -164,6 +173,18 @@ func (md *ManifestSection) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	return nil
 }
 
+// dependencyFields are the fields of a dependency in the manifest. They are the ones of Dependency, except that
+// the variables are read without expanding them
+type dependencyFields struct {
+	Repository   string              `yaml:"repository"`
+	ManifestPath string              `yaml:"manifest,omitempty"`
+	Branch       string              `yaml:"branch,omitempty"`
+	Variables    unexpandedVariables `yaml:"variables,omitempty"`
+	Timeout      time.Duration       `yaml:"timeout,omitempty"`
+	Wait         bool                `yaml:"wait,omitempty"`
+	DependsOn    DependsOn           `yaml:"depends_on,omitempty"`
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
@@ -173,14 +194,62 @@ func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	type dependencyPreventRecursionType Dependency
-	var dependencyRaw dependencyPreventRecursionType
-	err = unmarshal(&dependencyRaw)
+	var fields dependencyFields
+	err = unmarshal(&fields)
 	if err != nil {
 		return err
 	}
-	*d = Dependency(dependencyRaw)
+	*d = Dependency{
+		Repository:   fields.Repository,
+		ManifestPath: fields.ManifestPath,
+		Branch:       fields.Branch,
+		Variables:    env.Environment(fields.Variables),
+		Timeout:      fields.Timeout,
+		Wait:         fields.Wait,
+		DependsOn:    fields.DependsOn,
+	}
 
+	return nil
+}
+
+// unexpandedVariables are the variables of a dependency as they are written in the manifest. Unlike the rest of
+// the manifest, they are not expanded when it is read: the env vars of the dependencies in depends_on don't exist
+// yet. ExpandVarsFrom expands them when the dependency is deployed
+type unexpandedVariables env.Environment
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (v *unexpandedVariables) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	values := map[string]string{}
+	var rawList []string
+	if err := unmarshal(&rawList); err == nil {
+		for _, raw := range rawList {
+			name, value, found := strings.Cut(raw, "=")
+			if !found {
+				// a variable without value takes it from the environment, as in the rest of the manifest
+				name, err = env.ExpandEnv(raw)
+				if err != nil {
+					return err
+				}
+				value = os.Getenv(name)
+			}
+			values[name] = value
+		}
+	} else {
+		var rawMap map[string]string
+		if err := unmarshal(&rawMap); err != nil {
+			return err
+		}
+		maps.Copy(values, rawMap)
+	}
+
+	variables := make(unexpandedVariables, 0, len(values))
+	for name, value := range values {
+		variables = append(variables, env.Var{Name: name, Value: value})
+	}
+	sort.Slice(variables, func(i, j int) bool {
+		return variables[i].Name < variables[j].Name
+	})
+	*v = variables
 	return nil
 }
 

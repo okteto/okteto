@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 const schedulerTestTimeout = 5 * time.Second
@@ -750,8 +751,8 @@ func TestPipelineDependencyRunnerLeavesOutThePredecessorsOfDependsOn(t *testing.
 	require.NoError(t, runner.Run(context.Background(), "frontend", section["frontend"]))
 
 	require.Equal(t, []string{"backend"}, envVars.asked)
-	// frontend doesn't declare database, so its env vars are not expanded
-	require.Contains(t, deployer.captured["frontend"].Variables, "DB_HOST=${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}")
+	// frontend doesn't declare database, so its env vars are undefined, as any other undefined env var
+	require.Contains(t, deployer.captured["frontend"].Variables, "DB_HOST=")
 }
 
 func TestPipelineDependencyRunnerFailsWhenTheDependsOnEnvVarsCannotBeRead(t *testing.T) {
@@ -799,4 +800,24 @@ func TestPipelineDependencyRunnerUsesTheDependencyTimeout(t *testing.T) {
 	runAllDependencies(t, runner, section)
 
 	require.Equal(t, 2*time.Minute, deployer.captured["analytics"].Timeout)
+}
+
+func TestPipelineDependencyRunnerExpandsDependsOnEnvVarsWrittenInTheManifest(t *testing.T) {
+	manifest := []byte(`
+database:
+  repository: https://github.com/okteto/database
+backend:
+  repository: https://github.com/okteto/backend
+  depends_on: database
+  variables:
+    DB_HOST: ${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}
+`)
+	var section deps.ManifestSection
+	require.NoError(t, yaml.Unmarshal(manifest, &section))
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, chainEnvVars().get, section, &Options{}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	require.Contains(t, deployer.captured["backend"].Variables, "DB_HOST=db.svc")
 }

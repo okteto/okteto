@@ -367,3 +367,66 @@ func Test_ManifestSection_Validate_NamesResolvingToTheSamePipeline(t *testing.T)
 
 	require.EqualError(t, err, "manifest validation failed: dependencies 'my-api' and 'my.api' resolve to the same name 'my-api'")
 }
+
+func Test_Dependency_UnmarshalYAML_DoesNotExpandVariables(t *testing.T) {
+	t.Setenv("DEPS_TEST_HOST", "at-read")
+	manifest := []byte(`
+backend:
+  repository: https://github.com/okteto/backend
+  variables:
+    DB_HOST: ${DEPS_TEST_HOST}
+    ESCAPED: $${DEPS_TEST_HOST}
+`)
+
+	var section ManifestSection
+	require.NoError(t, yaml.Unmarshal(manifest, &section))
+
+	require.Equal(t, env.Environment{
+		{Name: "DB_HOST", Value: "${DEPS_TEST_HOST}"},
+		{Name: "ESCAPED", Value: "$${DEPS_TEST_HOST}"},
+	}, section["backend"].Variables)
+}
+
+func Test_Dependency_UnmarshalYAML_DoesNotExpandVariablesInListForm(t *testing.T) {
+	t.Setenv("DEPS_TEST_HOST", "at-read")
+	manifest := []byte(`
+backend:
+  repository: https://github.com/okteto/backend
+  variables:
+    - DB_HOST=${DEPS_TEST_HOST}
+    - DEPS_TEST_HOST
+`)
+
+	var section ManifestSection
+	require.NoError(t, yaml.Unmarshal(manifest, &section))
+
+	// a variable without value still takes it from the environment
+	require.Equal(t, env.Environment{
+		{Name: "DB_HOST", Value: "${DEPS_TEST_HOST}"},
+		{Name: "DEPS_TEST_HOST", Value: "at-read"},
+	}, section["backend"].Variables)
+}
+
+func Test_ExpandVarsFrom_ExpandsVariablesTwice(t *testing.T) {
+	dependency := &Dependency{
+		Variables: env.Environment{
+			{Name: "NATURAL", Value: "${DEPS_TEST_HOST}"},
+			{Name: "ESCAPED", Value: "$${DEPS_TEST_HOST}"},
+			{Name: "UNDEFINED", Value: "${DEPS_TEST_UNDEFINED}"},
+			{Name: "ESCAPED_UNDEFINED", Value: "$${DEPS_TEST_UNDEFINED}"},
+			{Name: "LITERAL", Value: "value"},
+		},
+	}
+
+	err := dependency.ExpandVarsFrom([]string{"DEPS_TEST_HOST=db.svc"}, nil)
+
+	require.NoError(t, err)
+	// the same results as expanding them when the manifest is read and again when deploying
+	require.Equal(t, env.Environment{
+		{Name: "NATURAL", Value: "db.svc"},
+		{Name: "ESCAPED", Value: "db.svc"},
+		{Name: "UNDEFINED", Value: ""},
+		{Name: "ESCAPED_UNDEFINED", Value: "${DEPS_TEST_UNDEFINED}"},
+		{Name: "LITERAL", Value: "value"},
+	}, dependency.Variables)
+}
