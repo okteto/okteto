@@ -222,3 +222,19 @@ func TestWaitUntilDestroyedDoesNotWarnWhenTheStreamIsCancelled(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, oktetoLog.GetOutputBuffer().String(), "error streaming pipeline logs")
 }
+
+func TestWaitUntilDestroyedKeepsTheLogLinesOfAFailure(t *testing.T) {
+	initLogBuffer(t)
+	// the pipeline fails before its last line, the one that explains why, reaches the stream
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: failingFinishPipelineClient{client.NewFakePipelineClient(&client.FakePipelineResponses{})},
+			StreamClient:   &slowStreamClient{lines: []string{"the reason"}, delay: 100 * time.Millisecond},
+		},
+	}
+
+	err := pc.waitUntilDestroyed(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second)
+
+	require.ErrorIs(t, err, assert.AnError)
+	require.Contains(t, oktetoLog.GetOutputBuffer().String(), "the reason")
+}

@@ -269,6 +269,9 @@ func (c *lingeringStreamClient) PipelineLogsTo(ctx context.Context, _, _, _ stri
 }
 
 func TestWaitUntilRunningStopsTheLogsStreamBeforeReturningAnError(t *testing.T) {
+	previous := logsDrainTimeout
+	logsDrainTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { logsDrainTimeout = previous })
 	stream := &lingeringStreamClient{}
 	pc := newWaitTestCommand(map[string]string{"svc": okteto.RunningStatus})
 	fake := pc.okClient.(*client.FakeOktetoClient)
@@ -279,4 +282,18 @@ func TestWaitUntilRunningStopsTheLogsStreamBeforeReturningAnError(t *testing.T) 
 
 	require.ErrorIs(t, err, assert.AnError)
 	require.True(t, stream.returned.Load())
+}
+
+func TestWaitUntilRunningKeepsTheLogLinesOfAFailure(t *testing.T) {
+	recorder := &safeLineRecorder{}
+	out := &prefixedDeployOutput{prefix: "db", printer: recorder.printer()}
+	// the pipeline fails before its last line, the one that explains why, reaches the stream
+	pc := newSlowStreamCommand(&slowStreamClient{lines: []string{"the reason"}, delay: 100 * time.Millisecond})
+	fake := pc.okClient.(*client.FakeOktetoClient)
+	fake.PipelineClient = failingFinishPipelineClient{fake.PipelineClient.(*client.FakePipelineClient)}
+
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, out)
+
+	require.ErrorIs(t, err, assert.AnError)
+	require.Contains(t, recorder.lines, "[db] the reason")
 }

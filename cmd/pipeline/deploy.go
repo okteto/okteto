@@ -455,19 +455,19 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, namespace, timeout)
 	}()
 
+	var err error
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
-	case err := <-exit:
+	case err = <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
-			return err
 		}
 	}
 
-	// the deploy has finished: give the logs stream time to reach the end of the logs before cancelling it,
-	// so that the last lines are not lost
+	// the deploy has finished, successfully or not: give the logs stream time to reach the end of the logs before
+	// cancelling it, so that the last lines are not lost. When it failed, they are the ones that explain why
 	select {
 	case <-streamDone:
 	case <-time.After(logsDrainTimeout):
@@ -475,7 +475,7 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
 	}
-	return nil
+	return err
 }
 
 func (pc *Command) waitToBeDeployed(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
