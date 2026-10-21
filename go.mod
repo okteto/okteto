@@ -26,7 +26,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/moby/buildkit v0.34.0
+	github.com/moby/buildkit v0.34.1
 	github.com/moby/term v0.5.2
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -292,4 +292,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260825221802-da73d73af1c5 // indirect
 )
 
-replace github.com/moby/buildkit => github.com/okteto/buildkit v0.34.1-0.20261008103754-06b797dcbc17 // v0.34.0-okteto1
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.34.2-0.20261020221304-94a56f5e96dd // v0.34.1-okteto1
