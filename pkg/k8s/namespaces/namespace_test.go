@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	openapi_v2 "github.com/google/gnostic-models/openapiv2"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,12 +28,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/openapi"
-	"k8s.io/client-go/rest"
 )
 
 func TestDestroySFSVolumesIfNeeded(t *testing.T) {
@@ -360,6 +356,8 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 }
 
 type fakeDiscovery struct {
+	// embedded to satisfy discovery.DiscoveryInterfaces; only ServerGroupsAndResources is used
+	discovery.DiscoveryInterfaces
 	errServerGroupsAndResources error
 }
 
@@ -367,41 +365,12 @@ func (d *fakeDiscovery) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav
 	return nil, []*metav1.APIResourceList{}, d.errServerGroupsAndResources
 }
 
-// not implemented, needed for mocking the discovery client
-func (*fakeDiscovery) OpenAPISchema() (*openapi_v2.Document, error) {
-	return nil, nil
-}
-func (*fakeDiscovery) OpenAPIV3() openapi.Client {
-	return nil
-}
-func (*fakeDiscovery) RESTClient() rest.Interface {
-	return nil
-}
-func (*fakeDiscovery) ServerGroups() (*metav1.APIGroupList, error) {
-	return nil, nil
-}
-func (*fakeDiscovery) ServerPreferredNamespacedResources() ([]*metav1.APIResourceList, error) {
-	return nil, nil
-}
-func (*fakeDiscovery) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
-	return nil, nil
-}
-func (*fakeDiscovery) ServerResourcesForGroupVersion(_ string) (*metav1.APIResourceList, error) {
-	return nil, nil
-}
-func (*fakeDiscovery) ServerVersion() (*version.Info, error) {
-	return nil, nil
-}
-func (*fakeDiscovery) WithLegacy() discovery.DiscoveryInterface {
-	return nil
-}
-
 type fakeK8sClient struct {
 	*fake.Clientset
-	discoveryClient discovery.DiscoveryInterface
+	discoveryClient discovery.DiscoveryInterfaces
 }
 
-func (f *fakeK8sClient) Discovery() discovery.DiscoveryInterface {
+func (f *fakeK8sClient) Discovery() discovery.DiscoveryInterfaces {
 	return f.discoveryClient
 }
 
@@ -410,7 +379,7 @@ func Test_wander(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		discoveryClient discovery.DiscoveryInterface
+		discoveryClient discovery.DiscoveryInterfaces
 		expectedErr     error
 	}{
 		{
