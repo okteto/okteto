@@ -1,6 +1,6 @@
 module github.com/okteto/okteto
 
-go 1.26.8
+go 1.26.10
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.1
