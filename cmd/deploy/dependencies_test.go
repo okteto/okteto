@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -573,6 +574,32 @@ func TestPipelineDependencyRunnerOptions(t *testing.T) {
 	require.Equal(t, "parent-id", backend.ParentWorkflowID)
 	require.Equal(t, 5*time.Minute, backend.Timeout)
 	require.Contains(t, backend.Variables, "OKTETO_ORIGIN=okteto-deploy")
+}
+
+func TestPipelineDependencyRunnerWaitsForEveryDependency(t *testing.T) {
+	t.Setenv(constants.OktetoIsDependencyEnvVar, "")
+	section := specExampleSection()
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	require.True(t, deployer.captured["analytics"].Wait)
+}
+
+func TestPipelineDependencyRunnerOnlySchedulesWhatNothingNeedsInsideADependency(t *testing.T) {
+	t.Setenv(constants.OktetoIsDependencyEnvVar, "true")
+	section := specExampleSection()
+	deployer := &capturingPipelineDeployer{}
+	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+
+	runAllDependencies(t, runner, section)
+
+	// neither the main deploy nor another dependency waits for analytics
+	require.False(t, deployer.captured["analytics"].Wait)
+	require.True(t, deployer.captured["database"].Wait)
+	require.True(t, deployer.captured["messaging"].Wait)
+	require.True(t, deployer.captured["backend"].Wait)
 }
 
 func TestPipelineDependencyRunnerChecksResourcesOnlyWhenNeeded(t *testing.T) {
