@@ -208,6 +208,18 @@ func TestOktetoIgnoreRules(t *testing.T) {
 			expected: nil,
 		},
 		{
+			name: "literal_root_section_header",
+			input: `
+			.git
+			[deploy]
+			integration
+			[__DEFAULT__]
+			node_modules
+			`,
+			section:  []string{RootSection, "deploy"},
+			expected: []string{".git", "node_modules", "integration"},
+		},
+		{
 			name:     "empty_section",
 			input:    ``,
 			section:  []string{RootSection},

@@ -29,6 +29,9 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
+// addToForwarderTimeout is how long addToForwarder retries creating the local ports before giving up
+const addToForwarderTimeout = 10 * time.Second
+
 func (up *upContext) forwards(ctx context.Context) error {
 	msg := "Configuring SSH tunnel to your development container..."
 	if up.Dev.IsHybridModeEnabled() {
@@ -138,7 +141,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 
 func addToForwarder(up *upContext) error {
 	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(10 * time.Second)
+	to := time.NewTicker(addToForwarderTimeout)
 	var forwardErr error
 	alreadyAdded := map[int]bool{}
 	for {
@@ -192,7 +195,7 @@ func addToForwarder(up *upContext) error {
 			if forwardErr != nil {
 				return forwardErr
 			}
-			return fmt.Errorf("could not create local ports after %s", (10 * time.Second).String())
+			return fmt.Errorf("could not create local ports after %s", addToForwarderTimeout)
 		}
 	}
 }

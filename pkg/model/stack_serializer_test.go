@@ -2612,6 +2612,22 @@ services:
 	}
 }
 
+func TestComposeRestartPolicyNotSupportedFields(t *testing.T) {
+	manifest := `services:
+  app:
+    image: okteto/vote:1
+    deploy:
+      restart_policy:
+        delay: 5s
+        window: 120s`
+	s, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{
+		"services[app].deploy.restart_policy.delay",
+		"services[app].deploy.restart_policy.window",
+	}, s.Warnings.NotSupportedFields)
+}
+
 func TestSecretsExtensionValidation(t *testing.T) {
 	invalidYAML := `
 secrets:

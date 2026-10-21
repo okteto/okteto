@@ -905,7 +905,7 @@ workflows:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
-  # run-e2e is triggered by oktetobot via Github Actions when adding the run-e2e label to the PR
+  # run-e2e is triggered by oktetobot (GitHub Account) via GitHub Actions when adding the run-e2e label to the PR
   # e2e tests are run for both platforms, windows and unix
   run-e2e:
     when:
@@ -952,7 +952,7 @@ workflows:
           requires:
             - test-e2e-setup
 
-  # run-e2e-unix is triggered by oktetobot via Github Actions when adding the run-e2e-unix label to the PR
+  # run-e2e-unix is triggered by oktetobot (GitHub Account) via GitHub Actions when adding the run-e2e-unix label to the PR
   # e2e tests for unix platform are run
   run-e2e-unix:
     when:
@@ -984,7 +984,7 @@ workflows:
           requires:
             - test-e2e-setup
 
-  # run-e2e-windows is triggered by oktetobot via Github Actions when adding the run-e2e-windows label to the PR
+  # run-e2e-windows is triggered by oktetobot (GitHub Account) via GitHub Actions when adding the run-e2e-windows label to the PR
   # e2e tests for windows platform are run
   run-e2e-windows:
     when:

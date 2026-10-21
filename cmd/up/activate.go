@@ -454,7 +454,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				return oktetoErrors.ErrDevPodDeleted
 			case "Started":
 				failedSchedulingEvent = nil
-				if e.Message == "Started container okteto-init-volume" {
+				if e.Message == "Started container "+apps.OktetoInitVolumeContainerName {
 					oktetoLog.Spinner("Initializing persistent volume content...")
 				}
 			case "Pulling":
