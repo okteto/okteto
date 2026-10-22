@@ -95,28 +95,11 @@ commands:
 
 			os.Setenv(constants.OktetoNameEnvVar, options.Name)
 
-			options.Variables = append(
-				options.Variables,
-				// Set OKTETO_DOMAIN=okteto-subdomain env variable
-				fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
-			)
-
 			params := deployable.TestParameters{
 				Name:       options.Name,
 				Namespace:  oktetoContext.GetNamespace(),
 				Deployable: dep,
-				Variables:  options.Variables,
-			}
-
-			// Token should be always masked from the logs
-			oktetoLog.AddMaskedWord(okteto.GetContext().Token)
-			keyValueVarParts := 2
-			// We mask all the variables received in the command
-			for _, variable := range params.Variables {
-				varParts := strings.SplitN(variable, "=", keyValueVarParts)
-				if len(varParts) >= keyValueVarParts && strings.TrimSpace(varParts[1]) != "" {
-					oktetoLog.AddMaskedWord(varParts[1])
-				}
+				Variables:  getTestVariables(options.Variables),
 			}
 
 			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
@@ -147,4 +130,26 @@ commands:
 	cmd.Flags().StringVar(&options.Name, "name", "", "test run name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	return cmd
+}
+
+// getTestVariables masks the variables received in the command and returns
+// them with OKTETO_DOMAIN, which is added afterwards as it is not a variable
+// defined by the user and must not be masked
+func getTestVariables(variables []string) []string {
+	// Token should be always masked from the logs
+	oktetoLog.AddMaskedWord(okteto.GetContext().Token)
+	keyValueVarParts := 2
+	// We mask all the variables received in the command
+	for _, variable := range variables {
+		varParts := strings.SplitN(variable, "=", keyValueVarParts)
+		if len(varParts) >= keyValueVarParts && strings.TrimSpace(varParts[1]) != "" {
+			oktetoLog.AddMaskedWord(varParts[1])
+		}
+	}
+
+	return append(
+		variables,
+		// Set OKTETO_DOMAIN=okteto-subdomain env variable
+		fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
+	)
 }
