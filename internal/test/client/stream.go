@@ -26,6 +26,10 @@ type FakeStreamClient struct {
 // FakeStreamResponse mocks the stream response
 type FakeStreamResponse struct {
 	StreamErr error
+	// Lines are passed to the printLine callback of PipelineLogsTo
+	Lines []string
+	// Warnings are passed to the warn callback of PipelineLogsTo, before the lines
+	Warnings []string
 }
 
 // NewFakeStreamClient returns a new fake stream client
@@ -37,6 +41,17 @@ func NewFakeStreamClient(response *FakeStreamResponse) *FakeStreamClient {
 
 // PipelineLogs starts the streaming of pipeline logs
 func (c *FakeStreamClient) PipelineLogs(_ context.Context, _, _, _ string, _ time.Duration) error {
+	return c.response.StreamErr
+}
+
+// PipelineLogsTo starts the streaming of pipeline logs, passing every line to printLine and every warning to warn
+func (c *FakeStreamClient) PipelineLogsTo(_ context.Context, _, _, _ string, _ time.Duration, printLine, warn func(msg string)) error {
+	for _, msg := range c.response.Warnings {
+		warn(msg)
+	}
+	for _, line := range c.response.Lines {
+		printLine(line)
+	}
 	return c.response.StreamErr
 }
 

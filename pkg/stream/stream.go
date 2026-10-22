@@ -32,16 +32,16 @@ const (
 	maxAttemptPower = 10
 )
 
-func request(c *http.Client, url string) (*http.Response, error) {
-	resp, err := c.Get(url)
+// request is bound to ctx: cancelling it aborts the request and the reading of its body
+func request(ctx context.Context, c *http.Client, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	return resp, nil
+	return c.Do(req)
 }
 
-func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout time.Duration) (*http.Response, error) {
+func requestWithRetry(ctx context.Context, c *http.Client, url string, warn func(msg string), timeout time.Duration) (*http.Response, error) {
 	attempts := 0
 	for {
 		select {
@@ -55,7 +55,7 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 
 		default:
 			// Attempt to stream logs
-			resp, err := request(c, url)
+			resp, err := request(ctx, c, url)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					return nil, err
@@ -77,7 +77,7 @@ func requestWithRetry(ctx context.Context, c *http.Client, url string, timeout t
 			streamError := fmt.Errorf("received status %d, retrying", resp.StatusCode)
 
 			// Log the retry attempt
-			oktetoLog.Warning("Unable to connect to stream logs, waiting to reconnect...")
+			warn("Unable to connect to stream logs, waiting to reconnect...")
 			oktetoLog.Infof("logs streaming error: %v, retrying in %v (attempt %d)", streamError, retryDelay, attempts)
 
 			// Wait before retrying, but respect context cancellation
@@ -96,9 +96,10 @@ type handleLineFn func(line string) bool
 
 // GetLogsFromURL makes a request to the url provided and reads the content of the body
 // the client will retry the connection if it fails
-// the handler will handle the content of the streaming events coming from the request body
-func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler handleLineFn, timeout time.Duration) error {
-	resp, err := requestWithRetry(ctx, c, url, timeout)
+// the handler will handle the content of the streaming events coming from the request body, and warn prints the
+// warnings about the connection
+func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler handleLineFn, warn func(msg string), timeout time.Duration) error {
+	resp, err := requestWithRetry(ctx, c, url, warn, timeout)
 	if err != nil {
 		return err
 	}
@@ -106,7 +107,8 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler han
 
 	sc := bufio.NewScanner(resp.Body)
 	done := false
-	for sc.Scan() && !done {
+	// done is checked before scanning: the server may keep the connection open after the done message
+	for !done && sc.Scan() {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -123,6 +125,10 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler han
 		}
 	}
 
+	// a cancelled request ends the scan with a read error
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	// return whether the scan has encountered any error
 	return sc.Err()
 }

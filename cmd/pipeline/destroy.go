@@ -182,7 +182,12 @@ func (pc *Command) destroyPipeline(ctx context.Context, name, namespace string, 
 
 func (pc *Command) waitUntilDestroyed(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
-	defer ctxCancel()
+	streamDone := make(chan struct{})
+	// the logs stream doesn't outlive the wait, whatever the way out
+	defer func() {
+		ctxCancel()
+		<-streamDone
+	}()
 
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for the repository '%s' to be destroyed...", name))
 	oktetoLog.StartSpinner()
@@ -197,8 +202,10 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name, namespace strin
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
-		if err != nil {
+		defer close(streamDone)
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout, globalDeployOutput{})
+		// the stream is cancelled on purpose once the destroy has finished
+		if err != nil && waitCtx.Err() == nil {
 			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
 		}
 	}(&wg)
@@ -214,20 +221,29 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name, namespace strin
 		close(exit)
 	}(&wg)
 
+	var err error
 	select {
 	case <-stop:
 		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
-	case err := <-exit:
+	case err = <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
-			return err
 		}
 	}
 
-	return nil
+	// the destroy has finished, successfully or not: give the logs stream time to reach the end of the logs before
+	// cancelling it, so that the last lines are not lost. When it failed, they are the ones that explain why
+	select {
+	case <-streamDone:
+	case <-time.After(logsDrainTimeout):
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		return oktetoErrors.ErrIntSig
+	}
+	return err
 }
 
 func (pc *Command) waitToBeDestroyed(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {

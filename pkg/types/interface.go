@@ -84,6 +84,7 @@ type OktetoClientProvider interface {
 // StreamInterface represents the streaming client
 type StreamInterface interface {
 	PipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error
+	PipelineLogsTo(ctx context.Context, name, namespace, actionName string, timeout time.Duration, printLine, warn func(msg string)) error
 	DestroyAllLogs(ctx context.Context, namespace string, timeout time.Duration) error
 }
 

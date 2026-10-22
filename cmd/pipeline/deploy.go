@@ -43,14 +43,20 @@ import (
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	dependencyEnvTemplate = "OKTETO_DEPENDENCY_%s_VARIABLE_%s"
-	fiveMinutes           = 5 * time.Minute
+	fiveMinutes = 5 * time.Minute
 )
 
 var (
+	// logsDrainTimeout is how long the logs stream can take to reach the end once the deploy has finished
+	logsDrainTimeout = 10 * time.Second
+
+	// existingDeployPollInterval is how often the status of a deploy already in progress is checked
+	existingDeployPollInterval = 1 * time.Second
+
 	errUnableToReuseParams = errors.New("development environment not found: unable to use --reuse-params option")
 )
 
@@ -86,9 +92,14 @@ type DeployOptions struct {
 	ReuseParams          bool
 	RedeployDependencies bool
 	IsDependency         bool
-	DependenciesIsSet    bool
-	WorkflowID           string
-	ParentWorkflowID     string
+	// SkipResourcesCheck returns as soon as the pipeline finishes, without waiting for its resources to be running
+	SkipResourcesCheck bool
+	// PrefixLogs prints every message and log line as "[Name] line", without spinner, so that
+	// pipelines deployed in parallel can be told apart
+	PrefixLogs        bool
+	DependenciesIsSet bool
+	WorkflowID        string
+	ParentWorkflowID  string
 }
 
 func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
@@ -153,6 +164,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	if err := opts.setDefaults(); err != nil {
 		return fmt.Errorf("could not set default values for options: %w", err)
 	}
+	out := newDeployOutput(opts)
 
 	c, _, err := pc.k8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
@@ -180,48 +192,43 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 	if !opts.RedeployDependencies && opts.SkipIfExists && exists {
 		if cfg.Data["status"] == pipeline.DeployedStatus {
-			oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
+			out.Success(fmt.Sprintf("Skipping repository '%s' because it's already deployed", opts.Name))
 			return nil
 		}
 
 		if !opts.Wait && cfg.Data["status"] == pipeline.ProgressingStatus {
-			oktetoLog.Success("Repository '%s' already scheduled for deployment", opts.Name)
+			out.Success(fmt.Sprintf("Repository '%s' already scheduled for deployment", opts.Name))
 			return nil
 		}
 
 		canStreamPrevLogs := cfg.Data["actionLock"] != "" && cfg.Data["actionName"] != "cli"
 
 		if opts.Wait && canStreamPrevLogs {
-			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-			oktetoLog.StartSpinner()
-			defer oktetoLog.StopSpinner()
+			out.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			out.StartSpinner()
+			defer out.StopSpinner()
 
 			existingAction := &types.Action{
 				ID:   cfg.Data["actionLock"],
 				Name: cfg.Data["actionName"],
 			}
-			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout); err != nil {
+			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout, opts.SkipResourcesCheck, out); err != nil {
 				return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 			}
-			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
 			return nil
 		}
 
 		if opts.Wait && !canStreamPrevLogs && cfg.Data["status"] == pipeline.ProgressingStatus {
-			oktetoLog.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
-			oktetoLog.StartSpinner()
-			defer oktetoLog.StopSpinner()
+			out.Spinner(fmt.Sprintf("Repository '%s' is already being deployed, waiting for it to finish...", opts.Name))
+			out.StartSpinner()
+			defer out.StopSpinner()
 
-			ticker := time.NewTicker(1 * time.Second)
-			err := configmaps.WaitForStatus(ctx, cfgName, opts.Namespace, pipeline.DeployedStatus, ticker, opts.Timeout, c)
-			if err != nil {
-				if errors.Is(err, oktetoErrors.ErrTimeout) {
-					return fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
-				}
-				return fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err)
+			if err := pc.waitForExistingDeploy(ctx, c, cfgName, opts); err != nil {
+				return err
 			}
 
-			oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
+			out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
 			return nil
 		}
 	}
@@ -251,35 +258,79 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		})
 	}
 
-	resp, err := pc.deployPipeline(ctx, opts)
+	resp, err := pc.deployPipeline(ctx, opts, out)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline '%s': %w", opts.Name, err)
 	}
 
 	if !opts.Wait {
-		oktetoLog.Success("Repository '%s' scheduled for deployment", opts.Name)
+		out.Success(fmt.Sprintf("Repository '%s' scheduled for deployment", opts.Name))
 		return nil
 	}
 
-	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", opts.Name))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+	out.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", opts.Name))
+	out.StartSpinner()
+	defer out.StopSpinner()
 
-	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout); err != nil {
+	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout, opts.SkipResourcesCheck, out); err != nil {
 		return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 	}
 
-	cmap, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
-	if err != nil {
+	out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
+	return nil
+}
+
+// waitForExistingDeploy waits for a deploy of the pipeline that is already in progress and whose logs can't be
+// streamed: until its configmap is deployed (and its resources running, unless SkipResourcesCheck) or failed
+func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Interface, cfgName string, opts *DeployOptions) error {
+	// the health check runs with this context too, so a Ctrl+C stops the whole wait
+	sigCtx, stopNotify := signal.NotifyContext(ctx, os.Interrupt)
+	defer stopNotify()
+	interrupted := func(err error) error {
+		if sigCtx.Err() != nil && ctx.Err() == nil {
+			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+			return oktetoErrors.ErrIntSig
+		}
 		return err
 	}
 
-	if err := setEnvsFromDependency(cmap, os.Setenv); err != nil {
-		return fmt.Errorf("could not set environment variable generated by dependency '%s': %w", opts.Name, err)
-	}
+	deadline := time.Now().Add(opts.Timeout)
+	timeout := time.NewTimer(opts.Timeout)
+	defer timeout.Stop()
+	timedOut := fmt.Errorf("timed out waiting for repository '%s' to be deployed", opts.Name)
+	ticker := time.NewTicker(existingDeployPollInterval)
+	defer ticker.Stop()
 
-	oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
-	return nil
+	for {
+		select {
+		case <-sigCtx.Done():
+			return interrupted(sigCtx.Err())
+		case <-timeout.C:
+			return timedOut
+		case <-ticker.C:
+			cfg, err := configmaps.Get(sigCtx, cfgName, opts.Namespace, c)
+			if err != nil {
+				if oktetoErrors.IsNotFound(err) {
+					err = oktetoErrors.ErrNotFound
+				}
+				return interrupted(fmt.Errorf("failed to wait for repository '%s' to be deployed: %w", opts.Name, err))
+			}
+			switch cfg.Data["status"] {
+			case pipeline.DeployedStatus:
+				if opts.SkipResourcesCheck {
+					return nil
+				}
+				// the health check gets the time left, so the whole wait is bounded by the timeout
+				left := time.Until(deadline)
+				if left <= 0 {
+					return timedOut
+				}
+				return interrupted(pc.waitForResourcesToBeRunning(sigCtx, opts.Name, opts.Namespace, left))
+			case pipeline.ErrorStatus:
+				return fmt.Errorf("repository '%s' failed to deploy", opts.Name)
+			}
+		}
+	}
 }
 
 // shouldRedeployDependencies determines if the pipeline should redeploy dependencies
@@ -301,47 +352,14 @@ func shouldRedeployDependencies(opts *DeployOptions) bool {
 	return true
 }
 
-type envSetter func(name, value string) error
-
-// setEnvsFromDependency sets the environment variables found at configmap.Data[dependencyEnvs]
-func setEnvsFromDependency(cmap *v1.ConfigMap, envSetter envSetter) error {
-	if cmap == nil || cmap.Data == nil {
-		return nil
-	}
-
-	dependencyEnvsEncoded, ok := cmap.Data[constants.OktetoDependencyEnvsKey]
-	if !ok {
-		return nil
-	}
-
-	name := strings.TrimPrefix(cmap.Name, pipeline.ConfigmapNamePrefix)
-	sanitizedName := strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
-
-	decodedEnvs, err := base64.StdEncoding.DecodeString(dependencyEnvsEncoded)
-	if err != nil {
-		return err
-	}
-	envsToSet := make(map[string]string)
-	if err = json.Unmarshal(decodedEnvs, &envsToSet); err != nil {
-		return err
-	}
-	for envKey, envValue := range envsToSet {
-		envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(sanitizedName), envKey)
-		if err := envSetter(envName, envValue); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
-	oktetoLog.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out deployOutput) (*types.GitDeployResponse, error) {
+	out.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
+	out.StartSpinner()
+	defer out.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	defer signal.Stop(stop)
 	exit := make(chan error, 1)
 
 	var resp *types.GitDeployResponse
@@ -374,72 +392,90 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 	return resp, nil
 }
 
-func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
+func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration, out deployOutput) error {
 	// wait for the Action to be progressing
 	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
 		return err
 	}
 
-	return pc.okClient.Stream().PipelineLogs(ctx, name, namespace, actionName, timeout)
+	// a dependency's warnings about the connection get its prefix and stage, like its lines
+	return pc.okClient.Stream().PipelineLogsTo(ctx, name, namespace, actionName, timeout, out.Println, out.Warning)
 }
 
-func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
+func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, skipResourcesCheck bool, out deployOutput) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
-	defer ctxCancel()
+	var wg sync.WaitGroup
+	// no goroutine outlives the wait, whatever the way out: they write into the deploy output, which is read
+	// once the wait returns. They stop within a poll interval once cancelled
+	defer func() {
+		ctxCancel()
+		wg.Wait()
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	exit := make(chan error, 1)
+	// os/signal panics when it sends to a closed channel, so the channel is unregistered and never closed
+	defer signal.Stop(stop)
 
-	var wg sync.WaitGroup
+	// both goroutines can report an error, so there is room for both
+	exit := make(chan error, 2)
+	streamDone := make(chan struct{})
 
 	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+	go func() {
 		defer wg.Done()
+		defer close(streamDone)
 		if err := pc.okClient.Pipeline().WaitForActionProgressing(waitCtx, name, namespace, action.Name, timeout); err != nil {
 			oktetoLog.Infof("waiting for action to progress failed: %v", err)
 			exit <- err
 			return
 		}
-		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
-		if err != nil {
-			oktetoLog.Warning("pipeline logs cannot be streamed due to connectivity issues")
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout, out)
+		// the stream is cancelled on purpose once the deploy has finished
+		if err != nil && waitCtx.Err() == nil {
+			out.Warning("pipeline logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("pipeline logs cannot be streamed due to connectivity issues: %v", err)
 		}
-	}(&wg)
+	}()
 
 	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+	go func() {
 		defer wg.Done()
 		err := pc.waitToBeDeployed(waitCtx, name, namespace, action, timeout)
 		if err != nil {
 			exit <- err
 			return
 		}
+		if skipResourcesCheck {
+			exit <- nil
+			return
+		}
 
-		oktetoLog.Spinner("Waiting for containers to be healthy...")
+		out.Spinner("Waiting for containers to be healthy...")
 		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, namespace, timeout)
-	}(&wg)
+	}()
 
-	go func(wg *sync.WaitGroup) {
-		wg.Wait()
-		close(stop)
-		close(exit)
-	}(&wg)
-
+	var err error
 	select {
 	case <-stop:
-		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
-	case err := <-exit:
+	case err = <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
-			return err
 		}
 	}
 
-	return nil
+	// the deploy has finished, successfully or not: give the logs stream time to reach the end of the logs before
+	// cancelling it, so that the last lines are not lost. When it failed, they are the ones that explain why
+	select {
+	case <-streamDone:
+	case <-time.After(logsDrainTimeout):
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		return oktetoErrors.ErrIntSig
+	}
+	return err
 }
 
 func (pc *Command) waitToBeDeployed(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
@@ -453,6 +489,8 @@ func (pc *Command) waitForResourcesToBeRunning(ctx context.Context, name, namesp
 
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-to.C:
 			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
 		case <-ticker.C:

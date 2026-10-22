@@ -539,6 +539,9 @@ func (m *Manifest) validate() error {
 	if err := m.Build.Validate(); err != nil {
 		return err
 	}
+	if err := m.Dependencies.Validate(); err != nil {
+		return err
+	}
 	return m.validateDivert()
 }
 

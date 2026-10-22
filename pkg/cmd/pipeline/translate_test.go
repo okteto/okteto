@@ -477,6 +477,81 @@ func TestGetConfigmapBuildEnvVars(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestGetConfigmapDependencyEnvVars(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test-namespace"
+	name := "test-name"
+
+	t.Run("configmap not found", func(t *testing.T) {
+		client := fake.NewSimpleClientset()
+		_, err := GetConfigmapDependencyEnvVars(ctx, name, namespace, client)
+		require.True(t, k8sErrors.IsNotFound(err))
+	})
+
+	t.Run("configmap exists but no dependencyEnvs field", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		envVars, err := GetConfigmapDependencyEnvVars(ctx, name, namespace, client)
+		require.NoError(t, err)
+		require.Nil(t, envVars)
+	})
+
+	t.Run("configmap exists with valid dependencyEnvs field", func(t *testing.T) {
+		encodedData, err := json.Marshal(map[string]string{"PASSWORD": "secret"})
+		require.NoError(t, err)
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				constants.OktetoDependencyEnvsKey: base64.StdEncoding.EncodeToString(encodedData),
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		envVars, err := GetConfigmapDependencyEnvVars(ctx, name, namespace, client)
+		require.NoError(t, err)
+		require.Equal(t, map[string]string{"PASSWORD": "secret"}, envVars)
+	})
+
+	t.Run("configmap exists with invalid base64 data", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				constants.OktetoDependencyEnvsKey: "invalid-base64",
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		_, err := GetConfigmapDependencyEnvVars(ctx, name, namespace, client)
+		require.Error(t, err)
+	})
+
+	t.Run("configmap exists with invalid JSON data", func(t *testing.T) {
+		cmap := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TranslatePipelineName(name),
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				constants.OktetoDependencyEnvsKey: base64.StdEncoding.EncodeToString([]byte("invalid-json")),
+			},
+		}
+		client := fake.NewSimpleClientset(cmap)
+		_, err := GetConfigmapDependencyEnvVars(ctx, name, namespace, client)
+		require.Error(t, err)
+	})
+}
+
 func TestSetBuildEnvVars(t *testing.T) {
 	ctx := context.Background()
 	namespace := "test-namespace"

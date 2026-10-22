@@ -267,13 +267,28 @@
                 "wait": {
                   "type": "boolean",
                   "title": "wait",
-                  "description": "Whether to wait for the dependency to be ready"
+                  "description": "Whether the deploy commands wait for this dependency to be deployed before they start"
                 },
                 "timeout": {
                   "type": "string",
                   "pattern": "^[0-9]+(h|m|s)$",
                   "title": "timeout",
                   "description": "Maximum time to wait for the dependency to be ready"
+                },
+                "depends_on": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "depends_on",
+                  "description": "Dependencies that must be deployed successfully before this one starts"
                 }
               },
               "additionalProperties": false,

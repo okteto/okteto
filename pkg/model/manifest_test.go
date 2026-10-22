@@ -2201,3 +2201,37 @@ func TestDivertDeployIsEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestRead_RejectsInvalidDependenciesGraph(t *testing.T) {
+	manifest := []byte(`
+dependencies:
+  a:
+    repository: https://github.com/okteto/a
+    depends_on: b
+  b:
+    repository: https://github.com/okteto/b
+    depends_on: a
+deploy:
+  - echo "must not run"`)
+
+	_, err := Read(manifest)
+
+	require.EqualError(t, err, "manifest validation failed: cyclic dependency found between dependencies a and b")
+}
+
+func TestRead_AcceptsDependenciesGraph(t *testing.T) {
+	manifest := []byte(`
+dependencies:
+  backend:
+    repository: https://github.com/okteto/backend
+    depends_on: [database]
+  database:
+    repository: https://github.com/okteto/database
+deploy:
+  - echo "deploy"`)
+
+	m, err := Read(manifest)
+
+	require.NoError(t, err)
+	require.Equal(t, deps.DependsOn{"database"}, m.Dependencies["backend"].DependsOn)
+}

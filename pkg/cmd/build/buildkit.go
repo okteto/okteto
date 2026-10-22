@@ -15,6 +15,7 @@ package build
 
 import (
 	"context"
+	ioutil "io"
 	"os"
 	"strings"
 
@@ -138,7 +139,7 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
-			d, err := progressui.NewDisplay(ioCtrl.Out(), progressui.PlainMode)
+			d, err := progressui.NewDisplay(plainProgressWriter(progress, ioCtrl.Out(), w), progressui.PlainMode)
 			if err != nil {
 				// If an error occurs while attempting to create the plain display,
 				// fallback to using plain mode on stdout.
@@ -175,5 +176,15 @@ func SolveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 func (*buildWriter) Write(p []byte) (int, error) {
 	msg := strings.TrimSpace(string(p))
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "%s", msg)
-	return 0, nil
+	return len(p), nil
+}
+
+// plainProgressWriter returns where the plain progress of a build is written. When plain progress is forced while
+// the output is a terminal (dependencies log at the same time), it is also stored in the output buffer, as the
+// tty progress does, so that the UI shows it
+func plainProgressWriter(progress string, out, buffer ioutil.Writer) ioutil.Writer {
+	if progress == oktetoLog.PlainFormat && oktetoLog.GetOutputFormat() == oktetoLog.TTYFormat {
+		return ioutil.MultiWriter(out, buffer)
+	}
+	return out
 }

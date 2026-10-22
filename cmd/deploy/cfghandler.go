@@ -35,6 +35,7 @@ type ConfigMapHandler interface {
 	UpdateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 	UpdateEnvsFromCommands(context.Context, string, string, []string) error
 	GetDependencyBuildEnvVars(context.Context, string, string) (map[string]string, error)
+	GetDependencyVariableEnvVars(context.Context, string, string) (map[string]string, error)
 	SetBuildEnvVars(context.Context, string, string, map[string]string) error
 	GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error)
 	AddPhaseDuration(context.Context, string, string, string, time.Duration) error
@@ -143,6 +144,27 @@ func (ch *defaultConfigMapHandler) SetBuildEnvVars(ctx context.Context, name, ns
 	}
 
 	return pipeline.SetBuildEnvVars(ctx, name, ns, buildEnvVars, c)
+}
+
+// GetDependencyVariableEnvVars returns the OKTETO_DEPENDENCY_<NAME>_VARIABLE_<VAR> env vars exposed by a dependency
+func (ch *defaultConfigMapHandler) GetDependencyVariableEnvVars(ctx context.Context, name, ns string) (map[string]string, error) {
+	c, _, err := ch.k8sClientProvider.ProvideWithLogger(okteto.GetContext().Cfg, ch.k8slogger)
+	if err != nil {
+		return nil, err
+	}
+	envVars, err := pipeline.GetConfigmapDependencyEnvVars(ctx, name, ns, c)
+	if err != nil {
+		return nil, err
+	}
+	if len(envVars) == 0 {
+		return nil, nil
+	}
+	dependencyName := strings.ToUpper(strings.ReplaceAll(format.ResourceK8sMetaString(name), "-", "_"))
+	envs := make(map[string]string, len(envVars))
+	for key, value := range envVars {
+		envs[fmt.Sprintf("OKTETO_DEPENDENCY_%s_VARIABLE_%s", dependencyName, key)] = value
+	}
+	return envs, nil
 }
 
 func (ch *defaultConfigMapHandler) GetDependencyBuildEnvVars(ctx context.Context, name, ns string) (map[string]string, error) {

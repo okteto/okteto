@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -30,29 +31,66 @@ const (
 )
 
 type spinnerLogger struct {
-	sp             *sp.Spinner
+	sp *sp.Spinner
+	// isActive reports if the spinner is running. It is sp.Active, replaced in tests because
+	// the spinner only runs in a terminal
+	isActive       func() bool
 	spinnerSupport bool
-	onHold         bool
+	// holds counts the prints in progress that paused the running spinner
+	holds int
+	// mu serializes the spinner operations: dependencies deployed in parallel print lines
+	// while the main deploy starts and stops the spinner
+	mu sync.Mutex
 }
 
 // hold is used within the TTYWriter to pause the spinner to display the log
 // if the spinner is Active (running) it will stop
 func (sl *spinnerLogger) hold() {
-	if !sl.sp.Active() {
+	sl.mu.Lock()
+	defer sl.mu.Unlock()
+	if sl.holds > 0 {
+		sl.holds++
 		return
 	}
-	sl.onHold = true
-	StopSpinner()
+	if !sl.isActive() {
+		return
+	}
+	sl.holds = 1
+	sl.stop()
 }
 
 // unhold is used within the TTYWriter to restart the spinner after displaying the log.
-// If the spinner is onHold (previously Active) this will start the spinner running again
+// The spinner runs again when the last print that paused it has finished, unless it was stopped meanwhile
 func (sl *spinnerLogger) unhold() {
-	if !sl.onHold {
+	sl.mu.Lock()
+	defer sl.mu.Unlock()
+	if sl.holds == 0 {
 		return
 	}
-	sl.onHold = false
-	StartSpinner()
+	sl.holds--
+	if sl.holds == 0 {
+		sl.start()
+	}
+}
+
+// start runs the spinner. It must be called with sl.mu locked
+func (sl *spinnerLogger) start() {
+	sl.sp.Lock()
+	if sl.sp.FinalMSG == "" {
+		sl.sp.FinalMSG = sl.sp.Suffix
+	}
+	sl.sp.Unlock()
+	sl.sp.Start()
+}
+
+// stop deletes FinalMSG and stops the spinner. It must be called with sl.mu locked
+func (sl *spinnerLogger) stop() {
+	sl.sp.Lock()
+	sl.sp.FinalMSG = ""
+	sl.sp.Unlock()
+	if sl.spinnerSupport {
+		sl.sp.Stop()
+	}
 }
 
 func newSpinner() *sp.Spinner {
@@ -74,6 +112,10 @@ func newSpinner() *sp.Spinner {
 
 // Spinner sets the text provided as Suffix and FinalMSG of the spinner instance
 func Spinner(text string) {
+	log.spinner.mu.Lock()
+	defer log.spinner.mu.Unlock()
+	log.spinner.sp.Lock()
+	defer log.spinner.sp.Unlock()
 	log.spinner.sp.Suffix = fmt.Sprintf(" %s", ucFirst(text))
 	log.spinner.sp.FinalMSG = log.spinner.sp.Suffix
 }
@@ -81,23 +123,24 @@ func Spinner(text string) {
 // StartSpinner starts to run the spinner if enabled or Println if not
 func StartSpinner() {
 	if log.spinner.spinnerSupport {
-		if log.spinner.sp.FinalMSG == "" {
-			log.spinner.sp.FinalMSG = log.spinner.sp.Suffix
-		}
-		log.spinner.sp.Start()
-	} else {
-		Println(strings.TrimSpace(log.spinner.sp.Suffix))
+		log.spinner.mu.Lock()
+		defer log.spinner.mu.Unlock()
+		log.spinner.start()
+		return
 	}
+	log.spinner.sp.Lock()
+	suffix := log.spinner.sp.Suffix
+	log.spinner.sp.Unlock()
+	Println(strings.TrimSpace(suffix))
 }
 
-// StopSpinner deletes FinalMSG and stops the running of the spinner
+// StopSpinner deletes FinalMSG and stops the running of the spinner.
+// The spinner is not resumed by the prints that paused it before
 func StopSpinner() {
-	if log.spinner.sp.FinalMSG != "" {
-		log.spinner.sp.FinalMSG = ""
-	}
-	if log.spinner.spinnerSupport {
-		log.spinner.sp.Stop()
-	}
+	log.spinner.mu.Lock()
+	defer log.spinner.mu.Unlock()
+	log.spinner.holds = 0
+	log.spinner.stop()
 }
 
 func ucFirst(str string) string {

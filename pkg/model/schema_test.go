@@ -184,7 +184,7 @@ func Test_getStructKeys(t *testing.T) {
 			expected: map[string][]string{
 				"build.Info":                        {"secrets", "context", "dockerfile", "target", "image", "cache_from", "args", "export_cache", "depends_on"},
 				"build.VolumeMounts":                {"local_path", "remote_path"},
-				"deps.Dependency":                   {"repository", "manifest", "branch", "variables", "timeout", "wait"},
+				"deps.Dependency":                   {"repository", "manifest", "branch", "variables", "timeout", "wait", "depends_on"},
 				"env.Var":                           {"name", "value"},
 				"externalresource.ExternalResource": {"icon", "notes", "endpoints"},
 				"forward.Forward":                   {"labels", "name", "localPort", "remotePort"},

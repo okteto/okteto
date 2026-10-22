@@ -19,7 +19,9 @@ import (
 
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/externalresource"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -114,6 +116,22 @@ func TestDeploy(t *testing.T) {
 
 	require.ErrorIs(t, err, assert.AnError)
 	r.AssertExpectations(t)
+}
+
+func TestDeployFailureDoesNotEndTheOutput(t *testing.T) {
+	oktetoLog.Init(logrus.WarnLevel)
+	oktetoLog.SetStage("test command")
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+	r := &fakeRunner{}
+	r.On("RunDeploy", mock.Anything, mock.Anything).Return(assert.AnError)
+	opts := &Options{Manifest: &model.Manifest{Deploy: &model.DeployInfo{}}}
+
+	err := newLocalDeployer(r).Deploy(context.Background(), opts)
+
+	require.ErrorIs(t, err, assert.AnError)
+	// the deploy command ends the output once the dependencies running meanwhile have finished
+	require.Equal(t, "test command", oktetoLog.GetStage())
+	require.NotContains(t, oktetoLog.GetOutputBuffer().String(), "EOF")
 }
 
 func TestDeployWithEmptyManifest(t *testing.T) {

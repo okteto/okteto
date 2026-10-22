@@ -126,3 +126,27 @@ func TestGetCycles(t *testing.T) {
 	}
 
 }
+
+func TestGetDependentCyclicReturnsOnlyTheCycle(t *testing.T) {
+	// frontend and api lead to the cycle, but are not part of it
+	g := Graph{
+		"frontend": {"api"},
+		"api":      {"db"},
+		"db":       {"cache"},
+		"cache":    {"db"},
+	}
+
+	// the nodes are visited in order, so the result is the same on every run
+	for range 20 {
+		assert.ElementsMatch(t, []string{"cache", "db"}, GetDependentCyclic(g))
+	}
+}
+
+func TestGetDependentCyclicReturnsASelfReference(t *testing.T) {
+	g := Graph{
+		"test1": {"test2"},
+		"test2": {"test2"},
+	}
+
+	assert.Equal(t, []string{"test2"}, GetDependentCyclic(g))
+}
