@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/types"
@@ -226,6 +227,46 @@ func TestTrackPlatformFilesRemovesOnce(t *testing.T) {
 			assert.Equal(t, int32(1), removed.Load())
 		})
 	}
+}
+
+func TestCleanUpPlatformFilesWaitsForRunningCleanup(t *testing.T) {
+	t.Cleanup(resetPlatformFiles)
+	var removed atomic.Int32
+	removing := make(chan struct{})
+	release := make(chan struct{})
+	cleanup := trackPlatformFiles(func() {
+		close(removing)
+		<-release
+		removed.Add(1)
+	})
+
+	cleanupDone := make(chan struct{})
+	go func() {
+		defer close(cleanupDone)
+		cleanup()
+	}()
+	<-removing
+
+	platformFilesCleanups.Lock()
+	pending := len(platformFilesCleanups.pending)
+	platformFilesCleanups.Unlock()
+	assert.Equal(t, 1, pending, "files must stay registered until they are removed")
+
+	interruptDone := make(chan struct{})
+	go func() {
+		defer close(interruptDone)
+		CleanUpPlatformFiles()
+	}()
+	select {
+	case <-interruptDone:
+		t.Fatal("the interrupt must wait for the running cleanup to finish")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	close(release)
+	<-cleanupDone
+	<-interruptDone
+	assert.Equal(t, int32(1), removed.Load())
 }
 
 func TestTrackPlatformFilesAfterInterrupt(t *testing.T) {

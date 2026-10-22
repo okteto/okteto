@@ -117,8 +117,9 @@ func writePlatformFiles(fs afero.Fs, files []types.ExecutionFile) ([]string, fun
 
 // trackPlatformFiles registers remove so CleanUpPlatformFiles can run it if
 // the execution is interrupted, or runs it right away if the execution was
-// already interrupted. The returned function unregisters remove and runs it.
-// Whichever runs first, remove runs only once.
+// already interrupted. The returned function runs remove and then unregisters
+// it, so an interrupt in between still waits for remove to finish. Whichever
+// runs first, remove runs only once.
 func trackPlatformFiles(remove func()) func() {
 	once := &sync.Once{}
 	platformFilesCleanups.Lock()
@@ -131,10 +132,10 @@ func trackPlatformFiles(remove func()) func() {
 		once.Do(remove)
 	}
 	return func() {
+		once.Do(remove)
 		platformFilesCleanups.Lock()
 		delete(platformFilesCleanups.pending, once)
 		platformFilesCleanups.Unlock()
-		once.Do(remove)
 	}
 }
 
