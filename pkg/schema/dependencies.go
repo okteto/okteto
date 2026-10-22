@@ -47,7 +47,7 @@ func (dependencies) JSONSchema() *jsonschema.Schema {
 	extendedProps.Set("wait", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"boolean"}},
 		Title:       "wait",
-		Description: "Whether to wait for the dependency to be ready",
+		Description: "Whether the deploy commands wait for this dependency to be deployed before they start",
 	})
 	extendedProps.Set("timeout", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},

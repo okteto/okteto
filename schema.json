@@ -267,7 +267,7 @@
                 "wait": {
                   "type": "boolean",
                   "title": "wait",
-                  "description": "Whether to wait for the dependency to be ready"
+                  "description": "Whether the deploy commands wait for this dependency to be deployed before they start"
                 },
                 "timeout": {
                   "type": "string",
