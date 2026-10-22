@@ -109,6 +109,8 @@ type DeployParameters struct {
 	ManifestPath string
 	Deployable   Entity
 	Variables    []string
+	// platformVariables are the entries of Variables provided by the platform
+	platformVariables []string
 }
 
 // PortGetterFunc is a function that retrieves a free port the port for specified interface
@@ -273,6 +275,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 	platformVars, cleanupPlatformEnv := GetPlatformEnvironment(ctx)
 	defer cleanupPlatformEnv()
 	params.Variables = append(params.Variables, platformVars...)
+	params.platformVariables = platformVars
 
 	// Setup helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
@@ -333,7 +336,9 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.Infof("error adding phase to configmap: %s", err)
 		}
 	}
-	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, params.Variables)
+	// Platform variables are scoped to the commands of this execution
+	persistedVars := withoutVariables(params.Variables, params.platformVariables)
+	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, persistedVars)
 	if err != nil {
 		oktetoLog.SetStage(oktetoLog.UnexpectedErrorStage)
 		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error persisting OKTETO_ENV: %s", err.Error())
@@ -451,4 +456,22 @@ func setupHelmVersion() error {
 	}
 
 	return nil
+}
+
+// withoutVariables returns the "key=value" vars without any variable named as
+// one of the vars in exclude, whatever its value
+func withoutVariables(vars, exclude []string) []string {
+	excluded := make(map[string]bool, len(exclude))
+	for _, v := range exclude {
+		name, _, _ := strings.Cut(v, "=")
+		excluded[name] = true
+	}
+	result := make([]string, 0, len(vars))
+	for _, v := range vars {
+		name, _, _ := strings.Cut(v, "=")
+		if !excluded[name] {
+			result = append(result, v)
+		}
+	}
+	return result
 }
