@@ -292,4 +292,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260825221802-da73d73af1c5 // indirect
 )
 
-replace github.com/moby/buildkit => github.com/okteto/buildkit v0.34.2-0.20261020221304-94a56f5e96dd // v0.34.1-okteto1
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.34.2-0.20261022114757-15da830009bf // v0.34.1-okteto2
