@@ -14,14 +14,67 @@
 package deployable
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// printingExecutor prints its output through the okteto logger, as the real
+// executor does with the output of the commands
+type printingExecutor struct {
+	output string
+}
+
+func (e printingExecutor) Execute(_ model.DeployCommand, _ []string) error {
+	oktetoLog.Println(e.output)
+	return nil
+}
+
+func (printingExecutor) CleanUp(_ error) {}
+
+// captureLogOutput sends the okteto logger output to the returned buffer, with
+// masking disabled, until the test finishes
+func captureLogOutput(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	out := &bytes.Buffer{}
+	oktetoLog.Init(logrus.InfoLevel)
+	oktetoLog.DisableMasking()
+	oktetoLog.SetOutputFormat(oktetoLog.PlainFormat)
+	oktetoLog.SetOutput(out)
+	t.Cleanup(func() {
+		oktetoLog.DisableMasking()
+		oktetoLog.Init(logrus.InfoLevel)
+	})
+	return out
+}
+
+func TestRunDestroyMasksCommandOutput(t *testing.T) {
+	setFakeOktetoContext(t)
+	out := captureLogOutput(t)
+	// Added before the runner enables masking, like a destroy that already
+	// enabled it before the platform values were added
+	oktetoLog.AddMaskedWord("platform-secret")
+
+	runner := &DestroyRunner{
+		Executor: printingExecutor{output: "token: platform-secret"},
+	}
+	err := runner.RunDestroy(context.Background(), DestroyParameters{
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "print", Command: "print"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "token: ***")
+	assert.NotContains(t, out.String(), "platform-secret")
+}
 
 type fakeDestroyExecutor struct {
 	err      error

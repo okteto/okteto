@@ -61,6 +61,9 @@ func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error 
 
 	defer unlinkEnv()
 
+	// Masking has to be enabled after the platform values are added to be
+	// applied to them
+	oktetoLog.EnableMasking()
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 

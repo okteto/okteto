@@ -54,6 +54,9 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 		return err
 	}
 
+	// Masking has to be enabled after the platform values are added to be
+	// applied to them
+	oktetoLog.EnableMasking()
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		lastCommandName = command.Name
