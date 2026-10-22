@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -31,11 +32,23 @@ import (
 // able to escape the temporary directory.
 var envVarNameRegex = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+// platformFilesCleanups holds the removal of the platform files directories
+// that are still on disk, so they can be removed if the execution is
+// interrupted. Each removal is keyed by the sync.Once that guards it.
+var platformFilesCleanups = struct {
+	pending map[*sync.Once]func()
+	sync.Mutex
+	// closed is set when the execution is interrupted, so directories
+	// registered afterwards are removed right away
+	closed bool
+}{pending: map[*sync.Once]func(){}}
+
 // GetPlatformEnvironment returns the platform environment (e.g. cloud
 // credentials) as a list of "key=value" variables to be passed to the deploy,
 // destroy and test commands. Files requested by the platform are written to a
 // temporary directory and exposed through their env var. The returned cleanup
 // function removes those files and must be called once the commands finish.
+// If the execution is interrupted, CleanUpPlatformFiles must remove them.
 // Failures are logged and never block the commands from running.
 func GetPlatformEnvironment(ctx context.Context) ([]string, func()) {
 	c, err := okteto.NewOktetoClient()
@@ -79,11 +92,11 @@ func writePlatformFiles(fs afero.Fs, files []types.ExecutionFile) ([]string, fun
 		oktetoLog.Debugf("failed to create platform files dir: %s", err)
 		return nil, noop
 	}
-	cleanup := func() {
+	cleanup := trackPlatformFiles(func() {
 		if err := fs.RemoveAll(dir); err != nil {
 			oktetoLog.Infof("error removing platform files dir: %s", err)
 		}
-	}
+	})
 
 	var vars []string
 	for _, f := range files {
@@ -100,6 +113,46 @@ func writePlatformFiles(fs afero.Fs, files []types.ExecutionFile) ([]string, fun
 		vars = append(vars, fmt.Sprintf("%s=%s", f.EnvVar, path))
 	}
 	return vars, cleanup
+}
+
+// trackPlatformFiles registers remove so CleanUpPlatformFiles can run it if
+// the execution is interrupted, or runs it right away if the execution was
+// already interrupted. The returned function unregisters remove and runs it.
+// Whichever runs first, remove runs only once.
+func trackPlatformFiles(remove func()) func() {
+	once := &sync.Once{}
+	platformFilesCleanups.Lock()
+	closed := platformFilesCleanups.closed
+	if !closed {
+		platformFilesCleanups.pending[once] = remove
+	}
+	platformFilesCleanups.Unlock()
+	if closed {
+		once.Do(remove)
+	}
+	return func() {
+		platformFilesCleanups.Lock()
+		delete(platformFilesCleanups.pending, once)
+		platformFilesCleanups.Unlock()
+		once.Do(remove)
+	}
+}
+
+// CleanUpPlatformFiles removes the platform files that are still on disk, and
+// any written afterwards. The interrupt handlers call it right before the
+// process exits: they return without waiting for the commands, so the cleanup
+// returned by GetPlatformEnvironment never runs, and the commands keep running
+// until the process exits. It is safe to call more than once and at the same
+// time as that cleanup.
+func CleanUpPlatformFiles() {
+	platformFilesCleanups.Lock()
+	pending := platformFilesCleanups.pending
+	platformFilesCleanups.pending = map[*sync.Once]func(){}
+	platformFilesCleanups.closed = true
+	platformFilesCleanups.Unlock()
+	for once, remove := range pending {
+		once.Do(remove)
+	}
 }
 
 // maskValue always masks cloud credentials from the execution environment

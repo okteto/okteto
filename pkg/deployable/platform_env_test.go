@@ -19,6 +19,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -133,4 +135,121 @@ func TestWritePlatformFilesRejectsInvalidEnvVarNames(t *testing.T) {
 	content, err := afero.ReadFile(fs, got["VALID_NAME"])
 	require.NoError(t, err)
 	assert.Equal(t, "ok", string(content))
+}
+
+// resetPlatformFiles reopens the platform files registry, as
+// CleanUpPlatformFiles closes it for the rest of the process.
+func resetPlatformFiles() {
+	platformFilesCleanups.Lock()
+	defer platformFilesCleanups.Unlock()
+	platformFilesCleanups.pending = map[*sync.Once]func(){}
+	platformFilesCleanups.closed = false
+}
+
+func TestCleanUpPlatformFiles(t *testing.T) {
+	t.Cleanup(resetPlatformFiles)
+	fs := afero.NewMemMapFs()
+	c := &client.FakeUserClient{
+		ExecutionFiles: []types.ExecutionFile{
+			{EnvVar: "PLATFORM_TOKEN_FILE", Content: "platform-token"},
+		},
+	}
+
+	vars, cleanup := getPlatformEnvironment(context.Background(), c, fs)
+	path := splitVars(t, vars)["PLATFORM_TOKEN_FILE"]
+	require.NotEmpty(t, path)
+
+	CleanUpPlatformFiles()
+	_, err := fs.Stat(filepath.Dir(path))
+	assert.True(t, os.IsNotExist(err), "platform files dir must be removed when the execution is interrupted")
+
+	// The deferred cleanup and later interrupts must be no-ops
+	cleanup()
+	CleanUpPlatformFiles()
+}
+
+func TestTrackPlatformFilesRemovesOnce(t *testing.T) {
+	tests := []struct {
+		run  func(cleanup func())
+		name string
+	}{
+		{
+			name: "cleanup only",
+			run:  func(cleanup func()) { cleanup() },
+		},
+		{
+			name: "cleanup then interrupt",
+			run: func(cleanup func()) {
+				cleanup()
+				CleanUpPlatformFiles()
+			},
+		},
+		{
+			name: "interrupt then cleanup",
+			run: func(cleanup func()) {
+				CleanUpPlatformFiles()
+				cleanup()
+			},
+		},
+		{
+			name: "interrupt twice",
+			run: func(_ func()) {
+				CleanUpPlatformFiles()
+				CleanUpPlatformFiles()
+			},
+		},
+		{
+			name: "concurrent cleanup and interrupt",
+			run: func(cleanup func()) {
+				var wg sync.WaitGroup
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					cleanup()
+				}()
+				go func() {
+					defer wg.Done()
+					CleanUpPlatformFiles()
+				}()
+				wg.Wait()
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(resetPlatformFiles)
+			var removed atomic.Int32
+			cleanup := trackPlatformFiles(func() { removed.Add(1) })
+
+			tt.run(cleanup)
+
+			assert.Equal(t, int32(1), removed.Load())
+		})
+	}
+}
+
+func TestTrackPlatformFilesAfterInterrupt(t *testing.T) {
+	t.Cleanup(resetPlatformFiles)
+	CleanUpPlatformFiles()
+
+	var removed atomic.Int32
+	cleanup := trackPlatformFiles(func() { removed.Add(1) })
+	assert.Equal(t, int32(1), removed.Load(), "files registered after an interrupt must be removed right away")
+
+	cleanup()
+	CleanUpPlatformFiles()
+	assert.Equal(t, int32(1), removed.Load())
+}
+
+func TestWritePlatformFilesAfterInterrupt(t *testing.T) {
+	t.Cleanup(resetPlatformFiles)
+	CleanUpPlatformFiles()
+
+	// A real filesystem, as writing into the removed directory must fail
+	vars, cleanup := writePlatformFiles(afero.NewOsFs(), []types.ExecutionFile{
+		{EnvVar: "PLATFORM_TOKEN_FILE", Content: "platform-token"},
+	})
+	defer cleanup()
+
+	assert.Empty(t, vars, "commands started after an interrupt must not get platform files")
 }

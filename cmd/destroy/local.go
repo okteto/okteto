@@ -75,6 +75,7 @@ func (ld *localDestroyCommand) Destroy(ctx context.Context, opts *Options) error
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		errStop := "interrupt signal received"
 		ld.CleanUp(errors.New(errStop))
+		deployable.CleanUpPlatformFiles()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

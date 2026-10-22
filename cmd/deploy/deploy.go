@@ -306,6 +306,7 @@ $ okteto deploy --no-build=true`,
 				defer oktetoLog.StopSpinner()
 
 				c.cleanUp(ctx, oktetoErrors.ErrIntSig)
+				deployable.CleanUpPlatformFiles()
 				return oktetoErrors.ErrIntSig
 			case err := <-exit:
 				return err
