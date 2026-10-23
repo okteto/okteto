@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nginx
+package gatewayapi
 
 import (
 	"context"
@@ -40,7 +40,7 @@ type DivertManager interface {
 	Delete(ctx context.Context, name, namespace string) error
 }
 
-// Driver nginx struct for the divert driver
+// Driver implements the gateway-api divert driver
 type Driver struct {
 	client        kubernetes.Interface
 	cache         *cache

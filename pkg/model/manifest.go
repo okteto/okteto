@@ -614,15 +614,15 @@ func (m *Manifest) validateDivert() error {
 	}
 
 	switch m.Deploy.Divert.Driver {
-	case constants.OktetoDivertNginxDriver:
+	case constants.OktetoDivertGatewayAPIDriver:
 		if m.Deploy.Divert.Namespace == "" {
 			return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 		}
 		if len(m.Deploy.Divert.VirtualServices) > 0 {
-			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the nginx driver")
+			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the gateway-api driver")
 		}
 		if len(m.Deploy.Divert.Hosts) > 0 {
-			return fmt.Errorf("the field 'deploy.divert.hosts' is not supported with the nginx driver")
+			return fmt.Errorf("the field 'deploy.divert.hosts' is not supported with the gateway-api driver")
 		}
 	case constants.OktetoDivertIstioDriver:
 		if m.Deploy.Divert.DeprecatedService != "" {
@@ -660,7 +660,7 @@ func (m *Manifest) setDefaults() error {
 	if m.Deploy != nil && m.Deploy.Divert != nil {
 		var err error
 		if m.Deploy.Divert.Driver == "" {
-			m.Deploy.Divert.Driver = constants.OktetoDivertNginxDriver
+			m.Deploy.Divert.Driver = constants.OktetoDivertGatewayAPIDriver
 		}
 		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
 		if err != nil {

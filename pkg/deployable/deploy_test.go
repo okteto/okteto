@@ -232,7 +232,7 @@ func TestRunDeployWithEmptyDeployable(t *testing.T) {
 		},
 		Deployable: Entity{
 			Divert: &model.DivertDeploy{
-				Driver: constants.OktetoDivertNginxDriver,
+				Driver: constants.OktetoDivertGatewayAPIDriver,
 			},
 		},
 	}
@@ -631,7 +631,7 @@ func TestEntityIsEmpty(t *testing.T) {
 			name: "Non-empty Divert",
 			e: Entity{
 				External: nil,
-				Divert:   &model.DivertDeploy{Driver: "nginx"},
+				Divert:   &model.DivertDeploy{Driver: "gateway-api"},
 				Commands: nil,
 			},
 			want: false,
@@ -657,7 +657,7 @@ func TestEntityIsEmpty(t *testing.T) {
 						Icon: "icon",
 					},
 				},
-				Divert:   &model.DivertDeploy{Driver: "nginx"},
+				Divert:   &model.DivertDeploy{Driver: "gateway-api"},
 				Commands: nil,
 			},
 			want: false,

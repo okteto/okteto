@@ -261,7 +261,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-with-port",
 			divert: DivertDeploy{
-				Driver:               constants.OktetoDivertNginxDriver,
+				Driver:               constants.OktetoDivertGatewayAPIDriver,
 				Namespace:            "namespace",
 				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
@@ -272,7 +272,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-service",
 			divert: DivertDeploy{
-				Driver:               constants.OktetoDivertNginxDriver,
+				Driver:               constants.OktetoDivertGatewayAPIDriver,
 				Namespace:            "namespace",
 				DeprecatedService:    "",
 				DeprecatedPort:       8080,
@@ -283,7 +283,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-deployment",
 			divert: DivertDeploy{
-				Driver:               constants.OktetoDivertNginxDriver,
+				Driver:               constants.OktetoDivertGatewayAPIDriver,
 				Namespace:            "namespace",
 				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
@@ -294,7 +294,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-port",
 			divert: DivertDeploy{
-				Driver:               constants.OktetoDivertNginxDriver,
+				Driver:               constants.OktetoDivertGatewayAPIDriver,
 				Namespace:            "namespace",
 				DeprecatedService:    "service",
 				DeprecatedDeployment: "deployment",
@@ -304,13 +304,39 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ko-without-namespace",
 			divert: DivertDeploy{
-				Driver:               constants.OktetoDivertNginxDriver,
+				Driver:               constants.OktetoDivertGatewayAPIDriver,
 				Namespace:            "",
 				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: fmt.Errorf("the field 'deploy.divert.namespace' is mandatory"),
+		},
+		{
+			name: "divert-ko-gateway-api-with-virtual-services",
+			divert: DivertDeploy{
+				Driver:          constants.OktetoDivertGatewayAPIDriver,
+				Namespace:       "namespace",
+				VirtualServices: []DivertVirtualService{{Name: "vs", Namespace: "namespace"}},
+			},
+			expectedErr: fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the gateway-api driver"),
+		},
+		{
+			name: "divert-ko-gateway-api-with-hosts",
+			divert: DivertDeploy{
+				Driver:    constants.OktetoDivertGatewayAPIDriver,
+				Namespace: "namespace",
+				Hosts:     []DivertHost{{VirtualService: "vs", Namespace: "namespace"}},
+			},
+			expectedErr: fmt.Errorf("the field 'deploy.divert.hosts' is not supported with the gateway-api driver"),
+		},
+		{
+			name: "divert-ko-with-nginx-driver",
+			divert: DivertDeploy{
+				Driver:    "nginx",
+				Namespace: "namespace",
+			},
+			expectedErr: fmt.Errorf("the divert driver 'nginx' isn't supported"),
 		},
 	}
 
@@ -1687,7 +1713,7 @@ func TestRead(t *testing.T) {
 					ComposeSection: nil,
 					Endpoints:      nil,
 					Divert: &DivertDeploy{
-						Driver:               "nginx",
+						Driver:               "gateway-api",
 						Namespace:            "staging",
 						DeprecatedService:    "service-b",
 						DeprecatedDeployment: "",
@@ -2117,7 +2143,7 @@ func TestDivertDeployIsEmpty(t *testing.T) {
 		{
 			name: "Non-empty Driver",
 			d: &DivertDeploy{
-				Driver: "nginx",
+				Driver: "gateway-api",
 			},
 			want: false,
 		},
