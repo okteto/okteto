@@ -14,11 +14,15 @@
 package remoterun
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/deployable"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -75,4 +79,35 @@ func TestRun_TestCommand(t *testing.T) {
 		})
 	}
 
+}
+
+func TestGetTestVariablesDoesNotMaskOktetoDomain(t *testing.T) {
+	out := &bytes.Buffer{}
+	oktetoLog.Init(logrus.InfoLevel)
+	oktetoLog.DisableMasking()
+	oktetoLog.SetOutputFormat(oktetoLog.PlainFormat)
+	oktetoLog.SetOutput(out)
+	previousStore := okteto.CurrentStore
+	t.Cleanup(func() {
+		okteto.CurrentStore = previousStore
+		oktetoLog.DisableMasking()
+		oktetoLog.Init(logrus.InfoLevel)
+	})
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Token:    "context-token",
+				Registry: "registry.okteto.example.com",
+			},
+		},
+	}
+
+	vars := getTestVariables([]string{"USER_VAR=user-value"})
+
+	require.Equal(t, []string{"USER_VAR=user-value", "OKTETO_DOMAIN=okteto.example.com"}, vars)
+	// The runner enables masking before running the commands
+	oktetoLog.EnableMasking()
+	oktetoLog.Println("context-token user-value https://api.okteto.example.com")
+	assert.Contains(t, out.String(), "*** *** https://api.okteto.example.com")
 }

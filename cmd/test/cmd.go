@@ -116,6 +116,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 				oktetoLog.Spinner("Shutting down...")
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
+				deployable.CleanUpPlatformFiles()
 				return oktetoErrors.ErrIntSig
 			case err := <-exit:
 				return err

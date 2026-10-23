@@ -15,6 +15,7 @@ package deployable
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -35,9 +36,11 @@ import (
 type fakeCmapHandler struct {
 	errUpdatingWithEnvs error
 	errAddingPhase      error
+	updatedEnvs         []string
 }
 
-func (f *fakeCmapHandler) UpdateEnvsFromCommands(context.Context, string, string, []string) error {
+func (f *fakeCmapHandler) UpdateEnvsFromCommands(_ context.Context, _ string, _ string, envs []string) error {
+	f.updatedEnvs = envs
 	return f.errUpdatingWithEnvs
 }
 
@@ -303,6 +306,52 @@ func TestRunCommandsSectionWithCommands(t *testing.T) {
 
 	require.NoError(t, err)
 	executor.AssertExpectations(t)
+}
+
+func TestRunCommandsSectionPersistedVariables(t *testing.T) {
+	setFakeOktetoContext(t)
+	executor := &fakeExecutor{}
+	cmapHandler := &fakeCmapHandler{}
+	r := DeployRunner{
+		Fs:               afero.NewMemMapFs(),
+		ConfigMapHandler: cmapHandler,
+		Executor:         executor,
+	}
+	command := model.DeployCommand{Name: "test command", Command: "echo"}
+	params := DeployParameters{
+		Variables: []string{
+			"USER_VAR=value",
+			"PLATFORM_CLIENT_ID=client",
+			"PLATFORM_TOKEN_FILE=/tmp/okteto-platform-1/PLATFORM_TOKEN_FILE",
+			// Same name as a platform variable, e.g. set again by a previous step
+			"PLATFORM_CLIENT_ID=other",
+		},
+		platformVariables: []string{
+			"PLATFORM_CLIENT_ID=client",
+			"PLATFORM_TOKEN_FILE=/tmp/okteto-platform-1/PLATFORM_TOKEN_FILE",
+		},
+		Deployable: Entity{Commands: []model.DeployCommand{command}},
+	}
+	// The commands still get the platform variables
+	executor.On("Execute", command, mock.MatchedBy(func(env []string) bool {
+		return slices.Contains(env, "PLATFORM_CLIENT_ID=client") &&
+			slices.Contains(env, "PLATFORM_TOKEN_FILE=/tmp/okteto-platform-1/PLATFORM_TOKEN_FILE")
+	})).Return(nil).Once()
+
+	err := r.runCommandsSection(context.Background(), params)
+
+	require.NoError(t, err)
+	executor.AssertExpectations(t)
+	assert.Equal(t, []string{"USER_VAR=value"}, cmapHandler.updatedEnvs)
+}
+
+func TestWithoutVariables(t *testing.T) {
+	vars := []string{"A=1", "B=2", "B=3", "C=4", "NO_VALUE"}
+
+	got := withoutVariables(vars, []string{"B=2", "C=4", "D=5"})
+
+	assert.Equal(t, []string{"A=1", "NO_VALUE"}, got)
+	assert.Equal(t, []string{"A=1", "B=2", "B=3", "C=4", "NO_VALUE"}, vars, "the input must not be modified")
 }
 
 func TestRunCommandsSectionWithErrorInCommands(t *testing.T) {

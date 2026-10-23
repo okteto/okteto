@@ -44,13 +44,9 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 	var commandErr error
 	lastCommandName := ""
 
-	for k, v := range GetPlatformEnvironment(ctx) {
-		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
-		// Always mask cloud credentials from execution environment
-		if v != "" {
-			oktetoLog.AddMaskedWord(v)
-		}
-	}
+	platformVars, cleanupPlatformEnv := GetPlatformEnvironment(ctx)
+	defer cleanupPlatformEnv()
+	params.Variables = append(params.Variables, platformVars...)
 	params.Variables = appendGatewayEnvVars(params.Variables)
 
 	// Set up helm version based on environment variable
@@ -58,6 +54,9 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 		return err
 	}
 
+	// Masking has to be enabled after the platform values are added to be
+	// applied to them
+	oktetoLog.EnableMasking()
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		lastCommandName = command.Name

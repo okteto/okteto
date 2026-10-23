@@ -17,10 +17,32 @@ import (
 	"context"
 	"testing"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRunTestMasksCommandOutput(t *testing.T) {
+	setFakeOktetoContext(t)
+	out := captureLogOutput(t)
+	oktetoLog.AddMaskedWord("platform-secret")
+
+	runner := &TestRunner{
+		Executor: printingExecutor{output: "token: platform-secret"},
+		Fs:       afero.NewMemMapFs(),
+	}
+	err := runner.RunTest(context.Background(), TestParameters{
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "print", Command: "print"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "token: ***")
+	assert.NotContains(t, out.String(), "platform-secret")
+}
 
 func TestTestRunner(t *testing.T) {
 	setFakeOktetoContext(t)

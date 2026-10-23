@@ -109,6 +109,8 @@ type DeployParameters struct {
 	ManifestPath string
 	Deployable   Entity
 	Variables    []string
+	// platformVariables are the entries of Variables provided by the platform
+	platformVariables []string
 }
 
 // PortGetterFunc is a function that retrieves a free port for the specified interface
@@ -270,13 +272,10 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 		// Set OKTETO_DOMAIN=okteto-subdomain env variable
 		fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
 	)
-	for k, v := range GetPlatformEnvironment(ctx) {
-		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
-		// Always mask cloud credentials from execution environment
-		if strings.TrimSpace(v) != "" {
-			oktetoLog.AddMaskedWord(v)
-		}
-	}
+	platformVars, cleanupPlatformEnv := GetPlatformEnvironment(ctx)
+	defer cleanupPlatformEnv()
+	params.Variables = append(params.Variables, platformVars...)
+	params.platformVariables = platformVars
 
 	// Set up helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
@@ -337,7 +336,9 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.Infof("error adding phase to configmap: %s", err)
 		}
 	}
-	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, params.Variables)
+	// Platform variables are scoped to the commands of this execution
+	persistedVars := withoutVariables(params.Variables, params.platformVariables)
+	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, persistedVars)
 	if err != nil {
 		oktetoLog.SetStage(oktetoLog.UnexpectedErrorStage)
 		oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error persisting OKTETO_ENV: %s", err.Error())
@@ -437,20 +438,6 @@ func createTempOktetoEnvFile(fs afero.Fs) (afero.File, func(), error) {
 	}, nil
 }
 
-func GetPlatformEnvironment(ctx context.Context) map[string]string {
-	c, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil
-	}
-
-	env, err := c.User().GetExecutionEnv(ctx)
-	if err != nil {
-		oktetoLog.Debugf("failed to get platform environment: %s", err)
-		return map[string]string{}
-	}
-	return env
-}
-
 // setupHelmVersion configures the helm binary based on OKTETO_HELM_4_ENABLED environment variable.
 // Only runs in remote deploy environments when OKTETO_HELM_4_ENABLED is "true".
 // Copies helm4 to helm to override the default helm3 binary.
@@ -469,4 +456,22 @@ func setupHelmVersion() error {
 	}
 
 	return nil
+}
+
+// withoutVariables returns the "key=value" vars without any variable named as
+// one of the vars in exclude, whatever its value
+func withoutVariables(vars, exclude []string) []string {
+	excluded := make(map[string]bool, len(exclude))
+	for _, v := range exclude {
+		name, _, _ := strings.Cut(v, "=")
+		excluded[name] = true
+	}
+	result := make([]string, 0, len(vars))
+	for _, v := range vars {
+		name, _, _ := strings.Cut(v, "=")
+		if !excluded[name] {
+			result = append(result, v)
+		}
+	}
+	return result
 }

@@ -15,7 +15,6 @@ package deployable
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -47,13 +46,9 @@ func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error 
 		return err
 	}
 
-	for k, v := range GetPlatformEnvironment(ctx) {
-		params.Variables = append(params.Variables, fmt.Sprintf("%s=%s", k, v))
-		// Always mask cloud credentials from execution environment
-		if v != "" {
-			oktetoLog.AddMaskedWord(v)
-		}
-	}
+	platformVars, cleanupPlatformEnv := GetPlatformEnvironment(ctx)
+	defer cleanupPlatformEnv()
+	params.Variables = append(params.Variables, platformVars...)
 	params.Variables = appendGatewayEnvVars(params.Variables)
 
 	// Setup helm version based on environment variable
@@ -66,6 +61,9 @@ func (dr *TestRunner) RunTest(ctx context.Context, params TestParameters) error 
 
 	defer unlinkEnv()
 
+	// Masking has to be enabled after the platform values are added to be
+	// applied to them
+	oktetoLog.EnableMasking()
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 

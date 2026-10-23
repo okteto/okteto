@@ -41,6 +41,7 @@ type UserInterface interface {
 	GetClusterInfo(ctx context.Context) (*ClusterInfo, error)
 	GetRegistryCredentials(ctx context.Context, host string) (dockertypes.AuthConfig, error)
 	GetExecutionEnv(ctx context.Context) (map[string]string, error)
+	GetExecutionFiles(ctx context.Context) ([]ExecutionFile, error)
 	GetKnownHostsConfig(ctx context.Context) (KnownHostsConfig, error)
 }
 
