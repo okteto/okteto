@@ -159,7 +159,7 @@ require (
 	github.com/heimdalr/dag v1.5.1
 	github.com/kubeark/jsonschema v0.3.0
 	github.com/moby/patternmatcher v0.6.1
-	github.com/posthog/posthog-go v1.23.0
+	github.com/posthog/posthog-go v1.27.0
 	github.com/samber/slog-logrus/v2 v2.1.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/vbauerster/mpb/v7 v7.5.3
@@ -224,7 +224,7 @@ require (
 	github.com/go-openapi/swag/stringutils v0.28.0 // indirect
 	github.com/go-openapi/swag/typeutils v0.28.0 // indirect
 	github.com/go-openapi/swag/yamlutils v0.28.0 // indirect
-	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.74 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
