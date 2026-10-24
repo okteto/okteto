@@ -360,6 +360,42 @@ services:
 	assert.Equal(t, string(manifest), string(s.Manifest))
 }
 
+func Test_ReadStackComposeInterpolatedTypes(t *testing.T) {
+	t.Setenv("REPLICAS", "3")
+	t.Setenv("PUBLIC", "true")
+	t.Setenv("SCALE", "2")
+	t.Setenv("VERSION", "1.10")
+	t.Setenv("ZIP", "0123")
+	t.Setenv("ANSWER", "yes")
+	manifest := []byte(`services:
+  app:
+    image: okteto/vote:1
+    public: ${PUBLIC}
+    deploy:
+      replicas: ${REPLICAS}
+    environment:
+      VERSION: ${VERSION}
+      ZIP: ${ZIP}
+      ANSWER: ${ANSWER}
+      QUOTED: "${REPLICAS}"
+  worker:
+    image: okteto/vote:1
+    scale: ${SCALE}`)
+	s, err := ReadStack(manifest, true)
+	require.NoError(t, err)
+
+	app := s.Services["app"]
+	assert.Equal(t, int32(3), app.Replicas)
+	assert.True(t, app.Public)
+	assert.Equal(t, env.Environment{
+		{Name: "ANSWER", Value: "yes"},
+		{Name: "QUOTED", Value: "3"},
+		{Name: "VERSION", Value: "1.10"},
+		{Name: "ZIP", Value: "0123"},
+	}, app.Environment)
+	assert.Equal(t, int32(2), s.Services["worker"].Replicas)
+}
+
 func TestStack_validate(t *testing.T) {
 	tests := []struct {
 		stack *Stack
