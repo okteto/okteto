@@ -2261,3 +2261,31 @@ deploy:
 	require.NoError(t, err)
 	require.Equal(t, deps.DependsOn{"database"}, m.Dependencies["backend"].DependsOn)
 }
+
+func TestRead_TranslatesLegacyNginxDivertDriver(t *testing.T) {
+	manifest := []byte(`
+deploy:
+  divert:
+    driver: nginx
+    namespace: staging`)
+
+	m, err := Read(manifest)
+
+	require.NoError(t, err)
+	require.Equal(t, constants.OktetoDivertGatewayAPIDriver, m.Deploy.Divert.Driver)
+}
+
+func TestRead_LegacyNginxDivertDriverUsesGatewayAPIValidation(t *testing.T) {
+	manifest := []byte(`
+deploy:
+  divert:
+    driver: nginx
+    namespace: staging
+    virtualServices:
+      - name: vs
+        namespace: staging`)
+
+	_, err := Read(manifest)
+
+	require.EqualError(t, err, "the field 'deploy.divert.virtualServices' is not supported with the gateway-api driver")
+}

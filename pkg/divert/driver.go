@@ -33,10 +33,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// legacyNginxDriver is the previous name of the gateway-api driver. Manifests can't use it anymore, but
-// older CLIs still send it to the remote runner in OKTETO_DEPLOYABLE, as they set it as the default driver
-const legacyNginxDriver = "nginx"
-
 type Driver interface {
 	Deploy(ctx context.Context) error
 	Destroy(ctx context.Context) error
@@ -50,9 +46,11 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 	}
 
 	switch divert.Driver {
-	case constants.OktetoDivertGatewayAPIDriver, legacyNginxDriver:
-		if divert.Driver == legacyNginxDriver {
-			oktetoLog.Infof("divert driver '%s' received, using the '%s' driver", legacyNginxDriver, constants.OktetoDivertGatewayAPIDriver)
+	// Loading the manifest translates the legacy nginx driver into gateway-api, but older CLIs send nginx to
+	// the remote runner in OKTETO_DEPLOYABLE, which isn't loaded as a manifest
+	case constants.OktetoDivertGatewayAPIDriver, constants.OktetoDivertLegacyNginxDriver:
+		if divert.Driver == constants.OktetoDivertLegacyNginxDriver {
+			oktetoLog.Infof("divert driver '%s' received, using the '%s' driver", constants.OktetoDivertLegacyNginxDriver, constants.OktetoDivertGatewayAPIDriver)
 		}
 
 		var err error

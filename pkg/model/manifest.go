@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/a8m/envsubst"
 	"github.com/okteto/okteto/pkg/build"
@@ -85,6 +86,8 @@ const (
 
 var (
 	priorityOrder = []string{"dev", "dependencies", "deploy", "build", "name"}
+
+	legacyNginxDriverWarningOnce = sync.Once{}
 )
 
 // Manifest represents an okteto manifest
@@ -660,6 +663,12 @@ func (m *Manifest) setDefaults() error {
 	if m.Deploy != nil && m.Deploy.Divert != nil {
 		var err error
 		if m.Deploy.Divert.Driver == "" {
+			m.Deploy.Divert.Driver = constants.OktetoDivertGatewayAPIDriver
+		}
+		if m.Deploy.Divert.Driver == constants.OktetoDivertLegacyNginxDriver {
+			legacyNginxDriverWarningOnce.Do(func() {
+				oktetoLog.Warning("The divert driver '%s' is deprecated and will be removed in a future version. Use '%s' instead", constants.OktetoDivertLegacyNginxDriver, constants.OktetoDivertGatewayAPIDriver)
+			})
 			m.Deploy.Divert.Driver = constants.OktetoDivertGatewayAPIDriver
 		}
 		m.Deploy.Divert.Namespace, err = env.ExpandEnvIfNotEmpty(m.Deploy.Divert.Namespace)
