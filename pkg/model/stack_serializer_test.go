@@ -292,6 +292,64 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "deploy-without-resources-keeps-service-resources",
+			deployRaw: &DeployInfoRaw{},
+			resources: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size:  Quantity{resource.MustParse("5Gi")},
+						Class: "fast",
+					},
+				},
+			},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size:  Quantity{resource.MustParse("5Gi")},
+						Class: "fast",
+					},
+				},
+			},
+		},
+		{
+			name: "deploy-resources-override-only-the-values-they-set",
+			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
+				Limits: DeployComposeResources{
+					Cpus: Quantity{resource.MustParse("1")},
+				},
+			}},
+			resources: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size: Quantity{resource.MustParse("5Gi")},
+					},
+				},
+			},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size: Quantity{resource.MustParse("5Gi")},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
