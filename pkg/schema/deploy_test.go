@@ -141,11 +141,29 @@ deploy:
 			expectErr: true,
 		},
 		{
+			name: "deploy with gateway-api divert driver",
+			manifest: `
+deploy:
+  commands:
+    - helm upgrade --install movies chart
+  divert:
+    driver: gateway-api
+    namespace: staging`,
+		},
+		{
 			name: "invalid divert driver",
 			manifest: `
 deploy:
   divert:
     driver: invalid`,
+			expectErr: true,
+		},
+		{
+			name: "nginx divert driver is not supported",
+			manifest: `
+deploy:
+  divert:
+    driver: nginx`,
 			expectErr: true,
 		},
 		{

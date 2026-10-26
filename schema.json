@@ -158,9 +158,10 @@
                 "driver": {
                   "type": "string",
                   "enum": [
+                    "gateway-api",
                     "istio"
                   ],
-                  "description": "The backend for divert. Supported values are 'nginx' (default) and 'istio'"
+                  "description": "The backend for divert. Supported values are 'gateway-api' (default) and 'istio'"
                 },
                 "namespace": {
                   "type": "string",

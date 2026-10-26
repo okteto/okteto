@@ -113,8 +113,11 @@ const (
 	// OktetoNamespaceLabel is the label used to identify the namespace where the resource lives
 	OktetoNamespaceLabel = "dev.okteto.com/namespace"
 
-	// OktetoDivertNginxDriver is the divert driver for nginx
-	OktetoDivertNginxDriver = "nginx"
+	// OktetoDivertGatewayAPIDriver is the divert driver for gateway-api
+	OktetoDivertGatewayAPIDriver = "gateway-api"
+
+	// OktetoDivertLegacyNginxDriver is the deprecated name of the gateway-api divert driver
+	OktetoDivertLegacyNginxDriver = "nginx"
 
 	// OktetoDivertIstioDriver is the divert driver for istio
 	OktetoDivertIstioDriver = "istio"

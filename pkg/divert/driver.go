@@ -18,12 +18,13 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert/gatewayapi"
 	"github.com/okteto/okteto/pkg/divert/istio"
 	"github.com/okteto/okteto/pkg/divert/k8s"
-	"github.com/okteto/okteto/pkg/divert/nginx"
 	"github.com/okteto/okteto/pkg/divert/noop"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -44,7 +45,14 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 		return nil, oktetoErrors.ErrDivertNotSupported
 	}
 
-	if divert.Driver == constants.OktetoDivertNginxDriver {
+	switch divert.Driver {
+	// Loading the manifest translates the legacy nginx driver into gateway-api, but older CLIs send nginx to
+	// the remote runner in OKTETO_DEPLOYABLE, which isn't loaded as a manifest
+	case constants.OktetoDivertGatewayAPIDriver, constants.OktetoDivertLegacyNginxDriver:
+		if divert.Driver == constants.OktetoDivertLegacyNginxDriver {
+			oktetoLog.Infof("divert driver '%s' received, using the '%s' driver", constants.OktetoDivertLegacyNginxDriver, constants.OktetoDivertGatewayAPIDriver)
+		}
+
 		var err error
 		divertClient := k8s.GetNoopDivertClient(ioCtrl)
 
@@ -57,15 +65,17 @@ func New(divert *model.DivertDeploy, name, namespace string, c kubernetes.Interf
 		}
 
 		manager := NewManager(divertClient)
-		return nginx.New(divert, name, namespace, c, manager), nil
-	}
+		return gatewayapi.New(divert, name, namespace, c, manager), nil
+	case constants.OktetoDivertIstioDriver:
+		ic, err := virtualservices.GetIstioClient()
+		if err != nil {
+			return nil, fmt.Errorf("error creating istio client: %w", err)
+		}
 
-	ic, err := virtualservices.GetIstioClient()
-	if err != nil {
-		return nil, fmt.Errorf("error creating istio client: %w", err)
+		return istio.New(divert, name, namespace, c, ic), nil
+	default:
+		return nil, fmt.Errorf("the divert driver '%s' isn't supported", divert.Driver)
 	}
-
-	return istio.New(divert, name, namespace, c, ic), nil
 }
 
 // NewNoop returns a new noop driver for divert. Useful for cases in which divert is not defined
