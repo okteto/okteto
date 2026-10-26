@@ -76,17 +76,22 @@ func TestNew_IstioDriver(t *testing.T) {
 	require.IsType(t, &istio.Driver{}, d)
 }
 
+// Older CLIs send the legacy nginx driver to the remote runner, so it must keep working there
+func TestNew_LegacyNginxDriver(t *testing.T) {
+	setOktetoContext(t, true)
+
+	d, err := New(&model.DivertDeploy{Driver: "nginx", Namespace: "staging"}, "app", "test", fake.NewSimpleClientset(), io.NewIOController())
+
+	require.NoError(t, err)
+	require.IsType(t, &gatewayapi.Driver{}, d)
+}
+
 func TestNew_UnsupportedDriver(t *testing.T) {
 	tests := []struct {
 		name        string
 		driver      string
 		expectedErr string
 	}{
-		{
-			name:        "nginx driver is no longer supported",
-			driver:      "nginx",
-			expectedErr: "the divert driver 'nginx' isn't supported",
-		},
 		{
 			name:        "empty driver",
 			driver:      "",
