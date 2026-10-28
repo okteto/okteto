@@ -544,18 +544,18 @@ func Test_Deploy_Ingresses(t *testing.T) {
 	}
 }
 
-func Test_Deploy_IngressUpdateError(t *testing.T) {
+func Test_Deploy_IngressPatchError(t *testing.T) {
 	c := fake.NewClientset(
 		newIngress("i1", "staging", "s1", nil),
 		newIngress("i1", "cindy", "s1", nil),
 	)
-	c.PrependReactor("update", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, fmt.Errorf("update error")
+	c.PrependReactor("patch", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, fmt.Errorf("patch error")
 	})
 	d, _ := newDeployDriver(c)
 
 	err := d.Deploy(context.Background())
-	require.EqualError(t, err, "update error")
+	require.EqualError(t, err, "patch error")
 }
 
 func Test_deployDivertResources_Success(t *testing.T) {

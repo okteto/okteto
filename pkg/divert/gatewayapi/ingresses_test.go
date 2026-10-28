@@ -21,10 +21,8 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/require"
 	networkingv1 "k8s.io/api/networking/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 )
@@ -125,46 +123,35 @@ func Test_divertIngress_AlreadyAnnotated(t *testing.T) {
 	require.Empty(t, c.Actions())
 }
 
-func Test_divertIngress_UpdateError(t *testing.T) {
+func Test_divertIngress_KeepsConcurrentChanges(t *testing.T) {
 	ctx := context.Background()
-	in := newIngress("i1", "cindy", "s1", nil)
-	c := fake.NewClientset(in)
-	c.PrependReactor("update", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, errors.New("update error")
-	})
-	d := newIngressDriver(c, in)
-
-	err := d.divertIngress(ctx, in)
-	require.EqualError(t, err, "update error")
-}
-
-func conflictOnUpdate(k8stesting.Action) (bool, runtime.Object, error) {
-	return true, nil, k8sErrors.NewConflict(schema.GroupResource{Resource: "ingresses"}, "i1", errors.New("conflict"))
-}
-
-func Test_divertIngress_UpdateConflict(t *testing.T) {
-	ctx := context.Background()
-	in := newIngress("i1", "cindy", "s1", nil)
-	current := newIngress("i1", "cindy", "s1", map[string]string{"a1": "v2"})
-	c := fake.NewClientset(current)
-	c.PrependReactor("update", "ingresses", conflictOnUpdate)
+	// the cached ingress is older than the one in the cluster
+	in := newIngress("i1", "cindy", "s1", map[string]string{"a1": "v1"})
+	c := fake.NewClientset(newIngress("i1", "cindy", "s1", map[string]string{"a1": "v2"}))
 	d := newIngressDriver(c, in)
 
 	err := d.divertIngress(ctx, in)
 	require.NoError(t, err)
-	require.Equal(t, current.Annotations, d.cache.developerIngresses["i1"].Annotations)
+
+	expected := map[string]string{
+		"a1":                               "v2",
+		model.OktetoDivertHeaderAnnotation: "cindy",
+	}
+	result, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, expected, result.Annotations)
+	require.Equal(t, expected, d.cache.developerIngresses["i1"].Annotations)
 }
 
-func Test_divertIngress_GetAfterConflictError(t *testing.T) {
+func Test_divertIngress_PatchError(t *testing.T) {
 	ctx := context.Background()
 	in := newIngress("i1", "cindy", "s1", nil)
 	c := fake.NewClientset(in)
-	c.PrependReactor("update", "ingresses", conflictOnUpdate)
-	c.PrependReactor("get", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, errors.New("get error")
+	c.PrependReactor("patch", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("patch error")
 	})
 	d := newIngressDriver(c, in)
 
 	err := d.divertIngress(ctx, in)
-	require.EqualError(t, err, "get error")
+	require.EqualError(t, err, "patch error")
 }

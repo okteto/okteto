@@ -15,36 +15,37 @@ package gatewayapi
 
 import (
 	"context"
+	"encoding/json"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	networkingv1 "k8s.io/api/networking/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
-// divertIngress applies the divert header annotation to an ingress deployed in the developer namespace
+// divertIngress applies the divert header annotation to an ingress deployed in the developer namespace.
+// It uses a merge patch so the API server applies the annotation over the latest version of the ingress
 func (d *Driver) divertIngress(ctx context.Context, in *networkingv1.Ingress) error {
 	if in.Annotations[model.OktetoDivertHeaderAnnotation] == in.Namespace {
 		return nil
 	}
 
-	updatedIn := in.DeepCopy()
-	if updatedIn.Annotations == nil {
-		updatedIn.Annotations = map[string]string{}
+	patch, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]string{
+				model.OktetoDivertHeaderAnnotation: in.Namespace,
+			},
+		},
+	})
+	if err != nil {
+		return err
 	}
-	updatedIn.Annotations[model.OktetoDivertHeaderAnnotation] = updatedIn.Namespace
 
-	oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
-	if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
-		if !k8sErrors.IsConflict(err) {
-			return err
-		}
-		// the ingress was updated, refresh the cache
-		updatedIn, err = d.client.NetworkingV1().Ingresses(d.namespace).Get(ctx, in.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	oktetoLog.Infof("patching ingress %s/%s", in.Namespace, in.Name)
+	updatedIn, err := d.client.NetworkingV1().Ingresses(d.namespace).Patch(ctx, in.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return err
 	}
 	d.cache.developerIngresses[in.Name] = updatedIn
 	return nil
