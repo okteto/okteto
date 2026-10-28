@@ -39,7 +39,7 @@ require (
 	github.com/stern/stern v1.22.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/oauth2 v0.37.0
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	golang.org/x/term v0.46.0
 	google.golang.org/grpc v1.84.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
