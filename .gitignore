@@ -25,5 +25,5 @@ golangci-report.xml
 node_modules
 
 # Claude local config (personal, not shared)
-.claude/*.local.*
+.claude/*.local*
 .claude/worktrees/
