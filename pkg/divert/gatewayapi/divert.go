@@ -76,7 +76,14 @@ func (d *Driver) Deploy(ctx context.Context) error {
 		return fmt.Errorf("error deleting orphan divert resources: %w", err)
 	}
 
-	for name, in := range d.cache.divertIngresses {
+	for name := range d.cache.divertIngresses {
+		// Ingresses of the shared namespace are not created in the developer namespace, only the ones
+		// deployed there are diverted
+		in, ok := d.cache.developerIngresses[name]
+		if !ok {
+			continue
+		}
+
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")
@@ -85,7 +92,7 @@ func (d *Driver) Deploy(ctx context.Context) error {
 			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
 			oktetoLog.StartSpinner()
 			defer oktetoLog.StopSpinner()
-			if err := d.divertIngress(ctx, name); err != nil {
+			if err := d.divertIngress(ctx, in); err != nil {
 				return err
 			}
 			oktetoLog.StopSpinner()

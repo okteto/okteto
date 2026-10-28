@@ -24,9 +24,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 type fakeDivertManager struct {
@@ -442,443 +443,119 @@ func Test_UpdatePod(t *testing.T) {
 	}
 }
 
-func Test_divertIngresses(t *testing.T) {
+// requireDeveloperNamespace checks the annotations of the ingresses in the developer namespace, by name,
+// and that no service was created there
+func requireDeveloperNamespace(t *testing.T, c *fake.Clientset, expectedIngresses map[string]map[string]string) {
+	t.Helper()
 	ctx := context.Background()
-	i1 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i1",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v1",
-			},
-			Annotations: map[string]string{
-				"a1":                                    "v1",
-				model.OktetoDivertedNamespaceAnnotation: "staging",
-				model.OktetoDivertHeaderAnnotation:      "cindy",
-			},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i1-cindy.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s1",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i1-cindy.okteto.dev"},
-				},
-			},
-		},
+	ingresses, err := c.NetworkingV1().Ingresses("cindy").List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	annotations := map[string]map[string]string{}
+	for _, in := range ingresses.Items {
+		annotations[in.Name] = in.Annotations
 	}
-	expectedI1 := i1.DeepCopy()
-	di1 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i1",
-			Namespace: "staging",
-			Labels: map[string]string{
-				model.DeployedByLabel: "staging",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{"a1": "v2"},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i1-staging.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s1",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i1-staging.okteto.dev"},
-				},
-			},
-		},
-	}
+	require.Equal(t, expectedIngresses, annotations)
 
-	i2 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i2",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v1",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:        "true",
-				model.OktetoDivertedNamespaceAnnotation: "staging",
-				"a1":                                    "v1",
-			},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i2-cindy.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s2",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i2-cindy.okteto.dev"},
-				},
-			},
-		},
-	}
-	expectedI2 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i2",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:        "true",
-				model.OktetoDivertedNamespaceAnnotation: "staging",
-				model.OktetoDivertHeaderAnnotation:      "cindy",
-				"a1":                                    "v2",
-			},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i2-cindy.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s2",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i2-cindy.okteto.dev"},
-				},
-			},
-		},
-	}
-	di2 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i2",
-			Namespace: "staging",
-			Labels: map[string]string{
-				model.DeployedByLabel: "staging",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{"a1": "v2"},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i2-staging.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s2",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i2-staging.okteto.dev"},
-				},
-			},
-		},
-	}
+	services, err := c.CoreV1().Services("cindy").List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, services.Items)
+}
 
-	expectedI3 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i3",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:        "true",
-				model.OktetoDivertedNamespaceAnnotation: "staging",
-				model.OktetoDivertHeaderAnnotation:      "cindy",
-				"a1":                                    "v2",
-			},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i3-cindy.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s3",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i3-cindy.okteto.dev"},
-				},
-			},
-		},
-	}
-	di3 := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "i3",
-			Namespace: "staging",
-			Labels: map[string]string{
-				model.DeployedByLabel: "staging",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{"a1": "v2"},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "i3-staging.okteto.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "s3",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{
-				{
-					Hosts: []string{"i3-staging.okteto.dev"},
-				},
-			},
-		},
-	}
-
-	s1 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s1",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v1",
-			},
-			Annotations: map[string]string{"a1": "v1", model.OktetoDivertedNamespaceAnnotation: "staging"},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type:         apiv1.ServiceTypeExternalName,
-			ExternalName: "s1.staging.svc.cluster.local",
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-cindy",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  "my-ip",
-			ClusterIPs: []string{"my-ip"},
-			Selector:   map[string]string{"l1": "v1"},
-		},
-	}
-	ds1 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s1",
-			Namespace: "staging",
-			Labels: map[string]string{
-				model.DeployedByLabel: "staging",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{"a1": "v2"},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-		},
-	}
-
-	s2 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s2",
-			Namespace: "cindy",
-			Labels: map[string]string{
-				model.DeployedByLabel: "test",
-				"l1":                  "v1",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v1",
-			},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Name: "port-cindy",
-					Port: 8080,
-				},
-			},
-			ClusterIP:  apiv1.ClusterIPNone,
-			ClusterIPs: nil,
-			Selector:   nil,
-		},
-	}
-
-	ds2 := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "s2",
-			Namespace: "staging",
-			Labels: map[string]string{
-				model.DeployedByLabel: "staging",
-				"l1":                  "v2",
-			},
-			Annotations: map[string]string{"a1": "v2"},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type:         apiv1.ServiceTypeExternalName,
-			ExternalName: "s2.staging.svc.cluster.local",
-		},
-	}
-
-	c := fake.NewSimpleClientset(i1, i2, di1, di2, di3, s1, s2, ds1, ds2)
-	m := &model.Manifest{
-		Name: "test",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-
-	divertResources := []*k8s.Divert{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "divert-1",
-				Namespace: "cindy",
-			},
-			Spec: k8s.DivertSpec{
-				Service: "s1",
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "divert-2",
-				Namespace: "cindy",
-			},
-			Spec: k8s.DivertSpec{
-				Service: "s2",
-			},
-		},
-	}
-
+func newDeployDriver(c *fake.Clientset) (*Driver, *fakeDivertManager) {
 	dm := &fakeDivertManager{}
+	dm.On("List", mock.Anything, "cindy").Return([]*k8s.Divert{}, nil)
+	d := &Driver{client: c, name: "test", namespace: "cindy", divert: model.DivertDeploy{Namespace: "staging"}, divertManager: dm}
+	return d, dm
+}
 
-	dm.On("CreateOrUpdate", mock.Anything, mock.Anything).Return(nil).Times(2)
-	dm.On("List", mock.Anything, "cindy").Return(divertResources, nil).Times(2)
+func Test_Deploy_Ingresses(t *testing.T) {
+	leftoverCopyAnnotations := map[string]string{
+		"a1":                                    "v1",
+		model.OktetoAutoCreateAnnotation:        "true",
+		model.OktetoDivertedNamespaceAnnotation: "staging",
+		model.OktetoDivertHeaderAnnotation:      "cindy",
+	}
+	tests := []struct {
+		expected map[string]map[string]string
+		name     string
+		objects  []runtime.Object
+	}{
+		{
+			name: "ingress only in the shared namespace is not created",
+			objects: []runtime.Object{
+				newIngress("i1", "staging", "s1", map[string]string{"a1": "v1"}),
+				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1", Namespace: "staging"}},
+			},
+			expected: map[string]map[string]string{},
+		},
+		{
+			name: "developer ingress matching a shared ingress gets the divert header",
+			objects: []runtime.Object{
+				newIngress("i1", "staging", "s1", map[string]string{"a1": "v2"}),
+				newIngress("i1", "cindy", "s1", map[string]string{"a1": "v1"}),
+			},
+			expected: map[string]map[string]string{
+				"i1": {"a1": "v1", model.OktetoDivertHeaderAnnotation: "cindy"},
+			},
+		},
+		{
+			name: "developer ingress without a shared ingress is not modified",
+			objects: []runtime.Object{
+				newIngress("i1", "staging", "s1", map[string]string{"a1": "v2"}),
+				newIngress("i2", "cindy", "s2", map[string]string{"a1": "v1"}),
+			},
+			expected: map[string]map[string]string{
+				"i2": {"a1": "v1"},
+			},
+		},
+		{
+			name: "backend service only in the shared namespace is not created",
+			objects: []runtime.Object{
+				newIngress("i1", "staging", "s2", map[string]string{"a1": "v2"}),
+				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s2", Namespace: "staging"}},
+				newIngress("i1", "cindy", "s2", map[string]string{"a1": "v1"}),
+			},
+			expected: map[string]map[string]string{
+				"i1": {"a1": "v1", model.OktetoDivertHeaderAnnotation: "cindy"},
+			},
+		},
+		{
+			name: "leftover copy of a shared ingress is not translated again",
+			objects: []runtime.Object{
+				newIngress("i1", "staging", "s1", map[string]string{"a1": "v2"}),
+				newIngress("i1", "cindy", "s1", leftoverCopyAnnotations),
+			},
+			expected: map[string]map[string]string{
+				"i1": leftoverCopyAnnotations,
+			},
+		},
+	}
 
-	d := &Driver{client: c, name: m.Name, namespace: "cindy", divert: *m.Deploy.Divert, divertManager: dm}
-	err := d.Deploy(ctx)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientset(tt.objects...)
+			d, dm := newDeployDriver(c)
 
-	resultI1, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedI1, resultI1)
-	resultS1, err := c.CoreV1().Services("cindy").Get(ctx, "s1", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, s1, resultS1)
+			err := d.Deploy(context.Background())
+			require.NoError(t, err)
+			requireDeveloperNamespace(t, c, tt.expected)
+			dm.AssertExpectations(t)
+		})
+	}
+}
 
-	resultI2, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i2", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedI2, resultI2)
+func Test_Deploy_IngressPatchError(t *testing.T) {
+	c := fake.NewClientset(
+		newIngress("i1", "staging", "s1", nil),
+		newIngress("i1", "cindy", "s1", nil),
+	)
+	c.PrependReactor("patch", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, fmt.Errorf("patch error")
+	})
+	d, _ := newDeployDriver(c)
 
-	resultI3, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i3", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedI3, resultI3)
-
-	// Eliminate elements from the cache to force RCs
-	d.cache.developerIngresses = map[string]*networkingv1.Ingress{}
-	d.cache.developerServices = map[string]*apiv1.Service{}
-	d.cache.divertResources = map[string]*k8s.Divert{}
-	err = d.Deploy(ctx)
-	assert.NoError(t, err)
-
-	resultI1, err = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedI1, resultI1)
-	resultS1, err = c.CoreV1().Services("cindy").Get(ctx, "s1", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, s1, resultS1)
-
-	resultI2, err = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i2", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedI2, resultI2)
-
-	resultI3, err = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i3", metav1.GetOptions{})
-	assert.NoError(t, err)
-	assert.Equal(t, expectedI3, resultI3)
-
-	dm.AssertExpectations(t)
-	dm.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything)
+	err := d.Deploy(context.Background())
+	require.EqualError(t, err, "patch error")
 }
 
 func Test_deployDivertResources_Success(t *testing.T) {

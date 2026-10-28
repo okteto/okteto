@@ -14,108 +14,144 @@
 package gatewayapi
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
-func Test_translateIngress(t *testing.T) {
-	var tests = []struct {
-		in       *networkingv1.Ingress
-		expected *networkingv1.Ingress
-		name     string
-	}{
-		{
-			name: "ok",
-			in: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "name",
-					Namespace:   "staging",
-					Labels:      map[string]string{"l1": "v1"},
-					Annotations: map[string]string{"a1": "v1"},
-				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{
-						{
-							Host: "test-staging.okteto.dev",
-						},
-					},
-					TLS: []networkingv1.IngressTLS{
-						{
-							Hosts: []string{"test-staging.okteto.dev"},
-						},
-					},
-				},
-			},
-			expected: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "cindy",
-					Labels: map[string]string{
-						model.DeployedByLabel: "test",
-						"l1":                  "v1",
-					},
-					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation:        "true",
-						model.OktetoDivertedNamespaceAnnotation: "staging",
-						model.OktetoDivertHeaderAnnotation:      "cindy",
-						"a1":                                    "v1",
-					},
-				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{
-						{
-							Host: "test-cindy.okteto.dev",
-						},
-					},
-					TLS: []networkingv1.IngressTLS{
-						{
-							Hosts: []string{"test-cindy.okteto.dev"},
-						},
-					},
-				},
-			},
+// newIngress returns an ingress routing the host "<name>-<namespace>.okteto.dev" to the given service
+func newIngress(name, namespace, service string, annotations map[string]string) *networkingv1.Ingress {
+	host := name + "-" + namespace + ".okteto.dev"
+	return &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   namespace,
+			Labels:      map[string]string{model.DeployedByLabel: "test"},
+			Annotations: annotations,
 		},
-		{
-			name: "empty",
-			in: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "staging",
-				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{},
-					TLS:   []networkingv1.IngressTLS{},
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: host,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: service,
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
-			expected: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "cindy",
-					Labels: map[string]string{
-						model.DeployedByLabel: "test",
-					},
-					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation:        "true",
-						model.OktetoDivertedNamespaceAnnotation: "staging",
-						model.OktetoDivertHeaderAnnotation:      "cindy",
-					},
-				},
-				Spec: networkingv1.IngressSpec{
-					Rules: []networkingv1.IngressRule{},
-					TLS:   []networkingv1.IngressTLS{},
+			TLS: []networkingv1.IngressTLS{
+				{
+					Hosts: []string{host},
 				},
 			},
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := translateIngress("test", "cindy", tt.in)
-			assert.Equal(t, result, tt.expected)
-		})
+func newIngressDriver(c *fake.Clientset, in *networkingv1.Ingress) *Driver {
+	return &Driver{
+		client:    c,
+		name:      "test",
+		namespace: "cindy",
+		divert:    model.DivertDeploy{Namespace: "staging"},
+		cache: &cache{
+			developerIngresses: map[string]*networkingv1.Ingress{in.Name: in},
+		},
 	}
+}
+
+func Test_divertIngress_AddsHeaderAnnotation(t *testing.T) {
+	ctx := context.Background()
+	in := newIngress("i1", "cindy", "s1", map[string]string{"a1": "v1"})
+	c := fake.NewClientset(in)
+	d := newIngressDriver(c, in)
+
+	err := d.divertIngress(ctx, in)
+	require.NoError(t, err)
+
+	expected := newIngress("i1", "cindy", "s1", map[string]string{
+		"a1":                               "v1",
+		model.OktetoDivertHeaderAnnotation: "cindy",
+	})
+	result, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, expected.Annotations, result.Annotations)
+	require.Equal(t, expected.Labels, result.Labels)
+	require.Equal(t, expected.Spec, result.Spec)
+	require.Equal(t, expected.Annotations, d.cache.developerIngresses["i1"].Annotations)
+}
+
+func Test_divertIngress_NilAnnotations(t *testing.T) {
+	ctx := context.Background()
+	in := newIngress("i1", "cindy", "s1", nil)
+	c := fake.NewClientset(in)
+	d := newIngressDriver(c, in)
+
+	err := d.divertIngress(ctx, in)
+	require.NoError(t, err)
+
+	result, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{model.OktetoDivertHeaderAnnotation: "cindy"}, result.Annotations)
+}
+
+func Test_divertIngress_AlreadyAnnotated(t *testing.T) {
+	ctx := context.Background()
+	in := newIngress("i1", "cindy", "s1", map[string]string{model.OktetoDivertHeaderAnnotation: "cindy"})
+	c := fake.NewClientset(in)
+	d := newIngressDriver(c, in)
+
+	err := d.divertIngress(ctx, in)
+	require.NoError(t, err)
+	require.Empty(t, c.Actions())
+}
+
+func Test_divertIngress_KeepsConcurrentChanges(t *testing.T) {
+	ctx := context.Background()
+	// the cached ingress is older than the one in the cluster
+	in := newIngress("i1", "cindy", "s1", map[string]string{"a1": "v1"})
+	c := fake.NewClientset(newIngress("i1", "cindy", "s1", map[string]string{"a1": "v2"}))
+	d := newIngressDriver(c, in)
+
+	err := d.divertIngress(ctx, in)
+	require.NoError(t, err)
+
+	expected := map[string]string{
+		"a1":                               "v2",
+		model.OktetoDivertHeaderAnnotation: "cindy",
+	}
+	result, err := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, expected, result.Annotations)
+	require.Equal(t, expected, d.cache.developerIngresses["i1"].Annotations)
+}
+
+func Test_divertIngress_PatchError(t *testing.T) {
+	ctx := context.Background()
+	in := newIngress("i1", "cindy", "s1", nil)
+	c := fake.NewClientset(in)
+	c.PrependReactor("patch", "ingresses", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("patch error")
+	})
+	d := newIngressDriver(c, in)
+
+	err := d.divertIngress(ctx, in)
+	require.EqualError(t, err, "patch error")
 }
