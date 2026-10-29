@@ -104,3 +104,43 @@ func TestSetOutputFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestAddMaskedSecretMasksShortValues(t *testing.T) {
+	Init(logrus.InfoLevel)
+	t.Cleanup(func() {
+		DisableMasking()
+		Init(logrus.InfoLevel)
+	})
+
+	AddMaskedSecret("1234")
+	AddMaskedWord("abcd")
+	EnableMasking()
+
+	assert.Equal(t, "pin *** and abcd", redactMessage("pin 1234 and abcd"))
+}
+
+func TestAddMaskedSecretMasksLongLinesOfMultilineValues(t *testing.T) {
+	Init(logrus.InfoLevel)
+	t.Cleanup(func() {
+		DisableMasking()
+		Init(logrus.InfoLevel)
+	})
+
+	AddMaskedSecret("{\n  \"key\": \"private-value\"\n}")
+	EnableMasking()
+
+	assert.Equal(t, "*** {}", redactMessage("\"key\": \"private-value\" {}"))
+}
+
+func TestAddMaskedSecretIgnoresBlankValues(t *testing.T) {
+	Init(logrus.InfoLevel)
+	t.Cleanup(func() {
+		DisableMasking()
+		Init(logrus.InfoLevel)
+	})
+
+	AddMaskedSecret("  ")
+	EnableMasking()
+
+	assert.Equal(t, "a  b", redactMessage("a  b"))
+}
