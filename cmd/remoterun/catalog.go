@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/catalog"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -27,9 +28,6 @@ import (
 )
 
 const (
-	catalogItemIDFlag                  = "catalog-item-id"
-	catalogSecretVariablesEndpointFlag = "catalog-secret-variables-endpoint"
-
 	// catalogSecretVariablesStage is the stage of the errors getting the secret
 	// variables. The deploy or destroy running remote-run drops the lines
 	// logged without a stage
@@ -80,8 +78,8 @@ func (invalidCatalogSecretVariableNamesError) Error() string {
 // the catalog item. They are only read from these flags, so a variable can't
 // change them
 func addCatalogSecretVariablesFlags(cmd *cobra.Command, itemID, endpoint *string) {
-	cmd.Flags().StringVar(itemID, catalogItemIDFlag, "", "id of the catalog item whose secret variables are injected into the commands")
-	cmd.Flags().StringVar(endpoint, catalogSecretVariablesEndpointFlag, "", "endpoint to get the secret variables of the catalog item")
+	cmd.Flags().StringVar(itemID, catalog.ItemIDFlag, "", "id of the catalog item whose secret variables are injected into the commands")
+	cmd.Flags().StringVar(endpoint, catalog.SecretVariablesEndpointFlag, "", "endpoint to get the secret variables of the catalog item")
 }
 
 // newCatalogSecretVariables returns the getter of the secret variables of the
@@ -92,7 +90,7 @@ func newCatalogSecretVariables(itemID, endpoint, retryHint string) (catalogSecre
 		return c, nil
 	}
 	if endpoint == "" {
-		return c, fmt.Errorf("--%s is required with --%s", catalogSecretVariablesEndpointFlag, catalogItemIDFlag)
+		return c, fmt.Errorf("--%s is required with --%s", catalog.SecretVariablesEndpointFlag, catalog.ItemIDFlag)
 	}
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {

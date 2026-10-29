@@ -76,6 +76,7 @@ type PipelineInterface interface {
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
 	WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
+	GetCatalogItemSecretVariables(ctx context.Context, id string) ([]string, error)
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail

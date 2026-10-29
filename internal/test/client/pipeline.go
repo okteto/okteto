@@ -77,3 +77,8 @@ func (*FakePipelineClient) GetByName(_ context.Context, _, _ string) (*types.Git
 func (fc *FakePipelineClient) WaitForActionProgressing(_ context.Context, _, _, _ string, _ time.Duration) error {
 	return fc.responses.WaitErr
 }
+
+// GetCatalogItemSecretVariables returns the names of the secret variables of a catalog item
+func (*FakePipelineClient) GetCatalogItemSecretVariables(_ context.Context, _ string) ([]string, error) {
+	return nil, nil
+}
