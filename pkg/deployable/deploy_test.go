@@ -15,10 +15,12 @@ package deployable
 
 import (
 	"context"
+	"os"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert"
@@ -670,4 +672,94 @@ func TestEntityIsEmpty(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// newCatalogTestDeployRunner returns a runner whose commands run with e
+func newCatalogTestDeployRunner(e executor.ManifestExecutor, cmapHandler *fakeCmapHandler) DeployRunner {
+	proxy := &fakeProxy{}
+	proxy.On("GetPort").Return(80)
+	proxy.On("GetToken").Return("fake-token")
+	proxy.On("SetName", mock.Anything).Return()
+	proxy.On("Start").Return()
+	proxy.On("Shutdown", mock.Anything).Return(nil)
+	kubeconfigHandler := &fakeKubeconfigHandler{}
+	kubeconfigHandler.On("Modify", 80, "fake-token", "temp-kubeconfig").Return(nil)
+
+	return DeployRunner{
+		K8sClientProvider:  test.NewFakeK8sProvider(),
+		Proxy:              proxy,
+		Kubeconfig:         kubeconfigHandler,
+		TempKubeconfigFile: "temp-kubeconfig",
+		Fs:                 afero.NewMemMapFs(),
+		ConfigMapHandler:   cmapHandler,
+		Executor:           e,
+		IOCtrl:             io.NewIOController(),
+	}
+}
+
+func TestRunDeployAddsCatalogSecretVariablesOnlyToTheCommands(t *testing.T) {
+	setFakeOktetoContext(t)
+	exec := &fakeDestroyExecutor{}
+	cmapHandler := &fakeCmapHandler{}
+	r := newCatalogTestDeployRunner(exec, cmapHandler)
+
+	err := r.RunDeploy(context.Background(), DeployParameters{
+		Name:                   "test",
+		Namespace:              "test",
+		Variables:              []string{"CATALOG_TEST_TOKEN=from-var", "USER_VAR=value"},
+		CatalogSecretVariables: []string{"CATALOG_TEST_TOKEN=secret-value"},
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "deploy", Command: "deploy"}},
+		},
+	})
+
+	require.NoError(t, err)
+	require.Len(t, exec.envs, 1)
+	fromVar := slices.Index(exec.envs[0], "CATALOG_TEST_TOKEN=from-var")
+	secret := slices.Index(exec.envs[0], "CATALOG_TEST_TOKEN=secret-value")
+	require.NotEqual(t, -1, fromVar)
+	require.Greater(t, secret, fromVar, "the secret has to win over the variables")
+	assert.Contains(t, cmapHandler.updatedEnvs, "USER_VAR=value")
+	assert.NotContains(t, cmapHandler.updatedEnvs, "CATALOG_TEST_TOKEN=secret-value")
+	assert.Empty(t, os.Getenv("CATALOG_TEST_TOKEN"))
+}
+
+func TestRunDeployMasksShortCatalogSecretValues(t *testing.T) {
+	setFakeOktetoContext(t)
+	out := captureLogOutput(t)
+	r := newCatalogTestDeployRunner(printingExecutor{output: "pin: 1234"}, &fakeCmapHandler{})
+
+	err := r.RunDeploy(context.Background(), DeployParameters{
+		Name:                   "test",
+		Namespace:              "test",
+		CatalogSecretVariables: []string{"PIN=1234"},
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "print", Command: "print"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "pin: ***")
+	assert.NotContains(t, out.String(), "1234")
+}
+
+func TestRunCommandsSectionDoesNotPersistCatalogSecretVariables(t *testing.T) {
+	setFakeOktetoContext(t)
+	exec := &fakeDestroyExecutor{}
+	cmapHandler := &fakeCmapHandler{}
+	r := DeployRunner{
+		Fs:               afero.NewMemMapFs(),
+		ConfigMapHandler: cmapHandler,
+		Executor:         exec,
+	}
+
+	err := r.runCommandsSection(context.Background(), DeployParameters{
+		Variables:              []string{"USER_VAR=value", "API_TOKEN=secret-value"},
+		CatalogSecretVariables: []string{"API_TOKEN=secret-value"},
+		Deployable:             Entity{Commands: []model.DeployCommand{{Name: "deploy", Command: "deploy"}}},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, exec.envs[0], "API_TOKEN=secret-value")
+	assert.Equal(t, []string{"USER_VAR=value"}, cmapHandler.updatedEnvs)
 }

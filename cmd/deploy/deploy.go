@@ -31,6 +31,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/catalog"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
@@ -95,6 +96,12 @@ type Options struct {
 	RunInRemoteSet        bool
 	Wait                  bool
 	ShowCTA               bool
+
+	// CatalogItem is the catalog item the deploy runs for. It is read from the env before any variable is loaded
+	CatalogItem catalog.Item
+	// catalogItemToForward is the catalog item remote-run gets the secret variables of. It is empty when the deploy
+	// commands need none
+	catalogItemToForward catalog.Item
 }
 
 type builderInterface interface {
@@ -133,6 +140,8 @@ type Command struct {
 	K8sLogger            *io.K8sLogger
 	InsightsTracker      buildDeployTrackerInterface
 	DivertDeployerGetter getDivertDeployer
+
+	GetCatalogSecretVariables catalog.SecretVariablesGetter
 
 	PipelineType model.Archetype
 	isRedeploy   bool
@@ -214,7 +223,7 @@ $ okteto deploy --no-build=true`,
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
+			if err := readCatalogItemAndSetVariables(options, os.Setenv); err != nil {
 				return err
 			}
 
@@ -283,6 +292,8 @@ $ okteto deploy --no-build=true`,
 				IoCtrl:               ioCtrl,
 				K8sLogger:            k8sLogger,
 				DivertDeployerGetter: newDivertDeployer,
+
+				GetCatalogSecretVariables: catalog.GetSecretVariables,
 
 				onCleanUp:       []cleanUpFunc{},
 				InsightsTracker: insightsTracker,
@@ -484,6 +495,13 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
+	if err := dc.checkCatalogSecretVariables(ctx, deployOptions); err != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
+			return errStatus
+		}
+		return err
+	}
+
 	if deployOptions.Manifest.HasDependencies() {
 		// on Ctrl+C the deploy command doesn't wait for Run, and dependencies can be running before and after the
 		// main deploy: the interruption is recorded so the deploy doesn't stay in progress
@@ -589,6 +607,30 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	return err
+}
+
+// readCatalogItemAndSetVariables reads the catalog item the backend sets on the installer job, and then sets the --var
+// variables as env vars, as any of them can hold a variable with the same name. It has to run before the context is
+// loaded, which sets .env files and Okteto Variables as env vars, and before stored variables are loaded
+func readCatalogItemAndSetVariables(options *Options, setEnv func(key, value string) error) error {
+	options.CatalogItem = catalog.ItemFromEnv()
+	return validateAndSet(options.Variables, setEnv)
+}
+
+// checkCatalogSecretVariables checks the secret variables of the catalog item before any deploy command runs, and
+// keeps the item remote-run has to get them for. A manifest without deploy commands needs none
+func (dc *Command) checkCatalogSecretVariables(ctx context.Context, opts *Options) error {
+	if opts.Manifest.Deploy == nil || len(opts.Manifest.Deploy.Commands) == 0 {
+		return nil
+	}
+	item, err := catalog.CheckSecretVariables(ctx, opts.CatalogItem, catalog.DeployPhase, dc.GetCatalogSecretVariables, func() bool {
+		return ShouldRunInRemote(opts)
+	})
+	if err != nil {
+		return err
+	}
+	opts.catalogItemToForward = item
+	return nil
 }
 
 // mainDeployResult describes how far the main deploy went

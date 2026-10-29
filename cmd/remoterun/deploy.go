@@ -37,13 +37,16 @@ type deployRunner interface {
 
 // DeployOptions flags accepted by the remote-run deploy command
 type DeployOptions struct {
-	Name      string
-	Variables []string
+	Name                           string
+	CatalogItemID                  string
+	CatalogSecretVariablesEndpoint string
+	Variables                      []string
 }
 
 // DeployCommand struct with the dependencies needed to run the deploy operation
 type DeployCommand struct {
-	runner deployRunner
+	runner                 deployRunner
+	catalogSecretVariables catalogSecretVariables
 }
 
 // Deploy starts the deploy command remotely. This is the command executed in the
@@ -134,8 +137,14 @@ It is important that this command does the minimum and must not do calculations 
 				Variables:    options.Variables,
 			}
 
+			secretVariables, err := newCatalogSecretVariables(options.CatalogItemID, options.CatalogSecretVariablesEndpoint, deployRetryHint)
+			if err != nil {
+				return err
+			}
+
 			c := &DeployCommand{
-				runner: runner,
+				runner:                 runner,
+				catalogSecretVariables: secretVariables,
 			}
 
 			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
@@ -165,11 +174,17 @@ It is important that this command does the minimum and must not do calculations 
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	addCatalogSecretVariablesFlags(cmd, &options.CatalogItemID, &options.CatalogSecretVariablesEndpoint)
 	return cmd
 }
 
 func (c *DeployCommand) Run(ctx context.Context, params deployable.DeployParameters) error {
-	err := c.runner.RunDeploy(ctx, params)
+	// No command runs if the secret variables of the catalog item can't be got
+	catalogVars, err := c.catalogSecretVariables.get(ctx)
+	if err == nil {
+		params.CatalogSecretVariables = catalogVars
+		err = c.runner.RunDeploy(ctx, params)
+	}
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")

@@ -37,6 +37,12 @@ type ExecutionFile struct {
 	Content string
 }
 
+// CatalogSecretVariable is a secret variable of a catalog item with its value
+type CatalogSecretVariable struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // KnownHostsConfig contains the SSH known hosts configuration
 type KnownHostsConfig struct {
 	Content string

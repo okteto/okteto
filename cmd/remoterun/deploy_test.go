@@ -17,11 +17,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/externalresource"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeDeployRunner struct {
@@ -77,4 +82,50 @@ func TestRun(t *testing.T) {
 
 	assert.NoError(t, err)
 	runner.AssertExpectations(t)
+}
+
+func TestRunDeploysWithTheCatalogSecretVariables(t *testing.T) {
+	runner := &fakeDeployRunner{}
+	c := &DeployCommand{
+		runner: runner,
+		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{
+			CatalogSecretVariables: []types.CatalogSecretVariable{{Name: "API_TOKEN", Value: "abc"}},
+		}, deployRetryHint),
+	}
+	params := deployable.DeployParameters{Name: "test", Variables: []string{"A=1"}}
+	expected := deployable.DeployParameters{
+		Name:                   "test",
+		Variables:              []string{"A=1"},
+		CatalogSecretVariables: []string{"API_TOKEN=abc"},
+	}
+	runner.On("RunDeploy", mock.Anything, expected).Return(nil)
+
+	err := c.Run(context.Background(), params)
+
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+}
+
+func TestRunDoesNotDeployWhenCatalogSecretVariablesFail(t *testing.T) {
+	out := captureJSONLogs(t)
+	runner := &fakeDeployRunner{}
+	c := &DeployCommand{
+		runner:                 runner,
+		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, deployRetryHint),
+	}
+
+	err := c.Run(context.Background(), deployable.DeployParameters{Name: "test"})
+
+	require.ErrorIs(t, err, okteto.ErrCatalogSecretVariablesDisabled)
+	runner.AssertNotCalled(t, "RunDeploy", mock.Anything, mock.Anything)
+	logs := jsonLogs(t, out)
+	require.Contains(t, logs, catalogLog(oktetoLog.ErrorLevel, "secret variables are disabled on this installation"))
+	require.Equal(t, oktetoLog.JSONLogFormat{Level: oktetoLog.InfoLevel, Stage: "done", Message: "EOF"}, logs[len(logs)-1])
+}
+
+func TestDeployCommandHasTheCatalogFlags(t *testing.T) {
+	cmd := Deploy(context.Background(), nil, nil)
+
+	require.NotNil(t, cmd.Flags().Lookup("catalog-item-id"))
+	require.NotNil(t, cmd.Flags().Lookup("catalog-secret-variables-endpoint"))
 }
