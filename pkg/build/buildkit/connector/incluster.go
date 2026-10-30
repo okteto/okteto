@@ -16,7 +16,9 @@ package connector
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -210,9 +212,14 @@ func (ic *InClusterConnector) assignBuildkitPod(ctx context.Context) (string, er
 	}
 }
 
+// buildkitAddress returns the address of the buildkit server of a pod
+func buildkitAddress(podIP string) string {
+	return "tcp://" + net.JoinHostPort(podIP, strconv.Itoa(buildkitPort))
+}
+
 // createBuildkitClient creates a buildkit client with TLS certificates (like PortForwarder)
 func (ic *InClusterConnector) createBuildkitClient(ctx context.Context) (*client.Client, error) {
-	address := fmt.Sprintf("tcp://%s:%d", ic.podIP, buildkitPort)
+	address := buildkitAddress(ic.podIP)
 	ic.ioCtrl.Logger().Infof("creating buildkit client for address: %s", address)
 
 	// Get the original hostname from the builder URL for TLS verification

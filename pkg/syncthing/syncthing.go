@@ -246,7 +246,7 @@ func New(dev *model.Dev, namespace string, fs afero.Fs) (*Syncthing, error) {
 		Home:             config.GetAppHome(namespace, dev.Name),
 		LogPath:          GetLogFile(namespace, dev.Name),
 		ListenAddress:    net.JoinHostPort(dev.Interface, strconv.Itoa(listenPort)),
-		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
+		RemoteAddress:    "tcp://" + net.JoinHostPort(dev.Interface, strconv.Itoa(remotePort)),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		RemoteGUIAddress: net.JoinHostPort(dev.Interface, strconv.Itoa(remoteGUIPort)),
 		LocalGUIPort:     guiPort,

@@ -14,12 +14,14 @@
 package syncthing
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -98,4 +100,14 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
+}
+
+func TestNewWithIPv6Interface(t *testing.T) {
+	dev := &model.Dev{Name: "test", Interface: "::1"}
+
+	s, err := New(dev, "namespace", afero.NewMemMapFs())
+	assert.NoError(t, err)
+
+	assert.Equal(t, fmt.Sprintf("tcp://[::1]:%d", s.RemotePort), s.RemoteAddress)
+	assert.Equal(t, fmt.Sprintf("[::1]:%d", s.LocalPort), s.ListenAddress)
 }
