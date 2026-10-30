@@ -112,7 +112,7 @@ func (s *sshForwarder) handleConnection(ctx context.Context, localConn net.Conn,
 	cfg := s.getTLSConfig()
 
 	// Connect to the remote SSH agent over TCP
-	remoteConn, err := tls.Dial("tcp", fmt.Sprintf("%s:%s", host, port), cfg)
+	remoteConn, err := tls.Dial("tcp", net.JoinHostPort(host, port), cfg)
 	if err != nil {
 		oktetoLog.Errorf("Failed to connect to remote SSH agent: %v", err)
 		return fmt.Errorf("failed to connect to remote SSH agent: %v", err)
