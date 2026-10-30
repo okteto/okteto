@@ -820,6 +820,43 @@ func TestStack_Merge(t *testing.T) {
 	}
 }
 
+func TestStack_MergeKeepsBaseVolumesAndEndpoints(t *testing.T) {
+	base := &Stack{
+		Volumes: map[string]*VolumeSpec{
+			"db-data":    {Size: Quantity{Value: resource.MustParse("1Gi")}},
+			"cache-data": {Size: Quantity{Value: resource.MustParse("1Gi")}},
+		},
+		Endpoints: EndpointSpec{
+			"api": {Rules: []EndpointRule{{Path: "/api", Service: "api", Port: 8080}}},
+		},
+		Services: map[string]*Service{},
+	}
+	override := &Stack{
+		Volumes: map[string]*VolumeSpec{
+			"cache-data": {Size: Quantity{Value: resource.MustParse("5Gi")}},
+			"logs":       {Size: Quantity{Value: resource.MustParse("2Gi")}},
+		},
+		Endpoints: EndpointSpec{
+			"web": {Rules: []EndpointRule{{Path: "/", Service: "web", Port: 80}}},
+		},
+		Services: map[string]*Service{},
+	}
+
+	result := base.Merge(override)
+
+	expectedVolumes := map[string]*VolumeSpec{
+		"db-data":    {Size: Quantity{Value: resource.MustParse("1Gi")}},
+		"cache-data": {Size: Quantity{Value: resource.MustParse("5Gi")}},
+		"logs":       {Size: Quantity{Value: resource.MustParse("2Gi")}},
+	}
+	expectedEndpoints := EndpointSpec{
+		"api": {Rules: []EndpointRule{{Path: "/api", Service: "api", Port: 8080}}},
+		"web": {Rules: []EndpointRule{{Path: "/", Service: "web", Port: 80}}},
+	}
+	assert.Equal(t, expectedVolumes, result.Volumes)
+	assert.Equal(t, expectedEndpoints, result.Endpoints)
+}
+
 func TestStack_MergeIdentityToken(t *testing.T) {
 	overrideExpiration := IdentityTokenExpiration(3600)
 	tests := []struct {
