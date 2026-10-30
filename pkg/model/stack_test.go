@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -1754,4 +1755,19 @@ func Test_warnAboutComposeFileName(t *testing.T) {
 	warnAboutComposeFileName("stack.yml")
 	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
 	writer.Reset()
+}
+
+func TestService_ToDevPortForwards(t *testing.T) {
+	// compose "ports: [8080:80, 9090]": 8080 is the host port, 80 and 9090 are container ports
+	svc := &Service{
+		Ports: []Port{
+			{HostPort: 8080, ContainerPort: 80},
+			{ContainerPort: 9090},
+		},
+	}
+
+	dev, err := svc.ToDev("api")
+
+	require.NoError(t, err)
+	require.Equal(t, []forward.Forward{{Local: 8080, Remote: 80}}, dev.Forward)
 }
