@@ -113,6 +113,7 @@ func TestNewWithIPv6Interface(t *testing.T) {
 	}
 	require.NoError(t, l.Close())
 
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
 	dev := &model.Dev{Name: "test", Interface: "::1"}
 
 	s, err := New(dev, "namespace", afero.NewMemMapFs())
