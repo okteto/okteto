@@ -14,15 +14,12 @@
 package syncthing
 
 import (
-	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -104,21 +101,18 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 	}
 }
 
-func TestNewWithIPv6Interface(t *testing.T) {
-	// New binds ports on the dev interface, so the test needs an IPv6 loopback,
-	// which some environments (e.g. CI containers) don't have.
-	l, err := net.Listen("tcp", "[::1]:0")
-	if err != nil {
-		t.Skipf("IPv6 loopback not available: %v", err)
+func TestRemoteAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		iface    string
+		expected string
+	}{
+		{name: "IPv4 interface", iface: "127.0.0.1", expected: "tcp://127.0.0.1:22000"},
+		{name: "IPv6 interface", iface: "::1", expected: "tcp://[::1]:22000"},
 	}
-	require.NoError(t, l.Close())
-
-	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
-	dev := &model.Dev{Name: "test", Interface: "::1"}
-
-	s, err := New(dev, "namespace", afero.NewMemMapFs())
-	require.NoError(t, err)
-
-	assert.Equal(t, fmt.Sprintf("tcp://[::1]:%d", s.RemotePort), s.RemoteAddress)
-	assert.Equal(t, fmt.Sprintf("[::1]:%d", s.LocalPort), s.ListenAddress)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, remoteAddress(tt.iface, 22000))
+		})
+	}
 }

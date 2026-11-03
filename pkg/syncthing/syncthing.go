@@ -201,6 +201,11 @@ type DownloadProgressData struct {
 }
 
 // New constructs a new Syncthing.
+// remoteAddress returns the address of the remote syncthing device, forwarded to the dev interface
+func remoteAddress(iface string, port int) string {
+	return "tcp://" + net.JoinHostPort(iface, strconv.Itoa(port))
+}
+
 func New(dev *model.Dev, namespace string, fs afero.Fs) (*Syncthing, error) {
 	fullPath := getInstallPath()
 
@@ -246,7 +251,7 @@ func New(dev *model.Dev, namespace string, fs afero.Fs) (*Syncthing, error) {
 		Home:             config.GetAppHome(namespace, dev.Name),
 		LogPath:          GetLogFile(namespace, dev.Name),
 		ListenAddress:    net.JoinHostPort(dev.Interface, strconv.Itoa(listenPort)),
-		RemoteAddress:    "tcp://" + net.JoinHostPort(dev.Interface, strconv.Itoa(remotePort)),
+		RemoteAddress:    remoteAddress(dev.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		RemoteGUIAddress: net.JoinHostPort(dev.Interface, strconv.Itoa(remoteGUIPort)),
 		LocalGUIPort:     guiPort,
