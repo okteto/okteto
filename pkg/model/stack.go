@@ -719,11 +719,23 @@ func (stack *Stack) Merge(otherStack *Stack) *Stack {
 	if otherStack.Namespace != "" {
 		stack.Namespace = otherStack.Namespace
 	}
+	// Merge per key so an override file only replaces the entries it declares
+	// instead of dropping everything defined in the base file.
 	if len(otherStack.Endpoints) > 0 {
-		stack.Endpoints = otherStack.Endpoints
+		if stack.Endpoints == nil {
+			stack.Endpoints = EndpointSpec{}
+		}
+		for name, endpoint := range otherStack.Endpoints {
+			stack.Endpoints[name] = endpoint
+		}
 	}
 	if len(otherStack.Volumes) > 0 {
-		stack.Volumes = otherStack.Volumes
+		if stack.Volumes == nil {
+			stack.Volumes = map[string]*VolumeSpec{}
+		}
+		for name, volume := range otherStack.Volumes {
+			stack.Volumes[name] = volume
+		}
 	}
 	stack.Paths = append(stack.Paths, otherStack.Paths...)
 	stack = stack.mergeServices(otherStack)
