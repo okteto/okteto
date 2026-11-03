@@ -1127,8 +1127,8 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 		resources = &StackResources{}
 	}
 	if deployInfo != nil {
-		resources.Limits = deployInfo.Resources.Limits.toServiceResources()
-		resources.Requests = deployInfo.Resources.Reservations.toServiceResources()
+		deployInfo.Resources.Limits.applyTo(&resources.Limits)
+		deployInfo.Resources.Reservations.applyTo(&resources.Requests)
 	}
 
 	if resources.Limits.CPU.Value.IsZero() && !cpuCount.Value.IsZero() {
@@ -1163,15 +1163,15 @@ func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) 
 	return DefaultReplicasNumber
 }
 
-func (r DeployComposeResources) toServiceResources() ServiceResources {
-	resources := ServiceResources{}
+// applyTo overrides only the values set under deploy.resources, so the service's own
+// resources (including storage) are kept
+func (r DeployComposeResources) applyTo(resources *ServiceResources) {
 	if !r.Cpus.Value.IsZero() {
 		resources.CPU = r.Cpus
 	}
 	if !r.Memory.Value.IsZero() {
 		resources.Memory = r.Memory
 	}
-	return resources
 }
 
 func (endpoint *EndpointSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
