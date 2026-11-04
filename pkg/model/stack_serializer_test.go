@@ -3296,3 +3296,33 @@ services:
 	require.NoError(t, err)
 	require.Equal(t, "okteto/vote:2", s.Services["api"].Image)
 }
+
+func Test_UnmarshalRestartOnFailureWithMaxRetries(t *testing.T) {
+	manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: on-failure:3")
+
+	s, err := ReadStack(manifest, true)
+
+	require.NoError(t, err)
+	assert.Equal(t, apiv1.RestartPolicyOnFailure, s.Services["app"].RestartPolicy)
+	assert.Equal(t, int32(3), s.Services["app"].BackOffLimit)
+}
+
+func Test_UnmarshalRestartDeployMaxAttemptsOverRestartRetries(t *testing.T) {
+	manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: on-failure:3\n    deploy:\n      restart_policy:\n        condition: on-failure\n        max_attempts: 5")
+
+	s, err := ReadStack(manifest, true)
+
+	require.NoError(t, err)
+	assert.Equal(t, apiv1.RestartPolicyOnFailure, s.Services["app"].RestartPolicy)
+	assert.Equal(t, int32(5), s.Services["app"].BackOffLimit)
+}
+
+func Test_UnmarshalRestartOnFailureInvalidMaxRetries(t *testing.T) {
+	for _, restart := range []string{"on-failure:abc", "on-failure:-1", "on-failure:"} {
+		manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: \"" + restart + "\"")
+
+		_, err := ReadStack(manifest, true)
+
+		assert.ErrorContains(t, err, "invalid restart policy", restart)
+	}
+}

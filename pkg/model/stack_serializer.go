@@ -556,12 +556,19 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 
 	svc.User = serviceRaw.User
 
-	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
+	restart, restartRetries, err := splitRestartRetries(svcName, serviceRaw.Restart)
+	if err != nil {
+		return nil, err
+	}
+	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, restart)
 	if err != nil {
 		return nil, err
 	}
 	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
+	}
+	if svc.BackOffLimit == 0 && svc.RestartPolicy == apiv1.RestartPolicyOnFailure {
+		svc.BackOffLimit = restartRetries
 	}
 
 	// Extract endpoint_mode from deploy section
@@ -1101,6 +1108,20 @@ func IsSkippablePort(port int32) bool {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{ContainerPort: p.ContainerPort, Protocol: p.Protocol}, nil
+}
+
+// splitRestartRetries handles the compose `on-failure[:max-retries]` form,
+// returning the policy name and the retry count (0 when none is given).
+func splitRestartRetries(svcName, restart string) (string, int32, error) {
+	policy, retries, found := strings.Cut(restart, ":")
+	if !found || policy != "on-failure" {
+		return restart, 0, nil
+	}
+	maxRetries, err := strconv.ParseInt(retries, 10, 32)
+	if err != nil || maxRetries < 0 {
+		return restart, 0, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
+	}
+	return policy, int32(maxRetries), nil
 }
 
 func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, error) {
