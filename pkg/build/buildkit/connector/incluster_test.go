@@ -30,3 +30,19 @@ func TestInClusterConnector_GetBuildkitClient_NoPodIP(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no buildkit pod IP available")
 }
+
+func TestBuildkitAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		podIP    string
+		expected string
+	}{
+		{name: "IPv4 pod", podIP: "10.42.15.211", expected: "tcp://10.42.15.211:1234"},
+		{name: "IPv6 pod", podIP: "fd00:10:42:f::184c", expected: "tcp://[fd00:10:42:f::184c]:1234"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, buildkitAddress(tt.podIP))
+		})
+	}
+}

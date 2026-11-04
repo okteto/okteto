@@ -22,6 +22,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetFiles(t *testing.T) {
@@ -96,6 +97,22 @@ func TestIdentifyReadinessIssue(t *testing.T) {
 			tt.s.Fs = tt.mockFs()
 			err := tt.s.IdentifyReadinessIssue()
 			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+func TestRemoteAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		iface    string
+		expected string
+	}{
+		{name: "IPv4 interface", iface: "127.0.0.1", expected: "tcp://127.0.0.1:22000"},
+		{name: "IPv6 interface", iface: "::1", expected: "tcp://[::1]:22000"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, remoteAddress(tt.iface, 22000))
 		})
 	}
 }
