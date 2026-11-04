@@ -386,6 +386,8 @@ func translateAPIErr(err error) error {
 		return oktetoErrors.ErrNotFound
 	case "namespace-not-found":
 		return oktetoErrors.ErrNamespaceNotFound
+	case "git-catalog-item-not-found":
+		return oktetoErrors.ErrCatalogItemNotFound
 
 	default:
 		// Checking the prefix we make sure that the backend returned a 401 error, and in that case, we should

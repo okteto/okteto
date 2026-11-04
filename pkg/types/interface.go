@@ -43,6 +43,7 @@ type UserInterface interface {
 	GetExecutionEnv(ctx context.Context) (map[string]string, error)
 	GetExecutionFiles(ctx context.Context) ([]ExecutionFile, error)
 	GetKnownHostsConfig(ctx context.Context) (KnownHostsConfig, error)
+	GetCatalogSecretVariables(ctx context.Context, endpoint, catalogItemID string) ([]CatalogSecretVariable, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions
@@ -75,6 +76,7 @@ type PipelineInterface interface {
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
 	WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
+	GetCatalogItemSecretVariables(ctx context.Context, id string) ([]string, error)
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail

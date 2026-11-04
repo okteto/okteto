@@ -23,16 +23,18 @@ import (
 
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
-	errGetPlatformVariables error
-	ExecutionEnv            map[string]string
-	ExecutionFiles          []types.ExecutionFile
-	ErrExecutionEnv         error
-	ErrExecutionFiles       error
-	userCtx                 *types.UserContext
-	platformVariables       []env.Var
-	err                     []error
-	ClusterMetadata         types.ClusterMetadata
-	ClusterInfo             *types.ClusterInfo
+	errGetPlatformVariables   error
+	ExecutionEnv              map[string]string
+	ExecutionFiles            []types.ExecutionFile
+	ErrExecutionEnv           error
+	ErrExecutionFiles         error
+	userCtx                   *types.UserContext
+	platformVariables         []env.Var
+	err                       []error
+	ClusterMetadata           types.ClusterMetadata
+	ClusterInfo               *types.ClusterInfo
+	CatalogSecretVariables    []types.CatalogSecretVariable
+	ErrCatalogSecretVariables error
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -103,4 +105,11 @@ func (c *FakeUserClient) GetExecutionFiles(_ context.Context) ([]types.Execution
 
 func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (types.KnownHostsConfig, error) {
 	return types.KnownHostsConfig{}, nil
+}
+
+func (c *FakeUserClient) GetCatalogSecretVariables(_ context.Context, _, _ string) ([]types.CatalogSecretVariable, error) {
+	if c.ErrCatalogSecretVariables != nil {
+		return nil, c.ErrCatalogSecretVariables
+	}
+	return c.CatalogSecretVariables, nil
 }

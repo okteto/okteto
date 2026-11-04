@@ -210,6 +210,9 @@ var (
 	// ErrNamespaceNotFound is raised when the get namespace query returns a namespace not found
 	ErrNamespaceNotFound = errors.New("namespace-not-found")
 
+	// ErrCatalogItemNotFound is raised when the get catalog item query doesn't find the item
+	ErrCatalogItemNotFound = errors.New("git-catalog-item-not-found")
+
 	ErrManifestPathNotFound = UserError{
 		E:    fmt.Errorf("the Okteto manifest specified does not exist"),
 		Hint: "Check the path to the Okteto manifest file",

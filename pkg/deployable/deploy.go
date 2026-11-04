@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -109,6 +110,10 @@ type DeployParameters struct {
 	ManifestPath string
 	Deployable   Entity
 	Variables    []string
+	// CatalogSecretVariables are the "key=value" secret variables of the
+	// catalog item. They are added only to the env of the commands, after the
+	// platform variables, and never persisted
+	CatalogSecretVariables []string
 	// platformVariables are the entries of Variables provided by the platform
 	platformVariables []string
 }
@@ -276,6 +281,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 	defer cleanupPlatformEnv()
 	params.Variables = append(params.Variables, platformVars...)
 	params.platformVariables = platformVars
+	params.Variables = appendCatalogSecretVariables(params.Variables, params.CatalogSecretVariables)
 
 	// Set up helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
@@ -336,8 +342,8 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.Infof("error adding phase to configmap: %s", err)
 		}
 	}
-	// Platform variables are scoped to the commands of this execution
-	persistedVars := withoutVariables(params.Variables, params.platformVariables)
+	// Platform and catalog secret variables are scoped to the commands of this execution
+	persistedVars := withoutVariables(params.Variables, slices.Concat(params.platformVariables, params.CatalogSecretVariables))
 	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, persistedVars)
 	if err != nil {
 		oktetoLog.SetStage(oktetoLog.UnexpectedErrorStage)
@@ -474,4 +480,15 @@ func withoutVariables(vars, exclude []string) []string {
 		}
 	}
 	return result
+}
+
+// appendCatalogSecretVariables masks the values of the catalog secret
+// variables, whatever their length, and appends them to vars. Masking has to
+// be enabled afterwards to apply to them
+func appendCatalogSecretVariables(vars, secretVars []string) []string {
+	for _, v := range secretVars {
+		_, value, _ := strings.Cut(v, "=")
+		oktetoLog.AddMaskedSecret(value)
+	}
+	return append(vars, secretVars...)
 }

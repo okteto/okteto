@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/catalog"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -102,6 +103,12 @@ type Options struct {
 	DestroyAll          bool
 	RunInRemote         bool
 	RunInRemoteSet      bool
+
+	// CatalogItem is the catalog item the destroy runs for. It is read from the env before any variable is loaded
+	CatalogItem catalog.Item
+	// catalogItemToForward is the catalog item remote-run gets the secret variables of. It is empty when the destroy
+	// commands need none
+	catalogItemToForward catalog.Item
 }
 
 type destroyInterface interface {
@@ -135,6 +142,8 @@ type destroyCommand struct {
 	getDivertDriver      divertProvider
 	getPipelineDestroyer pipelineDestroyerProvider
 	buildCtrlProvider    buildControlProviderInterface
+
+	getCatalogSecretVariables catalog.SecretVariablesGetter
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -153,6 +162,10 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// the backend sets the catalog item on the installer job. It is read before .env files, Okteto Variables
+			// or stored variables are loaded, as any of them can hold a variable with the same name
+			options.CatalogItem = catalog.ItemFromEnv()
+
 			options.RunInRemoteSet = cmd.Flags().Changed("remote")
 
 			if options.ManifestPath != "" {
@@ -257,6 +270,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
 					return pipelineCMD.NewCommand(at)
 				},
+				getCatalogSecretVariables: catalog.GetSecretVariables,
 			}
 
 			// We need to create a custom kubeconfig file to avoid modifying the user's kubeconfig when running the
@@ -460,6 +474,13 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
+	if err := dc.checkCatalogSecretVariables(ctx, opts); err != nil {
+		if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+			return err
+		}
+		return err
+	}
+
 	if opts.DestroyDependencies {
 		if err := dc.destroyDependencies(ctx, opts); err != nil {
 			if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
@@ -522,6 +543,28 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	}
 
 	return commandErr
+}
+
+// checkCatalogSecretVariables checks the secret variables of the catalog item before any destroy command runs, and
+// keeps the item remote-run has to get them for. A manifest without destroy commands needs none. A failed check
+// doesn't stop a force destroy: its commands run without the secret variables, as they already run despite their
+// errors
+func (dc *destroyCommand) checkCatalogSecretVariables(ctx context.Context, opts *Options) error {
+	if opts.Manifest.Destroy == nil || len(opts.Manifest.Destroy.Commands) == 0 {
+		return nil
+	}
+	item, err := catalog.CheckSecretVariables(ctx, opts.CatalogItem, catalog.DestroyPhase, dc.getCatalogSecretVariables, func() bool {
+		return shouldRunInRemote(opts)
+	})
+	if err != nil && opts.ForceDestroy {
+		oktetoLog.Warning("Running the destroy commands without the catalog secret variables: %s", err)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	opts.catalogItemToForward = item
+	return nil
 }
 
 func (dc *destroyCommand) destroyDependencies(ctx context.Context, opts *Options) error {
