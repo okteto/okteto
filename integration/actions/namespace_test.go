@@ -97,7 +97,15 @@ func executeChangeNamespaceAction(namespace string) error {
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 	args := []string{namespace}
 	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
+
+	githubOutputFile, err := os.CreateTemp("", "github-output-*")
+	if err != nil {
+		return fmt.Errorf("creating temp file for GITHUB_OUTPUT: %w", err)
+	}
+	defer os.Remove(githubOutputFile.Name())
+	githubOutputFile.Close()
+
+	cmd.Env = append(os.Environ(), fmt.Sprintf("GITHUB_OUTPUT=%s", githubOutputFile.Name()))
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
