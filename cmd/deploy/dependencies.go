@@ -24,22 +24,11 @@ import (
 	"time"
 
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/validator"
-)
-
-var (
-	// errDependencyFailed is returned by WaitUntilMainReady when a dependency the main deploy waits for failed.
-	// The details of every failure are returned by Wait.
-	errDependencyFailed = errors.New("a dependency failed to deploy")
-
-	// errDependenciesStopped is returned by WaitUntilMainReady when Stop was called before the main deploy could start
-	errDependenciesStopped = errors.New("the dependencies deployment was stopped")
 )
 
 // dependencyRunner deploys a single dependency and returns when it has finished
@@ -53,88 +42,32 @@ type dependencyResult struct {
 }
 
 // dependencyScheduler deploys the dependencies of a manifest following their depends_on graph.
-// A dependency starts as soon as all its predecessors have succeeded. The main deploy is treated
-// as one more node: it is ready when its predecessors (every dependency with wait: true, and all
-// their predecessors) have succeeded.
-// A failing dependency that the main deploy doesn't wait for doesn't block it: after its failure, only the
-// dependencies the main deploy waits for keep starting. After a failure of one of those (or Stop), no new
-// dependency is started. The running ones are always allowed to finish.
+// A dependency starts as soon as all its predecessors have succeeded. After a failure or Ctrl+C no new
+// dependency is started, and the running ones are allowed to finish.
 type dependencyScheduler struct {
-	runner           dependencyRunner
-	section          deps.ManifestSection
-	mainPredecessors map[string]bool
-	results          chan dependencyResult
-	mainReady        chan struct{}
-	done             chan struct{}
-	mainReadyErr     error
-	err              error
-	failed           []string
-	failures         map[string]error
-	mainReadyOnce    sync.Once
-	startOnce        sync.Once
-	// stopMu is held while a dependency starts, so none starts after Stop returns
-	stopMu  sync.Mutex
-	stopped bool
+	runner    dependencyRunner
+	section   deps.ManifestSection
+	results   chan dependencyResult
+	done      chan struct{}
+	err       error
+	startOnce sync.Once
 }
 
 func newDependencyScheduler(section deps.ManifestSection, runner dependencyRunner) *dependencyScheduler {
 	return &dependencyScheduler{
-		runner:           runner,
-		section:          section,
-		mainPredecessors: mainDeployPredecessors(section),
-		results:          make(chan dependencyResult, len(section)),
-		mainReady:        make(chan struct{}),
-		done:             make(chan struct{}),
+		runner:  runner,
+		section: section,
+		results: make(chan dependencyResult, len(section)),
+		done:    make(chan struct{}),
 	}
 }
 
-// Start launches the dependencies graph and returns immediately. It must be called before
-// WaitUntilMainReady or Wait, and calling it more than once has no effect.
+// Start launches the dependencies graph and returns immediately. It must be called before Wait, and calling it
+// more than once has no effect.
 func (s *dependencyScheduler) Start(ctx context.Context) {
 	s.startOnce.Do(func() {
 		go s.coordinate(ctx)
 	})
-}
-
-// WaitUntilMainReady blocks until the main deploy can start, a dependency failed or the context is cancelled
-func (s *dependencyScheduler) WaitUntilMainReady() error {
-	<-s.mainReady
-	return s.mainReadyErr
-}
-
-// MainPredecessors returns the sorted names of the dependencies the main deploy waits for
-func (s *dependencyScheduler) MainPredecessors() []string {
-	names := make([]string, 0, len(s.mainPredecessors))
-	for name := range s.mainPredecessors {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
-}
-
-// Failed blocks until every started dependency has finished and returns the sorted names of the ones that failed
-func (s *dependencyScheduler) Failed() []string {
-	<-s.done
-	return s.failed
-}
-
-// FailureOf blocks until every started dependency has finished and returns the error of the dependency, if it failed
-func (s *dependencyScheduler) FailureOf(name string) error {
-	<-s.done
-	return s.failures[name]
-}
-
-// OverlapsMainDeploy returns true when some dependencies can run at the same time as the main deploy:
-// the ones the main deploy doesn't wait for
-func (s *dependencyScheduler) OverlapsMainDeploy() bool {
-	return len(s.section) > len(s.mainPredecessors)
-}
-
-// Stop prevents new dependencies from starting. Running dependencies are allowed to finish.
-func (s *dependencyScheduler) Stop() {
-	s.stopMu.Lock()
-	defer s.stopMu.Unlock()
-	s.stopped = true
 }
 
 // Wait blocks until every started dependency has finished and returns their errors
@@ -144,7 +77,7 @@ func (s *dependencyScheduler) Wait() error {
 }
 
 // coordinate owns the scheduling state: dependencies only report their results through s.results.
-// Cancellation is checked before scheduling successors, and no dependency starts after Stop returns.
+// Cancellation is checked before scheduling successors.
 func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	names := sortedDependencyNames(s.section)
 	pendingPredecessors := make(map[string]int, len(s.section))
@@ -160,30 +93,15 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 	failures := map[string]error{}
 	running := 0
 	cancelled := false
-	// mainBlocked is set when a dependency the main deploy waits for fails
-	mainBlocked := false
-	pendingMainPredecessors := len(s.mainPredecessors)
 
 	start := func(name string) {
-		s.stopMu.Lock()
-		defer s.stopMu.Unlock()
-		if s.stopped {
-			return
-		}
 		started[name] = true
 		running++
 		go func() {
 			s.results <- dependencyResult{name: name, err: s.runner.Run(ctx, name, s.section[name])}
 		}()
 	}
-	cancel := func() {
-		cancelled = true
-		s.resolveMainReady(oktetoErrors.ErrIntSig)
-	}
 
-	if pendingMainPredecessors == 0 {
-		s.resolveMainReady(nil)
-	}
 	for _, name := range names {
 		if pendingPredecessors[name] == 0 {
 			start(name)
@@ -195,83 +113,43 @@ func (s *dependencyScheduler) coordinate(ctx context.Context) {
 		select {
 		case <-ctxDone:
 			ctxDone = nil
-			cancel()
+			cancelled = true
 		case result := <-s.results:
 			running--
-			if !cancelled && ctx.Err() != nil {
-				cancel()
+			if ctx.Err() != nil {
+				cancelled = true
 			}
 
 			// the pipeline deployer handles Ctrl+C on its own, even when ctx is not cancelled
 			if errors.Is(result.err, oktetoErrors.ErrIntSig) {
-				if !cancelled {
-					cancel()
-				}
+				cancelled = true
 				continue
 			}
 			if result.err != nil {
 				failures[result.name] = result.err
-				if s.mainPredecessors[result.name] {
-					mainBlocked = true
-					s.resolveMainReady(errDependencyFailed)
-				}
 				continue
 			}
-			if s.mainPredecessors[result.name] {
-				pendingMainPredecessors--
-				if pendingMainPredecessors == 0 {
-					s.resolveMainReady(nil)
-				}
-			}
-			if cancelled || mainBlocked {
+			if cancelled || len(failures) > 0 {
 				continue
 			}
 			for _, successor := range successors[result.name] {
 				pendingPredecessors[successor]--
-				if pendingPredecessors[successor] == 0 && s.startsAfterFailures(successor, len(failures) > 0) {
+				if pendingPredecessors[successor] == 0 {
 					start(successor)
 				}
 			}
 		}
 	}
 
-	for _, name := range names {
-		if failures[name] != nil {
-			s.failed = append(s.failed, name)
-		}
+	if cancelled {
+		s.err = errors.Join(oktetoErrors.ErrIntSig, dependenciesError(failures, nil))
+	} else {
+		s.err = dependenciesError(failures, notStartedDependencies(names, started))
 	}
-	s.failures = failures
-	notStarted := notStartedDependencies(names, started)
-	switch {
-	case cancelled:
-		s.err = errors.Join(oktetoErrors.ErrIntSig, dependenciesError(failures, nil, ""))
-	case len(failures) > 0:
-		s.err = dependenciesError(failures, notStarted, "because of a previous failure")
-	default:
-		s.err = dependenciesError(failures, notStarted, "because the deploy was stopped")
-	}
-	if len(failures) > 0 {
-		s.resolveMainReady(errDependencyFailed)
-	}
-	s.resolveMainReady(errDependenciesStopped)
 	close(s.done)
 }
 
-// startsAfterFailures returns whether a dependency whose predecessors have succeeded can start when other
-// dependencies have failed. Only the dependencies the main deploy waits for keep starting after a failure,
-// so a failing dependency that the main deploy doesn't wait for doesn't block it
-func (s *dependencyScheduler) startsAfterFailures(name string, failed bool) bool {
-	return !failed || s.mainPredecessors[name]
-}
-
-func (s *dependencyScheduler) resolveMainReady(err error) {
-	s.mainReadyOnce.Do(func() {
-		s.mainReadyErr = err
-		close(s.mainReady)
-	})
-}
-
-// mainDeployPredecessors returns the dependencies the main deploy waits for:
+// mainDeployPredecessors returns the dependencies the deploy commands depend on:
 // the ones with wait: true and all their predecessors
 func mainDeployPredecessors(section deps.ManifestSection) map[string]bool {
 	predecessors := map[string]bool{}
@@ -293,7 +171,24 @@ func mainDeployPredecessors(section deps.ManifestSection) map[string]bool {
 	return predecessors
 }
 
-func dependenciesError(failures map[string]error, notStarted []string, notStartedReason string) error {
+// awaitedDependencies returns the dependencies that the deploy waits for: the ones with wait: true, their
+// predecessors, and every dependency that another one lists in depends_on. The rest are only scheduled
+func awaitedDependencies(section deps.ManifestSection) map[string]bool {
+	awaited := map[string]bool{}
+	for name, dep := range section {
+		if dep.Wait {
+			awaited[name] = true
+		}
+		// the predecessors of a wait: true dependency are in the depends_on of the dependencies in its chain
+		for _, predecessor := range dep.DependsOn {
+			awaited[predecessor] = true
+		}
+	}
+	return awaited
+}
+
+// dependenciesError joins the failures and, after a failure, lists the dependencies that didn't start
+func dependenciesError(failures map[string]error, notStarted []string) error {
 	names := make([]string, 0, len(failures))
 	for name := range failures {
 		names = append(names, name)
@@ -305,7 +200,7 @@ func dependenciesError(failures map[string]error, notStarted []string, notStarte
 		errs = append(errs, fmt.Errorf("dependency '%s' failed: %w", name, failures[name]))
 	}
 	if len(notStarted) > 0 {
-		errs = append(errs, fmt.Errorf("dependencies not deployed %s: %s", notStartedReason, strings.Join(notStarted, ", ")))
+		errs = append(errs, fmt.Errorf("dependencies not deployed because of a previous failure: %s", strings.Join(notStarted, ", ")))
 	}
 	return errors.Join(errs...)
 }
@@ -329,59 +224,47 @@ func sortedDependencyNames(section deps.ManifestSection) []string {
 	return names
 }
 
-// notAwaitedDependencyMinTimeout is the minimum time to wait for the dependencies that the main deploy doesn't
-// wait for: before they were never waited for, so a slow one couldn't fail the deploy
-const notAwaitedDependencyMinTimeout = 10 * time.Minute
-
 // deployedDependencyEnvVarsGetter returns the env vars generated by a deployed dependency (OKTETO_DEPENDENCY_<NAME>_*)
 type deployedDependencyEnvVarsGetter func(ctx context.Context, name, namespace string) (map[string]string, error)
 
-// pipelineDependencyRunner deploys a dependency as a remote pipeline and waits for it to finish
+// pipelineDependencyRunner deploys a dependency as a remote pipeline. It waits for the awaited dependencies to be
+// deployed and their resources to be running, and only schedules the rest. The messages and logs of each
+// dependency are printed with its name
 type pipelineDependencyRunner struct {
 	pipeline         pipelineCMD.DeployerInterface
 	envVarsOf        deployedDependencyEnvVarsGetter
-	healthChecked    map[string]bool
-	prefixed         map[string]bool
 	awaited          map[string]bool
-	needed           map[string]bool
 	parentWorkflowID string
 	namespace        string
 	variables        []string
 	// environ is the environment when the dependencies start. Variables are expanded with it and the env vars
-	// of the dependencies in depends_on, so that the env vars exported later by the main deploy or by other
-	// dependencies don't change the result depending on timing
+	// of the dependencies in depends_on, so that the result doesn't depend on when each dependency starts
 	environ  []string
 	timeout  time.Duration
 	redeploy bool
-	// nested is true when this deploy runs as a dependency of another one
-	nested bool
 }
 
 func newPipelineDependencyRunner(pipeline pipelineCMD.DeployerInterface, envVarsOf deployedDependencyEnvVarsGetter, section deps.ManifestSection, opts *Options, namespace, parentWorkflowID string) *pipelineDependencyRunner {
 	return &pipelineDependencyRunner{
 		pipeline:         pipeline,
 		envVarsOf:        envVarsOf,
-		healthChecked:    healthCheckedDependencies(section, opts.Wait),
-		awaited:          mainDeployPredecessors(section),
-		needed:           neededDependencies(section),
+		awaited:          awaitedDependencies(section),
 		parentWorkflowID: parentWorkflowID,
 		namespace:        namespace,
 		variables:        opts.Variables,
 		timeout:          opts.Timeout,
 		redeploy:         opts.Dependencies,
-		nested:           env.LoadBoolean(constants.OktetoIsDependencyEnvVar),
 		environ:          os.Environ(),
-		prefixed:         prefixedDependencies(section),
 	}
 }
 
 // Run validates and expands the variables of the dependency and deploys it.
 // It works on a copy of the dependency because the manifest is shared by the dependencies running in parallel
-func (r *pipelineDependencyRunner) Run(ctx context.Context, name string, dep *deps.Dependency) error {
-	// prefixed dependencies are announced by their own output, under their own stage
-	if !r.prefixed[name] {
-		oktetoLog.Information("Deploying dependency '%s'", name)
-	}
+func (r *pipelineDependencyRunner) Run(ctx context.Context, name string, dep *deps.Dependency) (err error) {
+	out := newDependencyOutput(name, r.awaited[name])
+	out.start()
+	defer func() { out.finish(err) }()
+
 	d := *dep
 	d.Variables = append(env.Environment{}, dep.Variables...)
 	if err := validator.CheckReservedVarName(d.Variables); err != nil {
@@ -400,27 +283,19 @@ func (r *pipelineDependencyRunner) Run(ctx context.Context, name string, dep *de
 	}
 
 	return r.pipeline.ExecuteDeployPipeline(ctx, &pipelineCMD.DeployOptions{
-		Name:               name,
-		Repository:         d.Repository,
-		Branch:             d.Branch,
-		File:               d.ManifestPath,
-		Variables:          model.SerializeEnvironmentVars(d.Variables),
-		Wait:               r.waits(name),
-		SkipResourcesCheck: !r.healthChecked[name],
-		PrefixLogs:         r.prefixed[name],
-		Timeout:            r.dependencyTimeout(name, &d),
-		SkipIfExists:       !r.redeploy,
-		Namespace:          r.namespace,
-		IsDependency:       true,
-		ParentWorkflowID:   r.parentWorkflowID,
+		Name:             name,
+		Repository:       d.Repository,
+		Branch:           d.Branch,
+		File:             d.ManifestPath,
+		Variables:        model.SerializeEnvironmentVars(d.Variables),
+		Wait:             r.awaited[name],
+		Output:           out,
+		Timeout:          d.GetTimeout(r.timeout),
+		SkipIfExists:     !r.redeploy,
+		Namespace:        r.namespace,
+		IsDependency:     true,
+		ParentWorkflowID: r.parentWorkflowID,
 	})
-}
-
-// waits returns whether to wait for the dependency to finish. Inside the deploy of a dependency, the dependencies
-// that nothing needs are only scheduled, as before: waiting for them would deadlock repositories that list each
-// other as dependencies, and would use up the time the parent deploy waits for this one
-func (r *pipelineDependencyRunner) waits(name string) bool {
-	return !r.nested || r.needed[name]
 }
 
 // environWithDependsOn returns the start environment plus the env vars generated by the dependencies in
@@ -443,50 +318,4 @@ func (r *pipelineDependencyRunner) environWithDependsOn(ctx context.Context, dep
 		}
 	}
 	return environ, nil
-}
-
-// dependencyTimeout returns how long to wait for the dependency: its own timeout if it's set. Otherwise the
-// --timeout flag, with a minimum of notAwaitedDependencyMinTimeout for the dependencies the main deploy doesn't wait for
-func (r *pipelineDependencyRunner) dependencyTimeout(name string, dep *deps.Dependency) time.Duration {
-	timeout := r.timeout
-	if !r.awaited[name] {
-		timeout = max(timeout, notAwaitedDependencyMinTimeout)
-	}
-	return dep.GetTimeout(timeout)
-}
-
-// prefixedDependencies returns the dependencies whose logs are prefixed with their name: all of them when
-// there are several, because they run in parallel. A single dependency keeps the current output (spinner and
-// no prefix) unless it runs at the same time as the main deploy, because the main deploy doesn't wait for it
-func prefixedDependencies(section deps.ManifestSection) map[string]bool {
-	prefixed := map[string]bool{}
-	mainPredecessors := mainDeployPredecessors(section)
-	for name := range section {
-		prefixed[name] = len(section) > 1 || !mainPredecessors[name]
-	}
-	return prefixed
-}
-
-// neededDependencies returns the dependencies that something waits for: the predecessors of the main deploy or
-// of another dependency
-func neededDependencies(section deps.ManifestSection) map[string]bool {
-	needed := mainDeployPredecessors(section)
-	for _, dep := range section {
-		for _, predecessor := range dep.DependsOn {
-			needed[predecessor] = true
-		}
-	}
-	return needed
-}
-
-// healthCheckedDependencies returns the dependencies that must have their resources running to succeed:
-// the ones something waits for, and all of them with --wait
-func healthCheckedDependencies(section deps.ManifestSection, waitFlag bool) map[string]bool {
-	healthChecked := neededDependencies(section)
-	if waitFlag {
-		for name := range section {
-			healthChecked[name] = true
-		}
-	}
-	return healthChecked
 }

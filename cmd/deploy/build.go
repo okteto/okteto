@@ -49,7 +49,6 @@ func buildImages(ctx context.Context, builder builderInterface, cmapHandler Conf
 				EnableStages: true,
 				Manifest:     deployOptions.Manifest,
 				CommandArgs:  servicesToBuild,
-				OutputMode:   buildOutputMode(deployOptions),
 			}
 
 			if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
@@ -66,7 +65,6 @@ func buildImages(ctx context.Context, builder builderInterface, cmapHandler Conf
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
 			CommandArgs:  setToSlice(servicesToBuildSet),
-			OutputMode:   buildOutputMode(deployOptions),
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := builder.Build(ctx, buildOptions); errBuild != nil {
@@ -126,13 +124,4 @@ func setDifference[T comparable](set1, set2 map[T]bool) map[T]bool {
 		}
 	}
 	return difference
-}
-
-// buildOutputMode returns the output mode of the build: plain when dependencies log at the same time,
-// and empty (the default for the current output format) otherwise
-func buildOutputMode(deployOptions *Options) string {
-	if deployOptions.forcePlainBuildProgress {
-		return oktetoLog.PlainFormat
-	}
-	return ""
 }
