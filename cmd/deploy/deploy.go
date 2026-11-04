@@ -545,7 +545,8 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, okteto.GetContext().Namespace, c)
 		if err != nil {
-			return err
+			// the deploy commands ran: the error is recorded so that the deploy doesn't stay in progress
+			return dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err)
 		}
 		if hasDeployed {
 			if deployOptions.Wait {

@@ -56,6 +56,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -2112,6 +2113,26 @@ func TestRunSkippedDependencyStillExportsItsEnvVars(t *testing.T) {
 	requireUnderTheDependenciesStage(t, outputLines(t, c), fmt.Sprintf("[db] %s Skipping repository 'db' because it's already deployed", successSymbol()))
 	require.Equal(t, "db", os.Getenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR"))
 	require.Contains(t, pipelineDeployer.captured["reports"].Variables, "FROM_DB=db")
+}
+
+func TestRunRecordsTheErrorWhenTheDeployedResourcesCannotBeListed(t *testing.T) {
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, &capturingPipelineDeployer{}, deployer)
+	client, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	require.NoError(t, err)
+	client.(*fake.Clientset).PrependReactor("list", "deployments", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("deployments is forbidden")
+	})
+
+	err = c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorContains(t, err, "deployments is forbidden")
+	// the deploy commands ran: the deploy doesn't stay in progress
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
 }
 
 func TestRunMainDeployFailureEndsTheOutputRightAfterTheCommands(t *testing.T) {
