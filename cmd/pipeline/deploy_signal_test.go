@@ -39,7 +39,8 @@ func TestWaitUntilRunningUnregistersItsSignalChannel(t *testing.T) {
 	t.Cleanup(func() { signal.Stop(interrupted) })
 	pc := newWaitTestCommand(map[string]string{"svc": okteto.RunningStatus})
 
-	err := pc.waitUntilRunning(context.Background(), "test", "test", &types.Action{ID: "test", Name: "test"}, time.Second, true, globalDeployOutput{})
+	// the timeout is above the poll interval of the health check
+	err := pc.waitUntilRunning(context.Background(), "test", "test", &types.Action{ID: "test", Name: "test"}, 5*time.Second, globalDeployOutput{})
 	require.NoError(t, err)
 
 	require.NoError(t, syscall.Kill(os.Getpid(), syscall.SIGINT))
@@ -74,11 +75,15 @@ func TestWaitForExistingDeployIsInterruptedDuringTheHealthCheck(t *testing.T) {
 
 func TestWaitUntilRunningIsInterruptedWhileDrainingTheLogs(t *testing.T) {
 	// the logs stream never reaches the end, so the wait drains it for logsDrainTimeout
+	previous := resourcesPollInterval
+	resourcesPollInterval = 10 * time.Millisecond
+	t.Cleanup(func() { resourcesPollInterval = previous })
 	pc := newSlowStreamCommand(&slowStreamClient{delay: time.Hour})
+	// the health check ends after a poll interval, so the interruption arrives while draining
 	interruptAfter(t, 200*time.Millisecond)
 	start := time.Now()
 
-	err := pc.waitUntilRunning(context.Background(), "test", "test", &types.Action{ID: "test", Name: "test"}, time.Minute, true, globalDeployOutput{})
+	err := pc.waitUntilRunning(context.Background(), "test", "test", &types.Action{ID: "test", Name: "test"}, time.Minute, globalDeployOutput{})
 
 	require.ErrorIs(t, err, oktetoErrors.ErrIntSig)
 	require.Less(t, time.Since(start), logsDrainTimeout)

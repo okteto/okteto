@@ -323,22 +323,6 @@ func TestDeployPipelineWithWaitChecksResources(t *testing.T) {
 	require.ErrorContains(t, err, "repository 'test' deployed with errors")
 }
 
-func TestDeployPipelineWithWaitSkipResourcesCheck(t *testing.T) {
-	pc := newWaitTestCommand(map[string]string{"svc": okteto.ErrorStatus})
-	opts := &DeployOptions{
-		Repository:         "https://test",
-		Name:               "test",
-		Namespace:          "test",
-		Wait:               true,
-		SkipResourcesCheck: true,
-		Timeout:            2 * time.Second,
-	}
-
-	err := pc.ExecuteDeployPipeline(context.Background(), opts)
-
-	require.NoError(t, err)
-}
-
 func inProgressPipelineConfigMap() *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -367,23 +351,6 @@ func TestDeployPipelineWaitingForExistingActionChecksResources(t *testing.T) {
 	err := pc.ExecuteDeployPipeline(context.Background(), opts)
 
 	require.ErrorContains(t, err, "repository 'test' deployed with errors")
-}
-
-func TestDeployPipelineWaitingForExistingActionSkipResourcesCheck(t *testing.T) {
-	pc := newWaitTestCommand(map[string]string{"svc": okteto.ErrorStatus}, inProgressPipelineConfigMap())
-	opts := &DeployOptions{
-		Repository:         "https://test",
-		Name:               "test",
-		Namespace:          "test",
-		SkipIfExists:       true,
-		Wait:               true,
-		SkipResourcesCheck: true,
-		Timeout:            2 * time.Second,
-	}
-
-	err := pc.ExecuteDeployPipeline(context.Background(), opts)
-
-	require.NoError(t, err)
 }
 
 func TestDeployPipelineWithWaitDoesNotExportDependencyEnvs(t *testing.T) {
@@ -1078,7 +1045,7 @@ func existingDeployConfigMap(status string) *apiv1.ConfigMap {
 	}
 }
 
-func waitForExistingDeployWith(t *testing.T, status string, resources map[string]string, skipResourcesCheck bool) error {
+func waitForExistingDeployWith(t *testing.T, status string, resources map[string]string) error {
 	t.Helper()
 	previous := existingDeployPollInterval
 	existingDeployPollInterval = 10 * time.Millisecond
@@ -1086,31 +1053,25 @@ func waitForExistingDeployWith(t *testing.T, status string, resources map[string
 	pc := newWaitTestCommand(resources, existingDeployConfigMap(status))
 	c, _, err := pc.k8sClientProvider.Provide(nil)
 	require.NoError(t, err)
-	opts := &DeployOptions{Name: "test", Namespace: "test", Timeout: 2 * time.Second, SkipResourcesCheck: skipResourcesCheck}
+	opts := &DeployOptions{Name: "test", Namespace: "test", Timeout: 2 * time.Second}
 
 	return pc.waitForExistingDeploy(context.Background(), c, pipeline.TranslatePipelineName("test"), opts)
 }
 
 func TestWaitForExistingDeployFailsWhenThePipelineFails(t *testing.T) {
-	err := waitForExistingDeployWith(t, pipeline.ErrorStatus, map[string]string{"svc": okteto.RunningStatus}, false)
+	err := waitForExistingDeployWith(t, pipeline.ErrorStatus, map[string]string{"svc": okteto.RunningStatus})
 
 	require.EqualError(t, err, "repository 'test' failed to deploy")
 }
 
 func TestWaitForExistingDeployChecksResources(t *testing.T) {
-	err := waitForExistingDeployWith(t, pipeline.DeployedStatus, map[string]string{"svc": okteto.ErrorStatus}, false)
+	err := waitForExistingDeployWith(t, pipeline.DeployedStatus, map[string]string{"svc": okteto.ErrorStatus})
 
 	require.ErrorContains(t, err, "repository 'test' deployed with errors")
 }
 
-func TestWaitForExistingDeploySkipResourcesCheck(t *testing.T) {
-	err := waitForExistingDeployWith(t, pipeline.DeployedStatus, map[string]string{"svc": okteto.ErrorStatus}, true)
-
-	require.NoError(t, err)
-}
-
 func TestWaitForExistingDeployTimesOut(t *testing.T) {
-	err := waitForExistingDeployWith(t, pipeline.ProgressingStatus, map[string]string{"svc": okteto.RunningStatus}, true)
+	err := waitForExistingDeployWith(t, pipeline.ProgressingStatus, map[string]string{"svc": okteto.RunningStatus})
 
 	require.EqualError(t, err, "timed out waiting for repository 'test' to be deployed")
 }
@@ -1128,4 +1089,38 @@ func TestWaitForExistingDeployHealthCheckGetsTheTimeLeft(t *testing.T) {
 	require.ErrorContains(t, err, "deploy didn't finish")
 	// with the whole timeout again for the health check, it would take a poll interval more
 	require.Less(t, time.Since(start), 2*time.Second)
+}
+
+func TestDeployPipelineSendsTheScheduleToTheOutput(t *testing.T) {
+	out := &recordingDeployOutput{}
+	pc := newWaitTestCommand(map[string]string{})
+	opts := &DeployOptions{Repository: "https://test", Name: "test", Namespace: "test", Output: out}
+
+	require.NoError(t, pc.ExecuteDeployPipeline(context.Background(), opts))
+
+	require.Equal(t, []string{
+		"spinner: Deploying repository 'test'...",
+		"success: Repository 'test' scheduled for deployment",
+	}, out.recorded())
+}
+
+func TestDeployPipelineSendsTheDeployAndItsLogsToTheOutput(t *testing.T) {
+	out := &recordingDeployOutput{}
+	pc := newWaitTestCommand(map[string]string{"svc": okteto.RunningStatus})
+	pc.okClient.(*client.FakeOktetoClient).StreamClient = client.NewFakeStreamClient(&client.FakeStreamResponse{Lines: []string{"creating tables"}})
+	opts := &DeployOptions{Repository: "https://test", Name: "test", Namespace: "test", Wait: true, Timeout: 2 * time.Second, Output: out}
+
+	require.NoError(t, pc.ExecuteDeployPipeline(context.Background(), opts))
+
+	// the logs are streamed while the health check runs, so they can come before or after its message
+	recorded := out.recorded()
+	require.ElementsMatch(t, []string{
+		"spinner: Deploying repository 'test'...",
+		"spinner: Waiting for repository 'test' to be deployed...",
+		"creating tables",
+		"spinner: Waiting for containers to be healthy...",
+		"success: Repository 'test' successfully deployed",
+	}, recorded)
+	require.Equal(t, []string{"spinner: Deploying repository 'test'...", "spinner: Waiting for repository 'test' to be deployed..."}, recorded[:2])
+	require.Equal(t, "success: Repository 'test' successfully deployed", recorded[len(recorded)-1])
 }

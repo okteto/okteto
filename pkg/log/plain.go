@@ -233,21 +233,3 @@ func (*PlainWriter) AddToBuffer(level, format string, a ...interface{}) {
 func (w *PlainWriter) Write(p []byte) (n int, err error) {
 	return w.out.Out.Write(p)
 }
-
-// PrintlnWithStage writes a line recorded under stage
-func (w *PlainWriter) PrintlnWithStage(stage, msg string) {
-	log.out.Info(msg)
-	w.fprintlnWithStage(w.out.Out, stage, msg)
-}
-
-// SuccessWithStage prints a success message recorded under stage
-func (w *PlainWriter) SuccessWithStage(stage, msg string) {
-	log.out.Info(msg)
-	w.fprintfWithStage(w.out.Out, stage, "SUCCESS: %s\n", msg)
-}
-
-// WarningWithStage prints a warning message recorded under stage
-func (w *PlainWriter) WarningWithStage(stage, msg string) {
-	log.out.Info(msg)
-	w.fprintfWithStage(w.out.Out, stage, "WARNING: %s\n", msg)
-}
