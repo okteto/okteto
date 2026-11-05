@@ -183,19 +183,3 @@ func (*SilentWriter) AddToBuffer(level, format string, a ...interface{}) {
 func (w *SilentWriter) Write(p []byte) (n int, err error) {
 	return w.buffer.Write(p)
 }
-
-// PrintlnWithStage writes a line into the buffer. The silent writer doesn't record stages
-func (w *SilentWriter) PrintlnWithStage(_, msg string) {
-	log.out.Info(msg)
-	w.FPrintln(w.buffer, msg)
-}
-
-// SuccessWithStage writes a success message into the buffer. The silent writer doesn't record stages
-func (w *SilentWriter) SuccessWithStage(_, msg string) {
-	w.Fprintf(w.buffer, "SUCCESS: %s\n", msg)
-}
-
-// WarningWithStage writes a warning message into the buffer. The silent writer doesn't record stages
-func (w *SilentWriter) WarningWithStage(_, msg string) {
-	w.Fprintf(w.buffer, "WARNING: %s\n", msg)
-}

@@ -15,8 +15,6 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -29,29 +27,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type safeLineRecorder struct {
-	lines  []string
-	stages []string
-	mu     sync.Mutex
+// recordingDeployOutput records every message and log line it receives, with its kind:
+// "" for log lines, "spinner: ", "success: " and "warning: "
+type recordingDeployOutput struct {
+	lines []string
+	mu    sync.Mutex
 }
 
-func (r *safeLineRecorder) record(level string) func(stage, line string) {
-	return func(stage, line string) {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		r.lines = append(r.lines, level+line)
-		r.stages = append(r.stages, stage)
-	}
+func (r *recordingDeployOutput) record(line string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lines = append(r.lines, line)
 }
 
-// printer records every line with its level: "" for plain lines, "success: " and "warning: "
-func (r *safeLineRecorder) printer() linePrinter {
-	return linePrinter{
-		println: r.record(""),
-		success: r.record("success: "),
-		warning: r.record("warning: "),
-	}
+func (r *recordingDeployOutput) recorded() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.lines...)
 }
+
+func (r *recordingDeployOutput) Spinner(msg string)  { r.record("spinner: " + msg) }
+func (*recordingDeployOutput) StartSpinner()         {}
+func (*recordingDeployOutput) StopSpinner()          {}
+func (r *recordingDeployOutput) Success(msg string)  { r.record("success: " + msg) }
+func (r *recordingDeployOutput) Warning(msg string)  { r.record("warning: " + msg) }
+func (r *recordingDeployOutput) Println(line string) { r.record(line) }
 
 func TestNewDeployOutputDefault(t *testing.T) {
 	out := newDeployOutput(&DeployOptions{Name: "database"})
@@ -59,112 +59,8 @@ func TestNewDeployOutputDefault(t *testing.T) {
 	require.IsType(t, globalDeployOutput{}, out)
 }
 
-func TestNewDeployOutputPrefixed(t *testing.T) {
-	out := newDeployOutput(&DeployOptions{Name: "database", PrefixLogs: true})
-
-	require.IsType(t, &prefixedDeployOutput{}, out)
-	require.Equal(t, "database", out.(*prefixedDeployOutput).prefix)
-	require.Equal(t, "Deploying dependency database", out.(*prefixedDeployOutput).stage)
-}
-
-func TestPrefixedDeployOutputRecordsItsOwnStage(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", stage: "Deploying dependency database", printer: recorder.printer()}
-
-	out.Println("creating tables")
-	out.Success("done")
-
-	require.Equal(t, []string{"Deploying dependency database", "Deploying dependency database"}, recorder.stages)
-}
-
-func TestPrefixedDeployOutputPrintln(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
-
-	out.Println("creating tables")
-
-	require.Equal(t, []string{"[database] creating tables"}, recorder.lines)
-}
-
-func TestPrefixedDeployOutputPrefixesEveryLine(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
-
-	out.Println("line 1\nline 2")
-
-	require.Equal(t, []string{"[database] line 1", "[database] line 2"}, recorder.lines)
-}
-
-func TestPrefixedDeployOutputIgnoresTrailingNewline(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
-
-	out.Println("line 1\r\nline 2\r\n")
-
-	require.Equal(t, []string{"[database] line 1", "[database] line 2"}, recorder.lines)
-}
-
-func TestPrefixedDeployOutputStatusMessages(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
-
-	out.Spinner("Waiting for repository 'database' to be deployed...")
-	out.StartSpinner()
-	out.StopSpinner()
-	out.Success("Repository 'database' successfully deployed")
-	out.Warning("pipeline logs cannot be streamed")
-
-	require.Equal(t, []string{
-		"[database] Waiting for repository 'database' to be deployed...",
-		"success: [database] Repository 'database' successfully deployed",
-		"warning: [database] pipeline logs cannot be streamed",
-	}, recorder.lines)
-}
-
-// writeLinesConcurrently writes n lines from every output at the same time
-func writeLinesConcurrently(outputs []*prefixedDeployOutput, n int) {
-	var wg sync.WaitGroup
-	for _, out := range outputs {
-		wg.Add(1)
-		go func(out *prefixedDeployOutput) {
-			defer wg.Done()
-			for i := 0; i < n; i++ {
-				out.Println(fmt.Sprintf("line %d", i))
-			}
-		}(out)
-	}
-	wg.Wait()
-}
-
-func requireEveryLineHasOnePrefix(t *testing.T, lines []string, prefixes ...string) {
-	t.Helper()
-	for _, line := range lines {
-		matches := 0
-		for _, prefix := range prefixes {
-			if strings.HasPrefix(line, fmt.Sprintf("[%s] line ", prefix)) {
-				matches++
-			}
-		}
-		require.Equal(t, 1, matches, "line %q", line)
-	}
-}
-
-func TestPrefixedDeployOutputConcurrentWriters(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	outputs := []*prefixedDeployOutput{
-		{prefix: "database", printer: recorder.printer()},
-		{prefix: "messaging", printer: recorder.printer()},
-	}
-
-	writeLinesConcurrently(outputs, 100)
-
-	require.Len(t, recorder.lines, 200)
-	requireEveryLineHasOnePrefix(t, recorder.lines, "database", "messaging")
-}
-
 func TestStreamPipelineLogsUsesTheDeployOutput(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
+	out := &recordingDeployOutput{}
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(&client.FakePipelineResponses{}),
@@ -175,12 +71,11 @@ func TestStreamPipelineLogsUsesTheDeployOutput(t *testing.T) {
 	err := pc.streamPipelineLogs(context.Background(), "database", "test", "action", time.Second, out)
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"[database] creating tables", "[database] done"}, recorder.lines)
+	require.Equal(t, []string{"creating tables", "done"}, out.recorded())
 }
 
 func TestStreamPipelineLogsWarnsThroughTheDeployOutput(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "database", printer: recorder.printer()}
+	out := &recordingDeployOutput{}
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(&client.FakePipelineResponses{}),
@@ -191,7 +86,7 @@ func TestStreamPipelineLogsWarnsThroughTheDeployOutput(t *testing.T) {
 	err := pc.streamPipelineLogs(context.Background(), "database", "test", "action", time.Second, out)
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"warning: [database] reconnecting"}, recorder.lines)
+	require.Equal(t, []string{"warning: reconnecting"}, out.recorded())
 }
 
 // slowStreamClient prints its lines after a delay, unless the stream is cancelled before
@@ -220,29 +115,29 @@ func newSlowStreamCommand(stream *slowStreamClient) *Command {
 }
 
 func TestWaitUntilRunningKeepsTheLastLogLines(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "db", printer: recorder.printer()}
+	out := &recordingDeployOutput{}
 	pc := newSlowStreamCommand(&slowStreamClient{lines: []string{"last line"}, delay: 100 * time.Millisecond})
 
-	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, out)
+	// the timeout is above the poll interval of the health check
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, 5*time.Second, out)
 
 	require.NoError(t, err)
-	require.Contains(t, recorder.lines, "[db] last line")
+	require.Contains(t, out.recorded(), "last line")
 }
 
 func TestWaitUntilRunningDoesNotWarnWhenTheStreamIsCancelled(t *testing.T) {
 	previous := logsDrainTimeout
 	logsDrainTimeout = 50 * time.Millisecond
 	t.Cleanup(func() { logsDrainTimeout = previous })
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "db", printer: recorder.printer()}
+	out := &recordingDeployOutput{}
 	// the stream never reaches the end: it is cancelled after the drain timeout
 	pc := newSlowStreamCommand(&slowStreamClient{delay: time.Hour})
 
-	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, out)
+	// the timeout is above the poll interval of the health check
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, 5*time.Second, out)
 
 	require.NoError(t, err)
-	require.Empty(t, recorder.lines)
+	require.Equal(t, []string{"spinner: Waiting for containers to be healthy..."}, out.recorded())
 }
 
 // failingFinishPipelineClient fails while waiting for the action to finish
@@ -278,22 +173,32 @@ func TestWaitUntilRunningStopsTheLogsStreamBeforeReturningAnError(t *testing.T) 
 	fake.PipelineClient = failingFinishPipelineClient{fake.PipelineClient.(*client.FakePipelineClient)}
 	fake.StreamClient = stream
 
-	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, globalDeployOutput{})
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, globalDeployOutput{})
 
 	require.ErrorIs(t, err, assert.AnError)
 	require.True(t, stream.returned.Load())
 }
 
 func TestWaitUntilRunningKeepsTheLogLinesOfAFailure(t *testing.T) {
-	recorder := &safeLineRecorder{}
-	out := &prefixedDeployOutput{prefix: "db", printer: recorder.printer()}
+	out := &recordingDeployOutput{}
 	// the pipeline fails before its last line, the one that explains why, reaches the stream
 	pc := newSlowStreamCommand(&slowStreamClient{lines: []string{"the reason"}, delay: 100 * time.Millisecond})
 	fake := pc.okClient.(*client.FakeOktetoClient)
 	fake.PipelineClient = failingFinishPipelineClient{fake.PipelineClient.(*client.FakePipelineClient)}
 
-	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, true, out)
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, time.Second, out)
 
 	require.ErrorIs(t, err, assert.AnError)
-	require.Contains(t, recorder.lines, "[db] the reason")
+	require.Contains(t, out.recorded(), "the reason")
+}
+
+func TestWaitUntilRunningWarnsThroughTheDeployOutputWhenTheLogsCannotBeStreamed(t *testing.T) {
+	out := &recordingDeployOutput{}
+	pc := newWaitTestCommand(map[string]string{"svc": okteto.RunningStatus})
+	pc.okClient.(*client.FakeOktetoClient).StreamClient = client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: assert.AnError})
+
+	err := pc.waitUntilRunning(context.Background(), "db", "test", &types.Action{ID: "a", Name: "a"}, 5*time.Second, out)
+
+	require.NoError(t, err)
+	require.Contains(t, out.recorded(), "warning: pipeline logs cannot be streamed due to connectivity issues")
 }
