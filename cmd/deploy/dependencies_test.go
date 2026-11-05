@@ -485,10 +485,7 @@ func TestPipelineDependencyRunnerPrintsTheErrorOfTheDeploy(t *testing.T) {
 	err := runner.Run(context.Background(), "database", section["database"])
 
 	require.Error(t, err)
-	require.Equal(t, []string{
-		"info: [database]  i  Deploying dependency 'database'",
-		"error: [database]  x  repository 'database' deployed with errors",
-	}, printed())
+	require.Equal(t, []string{"error: [database]  x  repository 'database' deployed with errors"}, printed())
 }
 
 func TestPipelineDependencyRunnerExpandsVariablesWithTheStartEnvironment(t *testing.T) {

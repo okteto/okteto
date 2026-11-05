@@ -64,7 +64,6 @@ func TestDependencyOutputOfAnAwaitedDependency(t *testing.T) {
 	printed := captureDependencyOutput(t, oktetoLog.JSONFormat)
 	out := newDependencyOutput("db", true)
 
-	out.start()
 	out.Spinner("Waiting for repository 'db' to be deployed...")
 	out.StartSpinner()
 	out.Println("creating tables")
@@ -73,7 +72,6 @@ func TestDependencyOutputOfAnAwaitedDependency(t *testing.T) {
 	out.finish(nil)
 
 	require.Equal(t, []string{
-		"info: [db]  i  Deploying dependency 'db'",
 		"info: [db] Waiting for repository 'db' to be deployed...",
 		"info: [db] creating tables",
 		fmt.Sprintf("info: [db] %s Repository 'db' successfully deployed", successSymbol()),
@@ -84,7 +82,6 @@ func TestDependencyOutputOfAScheduledDependency(t *testing.T) {
 	printed := captureDependencyOutput(t, oktetoLog.JSONFormat)
 	out := newDependencyOutput("reports", false)
 
-	out.start()
 	out.Spinner("Deploying repository 'reports'...")
 	out.StartSpinner()
 	out.StopSpinner()
@@ -132,7 +129,6 @@ func TestDependencyOutputDoesNotShowAnInterruptionAsAnError(t *testing.T) {
 // printEveryLevel prints a message of every level from the output of an awaited dependency, which fails
 func printEveryLevel() {
 	out := newDependencyOutput("db", true)
-	out.start()
 	out.Println("creating tables")
 	out.Success("deployed")
 	out.Warning("reconnecting")
@@ -146,7 +142,6 @@ func TestDependencyOutputInPlainOutput(t *testing.T) {
 
 	// the plain logger stores the lines it prints twice in the buffer, as it always has
 	require.Subset(t, printed(), []string{
-		"info: [db] INFO: Deploying dependency 'db'",
 		"info: [db] creating tables",
 		"info: [db] SUCCESS: deployed",
 		"info: [db] WARNING: reconnecting",
@@ -162,7 +157,6 @@ func TestDependencyOutputInTTYOutput(t *testing.T) {
 
 	// colors are off in tests
 	require.Equal(t, []string{
-		"info: [db]  i  Deploying dependency 'db'",
 		"info: [db] creating tables",
 		fmt.Sprintf("info: [db] %s deployed", successSymbol()),
 		"info: [db]  !  reconnecting",

@@ -1937,13 +1937,15 @@ func TestRunShowsEveryDependencyUnderOneStageWithItsName(t *testing.T) {
 	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
 
 	lines := outputLines(t, c)
-	requireUnderTheDependenciesStage(t, lines, "[db]  i  Deploying dependency 'db'")
+	requireUnderTheDependenciesStage(t, lines, "Deploying dependencies")
+	require.Less(t, lineIndex(t, lines, "Deploying dependencies"), lineIndex(t, lines, "[db]"))
 	requireUnderTheDependenciesStage(t, lines, "[db] creating tables")
 	requireUnderTheDependenciesStage(t, lines, fmt.Sprintf("[db] %s Repository 'db' successfully deployed", successSymbol()))
 	requireUnderTheDependenciesStage(t, lines, fmt.Sprintf("[reports] %s Repository 'reports' scheduled for deployment", successSymbol()))
 	// a scheduled dependency leaves a single line
 	require.NotContains(t, deployOutput(t, c), "Deploying repository 'reports'")
-	require.NotContains(t, deployOutput(t, c), "Deploying dependency 'reports'")
+	// the dependencies are announced once, not one by one
+	require.NotContains(t, deployOutput(t, c), "Deploying dependency")
 }
 
 func TestRunShowsTheLinesOfParallelDependenciesAsTheyArrive(t *testing.T) {

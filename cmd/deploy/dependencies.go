@@ -262,7 +262,6 @@ func newPipelineDependencyRunner(pipeline pipelineCMD.DeployerInterface, envVars
 // It works on a copy of the dependency because the manifest is shared by the dependencies running in parallel
 func (r *pipelineDependencyRunner) Run(ctx context.Context, name string, dep *deps.Dependency) (err error) {
 	out := newDependencyOutput(name, r.awaited[name])
-	out.start()
 	defer func() { out.finish(err) }()
 
 	d := *dep

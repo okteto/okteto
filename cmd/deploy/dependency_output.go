@@ -39,10 +39,9 @@ type dependencyMark struct {
 }
 
 var (
-	informationMark = dependencyMark{symbol: " i ", label: "INFO:", level: oktetoLog.InfoLevel, badge: color.New(color.BgHiBlue, color.FgBlack), text: color.New(color.FgHiBlue).SprintfFunc()}
-	successMark     = dependencyMark{symbol: successSymbol(), label: "SUCCESS:", level: oktetoLog.InfoLevel, badge: color.New(color.BgGreen, color.FgBlack), text: color.New(color.FgGreen).SprintfFunc()}
-	warningMark     = dependencyMark{symbol: " ! ", label: "WARNING:", level: oktetoLog.WarningLevel, badge: color.New(color.BgHiYellow, color.FgBlack), text: color.New(color.FgHiYellow).SprintfFunc()}
-	errorMark       = dependencyMark{symbol: " x ", label: "ERROR:", level: oktetoLog.ErrorLevel, badge: color.New(color.BgHiRed, color.FgBlack), text: color.New(color.FgHiRed).SprintfFunc()}
+	successMark = dependencyMark{symbol: successSymbol(), label: "SUCCESS:", level: oktetoLog.InfoLevel, badge: color.New(color.BgGreen, color.FgBlack), text: color.New(color.FgGreen).SprintfFunc()}
+	warningMark = dependencyMark{symbol: " ! ", label: "WARNING:", level: oktetoLog.WarningLevel, badge: color.New(color.BgHiYellow, color.FgBlack), text: color.New(color.FgHiYellow).SprintfFunc()}
+	errorMark   = dependencyMark{symbol: " x ", label: "ERROR:", level: oktetoLog.ErrorLevel, badge: color.New(color.BgHiRed, color.FgBlack), text: color.New(color.FgHiRed).SprintfFunc()}
 )
 
 // successSymbol is the symbol the logger uses for a success
@@ -108,13 +107,6 @@ func (*dependencyOutput) StopSpinner()          {}
 func (o *dependencyOutput) Success(msg string)  { o.print(successMark.print, msg) }
 func (o *dependencyOutput) Warning(msg string)  { o.print(warningMark.print, msg) }
 func (o *dependencyOutput) Println(line string) { o.print(printLine, line) }
-
-// start announces an awaited dependency, as every dependency was announced before they were deployed in parallel
-func (o *dependencyOutput) start() {
-	if o.awaited {
-		o.print(informationMark.print, fmt.Sprintf("Deploying dependency '%s'", o.name))
-	}
-}
 
 // finish prints the error of the dependency, if it failed. An interruption is not an error of the dependency:
 // the deploy reports it
