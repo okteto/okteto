@@ -25,8 +25,9 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-// dependenciesStage is the log stage of the output of every dependency
-const dependenciesStage = "Deploy dependencies"
+// dependenciesStage is the log stage of the output of every dependency. Like the other stages that deploy or destroy
+// dependencies, it starts with an information line with its name
+const dependenciesStage = "Deploying dependencies"
 
 // dependencyMark is how the logger marks the level of a message: a symbol in a terminal and in JSON, and a label in
 // plain output

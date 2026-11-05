@@ -819,7 +819,7 @@ func (dc *Command) deployDependencies(ctx context.Context, deployOptions *Option
 		return errDepenNotAvailableInVanilla
 	}
 	oktetoLog.SetStage(dependenciesStage)
-	oktetoLog.Information("Deploying dependencies")
+	oktetoLog.Information(dependenciesStage)
 
 	// parentWorkflowID correlates all the dependencies deployed by this deploy operation
 	// with their parent. It is sent to the backend on each dependency deploy.
