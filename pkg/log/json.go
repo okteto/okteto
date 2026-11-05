@@ -313,23 +313,3 @@ func (w *JSONWriter) Write(p []byte) (n int, err error) {
 	}
 	return w.out.Out.Write([]byte(msg))
 }
-
-// PrintlnWithStage writes a line recorded under stage
-func (w *JSONWriter) PrintlnWithStage(stage, msg string) {
-	w.fprintlnWithStage(w.out.Out, stage, msg)
-}
-
-// SuccessWithStage prints a message with the success symbol first, recorded under stage
-func (w *JSONWriter) SuccessWithStage(stage, msg string) {
-	log.out.Info(msg)
-	w.fprintlnWithStage(w.out.Out, stage, fmt.Sprintf("%s %s", successSymbol, msg))
-}
-
-// WarningWithStage prints a message with the warning symbol first, under stage
-func (w *JSONWriter) WarningWithStage(stage, msg string) {
-	log.out.Info(msg)
-	msg = convertToJSON("warn", stage, fmt.Sprintf("%s %s", warningSymbol, msg))
-	if msg != "" {
-		fmt.Fprintln(w.out.Out, msg)
-	}
-}

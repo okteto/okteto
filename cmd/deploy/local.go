@@ -60,8 +60,8 @@ func (ld *localDeployer) Deploy(ctx context.Context, deployOptions *Options) err
 		},
 	}
 
-	// on an error, the deploy command (Command.Run) sets the "done" stage and the end of the output once the
-	// dependencies have finished, so that the lines they log meanwhile are not left after the end
+	// on an error, the deploy command (Command.Run) sets the "done" stage and the end of the output, as it does
+	// on success
 	return ld.runner.RunDeploy(ctx, params)
 }
 
