@@ -65,6 +65,8 @@ const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
 	dependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
 	deployComposePhaseName = "compose"
+
+	localExecutionDeprecatedWarning = "Local execution is deprecated and will be removed in a future release.\n    Some Okteto features require remote execution and are not supported in local mode.\n    We recommend enabling remote execution for your deploy commands.\n    Learn more: https://www.okteto.com/docs/core/remote-execution"
 )
 
 var (
@@ -380,6 +382,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if deployOptions.Manifest.Deploy == nil && !deployOptions.Manifest.HasDependencies() {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
+	warnIfLocalExecution(deployOptions)
 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
@@ -825,10 +828,18 @@ func ShouldRunInRemote(opts *Options) bool {
 		}
 	}
 
-	if opts.Manifest != nil && opts.Manifest.Deploy != nil && (len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0) {
-		oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
-	}
 	return false
+}
+
+// warnIfLocalExecution warns that local execution is deprecated when the deploy runs its commands locally. It is
+// logged once, when the manifest is loaded, as ShouldRunInRemote is called several times along the deploy
+func warnIfLocalExecution(opts *Options) {
+	if opts.Manifest.Deploy == nil || ShouldRunInRemote(opts) {
+		return
+	}
+	if len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0 {
+		oktetoLog.Warning(localExecutionDeprecatedWarning)
+	}
 }
 
 // GetDeployer returns a remote or a local deployer
