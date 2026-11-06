@@ -3296,3 +3296,32 @@ services:
 	require.NoError(t, err)
 	require.Equal(t, "okteto/vote:2", s.Services["api"].Image)
 }
+
+func Test_EndpointRulesFollowSanitizedServiceNames(t *testing.T) {
+	manifest := []byte(`services:
+  web_app:
+    image: nginx
+    ports:
+      - 8080:8080
+  api:
+    image: nginx
+    ports:
+      - 3000:3000
+endpoints:
+  main:
+    - path: /
+      service: web_app
+      port: 8080
+    - path: /api
+      service: api
+      port: 3000
+`)
+
+	s, err := ReadStack(manifest, true)
+	require.NoError(t, err)
+
+	require.Contains(t, s.Services, "web-app")
+	require.Len(t, s.Endpoints["main"].Rules, 2)
+	assert.Equal(t, "web-app", s.Endpoints["main"].Rules[0].Service)
+	assert.Equal(t, "api", s.Endpoints["main"].Rules[1].Service)
+}
