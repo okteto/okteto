@@ -556,18 +556,15 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 
 	svc.User = serviceRaw.User
 
-	restart, restartRetries, err := splitRestartRetries(svcName, serviceRaw.Restart)
-	if err != nil {
-		return nil, err
-	}
-	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, restart)
+	var restartRetries int32
+	svc.RestartPolicy, restartRetries, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
 	if err != nil {
 		return nil, err
 	}
 	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
-	if svc.BackOffLimit == 0 && svc.RestartPolicy == apiv1.RestartPolicyOnFailure {
+	if svc.BackOffLimit == 0 {
 		svc.BackOffLimit = restartRetries
 	}
 
@@ -1110,37 +1107,33 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{ContainerPort: p.ContainerPort, Protocol: p.Protocol}, nil
 }
 
-// splitRestartRetries handles the compose `on-failure[:max-retries]` form,
-// returning the policy name and the retry count (0 when none is given).
-func splitRestartRetries(svcName, restart string) (string, int32, error) {
-	policy, retries, found := strings.Cut(restart, ":")
-	if !found || policy != "on-failure" {
-		return restart, 0, nil
-	}
-	maxRetries, err := strconv.ParseInt(retries, 10, 32)
-	if err != nil || maxRetries < 0 {
-		return restart, 0, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
-	}
-	return policy, int32(maxRetries), nil
-}
-
-func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, error) {
+// getRestartPolicy returns the restart policy and, for the compose
+// `restart: on-failure[:max-retries]` form, the retry count (0 when none is
+// given). deploy.restart_policy.condition wins over restart when set.
+func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, int32, error) {
 	var restart string
 	if deployInfo != nil && deployInfo.RestartPolicy != nil {
 		restart = deployInfo.RestartPolicy.Condition
 	}
 	if restart == "" {
+		if policy, retries, found := strings.Cut(restartPolicy, ":"); found && policy == "on-failure" {
+			maxRetries, err := strconv.ParseInt(retries, 10, 32)
+			if err != nil || maxRetries < 0 {
+				return apiv1.RestartPolicyAlways, 0, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restartPolicy)
+			}
+			return apiv1.RestartPolicyOnFailure, int32(maxRetries), nil
+		}
 		restart = restartPolicy
 	}
 	switch restart {
 	case "none", "never", "no":
-		return apiv1.RestartPolicyNever, nil
+		return apiv1.RestartPolicyNever, 0, nil
 	case "always", "", "unless-stopped", "any":
-		return apiv1.RestartPolicyAlways, nil
+		return apiv1.RestartPolicyAlways, 0, nil
 	case "on-failure":
-		return apiv1.RestartPolicyOnFailure, nil
+		return apiv1.RestartPolicyOnFailure, 0, nil
 	default:
-		return apiv1.RestartPolicyAlways, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
+		return apiv1.RestartPolicyAlways, 0, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
 	}
 }
 func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) *StackResources {
