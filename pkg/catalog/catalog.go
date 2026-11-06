@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package catalog checks the secret variables of the catalog item a deploy or destroy runs for, before any of its
-// commands runs. The values are never read here: remote-run gets them for the commands it runs
+// Package catalog checks the catalog secret variables of the development environment a deploy or destroy runs for,
+// before any of its commands runs. The values are never read here: remote-run gets them for the commands it runs
 package catalog
 
 import (
-	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -24,19 +24,21 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
-	// ItemIDEnvVar is the id of the catalog item. The backend sets it on the installer job of catalog deployments
-	ItemIDEnvVar = "OKTETO_CATALOG_ITEM_ID"
+	// SecretVariablesEnvVar holds the references of the catalog secret variables of the development environment: a
+	// JSON array with their names and the keys of the Secrets their values come from, never the values. The backend
+	// sets it on the installer job
+	SecretVariablesEnvVar = "OKTETO_CATALOG_SECRET_VARIABLES"
 
 	// SecretVariablesEndpointEnvVar is the URL remote-run gets the values of the secret variables from. The backend
 	// sets it on the installer job
 	SecretVariablesEndpointEnvVar = "OKTETO_CATALOG_SECRET_VARIABLES_ENDPOINT"
 
-	// ItemIDFlag is the remote-run flag with the id of the catalog item whose secret variables it gets
-	ItemIDFlag = "catalog-item-id"
+	// ActionFlag is the remote-run flag with the action whose catalog secret variables it gets
+	ActionFlag = "catalog-action"
 
 	// SecretVariablesEndpointFlag is the remote-run flag with the URL it gets the values of the secret variables from
 	SecretVariablesEndpointFlag = "catalog-secret-variables-endpoint"
@@ -56,88 +58,93 @@ const (
 )
 
 var (
-	// ErrSecretVariablesNeedRemote is returned when the catalog item has secret variables and the commands wouldn't
-	// run remotely, which is the only place they get them
+	// ErrSecretVariablesNeedRemote is returned when the development environment has catalog secret variables and the
+	// commands wouldn't run remotely, which is the only place they get them
 	ErrSecretVariablesNeedRemote = errors.New("catalog variables of type `secret` are only supported with deploy on remote. Enable remote execution and try again")
 
-	errSecretVariablesEndpointNotSet = fmt.Errorf("the catalog item has secret variables, but %s is not set", SecretVariablesEndpointEnvVar)
+	errSecretVariablesEndpointNotSet = fmt.Errorf("the development environment has catalog secret variables, but %s is not set", SecretVariablesEndpointEnvVar)
+	errActionNotSet                  = fmt.Errorf("the development environment has catalog secret variables, but %s is not set", model.OktetoActionNameEnvVar)
 )
 
-// Item is the catalog item a deploy or destroy runs for
-type Item struct {
-	ID                      string
-	SecretVariablesEndpoint string
+// SecretVariables are the catalog secret variables of the development environment a deploy or destroy runs for
+type SecretVariables struct {
+	// References is the JSON array of the references of the secret variables
+	References string
+	// Action is the action the installer job runs. remote-run gets the values of the secret variables by it
+	Action string
+	// Endpoint is the URL remote-run gets the values of the secret variables from
+	Endpoint string
 }
 
-// ItemFromEnv reads the catalog item from the env vars the backend sets on the installer job. It has to be called
-// before --var, .env files, Okteto Variables or stored variables are loaded, as any of them can hold a variable
-// with the same name
-func ItemFromEnv() Item {
-	return Item{
-		ID:                      os.Getenv(ItemIDEnvVar),
-		SecretVariablesEndpoint: os.Getenv(SecretVariablesEndpointEnvVar),
+// secretVariableReference is the reference of a catalog secret variable. Only its name is read here
+type secretVariableReference struct {
+	Name string `json:"name"`
+}
+
+// SecretVariablesFromEnv reads the catalog secret variables from the env vars the backend sets on the installer job.
+// It has to be called before --var, .env files, Okteto Variables or stored variables are loaded, as any of them can
+// hold a variable with the same name
+func SecretVariablesFromEnv() SecretVariables {
+	return SecretVariables{
+		References: os.Getenv(SecretVariablesEnvVar),
+		Action:     os.Getenv(model.OktetoActionNameEnvVar),
+		Endpoint:   os.Getenv(SecretVariablesEndpointEnvVar),
 	}
 }
 
-// RemoteRunFlags returns the remote-run flags that make it get the values of the secret variables of the item, or
-// none for an empty item
-func (i Item) RemoteRunFlags() []string {
-	if i.ID == "" {
+// RemoteRunFlags returns the remote-run flags that make it get the values of the secret variables, or none when
+// there is no action to get them for
+func (s SecretVariables) RemoteRunFlags() []string {
+	if s.Action == "" {
 		return nil
 	}
 	return []string{
-		fmt.Sprintf("--%s %q", ItemIDFlag, i.ID),
-		fmt.Sprintf("--%s %q", SecretVariablesEndpointFlag, i.SecretVariablesEndpoint),
+		fmt.Sprintf("--%s %q", ActionFlag, s.Action),
+		fmt.Sprintf("--%s %q", SecretVariablesEndpointFlag, s.Endpoint),
 	}
 }
 
-// SecretVariablesGetter returns the names of the secret variables of the catalog item with the id provided
-type SecretVariablesGetter func(ctx context.Context, id string) ([]string, error)
-
-// GetSecretVariables returns the names of the secret variables of a catalog item from the Okteto API of the current
-// context
-func GetSecretVariables(ctx context.Context, id string) ([]string, error) {
-	c, err := okteto.NewOktetoClient()
-	if err != nil {
+// names returns the names of the secret variables in the references
+func (s SecretVariables) names() ([]string, error) {
+	var references []secretVariableReference
+	if err := json.Unmarshal([]byte(s.References), &references); err != nil {
 		return nil, err
 	}
-	return c.Pipeline().GetCatalogItemSecretVariables(ctx, id)
+	names := make([]string, 0, len(references))
+	for _, r := range references {
+		names = append(names, r.Name)
+	}
+	return names, nil
 }
 
-// CheckSecretVariables checks the secret variables of the catalog item before the commands of the phase run. It
-// returns the item remote-run has to get their values for, which is empty when the commands need none: there is no
-// item, the item has no secret variables, or the item of a deploy was deleted. It fails when the secret variables
-// can't be checked, or when the commands wouldn't run remotely. runsInRemote is only called when the item has
-// secret variables
-func CheckSecretVariables(ctx context.Context, item Item, phase Phase, getSecretVariables SecretVariablesGetter, runsInRemote func() bool) (Item, error) {
-	if item.ID == "" {
-		return Item{}, nil
+// CheckSecretVariables checks the catalog secret variables before the commands of the phase run. It returns the ones
+// remote-run has to get the values of, which are empty when the development environment has none. It fails when
+// their references can't be read, or when the commands wouldn't run remotely. runsInRemote is only called when the
+// development environment has secret variables
+func CheckSecretVariables(s SecretVariables, phase Phase, runsInRemote func() bool) (SecretVariables, error) {
+	if s.References == "" {
+		return SecretVariables{}, nil
 	}
 
-	names, err := getSecretVariables(ctx, item.ID)
-	if errors.Is(err, oktetoErrors.ErrCatalogItemNotFound) {
-		if phase == DeployPhase {
-			// a deleted item has no secret variables, so the environments deployed from it can still be redeployed
-			oktetoLog.Warning("Catalog item '%s' not found: deploying without its secret variables", item.ID)
-			return Item{}, nil
-		}
-		return Item{}, phase.fail(fmt.Errorf("catalog item '%s' not found: can't tell whether its destroy commands need secret variables", item.ID))
-	}
+	names, err := s.names()
 	if err != nil {
-		return Item{}, phase.fail(fmt.Errorf("could not check the secret variables of catalog item '%s': %w", item.ID, err))
+		return SecretVariables{}, phase.fail(fmt.Errorf("could not read the catalog secret variables from %s: %w", SecretVariablesEnvVar, err))
 	}
 	if len(names) == 0 {
-		return Item{}, nil
+		return SecretVariables{}, nil
 	}
 
-	oktetoLog.Infof("catalog item '%s' has secret variables: %s", item.ID, strings.Join(names, ", "))
+	oktetoLog.Infof("the development environment has catalog secret variables: %s", strings.Join(names, ", "))
 	if !runsInRemote() {
-		return Item{}, phase.fail(ErrSecretVariablesNeedRemote)
+		return SecretVariables{}, phase.fail(ErrSecretVariablesNeedRemote)
 	}
-	if item.SecretVariablesEndpoint == "" {
-		return Item{}, phase.fail(errSecretVariablesEndpointNotSet)
+	if s.Endpoint == "" {
+		return SecretVariables{}, phase.fail(errSecretVariablesEndpointNotSet)
 	}
-	return item, nil
+	if s.Action == "" {
+		return SecretVariables{}, phase.fail(errActionNotSet)
+	}
+	return s, nil
 }
 
 // fail returns the error of a failed check. On destroy, it points to force destroy, which a failed check doesn't stop

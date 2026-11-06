@@ -203,7 +203,7 @@ func getCommandFlags(opts *Options) ([]string, error) {
 		commandFlags = append(commandFlags, strings.Join(varsToAddForDeploy, " "))
 	}
 
-	commandFlags = append(commandFlags, opts.catalogItemToForward.RemoteRunFlags()...)
+	commandFlags = append(commandFlags, opts.catalogSecretVariablesToForward.RemoteRunFlags()...)
 
 	return commandFlags, nil
 }

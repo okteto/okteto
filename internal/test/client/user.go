@@ -33,7 +33,7 @@ type FakeUserClient struct {
 	err                       []error
 	ClusterMetadata           types.ClusterMetadata
 	ClusterInfo               *types.ClusterInfo
-	CatalogSecretVariables    []types.CatalogSecretVariable
+	CatalogSecretVariables    types.CatalogSecretVariables
 	ErrCatalogSecretVariables error
 }
 
@@ -107,9 +107,9 @@ func (*FakeUserClient) GetKnownHostsConfig(_ context.Context) (types.KnownHostsC
 	return types.KnownHostsConfig{}, nil
 }
 
-func (c *FakeUserClient) GetCatalogSecretVariables(_ context.Context, _, _ string) ([]types.CatalogSecretVariable, error) {
+func (c *FakeUserClient) GetCatalogSecretVariables(_ context.Context, _, _ string) (types.CatalogSecretVariables, error) {
 	if c.ErrCatalogSecretVariables != nil {
-		return nil, c.ErrCatalogSecretVariables
+		return types.CatalogSecretVariables{}, c.ErrCatalogSecretVariables
 	}
 	return c.CatalogSecretVariables, nil
 }

@@ -24,12 +24,10 @@ import (
 	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
@@ -37,20 +35,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var testCatalogItem = catalog.Item{
-	ID:                      "item-id",
-	SecretVariablesEndpoint: "https://okteto.example/internal/catalog/secret-variables",
-}
-
-type fakeCatalogSecretVariables struct {
-	err   error
-	names []string
-	ids   []string
-}
-
-func (f *fakeCatalogSecretVariables) get(_ context.Context, id string) ([]string, error) {
-	f.ids = append(f.ids, id)
-	return f.names, f.err
+var testCatalogSecretVariables = catalog.SecretVariables{
+	References: `[{"name":"API_TOKEN","secretKeyRef":{"name":"creds","key":"token"}}]`,
+	Action:     "action-name",
+	Endpoint:   "https://okteto.example/internal/catalog/secret-variables",
 }
 
 // catalogManifest returns a manifest with deploy commands that run remotely when remote is true
@@ -63,149 +51,132 @@ func catalogManifest(remote bool) *model.Manifest {
 	}
 }
 
-// newCatalogRunCommand returns a Command that deploys the manifest provided, getting the names of the secret
-// variables of the catalog item from secrets
-func newCatalogRunCommand(t *testing.T, manifest *model.Manifest, deployer *fakeDeployer, secrets *fakeCatalogSecretVariables, objects ...runtime.Object) *Command {
+// newCatalogRunCommand returns a Command that deploys the manifest provided
+func newCatalogRunCommand(t *testing.T, manifest *model.Manifest, deployer *fakeDeployer, objects ...runtime.Object) *Command {
 	t.Helper()
 	resetLogBuffer(t)
 	t.Setenv(constants.OktetoForceRemote, "")
 	setTestOktetoContext()
 	k8sProvider := test.NewFakeK8sProvider(objects...)
 	return &Command{
-		AnalyticsTracker:          &fakeTracker{},
-		GetManifest:               func(string, afero.Fs) (*model.Manifest, error) { return manifest, nil },
-		K8sClientProvider:         k8sProvider,
-		EndpointGetter:            getFakeEndpoint,
-		Fs:                        afero.NewMemMapFs(),
-		CfgMapHandler:             newDefaultConfigMapHandler(k8sProvider, nil),
-		GetDeployer:               deployer.Get,
-		Builder:                   &fakeV2Builder{},
-		IoCtrl:                    io.NewIOController(),
-		GetCatalogSecretVariables: secrets.get,
+		AnalyticsTracker:  &fakeTracker{},
+		GetManifest:       func(string, afero.Fs) (*model.Manifest, error) { return manifest, nil },
+		K8sClientProvider: k8sProvider,
+		EndpointGetter:    getFakeEndpoint,
+		Fs:                afero.NewMemMapFs(),
+		CfgMapHandler:     newDefaultConfigMapHandler(k8sProvider, nil),
+		GetDeployer:       deployer.Get,
+		Builder:           &fakeV2Builder{},
+		IoCtrl:            io.NewIOController(),
 	}
 }
 
-// expectDeploy makes the deployer succeed when the deploy forwards the catalog item provided to remote-run
-func expectDeploy(deployer *fakeDeployer, forwarded catalog.Item) {
+// expectDeploy makes the deployer succeed when the deploy forwards the catalog secret variables provided to
+// remote-run
+func expectDeploy(deployer *fakeDeployer, forwarded catalog.SecretVariables) {
 	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
 	deployer.On("Deploy", mock.Anything, mock.MatchedBy(func(opts *Options) bool {
-		return opts.catalogItemToForward == forwarded
+		return opts.catalogSecretVariablesToForward == forwarded
 	})).Return(nil)
 }
 
-func TestRunForwardsTheCatalogItemWhenItsSecretVariablesRunRemotely(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
+func TestRunForwardsTheCatalogSecretVariablesWhenTheCommandsRunRemotely(t *testing.T) {
 	deployer := &fakeDeployer{}
-	expectDeploy(deployer, testCatalogItem)
-	c := newCatalogRunCommand(t, catalogManifest(true), deployer, secrets)
+	expectDeploy(deployer, testCatalogSecretVariables)
+	c := newCatalogRunCommand(t, catalogManifest(true), deployer)
 
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: testCatalogSecretVariables})
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"item-id"}, secrets.ids)
 	deployer.AssertExpectations(t)
 }
 
 func TestRunFailsBeforeAnyCommandWhenCatalogSecretVariablesWouldRunLocally(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
 	// no expectations: no command must run
 	deployer := &fakeDeployer{}
-	c := newCatalogRunCommand(t, catalogManifest(false), deployer, secrets)
+	c := newCatalogRunCommand(t, catalogManifest(false), deployer)
 
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: testCatalogSecretVariables})
 
 	require.ErrorIs(t, err, catalog.ErrSecretVariablesNeedRemote)
 	requireDeployStatus(t, c, pipeline.ErrorStatus)
 	deployer.AssertNotCalled(t, "Get")
 }
 
-func TestRunFailsBeforeAnyCommandWhenCatalogSecretVariablesCannotBeChecked(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{err: assert.AnError}
+func TestRunFailsBeforeAnyCommandWhenCatalogSecretVariablesCannotBeRead(t *testing.T) {
 	deployer := &fakeDeployer{}
-	c := newCatalogRunCommand(t, catalogManifest(true), deployer, secrets)
+	c := newCatalogRunCommand(t, catalogManifest(true), deployer)
+	secretVariables := testCatalogSecretVariables
+	secretVariables.References = `{"name":`
 
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: secretVariables})
 
-	require.ErrorIs(t, err, assert.AnError)
+	require.ErrorContains(t, err, "could not read the catalog secret variables")
 	requireDeployStatus(t, c, pipeline.ErrorStatus)
 	deployer.AssertNotCalled(t, "Get")
 }
 
-func TestRunDeploysADeletedCatalogItemWithoutForwardingIt(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{err: oktetoErrors.ErrCatalogItemNotFound}
+func TestRunDeploysLocallyWithoutCatalogSecretVariables(t *testing.T) {
 	deployer := &fakeDeployer{}
-	expectDeploy(deployer, catalog.Item{})
-	c := newCatalogRunCommand(t, catalogManifest(true), deployer, secrets)
+	expectDeploy(deployer, catalog.SecretVariables{})
+	c := newCatalogRunCommand(t, catalogManifest(false), deployer)
+	secretVariables := testCatalogSecretVariables
+	secretVariables.References = "[]"
 
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: secretVariables})
 
 	require.NoError(t, err)
 	deployer.AssertExpectations(t)
 }
 
-func TestRunDeploysLocallyACatalogItemWithoutSecretVariables(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{}
+func TestRunWithoutCatalogSecretVariablesDoesNotForwardThem(t *testing.T) {
 	deployer := &fakeDeployer{}
-	expectDeploy(deployer, catalog.Item{})
-	c := newCatalogRunCommand(t, catalogManifest(false), deployer, secrets)
+	expectDeploy(deployer, catalog.SecretVariables{})
+	c := newCatalogRunCommand(t, catalogManifest(false), deployer)
 
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: catalog.SecretVariables{Action: "action-name"}})
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"item-id"}, secrets.ids)
-	deployer.AssertExpectations(t)
-}
-
-func TestRunWithoutCatalogItemDoesNotCheckSecretVariables(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
-	deployer := &fakeDeployer{}
-	expectDeploy(deployer, catalog.Item{})
-	c := newCatalogRunCommand(t, catalogManifest(false), deployer, secrets)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.NoError(t, err)
-	require.Empty(t, secrets.ids)
 	deployer.AssertExpectations(t)
 }
 
 func TestRunWithoutDeployCommandsDoesNotCheckCatalogSecretVariables(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
 	deployer := &fakeDeployer{}
-	expectDeploy(deployer, catalog.Item{})
-	c := newCatalogRunCommand(t, &model.Manifest{Deploy: &model.DeployInfo{}}, deployer, secrets)
+	expectDeploy(deployer, catalog.SecretVariables{})
+	c := newCatalogRunCommand(t, &model.Manifest{Deploy: &model.DeployInfo{}}, deployer)
 
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: testCatalogSecretVariables})
 
 	require.NoError(t, err)
-	require.Empty(t, secrets.ids)
 	deployer.AssertExpectations(t)
 }
 
-func TestReadCatalogItemAndSetVariablesReadsTheItemBeforeAVariableWithItsName(t *testing.T) {
-	t.Setenv(catalog.ItemIDEnvVar, testCatalogItem.ID)
-	t.Setenv(catalog.SecretVariablesEndpointEnvVar, testCatalogItem.SecretVariablesEndpoint)
+func TestReadCatalogSecretVariablesAndSetVariablesReadsThemBeforeAVariableWithTheirName(t *testing.T) {
+	t.Setenv(catalog.SecretVariablesEnvVar, testCatalogSecretVariables.References)
+	t.Setenv(model.OktetoActionNameEnvVar, testCatalogSecretVariables.Action)
+	t.Setenv(catalog.SecretVariablesEndpointEnvVar, testCatalogSecretVariables.Endpoint)
 	options := &Options{Variables: []string{
-		"OKTETO_CATALOG_ITEM_ID=var-id",
+		"OKTETO_CATALOG_SECRET_VARIABLES=[]",
 		"OKTETO_CATALOG_SECRET_VARIABLES_ENDPOINT=https://var.example",
 	}}
 
-	err := readCatalogItemAndSetVariables(options, setTestEnv(t))
+	err := readCatalogSecretVariablesAndSetVariables(options, setTestEnv(t))
 
 	require.NoError(t, err)
-	require.Equal(t, testCatalogItem, options.CatalogItem)
-	require.Equal(t, "var-id", os.Getenv(catalog.ItemIDEnvVar))
+	require.Equal(t, testCatalogSecretVariables, options.CatalogSecretVariables)
+	require.Equal(t, "[]", os.Getenv(catalog.SecretVariablesEnvVar))
 }
 
-func TestReadCatalogItemAndSetVariablesIgnoresAVariableWithItsNameOutsideTheInstaller(t *testing.T) {
-	t.Setenv(catalog.ItemIDEnvVar, "")
+func TestReadCatalogSecretVariablesAndSetVariablesIgnoresAVariableWithTheirNameOutsideTheInstaller(t *testing.T) {
+	t.Setenv(catalog.SecretVariablesEnvVar, "")
+	t.Setenv(model.OktetoActionNameEnvVar, "")
 	t.Setenv(catalog.SecretVariablesEndpointEnvVar, "")
-	options := &Options{Variables: []string{"OKTETO_CATALOG_ITEM_ID=var-id"}}
+	options := &Options{Variables: []string{`OKTETO_CATALOG_SECRET_VARIABLES=[{"name":"API_TOKEN"}]`}}
 
-	err := readCatalogItemAndSetVariables(options, setTestEnv(t))
+	err := readCatalogSecretVariablesAndSetVariables(options, setTestEnv(t))
 
 	require.NoError(t, err)
-	require.Equal(t, catalog.Item{}, options.CatalogItem)
+	require.Equal(t, catalog.SecretVariables{}, options.CatalogSecretVariables)
 }
 
 // setTestEnv sets env vars that are restored when the test ends
@@ -217,8 +188,8 @@ func setTestEnv(t *testing.T) func(key, value string) error {
 	}
 }
 
-func TestRunInInstallerKeepsTheCatalogItemWhenAStoredVariableHasItsName(t *testing.T) {
-	stored, err := json.Marshal([]types.DeployVariable{{Name: catalog.ItemIDEnvVar, Value: "stored-id"}})
+func TestRunInInstallerKeepsTheCatalogSecretVariablesWhenAStoredVariableHasTheirName(t *testing.T) {
+	stored, err := json.Marshal([]types.DeployVariable{{Name: catalog.SecretVariablesEnvVar, Value: "[]"}})
 	require.NoError(t, err)
 	cfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -228,18 +199,16 @@ func TestRunInInstallerKeepsTheCatalogItemWhenAStoredVariableHasItsName(t *testi
 		},
 		Data: map[string]string{"variables": base64.StdEncoding.EncodeToString(stored)},
 	}
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
 	deployer := &fakeDeployer{}
 	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
 	deployer.On("Deploy", mock.Anything, mock.MatchedBy(func(opts *Options) bool {
-		return opts.catalogItemToForward == testCatalogItem && opts.Variables[0] == "OKTETO_CATALOG_ITEM_ID=stored-id"
+		return opts.catalogSecretVariablesToForward == testCatalogSecretVariables && opts.Variables[0] == "OKTETO_CATALOG_SECRET_VARIABLES=[]"
 	})).Return(nil)
-	c := newCatalogRunCommand(t, catalogManifest(true), deployer, secrets, cfg)
+	c := newCatalogRunCommand(t, catalogManifest(true), deployer, cfg)
 	c.RunningInInstaller = true
 
-	err = c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogItem: testCatalogItem})
+	err = c.Run(context.Background(), &Options{Name: "movies", Namespace: "test", CatalogSecretVariables: testCatalogSecretVariables})
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"item-id"}, secrets.ids)
 	deployer.AssertExpectations(t)
 }

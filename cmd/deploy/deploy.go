@@ -97,11 +97,12 @@ type Options struct {
 	Wait                  bool
 	ShowCTA               bool
 
-	// CatalogItem is the catalog item the deploy runs for. It is read from the env before any variable is loaded
-	CatalogItem catalog.Item
-	// catalogItemToForward is the catalog item remote-run gets the secret variables of. It is empty when the deploy
-	// commands need none
-	catalogItemToForward catalog.Item
+	// CatalogSecretVariables are the catalog secret variables of the development environment. They are read from the
+	// env before any variable is loaded
+	CatalogSecretVariables catalog.SecretVariables
+	// catalogSecretVariablesToForward are the catalog secret variables remote-run gets the values of. They are empty
+	// when the deploy commands need none
+	catalogSecretVariablesToForward catalog.SecretVariables
 }
 
 type builderInterface interface {
@@ -140,8 +141,6 @@ type Command struct {
 	K8sLogger            *io.K8sLogger
 	InsightsTracker      buildDeployTrackerInterface
 	DivertDeployerGetter getDivertDeployer
-
-	GetCatalogSecretVariables catalog.SecretVariablesGetter
 
 	PipelineType model.Archetype
 	isRedeploy   bool
@@ -223,7 +222,7 @@ $ okteto deploy --no-build=true`,
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := readCatalogItemAndSetVariables(options, os.Setenv); err != nil {
+			if err := readCatalogSecretVariablesAndSetVariables(options, os.Setenv); err != nil {
 				return err
 			}
 
@@ -292,8 +291,6 @@ $ okteto deploy --no-build=true`,
 				IoCtrl:               ioCtrl,
 				K8sLogger:            k8sLogger,
 				DivertDeployerGetter: newDivertDeployer,
-
-				GetCatalogSecretVariables: catalog.GetSecretVariables,
 
 				onCleanUp:       []cleanUpFunc{},
 				InsightsTracker: insightsTracker,
@@ -495,7 +492,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
-	if err := dc.checkCatalogSecretVariables(ctx, deployOptions); err != nil {
+	if err := checkCatalogSecretVariables(deployOptions); err != nil {
 		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
@@ -609,27 +606,28 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	return err
 }
 
-// readCatalogItemAndSetVariables reads the catalog item the backend sets on the installer job, and then sets the --var
-// variables as env vars, as any of them can hold a variable with the same name. It has to run before the context is
-// loaded, which sets .env files and Okteto Variables as env vars, and before stored variables are loaded
-func readCatalogItemAndSetVariables(options *Options, setEnv func(key, value string) error) error {
-	options.CatalogItem = catalog.ItemFromEnv()
+// readCatalogSecretVariablesAndSetVariables reads the catalog secret variables the backend sets on the installer job,
+// and then sets the --var variables as env vars, as any of them can hold a variable with the same name. It has to run
+// before the context is loaded, which sets .env files and Okteto Variables as env vars, and before stored variables
+// are loaded
+func readCatalogSecretVariablesAndSetVariables(options *Options, setEnv func(key, value string) error) error {
+	options.CatalogSecretVariables = catalog.SecretVariablesFromEnv()
 	return validateAndSet(options.Variables, setEnv)
 }
 
-// checkCatalogSecretVariables checks the secret variables of the catalog item before any deploy command runs, and
-// keeps the item remote-run has to get them for. A manifest without deploy commands needs none
-func (dc *Command) checkCatalogSecretVariables(ctx context.Context, opts *Options) error {
+// checkCatalogSecretVariables checks the catalog secret variables before any deploy command runs, and keeps the ones
+// remote-run has to get the values of. A manifest without deploy commands needs none
+func checkCatalogSecretVariables(opts *Options) error {
 	if opts.Manifest.Deploy == nil || len(opts.Manifest.Deploy.Commands) == 0 {
 		return nil
 	}
-	item, err := catalog.CheckSecretVariables(ctx, opts.CatalogItem, catalog.DeployPhase, dc.GetCatalogSecretVariables, func() bool {
+	secretVariables, err := catalog.CheckSecretVariables(opts.CatalogSecretVariables, catalog.DeployPhase, func() bool {
 		return ShouldRunInRemote(opts)
 	})
 	if err != nil {
 		return err
 	}
-	opts.catalogItemToForward = item
+	opts.catalogSecretVariablesToForward = secretVariables
 	return nil
 }
 

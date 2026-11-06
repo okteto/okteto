@@ -20,6 +20,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	deployCMD "github.com/okteto/okteto/cmd/deploy"
+	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -38,7 +39,7 @@ type deployRunner interface {
 // DeployOptions flags accepted by the remote-run deploy command
 type DeployOptions struct {
 	Name                           string
-	CatalogItemID                  string
+	CatalogAction                  string
 	CatalogSecretVariablesEndpoint string
 	Variables                      []string
 }
@@ -137,7 +138,7 @@ It is important that this command does the minimum and must not do calculations 
 				Variables:    options.Variables,
 			}
 
-			secretVariables, err := newCatalogSecretVariables(options.CatalogItemID, options.CatalogSecretVariablesEndpoint, deployRetryHint)
+			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, catalog.DeployPhase)
 			if err != nil {
 				return err
 			}
@@ -174,12 +175,12 @@ It is important that this command does the minimum and must not do calculations 
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	addCatalogSecretVariablesFlags(cmd, &options.CatalogItemID, &options.CatalogSecretVariablesEndpoint)
+	addCatalogSecretVariablesFlags(cmd, &options.CatalogAction, &options.CatalogSecretVariablesEndpoint)
 	return cmd
 }
 
 func (c *DeployCommand) Run(ctx context.Context, params deployable.DeployParameters) error {
-	// No command runs if the secret variables of the catalog item can't be got
+	// No command runs if the catalog secret variables can't be got
 	catalogVars, err := c.catalogSecretVariables.get(ctx)
 	if err == nil {
 		params.CatalogSecretVariables = catalogVars

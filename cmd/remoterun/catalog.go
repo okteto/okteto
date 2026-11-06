@@ -48,49 +48,63 @@ const (
 // envVarNameRegex matches the names that can be set as env vars
 var envVarNameRegex = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-// catalogSecretVariablesGetter gets the values of the secret variables of a catalog item
+// catalogSecretVariablesGetter gets the catalog secret variables of the
+// development environment an action runs for
 type catalogSecretVariablesGetter interface {
-	GetCatalogSecretVariables(ctx context.Context, endpoint, catalogItemID string) ([]types.CatalogSecretVariable, error)
+	GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error)
 }
 
-// catalogSecretVariables gets the secret variables of the catalog item being
-// deployed or destroyed, to inject them into the env of the commands
+// catalogSecretVariables gets the catalog secret variables of the development
+// environment being deployed or destroyed, to inject them into the env of the
+// commands
 type catalogSecretVariables struct {
 	client   catalogSecretVariablesGetter
-	itemID   string
+	action   string
 	endpoint string
-	// retryHint ends the hints, telling how to run the operation again
-	retryHint string
+	// phase is the operation whose commands get the variables
+	phase catalog.Phase
 }
 
-// invalidCatalogSecretVariableNamesError is returned when the catalog item has
-// secret variables that can't be injected because of their names
+// unresolvedCatalogSecretVariablesError is returned when some secret variables
+// can't be resolved. It lists all of them
+type unresolvedCatalogSecretVariablesError struct {
+	variables []types.UnresolvedCatalogSecretVariable
+}
+
+func (unresolvedCatalogSecretVariablesError) Error() string {
+	return "the catalog secret variables could not be resolved"
+}
+
+// invalidCatalogSecretVariableNamesError is returned when the development
+// environment has secret variables that can't be injected because of their
+// names
 type invalidCatalogSecretVariableNamesError struct {
 	// lines has a line per invalid variable explaining why
 	lines []string
 }
 
 func (invalidCatalogSecretVariableNamesError) Error() string {
-	return "the secret variables of the catalog item have invalid names"
+	return "the catalog secret variables have invalid names"
 }
 
-// addCatalogSecretVariablesFlags adds the flags to get the secret variables of
-// the catalog item. They are only read from these flags, so a variable can't
-// change them
-func addCatalogSecretVariablesFlags(cmd *cobra.Command, itemID, endpoint *string) {
-	cmd.Flags().StringVar(itemID, catalog.ItemIDFlag, "", "id of the catalog item whose secret variables are injected into the commands")
-	cmd.Flags().StringVar(endpoint, catalog.SecretVariablesEndpointFlag, "", "endpoint to get the secret variables of the catalog item")
+// addCatalogSecretVariablesFlags adds the flags to get the catalog secret
+// variables. They are only read from these flags, so a variable can't change
+// them
+func addCatalogSecretVariablesFlags(cmd *cobra.Command, action, endpoint *string) {
+	cmd.Flags().StringVar(action, catalog.ActionFlag, "", "action whose catalog secret variables are injected into the commands")
+	cmd.Flags().StringVar(endpoint, catalog.SecretVariablesEndpointFlag, "", "endpoint to get the catalog secret variables from")
 }
 
-// newCatalogSecretVariables returns the getter of the secret variables of the
-// catalog item. Without a catalog item id, nothing is fetched
-func newCatalogSecretVariables(itemID, endpoint, retryHint string) (catalogSecretVariables, error) {
-	c := catalogSecretVariables{itemID: itemID, endpoint: endpoint, retryHint: retryHint}
-	if itemID == "" {
+// newCatalogSecretVariables returns the getter of the catalog secret variables
+// of the action, for the commands of the phase. Without an action, nothing is
+// fetched
+func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (catalogSecretVariables, error) {
+	c := catalogSecretVariables{action: action, endpoint: endpoint, phase: phase}
+	if action == "" {
 		return c, nil
 	}
 	if endpoint == "" {
-		return c, fmt.Errorf("--%s is required with --%s", catalog.SecretVariablesEndpointFlag, catalog.ItemIDFlag)
+		return c, fmt.Errorf("--%s is required with --%s", catalog.SecretVariablesEndpointFlag, catalog.ActionFlag)
 	}
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -100,57 +114,80 @@ func newCatalogSecretVariables(itemID, endpoint, retryHint string) (catalogSecre
 	return c, nil
 }
 
-// get returns the secret variables of the catalog item as "key=value" vars.
-// Any error is logged with the variables that caused it and a hint, under its
-// own stage, so the deploy or destroy running remote-run shows them
+// get returns the catalog secret variables as "key=value" vars. Any error, and
+// the warnings about the variables skipped, are logged with the variables that
+// caused them under their own stage, so the deploy or destroy running
+// remote-run shows them
 func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
-	if c.itemID == "" {
+	if c.action == "" {
 		return nil, nil
 	}
 
-	variables, err := c.client.GetCatalogSecretVariables(ctx, c.endpoint, c.itemID)
+	variables, err := c.client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	if err == nil && len(variables.Unresolved) > 0 && !c.skipsUnresolved() {
+		err = unresolvedCatalogSecretVariablesError{variables: variables.Unresolved}
+	}
 	if err == nil {
-		err = validateCatalogSecretVariableNames(variables)
+		err = validateCatalogSecretVariableNames(variables.Variables)
 	}
 	if err != nil {
 		c.logError(err)
 		return nil, err
 	}
 
-	vars := make([]string, 0, len(variables))
-	for _, v := range variables {
+	for _, v := range variables.Unresolved {
+		oktetoLog.WarningWithStage(catalogSecretVariablesStage, fmt.Sprintf("%s. The commands run without it", unresolvedCatalogSecretVariableMessage(v)))
+	}
+
+	vars := make([]string, 0, len(variables.Variables))
+	for _, v := range variables.Variables {
 		vars = append(vars, fmt.Sprintf("%s=%s", v.Name, v.Value))
 	}
 	return vars, nil
 }
 
+// skipsUnresolved is true when the commands run without the variables that
+// can't be resolved, with a warning per variable, instead of failing. Only
+// destroy does: deploy always fails
+func (c catalogSecretVariables) skipsUnresolved() bool {
+	return c.phase == catalog.DestroyPhase
+}
+
+// retryHint ends the hints, telling how to run the operation again
+func (c catalogSecretVariables) retryHint() string {
+	if c.phase == catalog.DestroyPhase {
+		return destroyRetryHint
+	}
+	return deployRetryHint
+}
+
 func (c catalogSecretVariables) logError(err error) {
 	oktetoLog.SetStage(catalogSecretVariablesStage)
-	var unresolved okteto.UnresolvedCatalogSecretVariablesError
+	var unresolved unresolvedCatalogSecretVariablesError
 	var invalidNames invalidCatalogSecretVariableNamesError
 	switch {
 	case errors.As(err, &unresolved):
-		for _, v := range unresolved.Variables {
+		for _, v := range unresolved.variables {
 			oktetoLog.Println(unresolvedCatalogSecretVariableMessage(v))
 		}
-		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Secret exists in the Okteto namespace with the label %s, or to fix the reference in the catalog item, %s", catalogSecretLabel, c.retryHint))
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Secret exists in the Okteto namespace with the label %s, or to fix the reference in the catalog item, %s", catalogSecretLabel, c.retryHint()))
 	case errors.As(err, &invalidNames):
 		for _, line := range invalidNames.lines {
 			oktetoLog.Println(line)
 		}
-		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint))
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint()))
 	}
 	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", err.Error())
 }
 
-func unresolvedCatalogSecretVariableMessage(v okteto.UnresolvedCatalogSecretVariable) string {
+func unresolvedCatalogSecretVariableMessage(v types.UnresolvedCatalogSecretVariable) string {
 	cause := v.Reason
 	switch v.Reason {
-	case okteto.CatalogSecretNotFoundReason:
+	case types.CatalogSecretNotFoundReason:
 		cause = fmt.Sprintf("Secret %q not found", v.SecretKeyRef.Name)
-	case okteto.CatalogSecretNotLabeledReason:
+	case types.CatalogSecretNotLabeledReason:
 		cause = fmt.Sprintf("Secret %q isn't labelled %s", v.SecretKeyRef.Name, catalogSecretLabel)
-	case okteto.CatalogSecretKeyNotFoundReason:
+	case types.CatalogSecretKeyNotFoundReason:
 		cause = fmt.Sprintf("key %q not found in Secret %q", v.SecretKeyRef.Key, v.SecretKeyRef.Name)
 	}
 	return fmt.Sprintf("Catalog variable %q could not be resolved: %s", v.Variable, cause)

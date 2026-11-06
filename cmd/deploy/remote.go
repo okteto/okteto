@@ -107,7 +107,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	if err != nil {
 		return err
 	}
-	commandsFlags = append(commandsFlags, deployOptions.catalogItemToForward.RemoteRunFlags()...)
+	commandsFlags = append(commandsFlags, deployOptions.catalogSecretVariablesToForward.RemoteRunFlags()...)
 
 	workdirCtrl := rd.workdirCtrl
 	if workdirCtrl == nil {

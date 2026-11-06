@@ -23,6 +23,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
@@ -41,7 +42,7 @@ type destroyRunner interface {
 // DestroyOptions flags accepted by the remote-run destroy command
 type DestroyOptions struct {
 	Name                           string
-	CatalogItemID                  string
+	CatalogAction                  string
 	CatalogSecretVariablesEndpoint string
 	Variables                      []string
 	ForceDestroy                   bool
@@ -122,7 +123,7 @@ It is important that this command does the minimum and must not do calculations 
 				ForceDestroy: options.ForceDestroy,
 			}
 
-			secretVariables, err := newCatalogSecretVariables(options.CatalogItemID, options.CatalogSecretVariablesEndpoint, destroyRetryHint)
+			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, catalog.DestroyPhase)
 			if err != nil {
 				return err
 			}
@@ -160,7 +161,7 @@ It is important that this command does the minimum and must not do calculations 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands")
-	addCatalogSecretVariablesFlags(cmd, &options.CatalogItemID, &options.CatalogSecretVariablesEndpoint)
+	addCatalogSecretVariablesFlags(cmd, &options.CatalogAction, &options.CatalogSecretVariablesEndpoint)
 	return cmd
 }
 
@@ -176,7 +177,7 @@ func (c *DestroyCommand) Run(ctx context.Context, params deployable.DestroyParam
 		}
 	}
 
-	// No command runs if the secret variables of the catalog item can't be got
+	// No command runs if the catalog secret variables can't be got
 	catalogVars, err := c.catalogSecretVariables.get(ctx)
 	if err != nil {
 		return err

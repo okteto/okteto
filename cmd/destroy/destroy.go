@@ -104,11 +104,12 @@ type Options struct {
 	RunInRemote         bool
 	RunInRemoteSet      bool
 
-	// CatalogItem is the catalog item the destroy runs for. It is read from the env before any variable is loaded
-	CatalogItem catalog.Item
-	// catalogItemToForward is the catalog item remote-run gets the secret variables of. It is empty when the destroy
-	// commands need none
-	catalogItemToForward catalog.Item
+	// CatalogSecretVariables are the catalog secret variables of the development environment. They are read from the
+	// env before any variable is loaded
+	CatalogSecretVariables catalog.SecretVariables
+	// catalogSecretVariablesToForward are the catalog secret variables remote-run gets the values of. They are empty
+	// when the destroy commands need none
+	catalogSecretVariablesToForward catalog.SecretVariables
 }
 
 type destroyInterface interface {
@@ -142,8 +143,6 @@ type destroyCommand struct {
 	getDivertDriver      divertProvider
 	getPipelineDestroyer pipelineDestroyerProvider
 	buildCtrlProvider    buildControlProviderInterface
-
-	getCatalogSecretVariables catalog.SecretVariablesGetter
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -162,9 +161,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// the backend sets the catalog item on the installer job. It is read before .env files, Okteto Variables
-			// or stored variables are loaded, as any of them can hold a variable with the same name
-			options.CatalogItem = catalog.ItemFromEnv()
+			readCatalogSecretVariables(options)
 
 			options.RunInRemoteSet = cmd.Flags().Changed("remote")
 
@@ -270,7 +267,6 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 				getPipelineDestroyer: func() (pipelineDestroyer, error) {
 					return pipelineCMD.NewCommand(at)
 				},
-				getCatalogSecretVariables: catalog.GetSecretVariables,
 			}
 
 			// We need to create a custom kubeconfig file to avoid modifying the user's kubeconfig when running the
@@ -474,7 +470,7 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
-	if err := dc.checkCatalogSecretVariables(ctx, opts); err != nil {
+	if err := checkCatalogSecretVariables(opts); err != nil {
 		if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
@@ -545,15 +541,21 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	return commandErr
 }
 
-// checkCatalogSecretVariables checks the secret variables of the catalog item before any destroy command runs, and
-// keeps the item remote-run has to get them for. A manifest without destroy commands needs none. A failed check
-// doesn't stop a force destroy: its commands run without the secret variables, as they already run despite their
-// errors
-func (dc *destroyCommand) checkCatalogSecretVariables(ctx context.Context, opts *Options) error {
+// readCatalogSecretVariables reads the catalog secret variables the backend sets on the installer job. It has to run
+// before the context is loaded, which sets .env files and Okteto Variables as env vars, and before stored variables
+// are loaded, as any of them can hold a variable with the same name
+func readCatalogSecretVariables(options *Options) {
+	options.CatalogSecretVariables = catalog.SecretVariablesFromEnv()
+}
+
+// checkCatalogSecretVariables checks the catalog secret variables before any destroy command runs, and keeps the ones
+// remote-run has to get the values of. A manifest without destroy commands needs none. A failed check doesn't stop a
+// force destroy: its commands run without the secret variables, as they already run despite their errors
+func checkCatalogSecretVariables(opts *Options) error {
 	if opts.Manifest.Destroy == nil || len(opts.Manifest.Destroy.Commands) == 0 {
 		return nil
 	}
-	item, err := catalog.CheckSecretVariables(ctx, opts.CatalogItem, catalog.DestroyPhase, dc.getCatalogSecretVariables, func() bool {
+	secretVariables, err := catalog.CheckSecretVariables(opts.CatalogSecretVariables, catalog.DestroyPhase, func() bool {
 		return shouldRunInRemote(opts)
 	})
 	if err != nil && opts.ForceDestroy {
@@ -563,7 +565,7 @@ func (dc *destroyCommand) checkCatalogSecretVariables(ctx context.Context, opts 
 	if err != nil {
 		return err
 	}
-	opts.catalogItemToForward = item
+	opts.catalogSecretVariablesToForward = secretVariables
 	return nil
 }
 

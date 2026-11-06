@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/deployable"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -89,8 +90,10 @@ func TestRunDeploysWithTheCatalogSecretVariables(t *testing.T) {
 	c := &DeployCommand{
 		runner: runner,
 		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{
-			CatalogSecretVariables: []types.CatalogSecretVariable{{Name: "API_TOKEN", Value: "abc"}},
-		}, deployRetryHint),
+			CatalogSecretVariables: types.CatalogSecretVariables{
+				Variables: []types.CatalogSecretVariable{{Name: "API_TOKEN", Value: "abc"}},
+			},
+		}, catalog.DeployPhase),
 	}
 	params := deployable.DeployParameters{Name: "test", Variables: []string{"A=1"}}
 	expected := deployable.DeployParameters{
@@ -111,7 +114,7 @@ func TestRunDoesNotDeployWhenCatalogSecretVariablesFail(t *testing.T) {
 	runner := &fakeDeployRunner{}
 	c := &DeployCommand{
 		runner:                 runner,
-		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, deployRetryHint),
+		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DeployPhase),
 	}
 
 	err := c.Run(context.Background(), deployable.DeployParameters{Name: "test"})
@@ -126,6 +129,6 @@ func TestRunDoesNotDeployWhenCatalogSecretVariablesFail(t *testing.T) {
 func TestDeployCommandHasTheCatalogFlags(t *testing.T) {
 	cmd := Deploy(context.Background(), nil, nil)
 
-	require.NotNil(t, cmd.Flags().Lookup("catalog-item-id"))
+	require.NotNil(t, cmd.Flags().Lookup("catalog-action"))
 	require.NotNil(t, cmd.Flags().Lookup("catalog-secret-variables-endpoint"))
 }

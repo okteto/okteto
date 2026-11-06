@@ -21,29 +21,24 @@ import (
 	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	okerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-var testCatalogItem = catalog.Item{
-	ID:                      "item-id",
-	SecretVariablesEndpoint: "https://okteto.example/internal/catalog/secret-variables",
+var testCatalogSecretVariables = catalog.SecretVariables{
+	References: `[{"name":"API_TOKEN","secretKeyRef":{"name":"creds","key":"token"}}]`,
+	Action:     "action-name",
+	Endpoint:   "https://okteto.example/internal/catalog/secret-variables",
 }
 
-type fakeCatalogSecretVariables struct {
-	err   error
-	names []string
-	ids   []string
-}
-
-func (f *fakeCatalogSecretVariables) get(_ context.Context, id string) ([]string, error) {
-	f.ids = append(f.ids, id)
-	return f.names, f.err
+// catalogSecretVariablesWithReferences returns the test catalog secret variables with the references provided
+func catalogSecretVariablesWithReferences(references string) catalog.SecretVariables {
+	s := testCatalogSecretVariables
+	s.References = references
+	return s
 }
 
 // catalogManifest returns a manifest with destroy commands that run remotely when remote is true
@@ -57,8 +52,7 @@ func catalogManifest(remote bool) *model.Manifest {
 	}
 }
 
-// catalogDestroy is a destroy command that runs its commands locally with executor and gets the names of the
-// secret variables of the catalog item from secrets
+// catalogDestroy is a destroy command that runs its commands locally with executor
 type catalogDestroy struct {
 	cmd       *destroyCommand
 	client    kubernetes.Interface
@@ -66,7 +60,7 @@ type catalogDestroy struct {
 	executor  *fakeExecutor
 }
 
-func newCatalogDestroy(t *testing.T, secrets *fakeCatalogSecretVariables) *catalogDestroy {
+func newCatalogDestroy(t *testing.T) *catalogDestroy {
 	t.Helper()
 	t.Setenv(constants.OktetoForceRemote, "")
 	t.Setenv(constants.OktetoDeployRemote, "")
@@ -87,7 +81,6 @@ func newCatalogDestroy(t *testing.T, secrets *fakeCatalogSecretVariables) *catal
 					builder: fakeBuilderV2{getSvcs: fakeGetSvcs{}},
 				},
 			},
-			getCatalogSecretVariables: secrets.get,
 		},
 		client:    client,
 		destroyer: destroyer,
@@ -103,14 +96,13 @@ func (cd *catalogDestroy) requireStatus(t *testing.T, expected string) {
 }
 
 func TestDestroyFailsBeforeAnyCommandWhenCatalogSecretVariablesWouldRunLocally(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
-	cd := newCatalogDestroy(t, secrets)
+	cd := newCatalogDestroy(t)
 
 	err := cd.cmd.destroy(context.Background(), &Options{
-		Name:        "test-app",
-		Namespace:   "namespace",
-		Manifest:    catalogManifest(false),
-		CatalogItem: testCatalogItem,
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(false),
+		CatalogSecretVariables: testCatalogSecretVariables,
 	})
 
 	require.ErrorIs(t, err, catalog.ErrSecretVariablesNeedRemote)
@@ -119,135 +111,119 @@ func TestDestroyFailsBeforeAnyCommandWhenCatalogSecretVariablesWouldRunLocally(t
 	cd.requireStatus(t, pipeline.ErrorStatus)
 }
 
-func TestDestroyFailsBeforeAnyCommandWhenTheCatalogItemWasDeleted(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{err: okerrors.ErrCatalogItemNotFound}
-	cd := newCatalogDestroy(t, secrets)
+func TestDestroyFailsBeforeAnyCommandWhenCatalogSecretVariablesCannotBeRead(t *testing.T) {
+	cd := newCatalogDestroy(t)
 
 	err := cd.cmd.destroy(context.Background(), &Options{
-		Name:        "test-app",
-		Namespace:   "namespace",
-		Manifest:    catalogManifest(true),
-		CatalogItem: testCatalogItem,
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(true),
+		CatalogSecretVariables: catalogSecretVariablesWithReferences(`{"name":`),
 	})
 
-	require.ErrorContains(t, err, "catalog item 'item-id' not found")
+	require.ErrorContains(t, err, "could not read the catalog secret variables")
 	require.Empty(t, cd.executor.executed)
 	require.False(t, cd.destroyer.destroyed)
 	cd.requireStatus(t, pipeline.ErrorStatus)
 }
 
-func TestDestroyFailsBeforeAnyCommandWhenCatalogSecretVariablesCannotBeChecked(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{err: assert.AnError}
-	cd := newCatalogDestroy(t, secrets)
-
-	err := cd.cmd.destroy(context.Background(), &Options{
-		Name:        "test-app",
-		Namespace:   "namespace",
-		Manifest:    catalogManifest(true),
-		CatalogItem: testCatalogItem,
-	})
-
-	require.ErrorIs(t, err, assert.AnError)
-	require.Empty(t, cd.executor.executed)
-	require.False(t, cd.destroyer.destroyed)
-	cd.requireStatus(t, pipeline.ErrorStatus)
-}
-
-func TestForceDestroyForwardsTheCatalogItemWhenTheCheckPasses(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
-	cd := newCatalogDestroy(t, secrets)
+func TestForceDestroyForwardsTheCatalogSecretVariablesWhenTheCheckPasses(t *testing.T) {
 	opts := &Options{
-		Name:         "test-app",
-		Manifest:     catalogManifest(true),
-		CatalogItem:  testCatalogItem,
-		ForceDestroy: true,
+		Name:                   "test-app",
+		Manifest:               catalogManifest(true),
+		CatalogSecretVariables: testCatalogSecretVariables,
+		ForceDestroy:           true,
 	}
 
-	err := cd.cmd.checkCatalogSecretVariables(context.Background(), opts)
+	err := checkCatalogSecretVariables(opts)
 
 	require.NoError(t, err)
-	require.Equal(t, testCatalogItem, opts.catalogItemToForward)
+	require.Equal(t, testCatalogSecretVariables, opts.catalogSecretVariablesToForward)
 }
 
 func TestForceDestroyRunsTheCommandsWithoutTheCatalogSecretVariablesWhenTheCheckFails(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{err: assert.AnError}
-	cd := newCatalogDestroy(t, secrets)
+	cd := newCatalogDestroy(t)
 	opts := &Options{
-		Name:         "test-app",
-		Namespace:    "namespace",
-		Manifest:     catalogManifest(false),
-		CatalogItem:  testCatalogItem,
-		ForceDestroy: true,
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(false),
+		CatalogSecretVariables: testCatalogSecretVariables,
+		ForceDestroy:           true,
 	}
 
 	err := cd.cmd.destroy(context.Background(), opts)
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"item-id"}, secrets.ids)
-	require.Equal(t, catalog.Item{}, opts.catalogItemToForward)
+	require.Equal(t, catalog.SecretVariables{}, opts.catalogSecretVariablesToForward)
 	require.Len(t, cd.executor.executed, 1)
 	require.True(t, cd.destroyer.destroyed)
 }
 
-func TestDestroyLocallyACatalogItemWithoutSecretVariables(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{}
-	cd := newCatalogDestroy(t, secrets)
+func TestDestroyLocallyWithoutCatalogSecretVariables(t *testing.T) {
+	cd := newCatalogDestroy(t)
 
 	err := cd.cmd.destroy(context.Background(), &Options{
-		Name:        "test-app",
-		Namespace:   "namespace",
-		Manifest:    catalogManifest(false),
-		CatalogItem: testCatalogItem,
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(false),
+		CatalogSecretVariables: catalogSecretVariablesWithReferences("[]"),
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"item-id"}, secrets.ids)
 	require.Len(t, cd.executor.executed, 1)
 	require.True(t, cd.destroyer.destroyed)
 }
 
-func TestDestroyWithoutCatalogItemDoesNotCheckSecretVariables(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
-	cd := newCatalogDestroy(t, secrets)
+func TestDestroyWithoutCatalogSecretVariablesDoesNotForwardThem(t *testing.T) {
+	cd := newCatalogDestroy(t)
+	opts := &Options{
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(false),
+		CatalogSecretVariables: catalog.SecretVariables{Action: "action-name"},
+	}
 
-	err := cd.cmd.destroy(context.Background(), &Options{
-		Name:      "test-app",
-		Namespace: "namespace",
-		Manifest:  catalogManifest(false),
-	})
+	err := cd.cmd.destroy(context.Background(), opts)
 
 	require.NoError(t, err)
-	require.Empty(t, secrets.ids)
+	require.Equal(t, catalog.SecretVariables{}, opts.catalogSecretVariablesToForward)
 	require.Len(t, cd.executor.executed, 1)
 }
 
 func TestDestroyWithoutDestroyCommandsDoesNotCheckCatalogSecretVariables(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{err: okerrors.ErrCatalogItemNotFound}
-	cd := newCatalogDestroy(t, secrets)
+	cd := newCatalogDestroy(t)
 
 	err := cd.cmd.destroy(context.Background(), &Options{
-		Name:        "test-app",
-		Namespace:   "namespace",
-		Manifest:    &model.Manifest{Name: "test-app", Destroy: &model.DestroyInfo{}},
-		CatalogItem: testCatalogItem,
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               &model.Manifest{Name: "test-app", Destroy: &model.DestroyInfo{}},
+		CatalogSecretVariables: catalogSecretVariablesWithReferences(`{"name":`),
 	})
 
 	require.NoError(t, err)
-	require.Empty(t, secrets.ids)
 	require.True(t, cd.destroyer.destroyed)
 }
 
-func TestCheckCatalogSecretVariablesForwardsTheItemWhenDestroyRunsRemotely(t *testing.T) {
-	secrets := &fakeCatalogSecretVariables{names: []string{"API_TOKEN"}}
-	cd := newCatalogDestroy(t, secrets)
+func TestCheckCatalogSecretVariablesForwardsThemWhenDestroyRunsRemotely(t *testing.T) {
 	opts := &Options{
-		Name:        "test-app",
-		Manifest:    catalogManifest(true),
-		CatalogItem: testCatalogItem,
+		Name:                   "test-app",
+		Manifest:               catalogManifest(true),
+		CatalogSecretVariables: testCatalogSecretVariables,
 	}
 
-	err := cd.cmd.checkCatalogSecretVariables(context.Background(), opts)
+	err := checkCatalogSecretVariables(opts)
 
 	require.NoError(t, err)
-	require.Equal(t, testCatalogItem, opts.catalogItemToForward)
+	require.Equal(t, testCatalogSecretVariables, opts.catalogSecretVariablesToForward)
+}
+
+func TestReadCatalogSecretVariablesReadsThemFromTheEnv(t *testing.T) {
+	t.Setenv(catalog.SecretVariablesEnvVar, testCatalogSecretVariables.References)
+	t.Setenv(model.OktetoActionNameEnvVar, testCatalogSecretVariables.Action)
+	t.Setenv(catalog.SecretVariablesEndpointEnvVar, testCatalogSecretVariables.Endpoint)
+	options := &Options{}
+
+	readCatalogSecretVariables(options)
+
+	require.Equal(t, testCatalogSecretVariables, options.CatalogSecretVariables)
 }

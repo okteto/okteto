@@ -474,7 +474,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 	}
 }
 
-func TestDeployRemoteForwardsTheCatalogItemToRemoteRun(t *testing.T) {
+func TestDeployRemoteForwardsTheCatalogSecretVariablesToRemoteRun(t *testing.T) {
 	manifest := &model.Manifest{
 		Deploy: &model.DeployInfo{
 			Commands: []model.DeployCommand{{Name: "command 1", Command: "test-command"}},
@@ -494,9 +494,9 @@ func TestDeployRemoteForwardsTheCatalogItemToRemoteRun(t *testing.T) {
 	opts := &Options{
 		Name:     "test",
 		Manifest: manifest,
-		// a stored variable with the same name travels as a --var, which remote-run doesn't read the item from
-		Variables:            []string{"OKTETO_CATALOG_ITEM_ID=stored-id"},
-		catalogItemToForward: testCatalogItem,
+		// a stored variable with the same name travels as a --var, which remote-run doesn't read the action from
+		Variables:                       []string{"OKTETO_ACTION_NAME=stored-action"},
+		catalogSecretVariablesToForward: testCatalogSecretVariables,
 	}
 
 	err := rd.Deploy(context.Background(), opts)
@@ -504,8 +504,8 @@ func TestDeployRemoteForwardsTheCatalogItemToRemoteRun(t *testing.T) {
 	require.NoError(t, err)
 	expected := []string{
 		`--name "test"`,
-		`--var OKTETO_CATALOG_ITEM_ID="stored-id"`,
-		`--catalog-item-id "item-id"`,
+		`--var OKTETO_ACTION_NAME="stored-action"`,
+		`--catalog-action "action-name"`,
 		`--catalog-secret-variables-endpoint "https://okteto.example/internal/catalog/secret-variables"`,
 	}
 	require.Equal(t, expected, params.CommandFlags)
