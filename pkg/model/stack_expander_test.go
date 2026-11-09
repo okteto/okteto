@@ -168,3 +168,31 @@ volumes:
 		})
 	}
 }
+
+func TestStackEscapedEnvironment(t *testing.T) {
+	t.Setenv("ESCAPED_TARGET", "host-value")
+	t.Setenv("EXPANSION_SOURCE", "${ESCAPED_TARGET}")
+	t.Setenv("UNSET_TARGET", "")
+	for name, environment := range map[string]string{
+		"map":  "      LITERAL: $${ESCAPED_TARGET}\n      INDIRECT: ${EXPANSION_SOURCE}\n      NORMAL: ${ESCAPED_TARGET}\n      UNSET: $${UNSET_TARGET}\n      MULTILINE: |\n        prefix\n        $${ESCAPED_TARGET}\n",
+		"list": "      - LITERAL=$${ESCAPED_TARGET}\n      - INDIRECT=${EXPANSION_SOURCE}\n      - NORMAL=${ESCAPED_TARGET}\n      - UNSET=$${UNSET_TARGET}\n      - |\n        MULTILINE=prefix\n        $${ESCAPED_TARGET}\n",
+	} {
+		for mode, compose := range map[string]bool{"compose": true, "stack": false} {
+			t.Run(name+"/"+mode, func(t *testing.T) {
+				s, err := ReadStack([]byte("services:\n  app:\n    image: nginx\n    environment:\n"+environment), compose)
+				if !assert.NoError(t, err) {
+					return
+				}
+				values := map[string]string{}
+				for _, variable := range s.Services["app"].Environment {
+					values[variable.Name] = variable.Value
+				}
+				assert.Equal(t, "${ESCAPED_TARGET}", values["LITERAL"])
+				assert.Equal(t, "${ESCAPED_TARGET}", values["INDIRECT"])
+				assert.Equal(t, "host-value", values["NORMAL"])
+				assert.Equal(t, "${UNSET_TARGET}", values["UNSET"])
+				assert.Equal(t, "prefix\n${ESCAPED_TARGET}\n", values["MULTILINE"])
+			})
+		}
+	}
+}
