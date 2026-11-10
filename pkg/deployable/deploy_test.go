@@ -743,6 +743,44 @@ func TestRunDeployMasksShortCatalogSecretValues(t *testing.T) {
 	assert.NotContains(t, out.String(), "1234")
 }
 
+func TestRunDeployMasksTheShortLinesOfMultilineCatalogSecretValues(t *testing.T) {
+	setFakeOktetoContext(t)
+	out := captureLogOutput(t)
+	r := newCatalogTestDeployRunner(linePrintingExecutor{lines: []string{"pin: 1234", "5678"}}, &fakeCmapHandler{})
+
+	err := r.RunDeploy(context.Background(), DeployParameters{
+		Name:                   "test",
+		Namespace:              "test",
+		CatalogSecretVariables: []string{"PIN=1234\n5678"},
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "print", Command: "print"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "pin: ***")
+	assert.NotContains(t, out.String(), "1234")
+	assert.NotContains(t, out.String(), "5678")
+}
+
+func TestRunDeployDoesNotMaskTheLinesWithoutLettersOrDigitsOfCatalogSecretValues(t *testing.T) {
+	setFakeOktetoContext(t)
+	out := captureLogOutput(t)
+	r := newCatalogTestDeployRunner(linePrintingExecutor{lines: []string{"config: {}"}}, &fakeCmapHandler{})
+
+	err := r.RunDeploy(context.Background(), DeployParameters{
+		Name:                   "test",
+		Namespace:              "test",
+		CatalogSecretVariables: []string{"CONFIG={\npin\n}"},
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "print", Command: "print"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "config: {}")
+}
+
 func TestRunCommandsSectionDoesNotPersistCatalogSecretVariables(t *testing.T) {
 	setFakeOktetoContext(t)
 	exec := &fakeDestroyExecutor{}

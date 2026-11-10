@@ -40,6 +40,21 @@ func (e printingExecutor) Execute(_ model.DeployCommand, _ []string) error {
 
 func (printingExecutor) CleanUp(_ error) {}
 
+// linePrintingExecutor logs each line of the output on its own, as the
+// executors do with the output of the commands
+type linePrintingExecutor struct {
+	lines []string
+}
+
+func (e linePrintingExecutor) Execute(_ model.DeployCommand, _ []string) error {
+	for _, line := range e.lines {
+		oktetoLog.Println(line)
+	}
+	return nil
+}
+
+func (linePrintingExecutor) CleanUp(_ error) {}
+
 // captureLogOutput sends the okteto logger output to the returned buffer, with
 // masking disabled, until the test finishes
 func captureLogOutput(t *testing.T) *bytes.Buffer {

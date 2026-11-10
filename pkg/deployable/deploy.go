@@ -22,6 +22,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/constants"
@@ -488,7 +489,27 @@ func withoutVariables(vars, exclude []string) []string {
 func appendCatalogSecretVariables(vars, secretVars []string) []string {
 	for _, v := range secretVars {
 		_, value, _ := strings.Cut(v, "=")
-		oktetoLog.AddMaskedSecret(value)
+		maskCatalogSecretValue(value)
 	}
 	return append(vars, secretVars...)
+}
+
+// maskCatalogSecretValue masks value and, when it has several lines, each line with a letter or a digit, whatever
+// its length: the output of the commands is masked line by line, so the whole value never matches. Lines like "}"
+// stay unmasked, so they don't mask every brace of the output
+func maskCatalogSecretValue(value string) {
+	oktetoLog.AddMaskedSecret(value)
+	lines := strings.Split(strings.ReplaceAll(value, "\r\n", "\n"), "\n")
+	if len(lines) == 1 {
+		return
+	}
+	for _, line := range lines {
+		if strings.IndexFunc(line, isLetterOrDigit) != -1 {
+			oktetoLog.AddMaskedSecret(line)
+		}
+	}
+}
+
+func isLetterOrDigit(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
