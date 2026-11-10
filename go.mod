@@ -13,8 +13,8 @@ require (
 	github.com/compose-spec/godotenv v1.1.1
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v29.8.2+incompatible
-	github.com/docker/docker-credential-helpers v0.9.9
+	github.com/docker/cli v29.9.0+incompatible
+	github.com/docker/docker-credential-helpers v0.9.10
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.19.0
 	github.com/gliderlabs/ssh v0.3.8
