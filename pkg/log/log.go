@@ -331,22 +331,6 @@ func Println(args ...interface{}) {
 	log.writer.Println(msg)
 }
 
-// PrintlnWithStage writes a line recorded under stage instead of the current stage of the logger.
-// It is used by dependencies deployed in parallel with the main deploy, whose stage keeps changing
-func PrintlnWithStage(stage, line string) {
-	log.writer.PrintlnWithStage(stage, redactMessage(line))
-}
-
-// SuccessWithStage prints a success message recorded under stage instead of the current stage of the logger
-func SuccessWithStage(stage, msg string) {
-	log.writer.SuccessWithStage(stage, msg)
-}
-
-// WarningWithStage prints a warning message recorded under stage instead of the current stage of the logger
-func WarningWithStage(stage, msg string) {
-	log.writer.WarningWithStage(stage, msg)
-}
-
 // FPrintln writes a line with colors to specific writer
 func FPrintln(w io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)

@@ -292,6 +292,92 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "deploy-without-resources-keeps-service-resources",
+			deployRaw: &DeployInfoRaw{},
+			resources: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size:  Quantity{resource.MustParse("5Gi")},
+						Class: "fast",
+					},
+				},
+			},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size:  Quantity{resource.MustParse("5Gi")},
+						Class: "fast",
+					},
+				},
+			},
+		},
+		{
+			name: "deploy-resources-override-only-the-values-they-set",
+			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
+				Limits: DeployComposeResources{
+					Cpus: Quantity{resource.MustParse("1")},
+				},
+			}},
+			resources: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size: Quantity{resource.MustParse("5Gi")},
+					},
+				},
+			},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size: Quantity{resource.MustParse("5Gi")},
+					},
+				},
+			},
+		},
+		{
+			name: "deploy-reservations-override-only-the-requests-they-set",
+			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
+				Reservations: DeployComposeResources{
+					Cpus: Quantity{resource.MustParse("250m")},
+				},
+			}},
+			resources: &StackResources{
+				Requests: ServiceResources{
+					CPU:    Quantity{resource.MustParse("500m")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+					Storage: StorageResource{
+						Size:  Quantity{resource.MustParse("5Gi")},
+						Class: "fast",
+					},
+				},
+			},
+			expected: &StackResources{
+				Requests: ServiceResources{
+					CPU:    Quantity{resource.MustParse("250m")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+					Storage: StorageResource{
+						Size:  Quantity{resource.MustParse("5Gi")},
+						Class: "fast",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3209,4 +3295,33 @@ services:
 	s, err := ReadStack([]byte(manifest), true)
 	require.NoError(t, err)
 	require.Equal(t, "okteto/vote:2", s.Services["api"].Image)
+}
+
+func Test_EndpointRulesFollowSanitizedServiceNames(t *testing.T) {
+	manifest := []byte(`services:
+  web_app:
+    image: nginx
+    ports:
+      - 8080:8080
+  api:
+    image: nginx
+    ports:
+      - 3000:3000
+endpoints:
+  main:
+    - path: /
+      service: web_app
+      port: 8080
+    - path: /api
+      service: api
+      port: 3000
+`)
+
+	s, err := ReadStack(manifest, true)
+	require.NoError(t, err)
+
+	require.Contains(t, s.Services, "web-app")
+	require.Len(t, s.Endpoints["main"].Rules, 2)
+	assert.Equal(t, "web-app", s.Endpoints["main"].Rules[0].Service)
+	assert.Equal(t, "api", s.Endpoints["main"].Rules[1].Service)
 }

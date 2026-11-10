@@ -344,6 +344,16 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
+	// Endpoint rules reference services by their original name, so point them
+	// to the sanitized name too or the endpoint never matches its service.
+	for _, endpoint := range s.Endpoints {
+		for i, rule := range endpoint.Rules {
+			if newName, ok := sanitizedServicesNames[rule.Service]; ok {
+				endpoint.Rules[i].Service = newName
+			}
+		}
+	}
+
 	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
 	s.Warnings.SanitizedServices = sanitizedServicesNames
 	s.Warnings.VolumeMountWarnings = make([]string, 0)
@@ -1127,8 +1137,8 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 		resources = &StackResources{}
 	}
 	if deployInfo != nil {
-		resources.Limits = deployInfo.Resources.Limits.toServiceResources()
-		resources.Requests = deployInfo.Resources.Reservations.toServiceResources()
+		deployInfo.Resources.Limits.applyTo(&resources.Limits)
+		deployInfo.Resources.Reservations.applyTo(&resources.Requests)
 	}
 
 	if resources.Limits.CPU.Value.IsZero() && !cpuCount.Value.IsZero() {
@@ -1163,15 +1173,15 @@ func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) 
 	return DefaultReplicasNumber
 }
 
-func (r DeployComposeResources) toServiceResources() ServiceResources {
-	resources := ServiceResources{}
+// applyTo overrides only the values set under deploy.resources, so the service's own
+// resources (including storage) are kept
+func (r DeployComposeResources) applyTo(resources *ServiceResources) {
 	if !r.Cpus.Value.IsZero() {
 		resources.CPU = r.Cpus
 	}
 	if !r.Memory.Value.IsZero() {
 		resources.Memory = r.Memory
 	}
-	return resources
 }
 
 func (endpoint *EndpointSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {

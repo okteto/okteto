@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
+	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -56,6 +57,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -864,26 +866,24 @@ func (fd *capturingPipelineDeployer) ExecuteDeployPipeline(_ context.Context, op
 	return fd.errs[opts.Name]
 }
 
-func TestStartDependenciesNotAvailableInVanilla(t *testing.T) {
+func TestDeployDependenciesNotAvailableInVanilla(t *testing.T) {
 	okteto.CurrentStore = &okteto.ContextStore{
 		Contexts:       map[string]*okteto.Context{"test": {Namespace: "test", Cfg: &api.Config{}}},
 		CurrentContext: "test",
 	}
 	dc := &Command{PipelineCMD: &capturingPipelineDeployer{}}
 
-	_, err := dc.startDependencies(context.Background(), &Options{Manifest: fakeManifestWithDependency})
+	err := dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifestWithDependency})
 
 	require.ErrorIs(t, err, errDepenNotAvailableInVanilla)
 }
 
-func TestStartDependenciesSharesParentWorkflowID(t *testing.T) {
+func TestDeployDependenciesSharesParentWorkflowID(t *testing.T) {
 	setTestOktetoContext()
 	deployer := &capturingPipelineDeployer{}
 	dc := &Command{PipelineCMD: deployer}
 
-	scheduler, err := dc.startDependencies(context.Background(), &Options{Manifest: fakeManifestWithDependency})
-	require.NoError(t, err)
-	require.NoError(t, scheduler.Wait())
+	require.NoError(t, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifestWithDependency}))
 
 	require.Len(t, deployer.captured, 2)
 	require.NotEmpty(t, deployer.captured["a"].ParentWorkflowID)
@@ -960,11 +960,17 @@ func resetLogBuffer(t *testing.T) {
 
 func requireDeployStatus(t *testing.T, c *Command, expected string) {
 	t.Helper()
+	require.Equal(t, expected, deployStatus(t, c))
+}
+
+// deployStatus returns the status of the deploy as stored in its configmap
+func deployStatus(t *testing.T, c *Command) string {
+	t.Helper()
 	fakeClient, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
 	require.NoError(t, err)
 	cfg, err := configmaps.Get(context.Background(), pipeline.TranslatePipelineName("movies"), "test", fakeClient)
 	require.NoError(t, err)
-	require.Equal(t, expected, cfg.Data["status"])
+	return cfg.Data["status"]
 }
 
 func TestRunDependencyFailureSkipsMainDeploy(t *testing.T) {
@@ -982,7 +988,8 @@ func TestRunDependencyFailureSkipsMainDeploy(t *testing.T) {
 	deployer.AssertNotCalled(t, "Get")
 }
 
-func TestRunDependencyFailureIsReportedUnderTheDependencyStage(t *testing.T) {
+func TestRunDependencyFailureIsTheLastLineOfTheDependenciesStage(t *testing.T) {
+	resetLogBuffer(t)
 	t.Cleanup(func() { oktetoLog.SetStage("") })
 	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"messaging": assert.AnError}}
 	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
@@ -993,7 +1000,8 @@ func TestRunDependencyFailureIsReportedUnderTheDependencyStage(t *testing.T) {
 	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
 
 	require.Error(t, err)
-	require.Contains(t, deployOutput(t, c), `"level":"error","stage":"Deploying dependency messaging","message":"dependency 'messaging' failed`)
+	lines := outputLines(t, c)
+	require.Contains(t, lines[len(lines)-1], `"level":"error","stage":"Deploying dependencies","message":"dependency 'messaging' failed`)
 }
 
 // deployOutput returns the log of the deploy as stored in its configmap, which is what the UI shows
@@ -1006,40 +1014,6 @@ func deployOutput(t *testing.T, c *Command) string {
 	output, err := base64.StdEncoding.DecodeString(cfg.Data["output"])
 	require.NoError(t, err)
 	return string(output)
-}
-
-func TestRunNotAwaitedDependencyFailureFailsTheDeploy(t *testing.T) {
-	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": assert.AnError}}
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, pipelineDeployer, deployer)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.ErrorContains(t, err, "dependency 'reports' failed")
-	requireDeployStatus(t, c, pipeline.ErrorStatus)
-	deployer.AssertCalled(t, "Deploy", mock.Anything, mock.Anything)
-}
-
-func TestRunNotAwaitedDependencyFailureDoesNotBlockTheMainDeploy(t *testing.T) {
-	t.Setenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR", "")
-	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": assert.AnError}}
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"db":      &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, pipelineDeployer, deployer)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.ErrorContains(t, err, "dependency 'reports' failed")
-	requireDeployStatus(t, c, pipeline.ErrorStatus)
-	deployer.AssertCalled(t, "Deploy", mock.Anything, mock.Anything)
 }
 
 func TestRunWithDependenciesSucceeds(t *testing.T) {
@@ -1064,117 +1038,6 @@ func TestRunWithDependenciesSucceeds(t *testing.T) {
 	require.Empty(t, os.Getenv("OKTETO_DEPENDENCY_REPORTS_VARIABLE_DEP_VAR"))
 }
 
-func TestRunRecordsEveryFailedDependencyUnderItsStage(t *testing.T) {
-	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{
-		"db":      errors.New("db exploded"),
-		"reports": errors.New("reports exploded"),
-	}}
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"db":      &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, pipelineDeployer, &fakeDeployer{})
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.Error(t, err)
-	output := deployOutput(t, c)
-	require.Contains(t, output, `"level":"error","stage":"Deploying dependency db","message":"dependency 'db' failed: db exploded"`)
-	require.Contains(t, output, `"level":"error","stage":"Deploying dependency reports","message":"dependency 'reports' failed: reports exploded"`)
-}
-
-func TestRunRecordsFailedDependenciesWhenTheMainDeployFails(t *testing.T) {
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(errors.New("main exploded"))
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, &capturingPipelineDeployer{errs: map[string]error{"reports": errors.New("reports exploded")}}, deployer)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.ErrorContains(t, err, "main exploded")
-	require.Contains(t, deployOutput(t, c), `"level":"error","stage":"Deploying dependency reports","message":"dependency 'reports' failed: reports exploded"`)
-}
-
-// lateLoggingPipelineDeployer deploys a dependency once the main deploy has failed, logging a line under its stage
-type lateLoggingPipelineDeployer struct {
-	mainFailed chan struct{}
-}
-
-func (d *lateLoggingPipelineDeployer) ExecuteDeployPipeline(_ context.Context, opts *pipelineCMD.DeployOptions) error {
-	<-d.mainFailed
-	oktetoLog.PrintlnWithStage(pipelineCMD.DependencyStage(opts.Name), "late line")
-	return nil
-}
-
-// lastLineIndex returns the index of the last line that contains text, or -1
-func lastLineIndex(lines []string, text string) int {
-	for i := len(lines) - 1; i >= 0; i-- {
-		if strings.Contains(lines[i], text) {
-			return i
-		}
-	}
-	return -1
-}
-
-func TestRunMainDeployFailureEndsTheOutputUnderItsStage(t *testing.T) {
-	mainFailed := make(chan struct{})
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
-		oktetoLog.SetStage("echo")
-		close(mainFailed)
-	}).Return(errors.New("main exploded"))
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, &capturingPipelineDeployer{}, deployer)
-	c.PipelineCMD = &lateLoggingPipelineDeployer{mainFailed: mainFailed}
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.ErrorContains(t, err, "main exploded")
-	lines := strings.Split(strings.TrimSpace(deployOutput(t, c)), "\n")
-	end := lastLineIndex(lines, `"stage":"done","message":"EOF"`)
-	// the line the dependency logged after the main deploy failed is not left after the end
-	require.Less(t, lastLineIndex(lines, `"message":"late line"`), end)
-	// and the last stage before the end is the one of the main deploy, with its error
-	require.Contains(t, lines[end-1], `"level":"error","stage":"echo","message":"main exploded"`)
-}
-
-func TestRunMainDeployFailureWaitsForDependencies(t *testing.T) {
-	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": errors.New("reports failed")}}
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(errors.New("main failed"))
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, pipelineDeployer, deployer)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.ErrorContains(t, err, "main failed")
-	require.ErrorContains(t, err, "dependency 'reports' failed: reports failed")
-	requireDeployStatus(t, c, pipeline.ErrorStatus)
-}
-
-func TestRunDependencyFailureAfterMainDeployHasNoEOFMarker(t *testing.T) {
-	resetLogBuffer(t)
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, &capturingPipelineDeployer{errs: map[string]error{"reports": assert.AnError}}, deployer)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.Error(t, err)
-	// as when a dependency fails before the main deploy: the error is the last line, under the dependency stage
-	output := deployOutput(t, c)
-	require.NotContains(t, output, `"message":"EOF"`)
-	require.Contains(t, output, `"level":"error","stage":"Deploying dependency reports"`)
-}
-
 func TestRunMainDeploySuccessHasEOFMarker(t *testing.T) {
 	resetLogBuffer(t)
 	deployer := &fakeDeployer{}
@@ -1189,7 +1052,42 @@ func TestRunMainDeploySuccessHasEOFMarker(t *testing.T) {
 	require.Contains(t, deployOutput(t, c), `"message":"EOF"`)
 }
 
-func TestRunWithDependenciesRecordsTheInterruptionOnCleanUp(t *testing.T) {
+func TestRunRecordsAnInterruptionWhileTheDependenciesRun(t *testing.T) {
+	var statusOnInterruption string
+	pipelineDeployer := &scriptedPipelineDeployer{events: &eventRecorder{}}
+	c := newScriptedRunCommand(t, deps.ManifestSection{
+		"db": &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+	}, pipelineDeployer)
+	pipelineDeployer.scripts = map[string]func(*pipelineCMD.DeployOptions) error{
+		"db": func(*pipelineCMD.DeployOptions) error {
+			// what the deploy command runs on Ctrl+C, without waiting for Run
+			c.cleanUp(context.Background(), oktetoErrors.ErrIntSig)
+			statusOnInterruption = deployStatus(t, c)
+			return oktetoErrors.ErrIntSig
+		},
+	}
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorIs(t, err, oktetoErrors.ErrIntSig)
+	require.Equal(t, pipeline.ErrorStatus, statusOnInterruption)
+}
+
+func TestRunRecordsAnInterruptionAfterTheDependenciesFail(t *testing.T) {
+	resetLogBuffer(t)
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"db": &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+	}, &capturingPipelineDeployer{errs: map[string]error{"db": assert.AnError}}, &fakeDeployer{})
+	require.Error(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	// the deploy command doesn't wait for Run: the clean up of a Ctrl+C can run once Run has seen the dependencies end
+	c.cleanUp(context.Background(), oktetoErrors.ErrIntSig)
+
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
+	require.Contains(t, deployOutput(t, c), `"message":"interrupt signal received"`)
+}
+
+func TestRunHandlesAnInterruptionAfterTheDependenciesAsBefore(t *testing.T) {
 	deployer := &fakeDeployer{}
 	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
 	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
@@ -1202,70 +1100,8 @@ func TestRunWithDependenciesRecordsTheInterruptionOnCleanUp(t *testing.T) {
 	// what the deploy command runs on Ctrl+C, without waiting for Run
 	c.cleanUp(context.Background(), oktetoErrors.ErrIntSig)
 
-	requireDeployStatus(t, c, pipeline.ErrorStatus)
-}
-
-// capturingBuilder records the output mode of the build
-type capturingBuilder struct {
-	outputMode string
-}
-
-func (b *capturingBuilder) Build(_ context.Context, options *types.BuildOptions) error {
-	b.outputMode = options.OutputMode
-	return nil
-}
-
-func (*capturingBuilder) GetServicesToBuildDuringExecution(_ context.Context, _ *model.Manifest, svcsToDeploy []string) ([]string, error) {
-	return svcsToDeploy, nil
-}
-
-func (*capturingBuilder) GetBuildEnvVars() map[string]string { return nil }
-
-// withBuildSection makes the manifest of c build an image, keeping its deploy and dependencies
-func withBuildSection(c *Command) {
-	getManifest := c.GetManifest
-	c.GetManifest = func(path string, fs afero.Fs) (*model.Manifest, error) {
-		m, err := getManifest(path, fs)
-		if err != nil {
-			return nil, err
-		}
-		m.Build = build.ManifestBuild{"api": &build.Info{Context: "api"}}
-		return m, nil
-	}
-}
-
-func TestRunWithDependenciesForcesPlainBuildProgress(t *testing.T) {
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
-	builder := &capturingBuilder{}
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, &capturingPipelineDeployer{}, deployer)
-	c.Builder = builder
-	withBuildSection(c)
-	opts := &Options{Name: "movies", Namespace: "test"}
-
-	require.NoError(t, c.Run(context.Background(), opts))
-
-	// reports runs at the same time as the build: its logs would break the TTY progress
-	require.Equal(t, oktetoLog.PlainFormat, builder.outputMode)
-}
-
-func TestRunWithAwaitedDependenciesKeepsBuildProgress(t *testing.T) {
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
-	builder := &capturingBuilder{}
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"db": &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
-	}, &capturingPipelineDeployer{}, deployer)
-	c.Builder = builder
-	withBuildSection(c)
-
-	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
-
-	require.Empty(t, builder.outputMode)
+	requireDeployStatus(t, c, pipeline.DeployedStatus)
+	deployer.AssertCalled(t, "CleanUp", mock.Anything, oktetoErrors.ErrIntSig)
 }
 
 func TestRunMainDeployInterruptedReturnsNil(t *testing.T) {
@@ -1280,7 +1116,7 @@ func TestRunMainDeployInterruptedReturnsNil(t *testing.T) {
 	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
 
 	require.NoError(t, err)
-	// the dependency was waited for before returning
+	// the dependency was scheduled before the deploy commands
 	require.Len(t, pipelineDeployer.captured, 1)
 }
 
@@ -1295,19 +1131,6 @@ func TestRunMainDeployErrorIsUserErrorWhenDependenciesSucceed(t *testing.T) {
 	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
 
 	require.IsType(t, oktetoErrors.UserError{}, err)
-}
-
-func TestRunMainDeployErrorIsUserErrorWhenDependenciesFail(t *testing.T) {
-	deployer := &fakeDeployer{}
-	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
-	deployer.On("Deploy", mock.Anything, mock.Anything).Return(errors.New("main failed"))
-	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}, &capturingPipelineDeployer{errs: map[string]error{"reports": assert.AnError}}, deployer)
-
-	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
-
-	require.ErrorAs(t, err, &oktetoErrors.UserError{})
 }
 
 func TestRunOnlyDependenciesFailureSetsErrorStatus(t *testing.T) {
@@ -1325,7 +1148,7 @@ func TestRunOnlyDependenciesFailureSetsErrorStatus(t *testing.T) {
 	requireDeployStatus(t, c, pipeline.ErrorStatus)
 }
 
-func TestRunExportFailureWaitsForDependencies(t *testing.T) {
+func TestRunExportFailureFailsBeforeTheCommands(t *testing.T) {
 	deployer := &fakeDeployer{}
 	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
 		"db": &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
@@ -1342,7 +1165,7 @@ func TestRunExportFailureWaitsForDependencies(t *testing.T) {
 	require.ErrorContains(t, err, "could not get environment variables generated by dependency 'db'")
 	requireDeployStatus(t, c, pipeline.ErrorStatus)
 	deployer.AssertNotCalled(t, "Get")
-	require.Contains(t, deployOutput(t, c), `"level":"error","stage":"Deploying dependency db","message":"could not get environment variables generated by dependency 'db'`)
+	require.Contains(t, deployOutput(t, c), `"level":"error","stage":"Deploying dependencies","message":"could not get environment variables generated by dependency 'db'`)
 }
 
 func TestDeployOnlyDependencies(t *testing.T) {
@@ -2092,4 +1915,331 @@ func Test_resolveIsRedeploy_FallbackToConfigmap(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// outputLines returns the lines of the log of the deploy as stored in its configmap
+func outputLines(t *testing.T, c *Command) []string {
+	t.Helper()
+	return strings.Split(strings.TrimSpace(deployOutput(t, c)), "\n")
+}
+
+// requireUnderTheDependenciesStage checks that every line of the output that contains text is recorded under the
+// dependencies stage
+func requireUnderTheDependenciesStage(t *testing.T, lines []string, text string) {
+	t.Helper()
+	found := 0
+	for _, line := range lines {
+		if strings.Contains(line, text) {
+			found++
+			require.Contains(t, line, `"stage":"Deploying dependencies"`, "line %q", line)
+		}
+	}
+	require.NotZero(t, found, "no line contains %q", text)
+}
+
+// lineIndex returns the index of the first line that contains text, failing if there is none
+func lineIndex(t *testing.T, lines []string, text string) int {
+	t.Helper()
+	for i, line := range lines {
+		if strings.Contains(line, text) {
+			return i
+		}
+	}
+	require.FailNow(t, "line not found", text)
+	return -1
+}
+
+// eventRecorder records what happens during a deploy, in order
+type eventRecorder struct {
+	events []string
+	mu     sync.Mutex
+}
+
+func (r *eventRecorder) record(event string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, event)
+}
+
+func (r *eventRecorder) recorded() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.events...)
+}
+
+// scriptedPipelineDeployer deploys every dependency running the script of its name, which writes to the output of
+// the deploy, and records "deployed:<name>" when it ends. A dependency without a script succeeds without output
+type scriptedPipelineDeployer struct {
+	capturingPipelineDeployer
+	scripts map[string]func(opts *pipelineCMD.DeployOptions) error
+	events  *eventRecorder
+}
+
+func (d *scriptedPipelineDeployer) ExecuteDeployPipeline(ctx context.Context, opts *pipelineCMD.DeployOptions) error {
+	err := d.capturingPipelineDeployer.ExecuteDeployPipeline(ctx, opts)
+	if script := d.scripts[opts.Name]; script != nil && err == nil {
+		err = script(opts)
+	}
+	d.events.record("deployed:" + opts.Name)
+	return err
+}
+
+// newScriptedRunCommand returns a Command whose deploy commands record "commands" when they run
+func newScriptedRunCommand(t *testing.T, section deps.ManifestSection, pipelineDeployer *scriptedPipelineDeployer) *Command {
+	t.Helper()
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		pipelineDeployer.events.record("commands")
+	}).Return(nil)
+	c := newRunWithDependenciesCommand(t, section, &capturingPipelineDeployer{}, deployer)
+	c.PipelineCMD = pipelineDeployer
+	return c
+}
+
+func TestRunShowsEveryDependencyUnderOneStageWithItsName(t *testing.T) {
+	resetLogBuffer(t)
+	t.Setenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR", "")
+	pipelineDeployer := &scriptedPipelineDeployer{events: &eventRecorder{}, scripts: map[string]func(*pipelineCMD.DeployOptions) error{
+		"db": func(opts *pipelineCMD.DeployOptions) error {
+			opts.Output.Println("creating tables")
+			opts.Output.Success("Repository 'db' successfully deployed")
+			return nil
+		},
+		"reports": func(opts *pipelineCMD.DeployOptions) error {
+			opts.Output.Spinner("Deploying repository 'reports'...")
+			opts.Output.StartSpinner()
+			opts.Output.StopSpinner()
+			opts.Output.Success("Repository 'reports' scheduled for deployment")
+			return nil
+		},
+	}}
+	c := newScriptedRunCommand(t, deps.ManifestSection{
+		"db":      &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, pipelineDeployer)
+
+	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	lines := outputLines(t, c)
+	// every line of the stage has its name in the stage field: the information line is the one with its symbol
+	requireUnderTheDependenciesStage(t, lines, "i  Deploying dependencies")
+	require.Less(t, lineIndex(t, lines, "i  Deploying dependencies"), lineIndex(t, lines, "[db]"))
+	requireUnderTheDependenciesStage(t, lines, "[db] creating tables")
+	requireUnderTheDependenciesStage(t, lines, fmt.Sprintf("[db] %s Repository 'db' successfully deployed", successSymbol()))
+	requireUnderTheDependenciesStage(t, lines, fmt.Sprintf("[reports] %s Repository 'reports' scheduled for deployment", successSymbol()))
+	// a scheduled dependency leaves a single line
+	require.NotContains(t, deployOutput(t, c), "Deploying repository 'reports'")
+	// the dependencies are announced once, not one by one
+	require.NotContains(t, deployOutput(t, c), "Deploying dependency")
+}
+
+func TestRunShowsTheLinesOfParallelDependenciesAsTheyArrive(t *testing.T) {
+	resetLogBuffer(t)
+	t.Setenv("OKTETO_DEPENDENCY_A_VARIABLE_DEP_VAR", "")
+	t.Setenv("OKTETO_DEPENDENCY_B_VARIABLE_DEP_VAR", "")
+	bLogged := make(chan struct{})
+	aLogged := make(chan struct{})
+	pipelineDeployer := &scriptedPipelineDeployer{events: &eventRecorder{}, scripts: map[string]func(*pipelineCMD.DeployOptions) error{
+		// a and b run in parallel, and their lines alternate: b1, a1, b2
+		"a": func(opts *pipelineCMD.DeployOptions) error {
+			if err := waitFor(bLogged); err != nil {
+				return err
+			}
+			opts.Output.Println("a1")
+			close(aLogged)
+			return nil
+		},
+		"b": func(opts *pipelineCMD.DeployOptions) error {
+			opts.Output.Println("b1")
+			close(bLogged)
+			if err := waitFor(aLogged); err != nil {
+				return err
+			}
+			opts.Output.Println("b2")
+			return nil
+		},
+	}}
+	c := newScriptedRunCommand(t, deps.ManifestSection{
+		"a": &deps.Dependency{Repository: "https://github.com/okteto/a", Wait: true},
+		"b": &deps.Dependency{Repository: "https://github.com/okteto/b", Wait: true},
+	}, pipelineDeployer)
+
+	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	lines := outputLines(t, c)
+	require.Less(t, lineIndex(t, lines, "[b] b1"), lineIndex(t, lines, "[a] a1"))
+	require.Less(t, lineIndex(t, lines, "[a] a1"), lineIndex(t, lines, "[b] b2"))
+}
+
+// waitFor waits until done is closed, failing after the scheduler test timeout
+func waitFor(done <-chan struct{}) error {
+	select {
+	case <-done:
+		return nil
+	case <-time.After(schedulerTestTimeout):
+		return errors.New("timed out waiting for the other dependency")
+	}
+}
+func TestRunStartsTheCommandsOnceTheDependenciesAreDeployedOrScheduled(t *testing.T) {
+	t.Setenv("OKTETO_DEPENDENCY_A_VARIABLE_DEP_VAR", "")
+	pipelineDeployer := &scriptedPipelineDeployer{events: &eventRecorder{}}
+	c := newScriptedRunCommand(t, deps.ManifestSection{
+		"a": &deps.Dependency{Repository: "https://github.com/okteto/a", Wait: true},
+		"b": &deps.Dependency{Repository: "https://github.com/okteto/b", DependsOn: deps.DependsOn{"a"}},
+	}, pipelineDeployer)
+
+	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	// a is awaited, and b is scheduled once a ends
+	require.Equal(t, []string{"deployed:a", "deployed:b", "commands"}, pipelineDeployer.events.recorded())
+	require.True(t, pipelineDeployer.captured["a"].Wait)
+	require.False(t, pipelineDeployer.captured["b"].Wait)
+}
+
+func TestRunAwaitsTheWholeChainOfAWaitTrueDependency(t *testing.T) {
+	t.Setenv("OKTETO_DEPENDENCY_A_VARIABLE_DEP_VAR", "")
+	t.Setenv("OKTETO_DEPENDENCY_B_VARIABLE_DEP_VAR", "")
+	t.Setenv("OKTETO_DEPENDENCY_C_VARIABLE_DEP_VAR", "")
+	pipelineDeployer := &scriptedPipelineDeployer{events: &eventRecorder{}}
+	c := newScriptedRunCommand(t, deps.ManifestSection{
+		"a": &deps.Dependency{Repository: "https://github.com/okteto/a", Wait: true},
+		"b": &deps.Dependency{Repository: "https://github.com/okteto/b", DependsOn: deps.DependsOn{"a"}},
+		"c": &deps.Dependency{Repository: "https://github.com/okteto/c", DependsOn: deps.DependsOn{"b"}, Wait: true},
+	}, pipelineDeployer)
+
+	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	require.Equal(t, []string{"deployed:a", "deployed:b", "deployed:c", "commands"}, pipelineDeployer.events.recorded())
+	require.True(t, pipelineDeployer.captured["b"].Wait)
+	// the deploy commands get the env vars of the wait: true dependencies and their chain
+	require.Equal(t, "b", os.Getenv("OKTETO_DEPENDENCY_B_VARIABLE_DEP_VAR"))
+}
+
+func TestRunScheduledDependencyThatCannotBeScheduledFailsBeforeTheCommands(t *testing.T) {
+	resetLogBuffer(t)
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{"reports": errors.New("failed to deploy pipeline 'reports': forbidden")}}
+	// no expectations: the deploy commands must not run
+	deployer := &fakeDeployer{}
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, pipelineDeployer, deployer)
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.EqualError(t, err, "dependency 'reports' failed: failed to deploy pipeline 'reports': forbidden")
+	require.False(t, pipelineDeployer.captured["reports"].Wait)
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
+	deployer.AssertNotCalled(t, "Get")
+	lines := outputLines(t, c)
+	requireUnderTheDependenciesStage(t, lines, "[reports] failed to deploy pipeline 'reports': forbidden")
+}
+
+func TestRunReportsEveryFailedDependency(t *testing.T) {
+	resetLogBuffer(t)
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{
+		"db":        errors.New("db exploded"),
+		"messaging": errors.New("messaging exploded"),
+	}}
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"db":        &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+		"messaging": &deps.Dependency{Repository: "https://github.com/okteto/messaging", Wait: true},
+	}, pipelineDeployer, &fakeDeployer{})
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.EqualError(t, err, "dependency 'db' failed: db exploded\ndependency 'messaging' failed: messaging exploded")
+	lines := outputLines(t, c)
+	requireUnderTheDependenciesStage(t, lines, "[db] db exploded")
+	requireUnderTheDependenciesStage(t, lines, "[messaging] messaging exploded")
+}
+
+func TestRunDependencyInterruptedDoesNotRunTheCommands(t *testing.T) {
+	resetLogBuffer(t)
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+	pipelineDeployer := &capturingPipelineDeployer{errs: map[string]error{
+		"db": fmt.Errorf("wait for pipeline 'db' to finish failed: %w", oktetoErrors.ErrIntSig),
+	}}
+	deployer := &fakeDeployer{}
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"db": &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+	}, pipelineDeployer, deployer)
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorIs(t, err, oktetoErrors.ErrIntSig)
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
+	deployer.AssertNotCalled(t, "Get")
+	// the interruption is not an error of the dependency
+	require.NotContains(t, deployOutput(t, c), "[db] wait for pipeline 'db' to finish failed")
+}
+
+func TestRunSkippedDependencyStillExportsItsEnvVars(t *testing.T) {
+	resetLogBuffer(t)
+	// restored when the test ends, and unset meanwhile: the deploy exports it
+	t.Setenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR", "")
+	require.NoError(t, os.Unsetenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR"))
+	pipelineDeployer := &scriptedPipelineDeployer{events: &eventRecorder{}, scripts: map[string]func(*pipelineCMD.DeployOptions) error{
+		"db": func(opts *pipelineCMD.DeployOptions) error {
+			opts.Output.Success("Skipping repository 'db' because it's already deployed")
+			return nil
+		},
+	}}
+	c := newScriptedRunCommand(t, deps.ManifestSection{
+		"db": &deps.Dependency{Repository: "https://github.com/okteto/db", Wait: true},
+		"reports": &deps.Dependency{
+			Repository: "https://github.com/okteto/reports",
+			DependsOn:  deps.DependsOn{"db"},
+			Variables:  env.Environment{{Name: "FROM_DB", Value: "${OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR}"}},
+		},
+	}, pipelineDeployer)
+
+	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	requireUnderTheDependenciesStage(t, outputLines(t, c), fmt.Sprintf("[db] %s Skipping repository 'db' because it's already deployed", successSymbol()))
+	require.Equal(t, "db", os.Getenv("OKTETO_DEPENDENCY_DB_VARIABLE_DEP_VAR"))
+	require.Contains(t, pipelineDeployer.captured["reports"].Variables, "FROM_DB=db")
+}
+
+func TestRunRecordsTheErrorWhenTheDeployedResourcesCannotBeListed(t *testing.T) {
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, &capturingPipelineDeployer{}, deployer)
+	client, _, err := c.K8sClientProvider.ProvideWithLogger(clientcmdapi.NewConfig(), nil)
+	require.NoError(t, err)
+	client.(*fake.Clientset).PrependReactor("list", "deployments", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("deployments is forbidden")
+	})
+
+	err = c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorContains(t, err, "deployments is forbidden")
+	// the deploy commands ran: the deploy doesn't stay in progress
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
+}
+
+func TestRunMainDeployFailureEndsTheOutputRightAfterTheCommands(t *testing.T) {
+	resetLogBuffer(t)
+	t.Cleanup(func() { oktetoLog.SetStage("") })
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		oktetoLog.SetStage("echo")
+	}).Return(errors.New("main exploded"))
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{
+		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+	}, &capturingPipelineDeployer{}, deployer)
+
+	err := c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"})
+
+	require.ErrorContains(t, err, "main exploded")
+	requireDeployStatus(t, c, pipeline.ErrorStatus)
+	lines := outputLines(t, c)
+	require.Contains(t, lines[len(lines)-2], `"stage":"done","message":"EOF"`)
+	require.Contains(t, lines[len(lines)-1], `"level":"error","stage":"done","message":"main exploded"`)
 }

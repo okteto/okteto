@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -358,6 +359,42 @@ services:
 		t.Errorf("'db.resources.memory' was not parsed: %+v", s)
 	}
 	assert.Equal(t, string(manifest), string(s.Manifest))
+}
+
+func Test_ReadStackComposeInterpolatedTypes(t *testing.T) {
+	t.Setenv("REPLICAS", "3")
+	t.Setenv("PUBLIC", "true")
+	t.Setenv("SCALE", "2")
+	t.Setenv("VERSION", "1.10")
+	t.Setenv("ZIP", "0123")
+	t.Setenv("ANSWER", "yes")
+	manifest := []byte(`services:
+  app:
+    image: okteto/vote:1
+    public: ${PUBLIC}
+    deploy:
+      replicas: ${REPLICAS}
+    environment:
+      VERSION: ${VERSION}
+      ZIP: ${ZIP}
+      ANSWER: ${ANSWER}
+      QUOTED: "${REPLICAS}"
+  worker:
+    image: okteto/vote:1
+    scale: ${SCALE}`)
+	s, err := ReadStack(manifest, true)
+	require.NoError(t, err)
+
+	app := s.Services["app"]
+	assert.Equal(t, int32(3), app.Replicas)
+	assert.True(t, app.Public)
+	assert.Equal(t, env.Environment{
+		{Name: "ANSWER", Value: "yes"},
+		{Name: "QUOTED", Value: "3"},
+		{Name: "VERSION", Value: "1.10"},
+		{Name: "ZIP", Value: "0123"},
+	}, app.Environment)
+	assert.Equal(t, int32(2), s.Services["worker"].Replicas)
 }
 
 func TestStack_validate(t *testing.T) {
@@ -818,6 +855,43 @@ func TestStack_Merge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStack_MergeKeepsBaseVolumesAndEndpoints(t *testing.T) {
+	base := &Stack{
+		Volumes: map[string]*VolumeSpec{
+			"db-data":    {Size: Quantity{Value: resource.MustParse("1Gi")}},
+			"cache-data": {Size: Quantity{Value: resource.MustParse("1Gi")}},
+		},
+		Endpoints: EndpointSpec{
+			"api": {Rules: []EndpointRule{{Path: "/api", Service: "api", Port: 8080}}},
+		},
+		Services: map[string]*Service{},
+	}
+	override := &Stack{
+		Volumes: map[string]*VolumeSpec{
+			"cache-data": {Size: Quantity{Value: resource.MustParse("5Gi")}},
+			"logs":       {Size: Quantity{Value: resource.MustParse("2Gi")}},
+		},
+		Endpoints: EndpointSpec{
+			"web": {Rules: []EndpointRule{{Path: "/", Service: "web", Port: 80}}},
+		},
+		Services: map[string]*Service{},
+	}
+
+	result := base.Merge(override)
+
+	expectedVolumes := map[string]*VolumeSpec{
+		"db-data":    {Size: Quantity{Value: resource.MustParse("1Gi")}},
+		"cache-data": {Size: Quantity{Value: resource.MustParse("5Gi")}},
+		"logs":       {Size: Quantity{Value: resource.MustParse("2Gi")}},
+	}
+	expectedEndpoints := EndpointSpec{
+		"api": {Rules: []EndpointRule{{Path: "/api", Service: "api", Port: 8080}}},
+		"web": {Rules: []EndpointRule{{Path: "/", Service: "web", Port: 80}}},
+	}
+	assert.Equal(t, expectedVolumes, result.Volumes)
+	assert.Equal(t, expectedEndpoints, result.Endpoints)
 }
 
 func TestStack_MergeIdentityToken(t *testing.T) {
@@ -1754,4 +1828,19 @@ func Test_warnAboutComposeFileName(t *testing.T) {
 	warnAboutComposeFileName("stack.yml")
 	assert.Equal(t, writer.String(), " !  Okteto Stack syntax is deprecated.\n    Please consider migrating to Docker Compose syntax: https://community.okteto.com/t/important-update-migrating-from-okteto-stacks-to-docker-compose/1262\n")
 	writer.Reset()
+}
+
+func TestService_ToDevPortForwards(t *testing.T) {
+	// compose "ports: [8080:80, 9090]": 8080 is the host port, 80 and 9090 are container ports
+	svc := &Service{
+		Ports: []Port{
+			{HostPort: 8080, ContainerPort: 80},
+			{ContainerPort: 9090},
+		},
+	}
+
+	dev, err := svc.ToDev("api")
+
+	require.NoError(t, err)
+	require.Equal(t, []forward.Forward{{Local: 8080, Remote: 80}}, dev.Forward)
 }

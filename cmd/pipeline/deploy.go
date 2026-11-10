@@ -57,6 +57,9 @@ var (
 	// existingDeployPollInterval is how often the status of a deploy already in progress is checked
 	existingDeployPollInterval = 1 * time.Second
 
+	// resourcesPollInterval is how often the health check looks at the resources of a deploy
+	resourcesPollInterval = 1 * time.Second
+
 	errUnableToReuseParams = errors.New("development environment not found: unable to use --reuse-params option")
 )
 
@@ -92,14 +95,11 @@ type DeployOptions struct {
 	ReuseParams          bool
 	RedeployDependencies bool
 	IsDependency         bool
-	// SkipResourcesCheck returns as soon as the pipeline finishes, without waiting for its resources to be running
-	SkipResourcesCheck bool
-	// PrefixLogs prints every message and log line as "[Name] line", without spinner, so that
-	// pipelines deployed in parallel can be told apart
-	PrefixLogs        bool
-	DependenciesIsSet bool
-	WorkflowID        string
-	ParentWorkflowID  string
+	DependenciesIsSet    bool
+	WorkflowID           string
+	ParentWorkflowID     string
+	// Output receives the messages and log lines of the deploy. They are printed by the global logger when it's nil
+	Output DeployOutput
 }
 
 func deploy(ctx context.Context, at pipelineAnalyticsTracker) *cobra.Command {
@@ -212,7 +212,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 				ID:   cfg.Data["actionLock"],
 				Name: cfg.Data["actionName"],
 			}
-			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout, opts.SkipResourcesCheck, out); err != nil {
+			if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout, out); err != nil {
 				return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 			}
 			out.Success(fmt.Sprintf("Repository '%s' successfully deployed", opts.Name))
@@ -272,7 +272,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	out.StartSpinner()
 	defer out.StopSpinner()
 
-	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout, opts.SkipResourcesCheck, out); err != nil {
+	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout, out); err != nil {
 		return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 	}
 
@@ -281,7 +281,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 }
 
 // waitForExistingDeploy waits for a deploy of the pipeline that is already in progress and whose logs can't be
-// streamed: until its configmap is deployed (and its resources running, unless SkipResourcesCheck) or failed
+// streamed: until its configmap is deployed and its resources running, or failed
 func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Interface, cfgName string, opts *DeployOptions) error {
 	// the health check runs with this context too, so a Ctrl+C stops the whole wait
 	sigCtx, stopNotify := signal.NotifyContext(ctx, os.Interrupt)
@@ -317,9 +317,6 @@ func (pc *Command) waitForExistingDeploy(ctx context.Context, c kubernetes.Inter
 			}
 			switch cfg.Data["status"] {
 			case pipeline.DeployedStatus:
-				if opts.SkipResourcesCheck {
-					return nil
-				}
 				// the health check gets the time left, so the whole wait is bounded by the timeout
 				left := time.Until(deadline)
 				if left <= 0 {
@@ -352,7 +349,7 @@ func shouldRedeployDependencies(opts *DeployOptions) bool {
 	return true
 }
 
-func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out deployOutput) (*types.GitDeployResponse, error) {
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out DeployOutput) (*types.GitDeployResponse, error) {
 	out.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
 	out.StartSpinner()
 	defer out.StopSpinner()
@@ -392,21 +389,21 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions, out 
 	return resp, nil
 }
 
-func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration, out deployOutput) error {
+func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration, out DeployOutput) error {
 	// wait for the Action to be progressing
 	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
 		return err
 	}
 
-	// a dependency's warnings about the connection get its prefix and stage, like its lines
+	// the warnings about the connection go to the deploy output, like the lines
 	return pc.okClient.Stream().PipelineLogsTo(ctx, name, namespace, actionName, timeout, out.Println, out.Warning)
 }
 
-func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, skipResourcesCheck bool, out deployOutput) error {
+func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration, out DeployOutput) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
-	// no goroutine outlives the wait, whatever the way out: they write into the deploy output, which is read
-	// once the wait returns. They stop within a poll interval once cancelled
+	// no goroutine outlives the wait, whatever the way out: they write into the deploy output, and nothing is
+	// written there once the deploy has returned. They stop within a poll interval once cancelled
 	defer func() {
 		ctxCancel()
 		wg.Wait()
@@ -446,10 +443,6 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 			exit <- err
 			return
 		}
-		if skipResourcesCheck {
-			exit <- nil
-			return
-		}
 
 		out.Spinner("Waiting for containers to be healthy...")
 		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, namespace, timeout)
@@ -484,7 +477,7 @@ func (pc *Command) waitToBeDeployed(ctx context.Context, name, namespace string,
 }
 
 func (pc *Command) waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(resourcesPollInterval)
 	to := time.NewTicker(timeout)
 
 	for {

@@ -1,7 +1,7 @@
 # Base image versions - Centralized version control for easier updates
 # Kubernetes tools (kubectl, Helm 3, Helm 4, kustomize)
-ARG KUBECTL_VERSION=1.35.9
-ARG HELM3_VERSION=3.22.0
+ARG KUBECTL_VERSION=1.35.10
+ARG HELM3_VERSION=3.22.1
 ARG HELM4_VERSION=4.2.4
 ARG KUSTOMIZE_VERSION=5.8.2
 # Okteto components
@@ -15,7 +15,7 @@ ARG ALPINE_SHA=sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8
 ARG BUSYBOX_VERSION=1.36.1
 ARG BUSYBOX_SHA=sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
 ARG DEBIAN_BOOKWORM_SLIM_SHA=sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
-ARG GIT_VERSION=2.42.0
+ARG GIT_VERSION=2.56.0
 # Minimum ca-certificates: 20261020-r0 drops the emSign roots behind the eMudhra compromise (CVE-2026-111943)
 ARG CA_CERTIFICATES_MIN_VERSION=20261020-r0
 
@@ -122,7 +122,7 @@ RUN curl -sLf --retry 3 -o helm.tar.gz \
 # Stage 3.4: Download git (Version control system)
 FROM debian:bookworm-slim@${DEBIAN_BOOKWORM_SLIM_SHA} AS git-builder
 
-ARG GIT_VERSION="2.42.0"
+ARG GIT_VERSION
 ENV CC=gcc
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -142,9 +142,11 @@ RUN make configure \
  && ./configure --prefix=/usr \
       CFLAGS="-static" LDFLAGS="-static" \
       NO_GETTEXT=YesPlease NO_PYTHON=YesPlease \
- && make -j"$(nproc)" \
- && make install \
+ && make NO_RUST=YesPlease -j"$(nproc)" \
+ && make NO_RUST=YesPlease install \
  && strip /usr/bin/git \
+ # Verify binary works
+ && /usr/bin/git --version | grep -qF "git version ${GIT_VERSION}" \
  && rm -rf /usr/src/git
 
 # Stage 4: Build the Okteto CLI

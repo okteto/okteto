@@ -129,7 +129,7 @@ func TestDeployFailureDoesNotEndTheOutput(t *testing.T) {
 	err := newLocalDeployer(r).Deploy(context.Background(), opts)
 
 	require.ErrorIs(t, err, assert.AnError)
-	// the deploy command ends the output once the dependencies running meanwhile have finished
+	// the deploy command ends the output, as it does on success
 	require.Equal(t, "test command", oktetoLog.GetStage())
 	require.NotContains(t, oktetoLog.GetOutputBuffer().String(), "EOF")
 }

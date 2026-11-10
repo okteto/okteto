@@ -91,7 +91,6 @@ func Test_initCache(t *testing.T) {
 	assert.Equal(t, map[string]*networkingv1.Ingress{"i1": i1}, d.cache.developerIngresses)
 	assert.Equal(t, map[string]*networkingv1.Ingress{"i3": i3}, d.cache.divertIngresses)
 	assert.Equal(t, map[string]*apiv1.Service{"s1": s1}, d.cache.developerServices)
-	assert.Equal(t, map[string]*apiv1.Service{"s3": s3}, d.cache.divertServices)
 	assert.Equal(t, map[string]*k8s.Divert{"test-divert-1": div}, d.cache.divertResources)
 
 	divertManager.AssertExpectations(t)

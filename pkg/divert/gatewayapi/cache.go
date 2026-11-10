@@ -24,7 +24,6 @@ import (
 
 type cache struct {
 	divertIngresses    map[string]*networkingv1.Ingress
-	divertServices     map[string]*apiv1.Service
 	developerIngresses map[string]*networkingv1.Ingress
 	developerServices  map[string]*apiv1.Service
 	divertResources    map[string]*k8s.Divert
@@ -33,7 +32,6 @@ type cache struct {
 func (d *Driver) initCache(ctx context.Context) error {
 	d.cache = &cache{
 		divertIngresses:    map[string]*networkingv1.Ingress{},
-		divertServices:     map[string]*apiv1.Service{},
 		developerIngresses: map[string]*networkingv1.Ingress{},
 		developerServices:  map[string]*apiv1.Service{},
 		divertResources:    map[string]*k8s.Divert{},
@@ -47,15 +45,6 @@ func (d *Driver) initCache(ctx context.Context) error {
 		d.cache.divertIngresses[iList.Items[i].Name] = &iList.Items[i]
 	}
 
-	// Service cache for diverted namespace
-	sList, err := d.client.CoreV1().Services(d.divert.Namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for i := range sList.Items {
-		d.cache.divertServices[sList.Items[i].Name] = &sList.Items[i]
-	}
-
 	// Ingress cache for developer namespace
 	iList, err = d.client.NetworkingV1().Ingresses(d.namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -66,7 +55,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 
 	// Service cache for developer namespace
-	sList, err = d.client.CoreV1().Services(d.namespace).List(ctx, metav1.ListOptions{})
+	sList, err := d.client.CoreV1().Services(d.namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

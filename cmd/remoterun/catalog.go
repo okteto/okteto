@@ -135,8 +135,13 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	for _, v := range variables.Unresolved {
-		oktetoLog.WarningWithStage(catalogSecretVariablesStage, fmt.Sprintf("%s. The commands run without it", unresolvedCatalogSecretVariableMessage(v)))
+	if len(variables.Unresolved) > 0 {
+		stage := oktetoLog.GetStage()
+		oktetoLog.SetStage(catalogSecretVariablesStage)
+		for _, v := range variables.Unresolved {
+			oktetoLog.Warning("%s. The commands run without it", unresolvedCatalogSecretVariableMessage(v))
+		}
+		oktetoLog.SetStage(stage)
 	}
 
 	vars := make([]string, 0, len(variables.Variables))
