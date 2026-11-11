@@ -262,6 +262,28 @@ func TestCatalogSecretVariablesLogsOtherErrors(t *testing.T) {
 	}
 }
 
+func TestCatalogSecretVariablesSkipsThemAllWithInvalidNamesOnForceDestroy(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(&client.FakeUserClient{
+		CatalogSecretVariables: types.CatalogSecretVariables{
+			Variables: []types.CatalogSecretVariable{
+				{Name: "VALID", Value: "value"},
+				{Name: "OKTETO_TOKEN", Value: "value"},
+			},
+		},
+	}, catalog.DestroyPhase)
+	c.forceDestroy = true
+
+	got, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Nil(t, got)
+	require.Equal(t, []oktetoLog.JSONLogFormat{
+		catalogWarning(`Catalog variable "OKTETO_TOKEN" can't be injected: names starting with OKTETO_ are reserved`),
+		catalogWarning("Running the destroy commands without the catalog secret variables: the catalog secret variables have invalid names"),
+	}, warnings(jsonLogs(t, out)))
+}
+
 func TestCatalogSecretVariablesRejectsInvalidNames(t *testing.T) {
 	tests := []struct {
 		name     string

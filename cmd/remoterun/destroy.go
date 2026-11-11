@@ -128,6 +128,8 @@ It is important that this command does the minimum and must not do calculations 
 				return err
 			}
 
+			secretVariables.forceDestroy = options.ForceDestroy
+
 			c := &DestroyCommand{
 				runner:                 runner,
 				catalogSecretVariables: secretVariables,
@@ -177,7 +179,8 @@ func (c *DestroyCommand) Run(ctx context.Context, params deployable.DestroyParam
 		}
 	}
 
-	// No command runs if the catalog secret variables can't be got
+	// No command runs if the catalog secret variables can't be got, unless the destroy is forced: then the commands run
+	// without them
 	catalogVars, err := c.catalogSecretVariables.get(ctx)
 	if err != nil {
 		return err

@@ -43,6 +43,10 @@ const (
 	// SecretVariablesEndpointFlag is the remote-run flag with the URL it gets the values of the secret variables from
 	SecretVariablesEndpointFlag = "catalog-secret-variables-endpoint"
 
+	// SecretVariablesStage is the log stage of the errors and warnings about the catalog secret variables. The json
+	// output drops the lines logged without a stage
+	SecretVariablesStage = "Load catalog secret variables"
+
 	// The installer doesn't clone the repository on force destroy, so no destroy command runs
 	forceDestroyHint = "Use force destroy to remove the development environment anyway: it deletes its resources without running the destroy commands"
 )

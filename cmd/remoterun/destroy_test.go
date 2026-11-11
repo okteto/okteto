@@ -116,11 +116,33 @@ func TestRunDoesNotDestroyWhenCatalogSecretVariablesFail(t *testing.T) {
 		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase),
 	}
 
-	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy", ForceDestroy: true})
+	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy"})
 
 	require.ErrorIs(t, err, okteto.ErrCatalogSecretVariablesDisabled)
 	runner.AssertNotCalled(t, "RunDestroy", mock.Anything)
 	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.ErrorLevel, "secret variables are disabled on this installation"))
+}
+
+func TestRunForceDestroysWithoutTheCatalogSecretVariablesWhenTheyFail(t *testing.T) {
+	setTestOktetoContext(t)
+	out := captureJSONLogs(t)
+	runner := &fakeDestroyRunner{}
+	secretVariables := newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase)
+	secretVariables.forceDestroy = true
+	command := &DestroyCommand{
+		runner:                 runner,
+		catalogSecretVariables: secretVariables,
+	}
+	runner.On("RunDestroy", deployable.DestroyParameters{Name: "test-destroy", ForceDestroy: true}).Return(nil)
+
+	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy", ForceDestroy: true})
+
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+	require.Equal(t, []oktetoLog.JSONLogFormat{
+		catalogWarning("Running the destroy commands without the catalog secret variables: secret variables are disabled on this installation"),
+	}, warnings(jsonLogs(t, out)))
+	require.NotContains(t, jsonLogs(t, out), catalogLog(oktetoLog.ErrorLevel, "secret variables are disabled on this installation"))
 }
 
 func TestRunDestroysWithoutTheUnresolvedCatalogSecretVariables(t *testing.T) {

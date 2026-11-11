@@ -31,7 +31,7 @@ const (
 	// catalogSecretVariablesStage is the stage of the errors getting the secret
 	// variables. The deploy or destroy running remote-run drops the lines
 	// logged without a stage
-	catalogSecretVariablesStage = "Load catalog secret variables"
+	catalogSecretVariablesStage = catalog.SecretVariablesStage
 
 	// reservedVariablePrefix is the prefix of the variables set by Okteto, such
 	// as OKTETO_TOKEN, that a catalog item must not override
@@ -63,6 +63,9 @@ type catalogSecretVariables struct {
 	endpoint string
 	// phase is the operation whose commands get the variables
 	phase catalog.Phase
+	// forceDestroy runs the destroy commands without the variables when they
+	// can't be got, as a forced destroy runs them despite their errors
+	forceDestroy bool
 }
 
 // unresolvedCatalogSecretVariablesError is returned when some secret variables
@@ -130,6 +133,10 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 	if err == nil {
 		err = validateCatalogSecretVariableNames(variables.Variables)
 	}
+	if err != nil && c.forceDestroy {
+		c.logSkipped(err)
+		return nil, nil
+	}
 	if err != nil {
 		c.logError(err)
 		return nil, err
@@ -183,6 +190,21 @@ func (c catalogSecretVariables) logError(err error) {
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint()))
 	}
 	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", err.Error())
+}
+
+// logSkipped logs, as warnings, why a forced destroy runs its commands without
+// the catalog secret variables
+func (catalogSecretVariables) logSkipped(err error) {
+	stage := oktetoLog.GetStage()
+	oktetoLog.SetStage(catalogSecretVariablesStage)
+	var invalidNames invalidCatalogSecretVariableNamesError
+	if errors.As(err, &invalidNames) {
+		for _, line := range invalidNames.lines {
+			oktetoLog.Warning("%s", line)
+		}
+	}
+	oktetoLog.Warning("Running the destroy commands without the catalog secret variables: %s", err)
+	oktetoLog.SetStage(stage)
 }
 
 func unresolvedCatalogSecretVariableMessage(v types.UnresolvedCatalogSecretVariable) string {

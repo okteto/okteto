@@ -14,14 +14,19 @@
 package destroy
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -125,6 +130,78 @@ func TestDestroyFailsBeforeAnyCommandWhenCatalogSecretVariablesCannotBeRead(t *t
 	require.Empty(t, cd.executor.executed)
 	require.False(t, cd.destroyer.destroyed)
 	cd.requireStatus(t, pipeline.ErrorStatus)
+}
+
+// captureJSONLogs sends the okteto logger output to the returned buffer in json, which drops the lines logged without
+// a stage, until the test finishes. The stage starts empty, as other tests leave theirs set
+func captureJSONLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	out := &bytes.Buffer{}
+	oktetoLog.SetStage("")
+	oktetoLog.Init(logrus.InfoLevel)
+	oktetoLog.SetOutputFormat(oktetoLog.JSONFormat)
+	oktetoLog.SetOutput(out)
+	t.Cleanup(func() {
+		oktetoLog.SetStage("")
+		oktetoLog.DisableMasking()
+		oktetoLog.Init(logrus.InfoLevel)
+	})
+	return out
+}
+
+// catalogStageLogs returns the json lines logged to out under the stage of the catalog secret variables, without
+// their timestamp
+func catalogStageLogs(out *bytes.Buffer) []oktetoLog.JSONLogFormat {
+	var lines []oktetoLog.JSONLogFormat
+	scanner := bufio.NewScanner(out)
+	for scanner.Scan() {
+		var line oktetoLog.JSONLogFormat
+		if json.Unmarshal(scanner.Bytes(), &line) != nil || line.Stage != catalog.SecretVariablesStage {
+			continue
+		}
+		line.Timestamp = 0
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+func TestDestroyLogsTheFailedCatalogSecretVariablesCheckUnderItsStage(t *testing.T) {
+	cd := newCatalogDestroy(t)
+	out := captureJSONLogs(t)
+
+	err := cd.cmd.destroy(context.Background(), &Options{
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(false),
+		CatalogSecretVariables: testCatalogSecretVariables,
+	})
+
+	require.ErrorIs(t, err, catalog.ErrSecretVariablesNeedRemote)
+	require.Equal(t, []oktetoLog.JSONLogFormat{
+		{Level: oktetoLog.InfoLevel, Stage: catalog.SecretVariablesStage, Message: "the development environment has catalog secret variables: API_TOKEN"},
+		{Level: oktetoLog.InfoLevel, Stage: catalog.SecretVariablesStage, Message: "Destruction failed: " + catalog.ErrSecretVariablesNeedRemote.Error()},
+	}, catalogStageLogs(out))
+	require.Equal(t, catalog.SecretVariablesStage, oktetoLog.GetStage())
+}
+
+func TestForceDestroyWarnsUnderTheCatalogSecretVariablesStageWhenTheCheckFails(t *testing.T) {
+	cd := newCatalogDestroy(t)
+	out := captureJSONLogs(t)
+
+	err := cd.cmd.destroy(context.Background(), &Options{
+		Name:                   "test-app",
+		Namespace:              "namespace",
+		Manifest:               catalogManifest(false),
+		CatalogSecretVariables: testCatalogSecretVariables,
+		ForceDestroy:           true,
+	})
+
+	require.NoError(t, err)
+	require.Contains(t, catalogStageLogs(out), oktetoLog.JSONLogFormat{
+		Level:   oktetoLog.WarningLevel,
+		Stage:   catalog.SecretVariablesStage,
+		Message: " !  Running the destroy commands without the catalog secret variables: " + catalog.ErrSecretVariablesNeedRemote.Error(),
+	})
 }
 
 func TestForceDestroyForwardsTheCatalogSecretVariablesWhenTheCheckPasses(t *testing.T) {

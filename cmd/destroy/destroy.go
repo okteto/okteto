@@ -470,12 +470,16 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
+	// no stage is set yet, and the json output drops the lines logged without one. On an error, the stage stays set
+	// for the error status and the error the command ends with
+	oktetoLog.SetStage(catalog.SecretVariablesStage)
 	if err := checkCatalogSecretVariables(opts); err != nil {
 		if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
 	}
+	oktetoLog.SetStage("")
 
 	if opts.DestroyDependencies {
 		if err := dc.destroyDependencies(ctx, opts); err != nil {
