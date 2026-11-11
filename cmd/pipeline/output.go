@@ -14,15 +14,11 @@
 package pipeline
 
 import (
-	"fmt"
-	"strings"
-	"sync"
-
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-// deployOutput prints the messages and logs of a pipeline deploy
-type deployOutput interface {
+// DeployOutput receives the messages and log lines of a pipeline deploy
+type DeployOutput interface {
 	Spinner(msg string)
 	StartSpinner()
 	StopSpinner()
@@ -31,35 +27,12 @@ type deployOutput interface {
 	Println(line string)
 }
 
-func newDeployOutput(opts *DeployOptions) deployOutput {
-	if opts.PrefixLogs {
-		return &prefixedDeployOutput{
-			prefix:  opts.Name,
-			stage:   DependencyStage(opts.Name),
-			printer: globalLinePrinter(),
-		}
+// newDeployOutput returns the output of the deploy: the one in the options, or the global logger
+func newDeployOutput(opts *DeployOptions) DeployOutput {
+	if opts.Output != nil {
+		return opts.Output
 	}
 	return globalDeployOutput{}
-}
-
-// DependencyStage is the log stage of the messages of a dependency
-func DependencyStage(name string) string {
-	return fmt.Sprintf("Deploying dependency %s", name)
-}
-
-// linePrinter prints a single line keeping its log level, recorded under the given stage
-type linePrinter struct {
-	println func(stage, line string)
-	success func(stage, line string)
-	warning func(stage, line string)
-}
-
-func globalLinePrinter() linePrinter {
-	return linePrinter{
-		println: oktetoLog.PrintlnWithStage,
-		success: oktetoLog.SuccessWithStage,
-		warning: oktetoLog.WarningWithStage,
-	}
 }
 
 // globalDeployOutput prints through the global logger, with spinner. It is the default output
@@ -71,35 +44,3 @@ func (globalDeployOutput) StopSpinner()        { oktetoLog.StopSpinner() }
 func (globalDeployOutput) Success(msg string)  { oktetoLog.Success("%s", msg) }
 func (globalDeployOutput) Warning(msg string)  { oktetoLog.Warning("%s", msg) }
 func (globalDeployOutput) Println(line string) { oktetoLog.Println(line) }
-
-// prefixedOutputMu serializes the lines printed by pipelines deployed in parallel.
-// It is global because it guards a process-wide resource: the global logger
-var prefixedOutputMu sync.Mutex
-
-// prefixedDeployOutput prints every message and log line as "[prefix] line", without spinner, recorded
-// under its own stage. It is used when pipelines are deployed in parallel and their output is interleaved:
-// the global stage belongs to the main deploy
-type prefixedDeployOutput struct {
-	printer linePrinter
-	prefix  string
-	stage   string
-}
-
-// Spinner prints the message once: a spinner can't represent several pipelines at the same time
-func (o *prefixedDeployOutput) Spinner(msg string) { o.print(o.printer.println, msg) }
-func (*prefixedDeployOutput) StartSpinner()        {}
-func (*prefixedDeployOutput) StopSpinner()         {}
-func (o *prefixedDeployOutput) Success(msg string) { o.print(o.printer.success, msg) }
-func (o *prefixedDeployOutput) Warning(msg string) { o.print(o.printer.warning, msg) }
-func (o *prefixedDeployOutput) Println(line string) {
-	o.print(o.printer.println, line)
-}
-
-// print prefixes every line of msg and prints them together, so lines from other pipelines can't get in between
-func (o *prefixedDeployOutput) print(printFn func(stage, line string), msg string) {
-	prefixedOutputMu.Lock()
-	defer prefixedOutputMu.Unlock()
-	for _, line := range strings.Split(strings.TrimRight(msg, "\r\n"), "\n") {
-		printFn(o.stage, fmt.Sprintf("[%s] %s", o.prefix, strings.TrimRight(line, "\r")))
-	}
-}

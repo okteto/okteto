@@ -19,8 +19,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/constants"
@@ -109,6 +111,10 @@ type DeployParameters struct {
 	ManifestPath string
 	Deployable   Entity
 	Variables    []string
+	// CatalogSecretVariables are the "key=value" secret variables of the
+	// catalog item. They are added only to the env of the commands, after the
+	// platform variables, and never persisted
+	CatalogSecretVariables []string
 	// platformVariables are the entries of Variables provided by the platform
 	platformVariables []string
 }
@@ -276,6 +282,7 @@ func (r *DeployRunner) RunDeploy(ctx context.Context, params DeployParameters) e
 	defer cleanupPlatformEnv()
 	params.Variables = append(params.Variables, platformVars...)
 	params.platformVariables = platformVars
+	params.Variables = appendCatalogSecretVariables(params.Variables, params.CatalogSecretVariables)
 
 	// Set up helm version based on environment variable
 	if err := setupHelmVersion(); err != nil {
@@ -336,8 +343,8 @@ func (r *DeployRunner) runCommandsSection(ctx context.Context, params DeployPara
 			oktetoLog.Infof("error adding phase to configmap: %s", err)
 		}
 	}
-	// Platform variables are scoped to the commands of this execution
-	persistedVars := withoutVariables(params.Variables, params.platformVariables)
+	// Platform and catalog secret variables are scoped to the commands of this execution
+	persistedVars := withoutVariables(params.Variables, slices.Concat(params.platformVariables, params.CatalogSecretVariables))
 	err = r.ConfigMapHandler.UpdateEnvsFromCommands(ctx, params.Name, params.Namespace, persistedVars)
 	if err != nil {
 		oktetoLog.SetStage(oktetoLog.UnexpectedErrorStage)
@@ -474,4 +481,35 @@ func withoutVariables(vars, exclude []string) []string {
 		}
 	}
 	return result
+}
+
+// appendCatalogSecretVariables masks the values of the catalog secret
+// variables, whatever their length, and appends them to vars. Masking has to
+// be enabled afterwards to apply to them
+func appendCatalogSecretVariables(vars, secretVars []string) []string {
+	for _, v := range secretVars {
+		_, value, _ := strings.Cut(v, "=")
+		maskCatalogSecretValue(value)
+	}
+	return append(vars, secretVars...)
+}
+
+// maskCatalogSecretValue masks value and, when it has several lines, each line with a letter or a digit, whatever
+// its length: the output of the commands is masked line by line, so the whole value never matches. Lines like "}"
+// stay unmasked, so they don't mask every brace of the output
+func maskCatalogSecretValue(value string) {
+	oktetoLog.AddMaskedSecret(value)
+	lines := strings.Split(strings.ReplaceAll(value, "\r\n", "\n"), "\n")
+	if len(lines) == 1 {
+		return
+	}
+	for _, line := range lines {
+		if strings.IndexFunc(line, isLetterOrDigit) != -1 {
+			oktetoLog.AddMaskedSecret(line)
+		}
+	}
+}
+
+func isLetterOrDigit(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

@@ -331,22 +331,6 @@ func Println(args ...interface{}) {
 	log.writer.Println(msg)
 }
 
-// PrintlnWithStage writes a line recorded under stage instead of the current stage of the logger.
-// It is used by dependencies deployed in parallel with the main deploy, whose stage keeps changing
-func PrintlnWithStage(stage, line string) {
-	log.writer.PrintlnWithStage(stage, redactMessage(line))
-}
-
-// SuccessWithStage prints a success message recorded under stage instead of the current stage of the logger
-func SuccessWithStage(stage, msg string) {
-	log.writer.SuccessWithStage(stage, msg)
-}
-
-// WarningWithStage prints a warning message recorded under stage instead of the current stage of the logger
-func WarningWithStage(stage, msg string) {
-	log.writer.WarningWithStage(stage, msg)
-}
-
 // FPrintln writes a line with colors to specific writer
 func FPrintln(w io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
@@ -375,11 +359,22 @@ func IsInteractive() bool {
 
 // AddMaskedWord adds a new word to be redacted, only if longer than 5 chars
 func AddMaskedWord(word string) {
+	addMaskedWord(word, false)
+}
+
+// AddMaskedSecret adds a secret value to be redacted whatever its length.
+// The lines of a multiline value are still redacted only if longer than 5
+// chars, so a line like "}" doesn't redact every brace of the output
+func AddMaskedSecret(value string) {
+	addMaskedWord(value, true)
+}
+
+func addMaskedWord(word string, always bool) {
 	clean := strings.TrimSpace(word)
 
 	// only mask words longer than 5 chars (i.e. 'true' and 'false' won't be masked)
 	minCharsToMask := 5
-	if len(clean) <= minCharsToMask {
+	if clean == "" || (!always && len(clean) <= minCharsToMask) {
 		return
 	}
 	log.mu.Lock()

@@ -344,6 +344,16 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
+	// Endpoint rules reference services by their original name, so point them
+	// to the sanitized name too or the endpoint never matches its service.
+	for _, endpoint := range s.Endpoints {
+		for i, rule := range endpoint.Rules {
+			if newName, ok := sanitizedServicesNames[rule.Service]; ok {
+				endpoint.Rules[i].Service = newName
+			}
+		}
+	}
+
 	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
 	s.Warnings.SanitizedServices = sanitizedServicesNames
 	s.Warnings.VolumeMountWarnings = make([]string, 0)

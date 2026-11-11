@@ -18,8 +18,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/deployable"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -79,4 +83,105 @@ func TestRun_DestroyCommand(t *testing.T) {
 		})
 	}
 
+}
+
+func TestRunDestroysWithTheCatalogSecretVariables(t *testing.T) {
+	setTestOktetoContext(t)
+	runner := &fakeDestroyRunner{}
+	command := &DestroyCommand{
+		runner: runner,
+		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{
+			CatalogSecretVariables: types.CatalogSecretVariables{
+				Variables: []types.CatalogSecretVariable{{Name: "API_TOKEN", Value: "abc"}},
+			},
+		}, catalog.DestroyPhase),
+	}
+	runner.On("RunDestroy", deployable.DestroyParameters{
+		Name:                   "test-destroy",
+		CatalogSecretVariables: []string{"API_TOKEN=abc"},
+	}).Return(nil)
+
+	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy"})
+
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+}
+
+func TestRunDoesNotDestroyWhenCatalogSecretVariablesFail(t *testing.T) {
+	setTestOktetoContext(t)
+	out := captureJSONLogs(t)
+	runner := &fakeDestroyRunner{}
+	command := &DestroyCommand{
+		runner:                 runner,
+		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase),
+	}
+
+	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy"})
+
+	require.ErrorIs(t, err, okteto.ErrCatalogSecretVariablesDisabled)
+	runner.AssertNotCalled(t, "RunDestroy", mock.Anything)
+	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.ErrorLevel, "secret variables are disabled on this installation"))
+}
+
+func TestRunForceDestroysWithoutTheCatalogSecretVariablesWhenTheyFail(t *testing.T) {
+	setTestOktetoContext(t)
+	out := captureJSONLogs(t)
+	runner := &fakeDestroyRunner{}
+	secretVariables := newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase)
+	secretVariables.forceDestroy = true
+	command := &DestroyCommand{
+		runner:                 runner,
+		catalogSecretVariables: secretVariables,
+	}
+	runner.On("RunDestroy", deployable.DestroyParameters{Name: "test-destroy", ForceDestroy: true}).Return(nil)
+
+	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy", ForceDestroy: true})
+
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+	require.Equal(t, []oktetoLog.JSONLogFormat{
+		catalogWarning("Running the destroy commands without the catalog secret variables: secret variables are disabled on this installation"),
+	}, warnings(jsonLogs(t, out)))
+	require.NotContains(t, jsonLogs(t, out), catalogLog(oktetoLog.ErrorLevel, "secret variables are disabled on this installation"))
+}
+
+func TestRunDestroysWithoutTheUnresolvedCatalogSecretVariables(t *testing.T) {
+	setTestOktetoContext(t)
+	out := captureJSONLogs(t)
+	runner := &fakeDestroyRunner{}
+	command := &DestroyCommand{
+		runner:                 runner,
+		catalogSecretVariables: newTestCatalogSecretVariables(withUnresolvedCatalogSecretVariables(), catalog.DestroyPhase),
+	}
+	runner.On("RunDestroy", deployable.DestroyParameters{
+		Name:                   "test-destroy",
+		CatalogSecretVariables: []string{"PIN=1"},
+	}).Return(nil)
+
+	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy"})
+
+	require.NoError(t, err)
+	runner.AssertExpectations(t)
+	require.Contains(t, jsonLogs(t, out), catalogWarning(`Catalog variable "API_TOKEN" could not be resolved: Secret "creds" not found. The commands run without it`))
+}
+
+func TestDestroyCommandHasTheCatalogFlags(t *testing.T) {
+	cmd := Destroy(context.Background())
+
+	require.NotNil(t, cmd.Flags().Lookup("catalog-action"))
+	require.NotNil(t, cmd.Flags().Lookup("catalog-secret-variables-endpoint"))
+}
+
+func setTestOktetoContext(t *testing.T) {
+	t.Helper()
+	original := okteto.CurrentStore
+	t.Cleanup(func() {
+		okteto.CurrentStore = original
+	})
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {Name: "https://okteto.example", Token: "token"},
+		},
+	}
 }

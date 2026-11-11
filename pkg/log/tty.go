@@ -259,27 +259,3 @@ func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 func (w *TTYWriter) Write(p []byte) (n int, err error) {
 	return w.out.Out.Write(p)
 }
-
-// PrintlnWithStage writes a line recorded under stage
-func (w *TTYWriter) PrintlnWithStage(stage, msg string) {
-	log.out.Info(msg)
-	log.spinner.hold()
-	w.fprintlnWithStage(w.out.Out, stage, msg)
-	log.spinner.unhold()
-}
-
-// SuccessWithStage prints a message with the success symbol first, and the text in green, recorded under stage
-func (w *TTYWriter) SuccessWithStage(stage, msg string) {
-	log.out.Info(msg)
-	log.spinner.hold()
-	w.fprintfWithStage(w.out.Out, stage, "%s %s\n", coloredSuccessSymbol, greenString("%s", msg))
-	log.spinner.unhold()
-}
-
-// WarningWithStage prints a message with the warning symbol first, and the text in yellow, recorded under stage
-func (w *TTYWriter) WarningWithStage(stage, msg string) {
-	log.out.Info(msg)
-	log.spinner.hold()
-	w.fprintfWithStage(w.out.Out, stage, "%s %s\n", coloredWarningSymbol, yellowString("%s", msg))
-	log.spinner.unhold()
-}

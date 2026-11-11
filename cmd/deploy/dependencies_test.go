@@ -18,12 +18,15 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,34 +117,6 @@ func requireNoMoreStarted(t *testing.T, f *fakeDependencyRunner) {
 	require.Empty(t, f.started)
 }
 
-func requireMainReadyResult(t *testing.T, mainReady <-chan error) error {
-	t.Helper()
-	select {
-	case err := <-mainReady:
-		return err
-	case <-time.After(schedulerTestTimeout):
-		require.FailNow(t, "timed out waiting for the main deploy to be ready")
-		return nil
-	}
-}
-
-func requireMainReadyPending(t *testing.T, mainReady <-chan error) {
-	t.Helper()
-	select {
-	case err := <-mainReady:
-		require.FailNow(t, "main deploy ready too early", "err: %v", err)
-	default:
-	}
-}
-
-func waitUntilMainReadyAsync(s *dependencyScheduler) <-chan error {
-	mainReady := make(chan error, 1)
-	go func() {
-		mainReady <- s.WaitUntilMainReady()
-	}()
-	return mainReady
-}
-
 func requireWaitResult(t *testing.T, s *dependencyScheduler) error {
 	t.Helper()
 	result := make(chan error, 1)
@@ -181,7 +156,6 @@ func TestDependencyScheduler_SpecExample(t *testing.T) {
 	s := newDependencyScheduler(section, runner)
 
 	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
 
 	requireStarted(t, runner, "database", "messaging")
 
@@ -190,11 +164,8 @@ func TestDependencyScheduler_SpecExample(t *testing.T) {
 
 	runner.finish("messaging", nil)
 	requireStarted(t, runner, "backend")
-	requireMainReadyPending(t, mainReady)
 
 	runner.finish("backend", nil)
-	require.NoError(t, requireMainReadyResult(t, mainReady))
-
 	runner.finish("analytics", nil)
 	require.NoError(t, requireWaitResult(t, s))
 	requireNoMoreStarted(t, runner)
@@ -204,122 +175,57 @@ func TestDependencyScheduler_SpecExample(t *testing.T) {
 	require.Less(t, runner.indexOf(t, "end:messaging"), runner.indexOf(t, "start:backend"))
 }
 
-func TestDependencyScheduler_MainReadyWaitsForAncestorsOfWaitDependencies(t *testing.T) {
-	section := deps.ManifestSection{
-		"database": &deps.Dependency{Repository: "https://github.com/okteto/database"},
-		"backend": &deps.Dependency{
-			Repository: "https://github.com/okteto/backend",
-			DependsOn:  deps.DependsOn{"database"},
-			Wait:       true,
-		},
-	}
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
-
-	requireStarted(t, runner, "database")
-	requireMainReadyPending(t, mainReady)
-	runner.finish("database", nil)
-
-	requireStarted(t, runner, "backend")
-	requireMainReadyPending(t, mainReady)
-	runner.finish("backend", nil)
-
-	require.NoError(t, requireMainReadyResult(t, mainReady))
-	require.NoError(t, requireWaitResult(t, s))
-}
-
-func TestDependencyScheduler_MainReadyImmediatelyWithoutWaitDependencies(t *testing.T) {
-	section := deps.ManifestSection{
-		"database": &deps.Dependency{Repository: "https://github.com/okteto/database"},
-	}
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-
-	require.NoError(t, requireMainReadyResult(t, waitUntilMainReadyAsync(s)))
-	requireStarted(t, runner, "database")
-
-	runner.finish("database", nil)
-	require.NoError(t, requireWaitResult(t, s))
-}
-
 func TestDependencyScheduler_NoDependencies(t *testing.T) {
 	section := deps.ManifestSection{}
 	s := newDependencyScheduler(section, newFakeDependencyRunner(section))
 
 	s.Start(context.Background())
 
-	require.NoError(t, requireMainReadyResult(t, waitUntilMainReadyAsync(s)))
 	require.NoError(t, requireWaitResult(t, s))
 }
 
-func TestDependencyScheduler_FailureBeforeMainReady(t *testing.T) {
-	section := specExampleSection()
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
+func TestDependencyScheduler_AFailureStopsNewDependencies(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		section := specExampleSection()
+		runner := newFakeDependencyRunner(section)
+		s := newDependencyScheduler(section, runner)
 
-	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
-	requireStarted(t, runner, "database", "messaging")
+		s.Start(context.Background())
+		requireStarted(t, runner, "database", "messaging")
 
-	runner.finish("messaging", errors.New("boom"))
-	require.ErrorIs(t, requireMainReadyResult(t, mainReady), errDependencyFailed)
+		runner.finish("messaging", errors.New("boom"))
+		// the scheduler has processed the failure before database ends
+		synctest.Wait()
+		// database was already running, so it is allowed to finish, but nothing new starts
+		runner.finish("database", nil)
+		err := requireWaitResult(t, s)
+		requireNoMoreStarted(t, runner)
 
-	// database was already running, so it is allowed to finish, but nothing new starts
-	runner.finish("database", nil)
-	err := requireWaitResult(t, s)
-	requireNoMoreStarted(t, runner)
-
-	require.EqualError(t, err, "dependency 'messaging' failed: boom\ndependencies not deployed because of a previous failure: analytics, backend")
+		require.EqualError(t, err, "dependency 'messaging' failed: boom\ndependencies not deployed because of a previous failure: analytics, backend")
+	})
 }
 
-func TestDependencyScheduler_FailureAfterMainReady(t *testing.T) {
-	section := specExampleSection()
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
-	requireStarted(t, runner, "database", "messaging")
-	runner.finish("database", nil)
-	requireStarted(t, runner, "analytics")
-	runner.finish("messaging", nil)
-	requireStarted(t, runner, "backend")
-	runner.finish("backend", nil)
-	require.NoError(t, requireMainReadyResult(t, mainReady))
-
-	runner.finish("analytics", errors.New("boom"))
-
-	require.EqualError(t, requireWaitResult(t, s), "dependency 'analytics' failed: boom")
-}
-
-func TestDependencyScheduler_FailedDependencies(t *testing.T) {
+func TestDependencyScheduler_ADependencyOfAFailedOneNeverStarts(t *testing.T) {
 	section := deps.ManifestSection{
-		"database":  &deps.Dependency{Repository: "https://github.com/okteto/database"},
-		"messaging": &deps.Dependency{Repository: "https://github.com/okteto/messaging"},
-		"reports":   &deps.Dependency{Repository: "https://github.com/okteto/reports"},
+		"a": &deps.Dependency{Repository: "https://github.com/okteto/a", Wait: true},
+		"b": &deps.Dependency{Repository: "https://github.com/okteto/b", DependsOn: deps.DependsOn{"a"}},
 	}
 	runner := newFakeDependencyRunner(section)
 	s := newDependencyScheduler(section, runner)
 
 	s.Start(context.Background())
-	requireStarted(t, runner, "database", "messaging", "reports")
-	runner.finish("reports", errors.New("boom"))
-	runner.finish("messaging", errors.New("boom"))
-	runner.finish("database", nil)
-	require.Error(t, requireWaitResult(t, s))
+	requireStarted(t, runner, "a")
+	runner.finish("a", errors.New("boom"))
+	err := requireWaitResult(t, s)
+	requireNoMoreStarted(t, runner)
 
-	require.Equal(t, []string{"messaging", "reports"}, s.Failed())
+	require.EqualError(t, err, "dependency 'a' failed: boom\ndependencies not deployed because of a previous failure: b")
 }
 
 func TestDependencyScheduler_ReportsEveryFailure(t *testing.T) {
 	section := deps.ManifestSection{
-		"database":  &deps.Dependency{Repository: "https://github.com/okteto/database"},
-		"messaging": &deps.Dependency{Repository: "https://github.com/okteto/messaging"},
+		"database":  &deps.Dependency{Repository: "https://github.com/okteto/database", Wait: true},
+		"messaging": &deps.Dependency{Repository: "https://github.com/okteto/messaging", Wait: true},
 	}
 	runner := newFakeDependencyRunner(section)
 	s := newDependencyScheduler(section, runner)
@@ -332,121 +238,22 @@ func TestDependencyScheduler_ReportsEveryFailure(t *testing.T) {
 	require.EqualError(t, requireWaitResult(t, s), "dependency 'database' failed: timeout\ndependency 'messaging' failed: boom")
 }
 
-func TestDependencyScheduler_StopPreventsNewDependencies(t *testing.T) {
-	section := specExampleSection()
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-	requireStarted(t, runner, "database", "messaging")
-
-	s.Stop()
-	runner.finish("database", nil)
-	runner.finish("messaging", nil)
-	err := requireWaitResult(t, s)
-	requireNoMoreStarted(t, runner)
-
-	require.EqualError(t, err, "dependencies not deployed because the deploy was stopped: analytics, backend")
-}
-
-func TestDependencyScheduler_StopBeforeStartStartsNothing(t *testing.T) {
-	section := specExampleSection()
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Stop()
-	s.Start(context.Background())
-	err := requireWaitResult(t, s)
-	requireNoMoreStarted(t, runner)
-
-	require.EqualError(t, err, "dependencies not deployed because the deploy was stopped: analytics, backend, database, messaging")
-}
-
-func TestDependencyScheduler_StopBeforeMainReady(t *testing.T) {
-	section := specExampleSection()
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
-	requireStarted(t, runner, "database", "messaging")
-
-	s.Stop()
-	runner.finish("database", nil)
-	runner.finish("messaging", nil)
-
-	require.ErrorIs(t, requireMainReadyResult(t, mainReady), errDependenciesStopped)
-	require.Error(t, requireWaitResult(t, s))
-}
-
-func TestDependencyScheduler_FailureOfNotAwaitedDependencyDoesNotBlockMain(t *testing.T) {
-	section := deps.ManifestSection{
-		"database": &deps.Dependency{Repository: "https://github.com/okteto/database", Wait: true},
-		"reports":  &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
-	requireStarted(t, runner, "database", "reports")
-
-	runner.finish("reports", errors.New("boom"))
-	requireMainReadyPending(t, mainReady)
-
-	runner.finish("database", nil)
-	require.NoError(t, requireMainReadyResult(t, mainReady))
-	// the deploy fails once everything has finished
-	require.EqualError(t, requireWaitResult(t, s), "dependency 'reports' failed: boom")
-}
-
-func TestDependencyScheduler_MainPredecessorsKeepStartingAfterANotAwaitedFailure(t *testing.T) {
-	section := deps.ManifestSection{
-		"database":  &deps.Dependency{Repository: "https://github.com/okteto/database"},
-		"messaging": &deps.Dependency{Repository: "https://github.com/okteto/messaging"},
-		"backend": &deps.Dependency{
-			Repository: "https://github.com/okteto/backend",
-			DependsOn:  deps.DependsOn{"database", "messaging"},
-			Wait:       true,
-		},
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}
-	runner := newFakeDependencyRunner(section)
-	s := newDependencyScheduler(section, runner)
-
-	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
-	requireStarted(t, runner, "database", "messaging", "reports")
-	runner.finish("reports", errors.New("boom"))
-	runner.finish("database", nil)
-	runner.finish("messaging", nil)
-
-	requireStarted(t, runner, "backend")
-	runner.finish("backend", nil)
-	require.NoError(t, requireMainReadyResult(t, mainReady))
-	require.EqualError(t, requireWaitResult(t, s), "dependency 'reports' failed: boom")
-}
-
-func TestDependencyScheduler_OnlyMainPredecessorsStartAfterAFailure(t *testing.T) {
-	s := newDependencyScheduler(specExampleSection(), nil)
-
-	require.True(t, s.startsAfterFailures("analytics", false))
-	require.False(t, s.startsAfterFailures("analytics", true))
-	require.True(t, s.startsAfterFailures("backend", true))
-}
-
-func TestDependencyScheduler_Diamond(t *testing.T) {
-	section := deps.ManifestSection{
+// diamondSection returns a diamond: b and c depend on a, and d, with wait: true, depends on both
+func diamondSection() deps.ManifestSection {
+	return deps.ManifestSection{
 		"a": &deps.Dependency{Repository: "https://github.com/okteto/a"},
 		"b": &deps.Dependency{Repository: "https://github.com/okteto/b", DependsOn: deps.DependsOn{"a"}},
 		"c": &deps.Dependency{Repository: "https://github.com/okteto/c", DependsOn: deps.DependsOn{"a"}},
 		"d": &deps.Dependency{Repository: "https://github.com/okteto/d", DependsOn: deps.DependsOn{"b", "c"}, Wait: true},
 	}
+}
+
+func TestDependencyScheduler_Diamond(t *testing.T) {
+	section := diamondSection()
 	runner := newFakeDependencyRunner(section)
 	s := newDependencyScheduler(section, runner)
 
 	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
 	requireStarted(t, runner, "a")
 	runner.finish("a", nil)
 	requireStarted(t, runner, "b", "c")
@@ -455,7 +262,6 @@ func TestDependencyScheduler_Diamond(t *testing.T) {
 	requireStarted(t, runner, "d")
 	runner.finish("d", nil)
 
-	require.NoError(t, requireMainReadyResult(t, mainReady))
 	require.NoError(t, requireWaitResult(t, s))
 	requireNoMoreStarted(t, runner)
 	require.Less(t, runner.indexOf(t, "end:b"), runner.indexOf(t, "start:d"))
@@ -504,14 +310,12 @@ func TestDependencyScheduler_InterruptedDependency(t *testing.T) {
 	s := newDependencyScheduler(section, runner)
 
 	s.Start(context.Background())
-	mainReady := waitUntilMainReadyAsync(s)
 	requireStarted(t, runner, "database", "messaging")
 
 	// the pipeline deployer handles Ctrl+C on its own and returns ErrIntSig without a cancelled context
 	runner.finish("database", oktetoErrors.ErrIntSig)
-	require.ErrorIs(t, requireMainReadyResult(t, mainReady), oktetoErrors.ErrIntSig)
-
 	runner.finish("messaging", nil)
+
 	require.ErrorIs(t, requireWaitResult(t, s), oktetoErrors.ErrIntSig)
 	requireNoMoreStarted(t, runner)
 }
@@ -523,12 +327,10 @@ func TestDependencyScheduler_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s.Start(ctx)
-	mainReady := waitUntilMainReadyAsync(s)
 	requireStarted(t, runner, "database", "messaging")
 
 	cancel()
 
-	require.ErrorIs(t, requireMainReadyResult(t, mainReady), oktetoErrors.ErrIntSig)
 	require.ErrorIs(t, requireWaitResult(t, s), oktetoErrors.ErrIntSig)
 	requireNoMoreStarted(t, runner)
 }
@@ -559,10 +361,15 @@ func (f *fakeDependencyEnvVars) get(_ context.Context, name, _ string) (map[stri
 	return f.envs[name], nil
 }
 
+// newTestDependencyRunner returns a runner of the dependencies of section in the namespace "test"
+func newTestDependencyRunner(deployer pipelineCMD.DeployerInterface, envVarsOf deployedDependencyEnvVarsGetter, section deps.ManifestSection, opts *Options) *pipelineDependencyRunner {
+	return newPipelineDependencyRunner(deployer, envVarsOf, section, opts, "test", "parent-id")
+}
+
 func TestPipelineDependencyRunnerOptions(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute})
 
 	runAllDependencies(t, runner, section)
 
@@ -570,84 +377,73 @@ func TestPipelineDependencyRunnerOptions(t *testing.T) {
 	require.True(t, backend.Wait)
 	require.True(t, backend.IsDependency)
 	require.True(t, backend.SkipIfExists)
-	require.True(t, backend.PrefixLogs)
 	require.Equal(t, "test", backend.Namespace)
 	require.Equal(t, "parent-id", backend.ParentWorkflowID)
 	require.Equal(t, 5*time.Minute, backend.Timeout)
 	require.Contains(t, backend.Variables, "OKTETO_ORIGIN=okteto-deploy")
 }
 
-func TestPipelineDependencyRunnerWaitsForEveryDependency(t *testing.T) {
-	t.Setenv(constants.OktetoIsDependencyEnvVar, "")
+func TestPipelineDependencyRunnerOnlySchedulesTheDependenciesNothingNeeds(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
-
-	runAllDependencies(t, runner, section)
-
-	require.True(t, deployer.captured["analytics"].Wait)
-}
-
-func TestPipelineDependencyRunnerOnlySchedulesWhatNothingNeedsInsideADependency(t *testing.T) {
-	t.Setenv(constants.OktetoIsDependencyEnvVar, "true")
-	section := specExampleSection()
-	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{})
 
 	runAllDependencies(t, runner, section)
 
 	// neither the main deploy nor another dependency waits for analytics
+	require.False(t, deployer.captured["analytics"].Wait)
+	// database and messaging have wait: false, but backend needs them
+	require.True(t, deployer.captured["database"].Wait)
+	require.True(t, deployer.captured["messaging"].Wait)
+	require.True(t, deployer.captured["backend"].Wait)
+}
+
+func TestPipelineDependencyRunnerFollowsTheSameRulesInsideADependency(t *testing.T) {
+	t.Setenv(constants.OktetoIsDependencyEnvVar, "true")
+	section := specExampleSection()
+	deployer := &capturingPipelineDeployer{}
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{})
+
+	runAllDependencies(t, runner, section)
+
 	require.False(t, deployer.captured["analytics"].Wait)
 	require.True(t, deployer.captured["database"].Wait)
 	require.True(t, deployer.captured["messaging"].Wait)
 	require.True(t, deployer.captured["backend"].Wait)
 }
 
-func TestPipelineDependencyRunnerChecksResourcesOnlyWhenNeeded(t *testing.T) {
-	section := specExampleSection()
+func TestPipelineDependencyRunnerWaitsForAWaitFalseDependencyAnotherOneNeeds(t *testing.T) {
+	section := deps.ManifestSection{
+		"a": &deps.Dependency{Repository: "https://github.com/okteto/a"},
+		"b": &deps.Dependency{Repository: "https://github.com/okteto/b", DependsOn: deps.DependsOn{"a"}},
+	}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{})
 
 	runAllDependencies(t, runner, section)
 
-	// predecessors of the main deploy or of another dependency need their resources running
-	require.False(t, deployer.captured["database"].SkipResourcesCheck)
-	require.False(t, deployer.captured["messaging"].SkipResourcesCheck)
-	require.False(t, deployer.captured["backend"].SkipResourcesCheck)
-	// wait: false and nobody depends on it: only waits for the pipeline to finish
-	require.True(t, deployer.captured["analytics"].SkipResourcesCheck)
+	require.True(t, deployer.captured["a"].Wait)
+	require.False(t, deployer.captured["b"].Wait)
 }
 
-func TestPipelineDependencyRunnerChecksEveryResourceWithWaitFlag(t *testing.T) {
+func TestPipelineDependencyRunnerOnlySchedulesTheDependenciesNothingNeedsWithWaitFlag(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Wait: true}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Wait: true})
 
 	runAllDependencies(t, runner, section)
 
-	require.False(t, deployer.captured["analytics"].SkipResourcesCheck)
+	require.False(t, deployer.captured["analytics"].Wait)
 }
 
 func TestPipelineDependencyRunnerRedeploysWithDependenciesFlag(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Dependencies: true}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Dependencies: true})
 
 	runAllDependencies(t, runner, section)
 
 	require.False(t, deployer.captured["database"].SkipIfExists)
-}
-
-func TestPipelineDependencyRunnerSingleDependencyKeepsCurrentOutput(t *testing.T) {
-	section := deps.ManifestSection{
-		"database": &deps.Dependency{Repository: "https://github.com/okteto/database", Wait: true},
-	}
-	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
-
-	runAllDependencies(t, runner, section)
-
-	require.False(t, deployer.captured["database"].PrefixLogs)
 }
 
 func TestPipelineDependencyRunnerDoesNotModifyTheManifest(t *testing.T) {
@@ -656,7 +452,7 @@ func TestPipelineDependencyRunnerDoesNotModifyTheManifest(t *testing.T) {
 		Variables:  env.Environment{{Name: "SIZE", Value: "small"}},
 	}
 	section := deps.ManifestSection{"database": dep}
-	runner := newPipelineDependencyRunner(&capturingPipelineDeployer{}, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(&capturingPipelineDeployer{}, noDependencyEnvVars, section, &Options{})
 
 	runAllDependencies(t, runner, section)
 
@@ -668,26 +464,28 @@ func TestPipelineDependencyRunnerRejectsReservedVariables(t *testing.T) {
 		Repository: "https://github.com/okteto/database",
 		Variables:  env.Environment{{Name: "OKTETO_CONTEXT", Value: "other"}},
 	}
+	section := deps.ManifestSection{"database": dep}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, deps.ManifestSection{"database": dep}, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{})
+	printed := captureDependencyOutput(t, oktetoLog.JSONFormat)
 
 	err := runner.Run(context.Background(), "database", dep)
 
 	require.ErrorIs(t, err, validator.ErrReservedVariableName)
 	require.Empty(t, deployer.captured)
+	require.Equal(t, []string{"error: [database]  x  OKTETO_CONTEXT is reserved variable name"}, printed())
 }
 
-func TestPipelineDependencyRunnerSingleNotAwaitedDependencyIsPrefixed(t *testing.T) {
-	// the main deploy doesn't wait for it: their logs are interleaved
-	section := deps.ManifestSection{
-		"reports": &deps.Dependency{Repository: "https://github.com/okteto/reports"},
-	}
-	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+func TestPipelineDependencyRunnerPrintsTheErrorOfTheDeploy(t *testing.T) {
+	section := deps.ManifestSection{"database": &deps.Dependency{Repository: "https://github.com/okteto/database", Wait: true}}
+	deployer := &capturingPipelineDeployer{errs: map[string]error{"database": errors.New("repository 'database' deployed with errors")}}
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{})
+	printed := captureDependencyOutput(t, oktetoLog.JSONFormat)
 
-	runAllDependencies(t, runner, section)
+	err := runner.Run(context.Background(), "database", section["database"])
 
-	require.True(t, deployer.captured["reports"].PrefixLogs)
+	require.Error(t, err)
+	require.Equal(t, []string{"error: [database]  x  repository 'database' deployed with errors"}, printed())
 }
 
 func TestPipelineDependencyRunnerExpandsVariablesWithTheStartEnvironment(t *testing.T) {
@@ -695,7 +493,7 @@ func TestPipelineDependencyRunnerExpandsVariablesWithTheStartEnvironment(t *test
 	dep := &deps.Dependency{Repository: "https://github.com/okteto/database", Branch: "${DEPS_TEST_BRANCH}"}
 	section := deps.ManifestSection{"database": dep}
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{})
 
 	// the main deploy exports env vars while the dependencies are running
 	t.Setenv("DEPS_TEST_BRANCH", "exported-later")
@@ -734,7 +532,7 @@ func chainEnvVars() *fakeDependencyEnvVars {
 func TestPipelineDependencyRunnerExpandsVariablesWithTheDependsOnEnvVars(t *testing.T) {
 	section := chainSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, chainEnvVars().get, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, chainEnvVars().get, section, &Options{})
 
 	runAllDependencies(t, runner, section)
 
@@ -746,7 +544,7 @@ func TestPipelineDependencyRunnerLeavesOutThePredecessorsOfDependsOn(t *testing.
 	section := chainSection()
 	envVars := chainEnvVars()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, envVars.get, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, envVars.get, section, &Options{})
 
 	require.NoError(t, runner.Run(context.Background(), "frontend", section["frontend"]))
 
@@ -761,7 +559,7 @@ func TestPipelineDependencyRunnerFailsWhenTheDependsOnEnvVarsCannotBeRead(t *tes
 	envVarsOf := func(context.Context, string, string) (map[string]string, error) {
 		return nil, assert.AnError
 	}
-	runner := newPipelineDependencyRunner(deployer, envVarsOf, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, envVarsOf, section, &Options{})
 
 	err := runner.Run(context.Background(), "analytics", section["analytics"])
 
@@ -769,33 +567,23 @@ func TestPipelineDependencyRunnerFailsWhenTheDependsOnEnvVarsCannotBeRead(t *tes
 	require.Empty(t, deployer.captured)
 }
 
-func TestPipelineDependencyRunnerWaitsAtLeastTenMinutesForNotAwaitedDependencies(t *testing.T) {
+func TestPipelineDependencyRunnerUsesTheTimeoutFlagForEveryDependency(t *testing.T) {
 	section := specExampleSection()
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute})
 
 	runAllDependencies(t, runner, section)
 
-	// the main deploy doesn't wait for analytics
-	require.Equal(t, 10*time.Minute, deployer.captured["analytics"].Timeout)
+	// analytics is only scheduled: it doesn't need a longer timeout
+	require.Equal(t, 5*time.Minute, deployer.captured["analytics"].Timeout)
 	require.Equal(t, 5*time.Minute, deployer.captured["database"].Timeout)
-}
-
-func TestPipelineDependencyRunnerUsesALongerTimeoutFlagForNotAwaitedDependencies(t *testing.T) {
-	section := specExampleSection()
-	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 20 * time.Minute}, "test", "parent-id")
-
-	runAllDependencies(t, runner, section)
-
-	require.Equal(t, 20*time.Minute, deployer.captured["analytics"].Timeout)
 }
 
 func TestPipelineDependencyRunnerUsesTheDependencyTimeout(t *testing.T) {
 	section := specExampleSection()
 	section["analytics"].Timeout = 2 * time.Minute
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, noDependencyEnvVars, section, &Options{Timeout: 5 * time.Minute})
 
 	runAllDependencies(t, runner, section)
 
@@ -815,9 +603,27 @@ backend:
 	var section deps.ManifestSection
 	require.NoError(t, yaml.Unmarshal(manifest, &section))
 	deployer := &capturingPipelineDeployer{}
-	runner := newPipelineDependencyRunner(deployer, chainEnvVars().get, section, &Options{}, "test", "parent-id")
+	runner := newTestDependencyRunner(deployer, chainEnvVars().get, section, &Options{})
 
 	runAllDependencies(t, runner, section)
 
 	require.Contains(t, deployer.captured["backend"].Variables, "DB_HOST=db.svc")
+}
+
+func TestPipelineDependencyRunnerExpandsTheDependsOnEnvVarsOfAScheduledDependency(t *testing.T) {
+	section := deps.ManifestSection{
+		"database": &deps.Dependency{Repository: "https://github.com/okteto/database"},
+		"reports": &deps.Dependency{
+			Repository: "https://github.com/okteto/reports",
+			DependsOn:  deps.DependsOn{"database"},
+			Variables:  env.Environment{{Name: "DB_HOST", Value: "${OKTETO_DEPENDENCY_DATABASE_VARIABLE_HOST}"}},
+		},
+	}
+	deployer := &capturingPipelineDeployer{}
+	runner := newTestDependencyRunner(deployer, chainEnvVars().get, section, &Options{})
+
+	runAllDependencies(t, runner, section)
+
+	require.False(t, deployer.captured["reports"].Wait)
+	require.Contains(t, deployer.captured["reports"].Variables, "DB_HOST=db.svc")
 }
