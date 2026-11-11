@@ -33,6 +33,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/catalog"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
@@ -66,6 +67,8 @@ const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
 	dependencyEnvVarPrefix = "OKTETO_DEPENDENCY_"
 	deployComposePhaseName = "compose"
+
+	localExecutionDeprecatedWarning = "Local execution is deprecated and will be removed in a future release.\n    Some Okteto features require remote execution and are not supported in local mode.\n    We recommend enabling remote execution for your deploy commands.\n    Learn more: https://www.okteto.com/docs/core/remote-execution"
 )
 
 var (
@@ -94,6 +97,13 @@ type Options struct {
 	RunInRemoteSet        bool
 	Wait                  bool
 	ShowCTA               bool
+
+	// CatalogSecretVariables are the catalog secret variables of the development environment. They are read from the
+	// env before any variable is loaded
+	CatalogSecretVariables catalog.SecretVariables
+	// catalogSecretVariablesToForward are the catalog secret variables remote-run gets the values of. They are empty
+	// when the deploy commands need none
+	catalogSecretVariablesToForward catalog.SecretVariables
 }
 
 type builderInterface interface {
@@ -213,7 +223,7 @@ $ okteto deploy --no-build=true`,
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
-			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
+			if err := readCatalogSecretVariablesAndSetVariables(options, os.Setenv); err != nil {
 				return err
 			}
 
@@ -371,6 +381,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if deployOptions.Manifest.Deploy == nil && !deployOptions.Manifest.HasDependencies() {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
+	dc.warnIfLocalExecution(deployOptions)
 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
@@ -483,6 +494,13 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
+	if err := checkCatalogSecretVariables(deployOptions); err != nil {
+		if errStatus := dc.CfgMapHandler.UpdateConfigMap(ctx, cfg, data, err); errStatus != nil {
+			return errStatus
+		}
+		return err
+	}
+
 	// on Ctrl+C the deploy command doesn't wait for Run: while the dependencies run, the interruption is recorded
 	// so that the deploy doesn't stay in progress. After them, an interruption is handled as before dependencies
 	// were deployed in parallel
@@ -580,6 +598,31 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	}
 
 	return err
+}
+
+// readCatalogSecretVariablesAndSetVariables reads the catalog secret variables the backend sets on the installer job,
+// and then sets the --var variables as env vars, as any of them can hold a variable with the same name. It has to run
+// before the context is loaded, which sets .env files and Okteto Variables as env vars, and before stored variables
+// are loaded
+func readCatalogSecretVariablesAndSetVariables(options *Options, setEnv func(key, value string) error) error {
+	options.CatalogSecretVariables = catalog.SecretVariablesFromEnv()
+	return validateAndSet(options.Variables, setEnv)
+}
+
+// checkCatalogSecretVariables checks the catalog secret variables before any deploy command runs, and keeps the ones
+// remote-run has to get the values of. A manifest without deploy commands needs none
+func checkCatalogSecretVariables(opts *Options) error {
+	if opts.Manifest.Deploy == nil || len(opts.Manifest.Deploy.Commands) == 0 {
+		return nil
+	}
+	secretVariables, err := catalog.CheckSecretVariables(opts.CatalogSecretVariables, catalog.DeployPhase, func() bool {
+		return ShouldRunInRemote(opts)
+	})
+	if err != nil {
+		return err
+	}
+	opts.catalogSecretVariablesToForward = secretVariables
+	return nil
 }
 
 func (dc *Command) deploy(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
@@ -710,10 +753,19 @@ func ShouldRunInRemote(opts *Options) bool {
 		}
 	}
 
-	if opts.Manifest != nil && opts.Manifest.Deploy != nil && (len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0) {
-		oktetoLog.Information("Okteto recommends that you enable remote execution for your deploy commands.\n    More information available here: https://www.okteto.com/docs/core/remote-execution")
-	}
 	return false
+}
+
+// warnIfLocalExecution warns that local execution is deprecated when the deploy runs its commands locally. It is
+// logged once, when the manifest is loaded, as ShouldRunInRemote is called several times along the deploy. A deploy
+// run by a command of a remote execution, such as "okteto deploy --remote=false", already runs remotely
+func (dc *Command) warnIfLocalExecution(opts *Options) {
+	if dc.IsRemote || opts.Manifest.Deploy == nil || ShouldRunInRemote(opts) {
+		return
+	}
+	if len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0 {
+		oktetoLog.Warning(localExecutionDeprecatedWarning)
+	}
 }
 
 // GetDeployer returns a remote or a local deployer
