@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ExpandStackEnvs(t *testing.T) {
@@ -180,9 +181,7 @@ func TestStackEscapedEnvironment(t *testing.T) {
 		for mode, compose := range map[string]bool{"compose": true, "stack": false} {
 			t.Run(name+"/"+mode, func(t *testing.T) {
 				s, err := ReadStack([]byte("services:\n  app:\n    image: nginx\n    environment:\n"+environment), compose)
-				if !assert.NoError(t, err) {
-					return
-				}
+				require.NoError(t, err)
 				values := map[string]string{}
 				for _, variable := range s.Services["app"].Environment {
 					values[variable.Name] = variable.Value
