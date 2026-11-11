@@ -193,7 +193,7 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("1Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("1Gi")}},
 				},
 			},
 			},
@@ -224,11 +224,11 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("1Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("1Gi")}},
 				},
 				Reservations: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("2Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("2Gi")}},
 				},
 			},
 			},
@@ -249,11 +249,11 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("1Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("1Gi")}},
 				},
 				Reservations: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("2Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("2Gi")}},
 				},
 			},
 			},
@@ -3337,4 +3337,42 @@ endpoints:
 	require.Len(t, s.Endpoints["main"].Rules, 2)
 	assert.Equal(t, "web-app", s.Endpoints["main"].Rules[0].Service)
 	assert.Equal(t, "api", s.Endpoints["main"].Rules[1].Service)
+}
+
+func Test_UnmarshalComposeMemoryUnits(t *testing.T) {
+	tests := []struct {
+		name     string
+		memory   string
+		expected int64
+	}{
+		{name: "megabytes-short", memory: "300m", expected: 300 * 1024 * 1024},
+		{name: "megabytes-long", memory: "512mb", expected: 512 * 1024 * 1024},
+		{name: "gigabytes-short", memory: "1g", expected: 1024 * 1024 * 1024},
+		{name: "gigabytes-long", memory: "1gb", expected: 1024 * 1024 * 1024},
+		{name: "kilobytes", memory: "512k", expected: 512 * 1024},
+		{name: "bytes", memory: "2048b", expected: 2048},
+		{name: "uppercase", memory: "1G", expected: 1024 * 1024 * 1024},
+		{name: "fractional", memory: "1.5g", expected: 1536 * 1024 * 1024},
+		{name: "kubernetes-units", memory: "512Mi", expected: 512 * 1024 * 1024},
+		{name: "plain-bytes", memory: "1048576", expected: 1048576},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    mem_limit: " + tt.memory + "\n    mem_reservation: " + tt.memory + "\n")
+			s, err := ReadStack(manifest, true)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, s.Services["app"].Resources.Limits.Memory.Value.Value())
+			assert.Equal(t, tt.expected, s.Services["app"].Resources.Requests.Memory.Value.Value())
+		})
+	}
+}
+
+func Test_UnmarshalComposeDeployResourcesMemoryUnits(t *testing.T) {
+	manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    deploy:\n      resources:\n        limits:\n          memory: 300m\n        reservations:\n          memory: 1gb\n")
+
+	s, err := ReadStack(manifest, true)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(300*1024*1024), s.Services["app"].Resources.Limits.Memory.Value.Value())
+	assert.Equal(t, int64(1024*1024*1024), s.Services["app"].Resources.Requests.Memory.Value.Value())
 }

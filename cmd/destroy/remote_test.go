@@ -100,6 +100,39 @@ func TestGetCommandFlags(t *testing.T) {
 			},
 			expected: []string{"--name \"test\"", "--var test=\"multi word value\""},
 		},
+		{
+			// a stored variable with the same name travels as a --var, which remote-run doesn't read the action from
+			name: "catalog secret variables forwarded",
+			config: config{
+				opts: &Options{
+					Name:                            "test",
+					Variables:                       []string{"OKTETO_ACTION_NAME=stored-action"},
+					catalogSecretVariablesToForward: testCatalogSecretVariables,
+				},
+			},
+			expected: []string{
+				"--name \"test\"",
+				"--var OKTETO_ACTION_NAME=\"stored-action\"",
+				"--catalog-action \"action-name\"",
+				"--catalog-secret-variables-endpoint \"https://okteto.example/internal/catalog/secret-variables\"",
+			},
+		},
+		{
+			name: "catalog secret variables forwarded on force destroy",
+			config: config{
+				opts: &Options{
+					Name:                            "test",
+					ForceDestroy:                    true,
+					catalogSecretVariablesToForward: testCatalogSecretVariables,
+				},
+			},
+			expected: []string{
+				"--name \"test\"",
+				"--force-destroy",
+				"--catalog-action \"action-name\"",
+				"--catalog-secret-variables-endpoint \"https://okteto.example/internal/catalog/secret-variables\"",
+			},
+		},
 	}
 
 	for _, tt := range tests {

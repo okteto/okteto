@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -147,10 +148,10 @@ type ServiceRaw struct {
 	Deploy                   *DeployInfoRaw         `yaml:"deploy,omitempty"`
 	MemswapLimit             *WarningType           `yaml:"memswap_limit,omitempty"`
 	OomKillDisable           *WarningType           `yaml:"oom_kill_disable,omitempty"`
-	MemReservation           Quantity               `yaml:"mem_reservation,omitempty"`
+	MemReservation           ComposeMemory          `yaml:"mem_reservation,omitempty"`
 	CpuCount                 Quantity               `yaml:"cpu_count,omitempty"`
 	Cpus                     Quantity               `yaml:"cpus,omitempty"`
-	MemLimit                 Quantity               `yaml:"mem_limit,omitempty"`
+	MemLimit                 ComposeMemory          `yaml:"mem_limit,omitempty"`
 	Restart                  string                 `yaml:"restart,omitempty"`
 	Image                    string                 `yaml:"image,omitempty"`
 	Workdir                  string                 `yaml:"workdir,omitempty"`
@@ -254,7 +255,7 @@ type DeployComposeResources struct {
 	Devices    *WarningType           `json:"devices,omitempty" yaml:"devices,omitempty"`
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 	Cpus       Quantity               `json:"cpus,omitempty" yaml:"cpus,omitempty"`
-	Memory     Quantity               `json:"memory,omitempty" yaml:"memory,omitempty"`
+	Memory     ComposeMemory          `json:"memory,omitempty" yaml:"memory,omitempty"`
 }
 
 type VolumeTopLevel struct {
@@ -455,7 +456,7 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	svc := &Service{}
 	var err error
 
-	svc.Resources = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
+	svc.Resources = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit.Quantity, serviceRaw.MemReservation.Quantity)
 
 	svc.Replicas = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
 
@@ -1190,6 +1191,46 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 	return resources
 }
 
+// ComposeMemory is a compose memory value. Compose uses its own byte units
+// ("300m" is 300 MiB, "1g" / "1gb" is 1 GiB), which Kubernetes reads
+// differently ("300m" is 0.3 bytes) or rejects, so those are converted here.
+// Other values, like "512Mi" or a plain byte count, are parsed as before.
+type ComposeMemory struct {
+	Quantity
+}
+
+var composeBytesRegex = regexp.MustCompile(`(?i)^([0-9]+(?:\.[0-9]+)?)\s*(b|k|kb|m|mb|g|gb)$`)
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (m *ComposeMemory) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	if err := unmarshal(&raw); err == nil {
+		if bytes, ok := parseComposeBytes(raw); ok {
+			m.Value = *resource.NewQuantity(bytes, resource.BinarySI)
+			return nil
+		}
+	}
+	return m.Quantity.UnmarshalYAML(unmarshal)
+}
+
+func parseComposeBytes(value string) (int64, bool) {
+	match := composeBytesRegex.FindStringSubmatch(strings.TrimSpace(value))
+	if match == nil {
+		return 0, false
+	}
+	number, err := strconv.ParseFloat(match[1], 64)
+	if err != nil {
+		return 0, false
+	}
+	multiplier := map[string]float64{
+		"b": 1,
+		"k": 1 << 10, "kb": 1 << 10,
+		"m": 1 << 20, "mb": 1 << 20,
+		"g": 1 << 30, "gb": 1 << 30,
+	}[strings.ToLower(match[2])]
+	return int64(number * multiplier), true
+}
+
 func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) int32 {
 	if replicas != nil {
 		return *replicas
@@ -1210,7 +1251,7 @@ func (r DeployComposeResources) applyTo(resources *ServiceResources) {
 		resources.CPU = r.Cpus
 	}
 	if !r.Memory.Value.IsZero() {
-		resources.Memory = r.Memory
+		resources.Memory = r.Memory.Quantity
 	}
 }
 
