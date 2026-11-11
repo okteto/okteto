@@ -381,7 +381,7 @@ func (dc *Command) Run(ctx context.Context, deployOptions *Options) error {
 	if deployOptions.Manifest.Deploy == nil && !deployOptions.Manifest.HasDependencies() {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
-	warnIfLocalExecution(deployOptions)
+	dc.warnIfLocalExecution(deployOptions)
 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
@@ -757,9 +757,10 @@ func ShouldRunInRemote(opts *Options) bool {
 }
 
 // warnIfLocalExecution warns that local execution is deprecated when the deploy runs its commands locally. It is
-// logged once, when the manifest is loaded, as ShouldRunInRemote is called several times along the deploy
-func warnIfLocalExecution(opts *Options) {
-	if opts.Manifest.Deploy == nil || ShouldRunInRemote(opts) {
+// logged once, when the manifest is loaded, as ShouldRunInRemote is called several times along the deploy. A deploy
+// run by a command of a remote execution, such as "okteto deploy --remote=false", already runs remotely
+func (dc *Command) warnIfLocalExecution(opts *Options) {
+	if dc.IsRemote || opts.Manifest.Deploy == nil || ShouldRunInRemote(opts) {
 		return
 	}
 	if len(opts.Manifest.Deploy.Commands) > 0 || opts.Manifest.Deploy.Divert != nil || len(opts.Manifest.External) > 0 {

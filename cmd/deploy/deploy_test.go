@@ -1589,7 +1589,7 @@ func TestWarnIfLocalExecutionWarnsWhenTheCommandsRunLocally(t *testing.T) {
 	t.Setenv(constants.OktetoForceRemote, "")
 	out := capturePlainLogs(t)
 
-	warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands()})
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands()})
 
 	require.Equal(t, "WARNING: "+localExecutionDeprecatedWarning+"\n", out.String())
 }
@@ -1598,7 +1598,7 @@ func TestWarnIfLocalExecutionWarnsWhenRemoteExecutionIsTurnedOff(t *testing.T) {
 	t.Setenv(constants.OktetoForceRemote, "true")
 	out := capturePlainLogs(t)
 
-	warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands(), RunInRemoteSet: true})
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands(), RunInRemoteSet: true})
 
 	require.Equal(t, "WARNING: "+localExecutionDeprecatedWarning+"\n", out.String())
 }
@@ -1607,7 +1607,7 @@ func TestWarnIfLocalExecutionDoesNotWarnWhenTheCommandsRunRemotely(t *testing.T)
 	t.Setenv(constants.OktetoForceRemote, "true")
 	out := capturePlainLogs(t)
 
-	warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands()})
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands()})
 
 	require.Empty(t, out.String())
 }
@@ -1616,7 +1616,7 @@ func TestWarnIfLocalExecutionDoesNotWarnWithoutDeployCommands(t *testing.T) {
 	t.Setenv(constants.OktetoForceRemote, "")
 	out := capturePlainLogs(t)
 
-	warnIfLocalExecution(&Options{Manifest: &model.Manifest{Deploy: &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{}}}})
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: &model.Manifest{Deploy: &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{}}}})
 
 	require.Empty(t, out.String())
 }
@@ -1625,7 +1625,16 @@ func TestWarnIfLocalExecutionDoesNotWarnWithoutDeploySection(t *testing.T) {
 	t.Setenv(constants.OktetoForceRemote, "")
 	out := capturePlainLogs(t)
 
-	warnIfLocalExecution(&Options{Manifest: &model.Manifest{Dependencies: deps.ManifestSection{"db": &deps.Dependency{}}}})
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: &model.Manifest{Dependencies: deps.ManifestSection{"db": &deps.Dependency{}}}})
+
+	require.Empty(t, out.String())
+}
+
+func TestWarnIfLocalExecutionDoesNotWarnInsideARemoteExecution(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	out := capturePlainLogs(t)
+
+	(&Command{IsRemote: true}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands(), RunInRemoteSet: true})
 
 	require.Empty(t, out.String())
 }
