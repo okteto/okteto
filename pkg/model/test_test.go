@@ -173,3 +173,9 @@ ip: ${NON_EXISTENT}`),
 		})
 	}
 }
+
+func TestTestUnmarshalYAMLDocker(t *testing.T) {
+	var test Test
+	require.NoError(t, yaml.Unmarshal([]byte("docker: true\ncommands:\n  - mvn test\n"), &test))
+	require.True(t, test.Docker)
+}

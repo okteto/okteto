@@ -182,7 +182,7 @@ func Test_getStructKeys(t *testing.T) {
 			name:  "okteto manifest",
 			input: Manifest{},
 			expected: map[string][]string{
-				"build.Info":                        {"secrets", "context", "dockerfile", "target", "image", "cache_from", "args", "export_cache", "depends_on"},
+				"build.Info":                        {"secrets", "context", "dockerfile", "target", "image", "cache_from", "args", "export_cache", "depends_on", "docker"},
 				"build.VolumeMounts":                {"local_path", "remote_path"},
 				"deps.Dependency":                   {"repository", "manifest", "branch", "variables", "timeout", "wait", "depends_on"},
 				"env.Var":                           {"name", "value"},
@@ -221,7 +221,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.StorageResource":             {"size", "class"},
 				"model.Sync":                        {"folders", "rescanInterval", "compression", "verbose"},
 				"model.SyncFolder":                  {"localPath", "remotePath"},
-				"model.Test":                        {"image", "context", "commands", "depends_on", "caches", "artifacts", "hosts", "skipIfNoFileChanges"},
+				"model.Test":                        {"image", "context", "commands", "depends_on", "caches", "artifacts", "hosts", "skipIfNoFileChanges", "docker"},
 				"model.TestCommand":                 {"name", "command"},
 				"model.Timeout":                     {"default", "resources"},
 				"model.VolumeSpec":                  {"labels", "annotations", "size", "class"},

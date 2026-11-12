@@ -30,8 +30,8 @@ const (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile string, okCtx OktetoContextInterface, repoURL, dockerfilePath, target string) (string, error) {
-	file, err := getTranslatedDockerFile(dockerFile, okCtx, repoURL, dockerFile, target)
+func GetDockerfile(dockerFile string, okCtx OktetoContextInterface, repoURL, dockerfilePath, target string, docker bool) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile, okCtx, repoURL, dockerFile, target, docker)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
@@ -39,10 +39,14 @@ func GetDockerfile(dockerFile string, okCtx OktetoContextInterface, repoURL, doc
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface, repoURL, dockerfilePath, target string) (string, error) {
+func getTranslatedDockerFile(filename string, okCtx OktetoContextInterface, repoURL, dockerfilePath, target string, docker bool) (string, error) {
 	translator, err := newDockerfileTranslator(okCtx, repoURL, dockerfilePath, target)
 	if err != nil {
 		return "", err
+	}
+	// declares DOCKER_HOST in every stage, so the RUN steps receive it as a build arg
+	if docker {
+		translator.translators = append(translator.translators, &dockerHostTranslator{})
 	}
 
 	if err := translator.translate(filename); err != nil {

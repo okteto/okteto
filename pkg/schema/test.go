@@ -83,6 +83,13 @@ func (test) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
+	testProps.Set("docker", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"boolean"}},
+		Title:       "docker",
+		Description: "Gives the commands access to a Docker daemon through the DOCKER_HOST environment variable, for example to run tests that use Testcontainers. Your Okteto instance needs the Docker daemon of BuildKit enabled",
+		Default:     false,
+	})
+
 	hostsItemProps := jsonschema.NewProperties()
 	hostsItemProps.Set("hostname", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"string"}},

@@ -969,3 +969,59 @@ func Test_shouldUseInClusterConnector(t *testing.T) {
 		})
 	}
 }
+
+func Test_addDockerHostBuildArg(t *testing.T) {
+	tests := []struct {
+		name         string
+		dockerHost   string
+		buildOptions *types.BuildOptions
+		expected     []string
+		expectedErr  error
+	}{
+		{
+			name:         "adds the Docker host of the instance",
+			dockerHost:   "tcp://10.10.0.1:2375",
+			buildOptions: &types.BuildOptions{File: "Dockerfile", BuildArgs: []string{"FOO=bar"}},
+			expected:     []string{"FOO=bar", "DOCKER_HOST=tcp://10.10.0.1:2375"},
+		},
+		{
+			name:         "fails when the instance has no Docker",
+			buildOptions: &types.BuildOptions{File: "Dockerfile"},
+			expectedErr: oktetoErrors.UserError{
+				E:    fmt.Errorf("'docker' isn't available in your Okteto instance"),
+				Hint: "Ask your Okteto admin to enable 'buildkit.dind.enabled' in the Okteto Helm chart",
+			},
+		},
+		{
+			name:         "fails without a local Dockerfile",
+			dockerHost:   "tcp://10.10.0.1:2375",
+			buildOptions: &types.BuildOptions{},
+			expectedErr: oktetoErrors.UserError{
+				E:    fmt.Errorf("'docker' needs a local Dockerfile"),
+				Hint: "Build from a local context or remove 'docker' from the build section of your manifest",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(dockerHostEnvVar, tt.dockerHost)
+			err := addDockerHostBuildArg(tt.buildOptions)
+			require.Equal(t, tt.expectedErr, err)
+			require.Equal(t, tt.expected, tt.buildOptions.BuildArgs)
+		})
+	}
+}
+
+func Test_OptsFromBuildInfo_Docker(t *testing.T) {
+	okCtx := &okteto.ContextStateless{
+		Store: &okteto.ContextStore{
+			Contexts: map[string]*okteto.Context{
+				"test": {Namespace: "test", IsOkteto: true},
+			},
+			CurrentContext: "test",
+		},
+	}
+	opts := OptsFromBuildInfo(&model.Manifest{Name: "movies"}, "api", &build.Info{Context: ".", Dockerfile: "Dockerfile", Docker: true}, &types.BuildOptions{}, &mockRegistry{}, okCtx)
+	require.True(t, opts.Docker)
+}

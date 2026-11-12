@@ -192,6 +192,8 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
+	// Docker gives the commands access to the Docker daemon of the BuildKit sidecar
+	Docker bool
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -332,6 +334,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	buildOptions := buildCmd.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: outputMode})
 	buildOptions.Manifest = params.Manifest
+	buildOptions.Docker = params.Docker
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
 		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.GetContext().Name),

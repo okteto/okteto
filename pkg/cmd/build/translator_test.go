@@ -740,3 +740,100 @@ FROM alpine:latest`,
 		})
 	}
 }
+
+func TestDockerHostTranslator_Translate(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "declares DOCKER_HOST after a FROM",
+			input:    []string{"FROM maven:3.9", "RUN mvn -B package"},
+			expected: []string{"FROM maven:3.9\nARG DOCKER_HOST", "RUN mvn -B package"},
+		},
+		{
+			name: "declares DOCKER_HOST in every stage",
+			input: []string{
+				"FROM maven:3.9 AS build",
+				"RUN mvn -B package",
+				"FROM eclipse-temurin:21",
+				"COPY --from=build /app.jar /app.jar",
+			},
+			expected: []string{
+				"FROM maven:3.9 AS build\nARG DOCKER_HOST",
+				"RUN mvn -B package",
+				"FROM eclipse-temurin:21\nARG DOCKER_HOST",
+				"COPY --from=build /app.jar /app.jar",
+			},
+		},
+		{
+			name:     "matches FROM in any case and with leading spaces",
+			input:    []string{"  from alpine", "From --platform=linux/amd64 alpine"},
+			expected: []string{"  from alpine\nARG DOCKER_HOST", "From --platform=linux/amd64 alpine\nARG DOCKER_HOST"},
+		},
+		{
+			name:     "declares DOCKER_HOST after a FROM split in several lines",
+			input:    []string{"FROM \\", "  --platform=linux/amd64 \\", "  alpine", "RUN true"},
+			expected: []string{"FROM \\", "  --platform=linux/amd64 \\", "  alpine\nARG DOCKER_HOST", "RUN true"},
+		},
+		{
+			name:     "ignores FROM inside the continuation of another instruction",
+			input:    []string{"RUN echo \\", "FROM alpine", "FROM alpine"},
+			expected: []string{"RUN echo \\", "FROM alpine", "FROM alpine\nARG DOCKER_HOST"},
+		},
+		{
+			name:     "leaves the global ARG before the first FROM and the other lines unchanged",
+			input:    []string{"ARG BASE=alpine", "# FROM in a comment", "FROM ${BASE}", "RUN echo FROM"},
+			expected: []string{"ARG BASE=alpine", "# FROM in a comment", "FROM ${BASE}\nARG DOCKER_HOST", "RUN echo FROM"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dht := &dockerHostTranslator{}
+			result := make([]string, 0, len(tt.input))
+			for _, line := range tt.input {
+				result = append(result, dht.translate(line))
+			}
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetTranslatedDockerFile_Docker(t *testing.T) {
+	okCtx := &mockOktetoContext{namespace: "user-ns", registryURL: "registry.example.com"}
+	dockerfile := "FROM maven:3.9 AS build\nRUN mvn -B package\nFROM eclipse-temurin:21\n"
+
+	tests := []struct {
+		name     string
+		docker   bool
+		expected string
+	}{
+		{
+			name:     "declares DOCKER_HOST in every stage with docker",
+			docker:   true,
+			expected: "FROM maven:3.9 AS build\nARG DOCKER_HOST\nRUN mvn -B package\nFROM eclipse-temurin:21\nARG DOCKER_HOST\n",
+		},
+		{
+			name:     "leaves the Dockerfile unchanged without docker",
+			docker:   false,
+			expected: dockerfile,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dockerfilePath := filepath.Join(t.TempDir(), "Dockerfile")
+			require.NoError(t, os.WriteFile(dockerfilePath, []byte(dockerfile), 0644))
+
+			translated, err := getTranslatedDockerFile(dockerfilePath, okCtx, "https://github.com/test/repo", dockerfilePath, "", tt.docker)
+			require.NoError(t, err)
+			t.Cleanup(func() { os.Remove(translated) })
+
+			content, err := os.ReadFile(translated)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, string(content))
+		})
+	}
+}

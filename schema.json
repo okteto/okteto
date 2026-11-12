@@ -1128,6 +1128,12 @@
               "title": "depends_on",
               "description": "List of images that need to be built first"
             },
+            "docker": {
+              "type": "boolean",
+              "title": "docker",
+              "description": "Gives the RUN steps of the build access to a Docker daemon through the DOCKER_HOST build arg, for example to run tests that use Testcontainers. Your Okteto instance needs the Docker daemon of BuildKit enabled",
+              "default": false
+            },
             "dockerfile": {
               "type": "string",
               "title": "dockerfile",
@@ -1229,6 +1235,12 @@
               "type": "array",
               "title": "depends_on",
               "description": "A list of Test Containers this test depends on. When a Test Container is executed, all its dependencies are executed first. The Test Containers defined in depends_on must exist in the current Okteto Manifest.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#depends_on-string-optional"
+            },
+            "docker": {
+              "type": "boolean",
+              "title": "docker",
+              "description": "Gives the commands access to a Docker daemon through the DOCKER_HOST environment variable, for example to run tests that use Testcontainers. Your Okteto instance needs the Docker daemon of BuildKit enabled",
+              "default": false
             },
             "hosts": {
               "items": {

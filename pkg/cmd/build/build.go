@@ -46,6 +46,11 @@ const (
 	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
 
 	OktetoBuildQueueEnabledEnvVar string = "OKTETO_BUILD_QUEUE_ENABLED"
+
+	// dockerHostEnvVar is the Docker daemon of the BuildKit sidecar, published by the Okteto instance
+	dockerHostEnvVar string = "OKTETO_BUILD_DOCKER_HOST"
+	// dockerHostBuildArg is the build arg that gives the Docker daemon to the RUN steps
+	dockerHostBuildArg string = "DOCKER_HOST"
 )
 
 // OktetoBuilderInterface runs the build of an image
@@ -206,11 +211,17 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 		repoURL = buildOptions.Manifest.ManifestPath
 	}
 
+	if buildOptions.Docker {
+		if err := addDockerHostBuildArg(buildOptions); err != nil {
+			return err
+		}
+	}
+
 	var err error
 	if buildOptions.File != "" {
 		// Preserve the original user-facing path before translation
 		buildOptions.OriginalDockerfile = buildOptions.File
-		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext, repoURL, buildOptions.File, buildOptions.Target)
+		buildOptions.File, err = GetDockerfile(buildOptions.File, ob.OktetoContext, repoURL, buildOptions.File, buildOptions.Target, buildOptions.Docker)
 		if err != nil {
 			return err
 		}
@@ -226,6 +237,25 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	ob.metadata = buildSolver.GetMetadata()
 	ob.metadata.ConnectionType = connTypeFromConnector(ob.connector.GetType())
 
+	return nil
+}
+
+// addDockerHostBuildArg passes the Docker daemon of the BuildKit sidecar to the build as the DOCKER_HOST build arg
+func addDockerHostBuildArg(buildOptions *types.BuildOptions) error {
+	if buildOptions.File == "" {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("'docker' needs a local Dockerfile"),
+			Hint: "Build from a local context or remove 'docker' from the build section of your manifest",
+		}
+	}
+	dockerHost := os.Getenv(dockerHostEnvVar)
+	if dockerHost == "" {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("'docker' isn't available in your Okteto instance"),
+			Hint: "Ask your Okteto admin to enable 'buildkit.dind.enabled' in the Okteto Helm chart",
+		}
+	}
+	buildOptions.BuildArgs = append(buildOptions.BuildArgs, fmt.Sprintf("%s=%s", dockerHostBuildArg, dockerHost))
 	return nil
 }
 
@@ -372,6 +402,7 @@ func OptsFromBuildInfo(manifest *model.Manifest, svcName string, b *build.Info, 
 		NoCache:            o.NoCache,
 		ExportCache:        b.ExportCache,
 		Platform:           o.Platform,
+		Docker:             b.Docker,
 	}
 
 	// if secrets are present at the cmd flag, copy them to opts.Secrets

@@ -40,6 +40,7 @@ type Info struct {
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
+	Docker           bool              `yaml:"docker,omitempty"`
 }
 
 // infoRaw represents the build info for serialization
@@ -54,6 +55,7 @@ type infoRaw struct {
 	VolumesToInclude []VolumeMounts    `yaml:"-"`
 	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 	DependsOn        DependsOn         `yaml:"depends_on,omitempty"`
+	Docker           bool              `yaml:"docker,omitempty"`
 }
 
 // normalizeServiceName converts a service name from env var format back to depends_on format
@@ -151,6 +153,7 @@ func (i *Info) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	i.ExportCache = rawBuildInfo.ExportCache
 	i.DependsOn = rawBuildInfo.DependsOn
 	i.Secrets = rawBuildInfo.Secrets
+	i.Docker = rawBuildInfo.Docker
 	return nil
 }
 
@@ -168,6 +171,9 @@ func (i *Info) MarshalYAML() (interface{}, error) {
 	if len(i.Args) != 0 {
 		return infoRaw(*i), nil
 	}
+	if i.Docker {
+		return infoRaw(*i), nil
+	}
 	return i.Image, nil
 }
 
@@ -179,6 +185,7 @@ func (i *Info) Copy() *Info {
 		Target:      i.Target,
 		Image:       i.Image,
 		ExportCache: i.ExportCache,
+		Docker:      i.Docker,
 	}
 
 	// copy to new pointers

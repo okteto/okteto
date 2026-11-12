@@ -38,6 +38,7 @@ var (
 	mountRegex      = regexp.MustCompile(`--mount=([^[:space:]]+)`)
 	targetRegex     = regexp.MustCompile(`target=([^,\s]+)`)
 	hasIDParamRegex = regexp.MustCompile(`\bid=.*`)
+	fromRegex       = regexp.MustCompile(`(?i)^\s*FROM\s`)
 )
 
 type opener interface {
@@ -254,4 +255,25 @@ func (cmt cacheMountTranslator) translate(line string) string {
 	}
 
 	return result
+}
+
+// dockerHostTranslator declares DOCKER_HOST after every FROM, so the RUN steps of every stage receive the DOCKER_HOST
+// build arg without changes in the Dockerfile. A build arg only reaches the stages that declare it
+type dockerHostTranslator struct {
+	// inContinuation is true when the previous line ends with a line continuation
+	inContinuation bool
+	// pendingArg is true when the current instruction is a FROM split in several lines
+	pendingArg bool
+}
+
+func (dht *dockerHostTranslator) translate(line string) string {
+	if !dht.inContinuation && fromRegex.MatchString(line) {
+		dht.pendingArg = true
+	}
+	dht.inContinuation = strings.HasSuffix(strings.TrimRight(line, " \t"), "\\")
+	if !dht.pendingArg || dht.inContinuation {
+		return line
+	}
+	dht.pendingArg = false
+	return line + "\nARG " + dockerHostBuildArg
 }

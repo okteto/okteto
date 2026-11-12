@@ -203,6 +203,7 @@ func Test_BuildInfoCopy(t *testing.T) {
 			},
 		},
 		DependsOn: DependsOn{"other"},
+		Docker:    true,
 	}
 
 	copyB := b.Copy()
@@ -253,6 +254,7 @@ export_cache:
   - test_export_cache
 depends_on:
   - test_depends_on
+docker: true
 secrets:
   secretName: secretValue`,
 			expected: &Info{
@@ -260,6 +262,7 @@ secrets:
 				Dockerfile: "dockerfile",
 				Target:     "testTarget",
 				Image:      "testImage",
+				Docker:     true,
 				CacheFrom: cache.From{
 					"test_cache_from",
 				},
@@ -388,6 +391,13 @@ func TestMarshalInfo(t *testing.T) {
 			expected: "target: a string value\n",
 			input: &Info{
 				Target: "a string value",
+			},
+		},
+		{
+			name:     "marshal info with docker",
+			expected: "docker: true\n",
+			input: &Info{
+				Docker: true,
 			},
 		},
 		{

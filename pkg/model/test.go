@@ -29,6 +29,7 @@ type Test struct {
 	Artifacts           []Artifact    `yaml:"artifacts,omitempty"`
 	Hosts               []Host        `yaml:"hosts,omitempty"`
 	SkipIfNoFileChanges bool          `yaml:"skipIfNoFileChanges,omitempty"`
+	Docker              bool          `yaml:"docker,omitempty"`
 }
 
 type Host struct {

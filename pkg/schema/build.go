@@ -43,6 +43,12 @@ func (build) JSONSchema() *jsonschema.Schema {
 			Type: &jsonschema.Type{Types: []string{"string"}},
 		},
 	})
+	buildProps.Set("docker", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"boolean"}},
+		Title:       "docker",
+		Description: "Gives the RUN steps of the build access to a Docker daemon through the DOCKER_HOST build arg, for example to run tests that use Testcontainers. Your Okteto instance needs the Docker daemon of BuildKit enabled",
+		Default:     false,
+	})
 	buildProps.Set("dockerfile", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "dockerfile",

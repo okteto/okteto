@@ -216,6 +216,41 @@ func TestExtraHosts(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestRunPassesDocker tests that the build of the test container gets `docker: true`, so it receives the Docker daemon
+func TestRunPassesDocker(t *testing.T) {
+	ctx := context.Background()
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	oktetoClient := &client.FakeOktetoClient{
+		Users: client.NewFakeUsersClient(&types.User{}),
+	}
+	nameGenerator := fakeNameGenerator{
+		name: "test",
+	}
+	rdc := Runner{
+		builder: fakeBuilder{
+			assertOptions: func(o *types.BuildOptions) {
+				require.True(t, o.Docker)
+			},
+		},
+		fs:                   fs,
+		workingDirectoryCtrl: wdCtrl,
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		oktetoClientProvider: client.NewFakeOktetoClientProvider(oktetoClient),
+		ioCtrl:               io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		generateSocketName: nameGenerator.GenerateName,
+	}
+
+	err := rdc.Run(ctx, &Params{
+		Manifest: &model.Manifest{},
+		Docker:   true,
+	})
+	require.NoError(t, err)
+}
+
 func TestCreateDockerfile(t *testing.T) {
 	originalStore := okteto.CurrentStore
 	defer func() { okteto.CurrentStore = originalStore }()

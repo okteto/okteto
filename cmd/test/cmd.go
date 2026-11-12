@@ -397,6 +397,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
 			Hosts:                       test.Hosts,
+			Docker:                      test.Docker,
 		}
 		for k, v := range deployable.GetGatewayEnvironment() {
 			params.OktetoCommandSpecificEnvVars[k] = v

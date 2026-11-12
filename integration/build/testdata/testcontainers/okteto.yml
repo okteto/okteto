@@ -1,0 +1,12 @@
+name: testcontainers-example
+
+build:
+  app:
+    docker: true
+
+test:
+  unit:
+    image: maven:3.9-eclipse-temurin-21
+    docker: true
+    commands:
+      - mvn -B test

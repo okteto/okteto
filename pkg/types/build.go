@@ -57,4 +57,6 @@ type BuildOptions struct {
 	CacheFrom    []string
 	NoCache      bool
 	EnableStages bool
+	// Docker gives the RUN steps access to the Docker daemon of the BuildKit sidecar
+	Docker bool
 }
