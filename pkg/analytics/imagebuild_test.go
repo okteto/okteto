@@ -14,46 +14,11 @@
 package analytics
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestAnalyticsTracker_TrackImageBuild(t *testing.T) {
-	tests := []struct {
-		input           *ImageBuildMetadata
-		expectedSuccess bool
-		name            string
-	}{
-		{
-			name:            "success event",
-			input:           &ImageBuildMetadata{Success: true},
-			expectedSuccess: true,
-		},
-		{
-			name:            "not success event",
-			input:           &ImageBuildMetadata{Success: false},
-			expectedSuccess: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var capturedMeta *ImageBuildMetadata
-			mock := &mockAnalyticsBackend{
-				trackImageBuildFn: func(_ context.Context, m *ImageBuildMetadata) {
-					capturedMeta = m
-				},
-			}
-			tracker := &Tracker{backends: []analyticsBackend{mock}}
-			tracker.TrackImageBuild(context.Background(), tt.input)
-
-			require.NotNil(t, capturedMeta)
-			require.Equal(t, tt.expectedSuccess, capturedMeta.Success)
-		})
-	}
-}
 
 func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 	m := &ImageBuildMetadata{
@@ -89,7 +54,7 @@ func Test_NewImageBuildMetadata(t *testing.T) {
 	require.IsType(t, &ImageBuildMetadata{}, NewImageBuildMetadata())
 }
 
-func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
+func Test_ImageBuildMetadata_toProductEventProps(t *testing.T) {
 	m := &ImageBuildMetadata{
 		Name:                     "api",
 		Success:                  true,
@@ -103,7 +68,7 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 		RepoURL:                  "https://github.com/org/repo",
 	}
 
-	props := m.toPostHogProps()
+	props := m.toProductEventProps()
 
 	require.Equal(t, "api", props["service"])
 	require.Equal(t, 30, props["duration_seconds"])
@@ -117,13 +82,13 @@ func Test_ImageBuildMetadata_toPostHogProps(t *testing.T) {
 	require.NotContains(t, props, "error_reason", "error_reason must be omitted on success")
 }
 
-func Test_ImageBuildMetadata_toPostHogProps_omitsZeroFields(t *testing.T) {
+func Test_ImageBuildMetadata_toProductEventProps_omitsZeroFields(t *testing.T) {
 	m := &ImageBuildMetadata{
 		Name:    "api",
 		Success: true,
 	}
 
-	props := m.toPostHogProps()
+	props := m.toProductEventProps()
 
 	require.NotContains(t, props, "duration_seconds")
 	require.NotContains(t, props, "queue_duration_seconds")
@@ -134,14 +99,14 @@ func Test_ImageBuildMetadata_toPostHogProps_omitsZeroFields(t *testing.T) {
 	require.NotContains(t, props, "error_reason")
 }
 
-func Test_ImageBuildMetadata_toPostHogProps_withError(t *testing.T) {
+func Test_ImageBuildMetadata_toProductEventProps_withError(t *testing.T) {
 	m := &ImageBuildMetadata{
 		Success:     false,
-		ErrorReason: "registry_pull_error",
+		ErrorReason: "image_not_found",
 	}
 
-	props := m.toPostHogProps()
+	props := m.toProductEventProps()
 
 	require.Equal(t, false, props["result"])
-	require.Equal(t, "registry_pull_error", props["error_reason"])
+	require.Equal(t, "image_not_found", props["error_reason"])
 }

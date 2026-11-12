@@ -15,11 +15,35 @@ package analytics
 
 import (
 	"context"
+	"os"
 	"sync"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/singleflight"
 )
+
+// IsWithinPreview reports whether the current CLI context is inside a preview
+// environment. It first checks the platform env var (set when running inside a
+// preview); if not set, it calls checkPreview with the active namespace so that
+// `okteto ns use <preview-name>` is also detected. Pass nil to skip the API check.
+// It feeds Mixpanel's Deploy.isPreview and the is_within_preview product event property.
+func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, string) error) bool {
+	if os.Getenv(constants.OktetoIsPreviewEnvVar) == "true" {
+		return true
+	}
+	if checkPreview == nil {
+		return false
+	}
+	ns := okteto.GetContext().Namespace
+	if ns == "" {
+		return false
+	}
+	// Memoized per namespace so the preview API check runs at most once per
+	// session across the up/deploy/pipeline call sites.
+	return defaultPreviewResolver.isWithinPreview(ctx, ns, checkPreview)
+}
 
 // previewResolver memoizes, per namespace, whether it is a preview environment,
 // so the analytics preview check hits the Okteto API at most once per session

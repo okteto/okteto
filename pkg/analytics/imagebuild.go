@@ -29,8 +29,8 @@ type ImageBuildMetadata struct {
 	RepoURL                  string
 	BuildContextHash         string
 	Initiator                string
-	ErrorReason              string // PostHog: raw error on failure, empty on success
-	ConnectionType           string // PostHog: proxy or legacy
+	ErrorReason              string // image_build: bounded error category on failure, never the raw error
+	ConnectionType           string // image_build: proxy or legacy
 	WaitForBuildkitAvailable time.Duration
 	BuildkitDuration         time.Duration
 	ContextTransferDuration  time.Duration
@@ -38,7 +38,7 @@ type ImageBuildMetadata struct {
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
 	CloneDuration            time.Duration
-	BuildContextSize         int64 // PostHog: build context size in bytes
+	BuildContextSize         int64 // image_build: build context size in bytes
 	CacheHit                 bool
 	Success                  bool
 }
@@ -71,9 +71,9 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
 	return props
 }
 
-// toPostHogProps returns the PostHog-specific property map for an image_build event.
+// toProductEventProps returns the properties of the image_build product event.
 // Fields with zero/empty values are omitted.
-func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
+func (m *ImageBuildMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
 		"service":  m.Name,
 		"result":   m.Success,
@@ -106,9 +106,8 @@ func (m *ImageBuildMetadata) toPostHogProps() map[string]any {
 	return props
 }
 
-// TrackImageBuild sends an image build event to all registered backends.
+// TrackImageBuild sends the imageBuild and image_build events.
 func (a *Tracker) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
-	for _, b := range a.backends {
-		b.TrackImageBuild(ctx, m)
-	}
+	a.trackFn(imageBuildEvent, m.Success, m.toMixpanelProps())
+	a.events.track(ctx, productImageBuildEvent, m.toProductEventProps(), a.events.withNamespace(m.Namespace))
 }
