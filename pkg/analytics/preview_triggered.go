@@ -25,9 +25,23 @@ type DeployPreviewTriggeredMetadata struct {
 	IsRedeploy       bool
 }
 
-// TrackDeployPreviewTriggered sends a deploy_preview_triggered event to all registered backends.
-func (a *Tracker) TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata) {
-	for _, b := range a.backends {
-		b.TrackDeployPreviewTriggered(ctx, m)
+// toProductEventProps returns the properties of the deploy_preview_triggered product event.
+func (m DeployPreviewTriggeredMetadata) toProductEventProps() map[string]any {
+	props := map[string]any{
+		"workflow_id": m.WorkflowID,
+		"is_redeploy": m.IsRedeploy,
 	}
+	if m.ParentWorkflowID != "" {
+		props["parent_workflow_id"] = m.ParentWorkflowID
+	}
+	if m.RepoURL != "" {
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+	}
+	return props
+}
+
+// TrackDeployPreviewTriggered sends a deploy_preview_triggered event. The preview
+// property is the preview namespace UID, never its name.
+func (a *Tracker) TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata) {
+	a.events.track(ctx, productDeployPreviewTriggeredEvent, m.toProductEventProps(), a.events.withPreview(m.Preview))
 }

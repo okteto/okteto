@@ -14,6 +14,7 @@
 package analytics
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -252,7 +253,8 @@ func (u *UpMetricsMetadata) errorReason() string {
 	}
 }
 
-func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
+// toProductEventProps returns the properties of the up product event.
+func (u *UpMetricsMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
 		"result":             u.success,
 		"manifest_type":      string(u.manifestType),
@@ -286,18 +288,22 @@ func (u *UpMetricsMetadata) toPostHogProps() map[string]any {
 	return props
 }
 
-// TrackUp sends a tracking event when the user activates a development container.
-// Mixpanel receives the event via trackFn; PostHog via the backends slice.
+// TrackUp sends the Up and up events when the user activates a development container.
 func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
 	a.trackFn(upEvent, m.success, m.toProps())
-	for _, b := range a.backends {
-		b.TrackUp(m)
-	}
+	a.events.track(context.Background(), productUpEvent, m.toProductEventProps(), a.events.withNamespace(m.namespace))
 }
 
 // TrackUpStarted fires the up_started event at the beginning of the up command.
 func (a *Tracker) TrackUpStarted(service, namespace, repoURL, workflowID string) {
-	for _, b := range a.backends {
-		b.TrackUpStarted(service, namespace, repoURL, workflowID)
+	hashedRepoURL := ""
+	if repoURL != "" {
+		hashedRepoURL = hashString(normalizeRepoURL(repoURL))
 	}
+	props := map[string]any{
+		"service":     service,
+		"repo_url":    hashedRepoURL,
+		"workflow_id": workflowID,
+	}
+	a.events.track(context.Background(), productUpStartedEvent, props, a.events.withNamespace(namespace))
 }

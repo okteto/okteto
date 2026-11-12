@@ -27,9 +27,24 @@ type DeployPipelineTriggeredMetadata struct {
 	IsRedeploy       bool
 }
 
-// TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event to all registered backends.
-func (a *Tracker) TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata) {
-	for _, b := range a.backends {
-		b.TrackDeployPipelineTriggered(ctx, m)
+// toProductEventProps returns the properties of the deploy_pipeline_triggered product event.
+func (m DeployPipelineTriggeredMetadata) toProductEventProps() map[string]any {
+	props := map[string]any{
+		"workflow_id":       m.WorkflowID,
+		"is_within_preview": m.IsWithinPreview,
+		"is_redeploy":       m.IsRedeploy,
+		"deploy_type":       m.DeployType,
 	}
+	if m.ParentWorkflowID != "" {
+		props["parent_workflow_id"] = m.ParentWorkflowID
+	}
+	if m.RepoURL != "" {
+		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+	}
+	return props
+}
+
+// TrackDeployPipelineTriggered sends a deploy_pipeline_triggered event.
+func (a *Tracker) TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata) {
+	a.events.track(ctx, productDeployPipelineTriggeredEvent, m.toProductEventProps(), a.events.withNamespace(m.Namespace))
 }

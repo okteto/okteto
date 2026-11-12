@@ -21,9 +21,8 @@ type WakeTriggeredMetadata struct {
 	IsPreview bool
 }
 
-// TrackWakeTriggered sends a wake_triggered event to all registered backends.
+// TrackWakeTriggered sends a wake_triggered event.
 func (a *Tracker) TrackWakeTriggered(ctx context.Context, m WakeTriggeredMetadata) {
-	for _, b := range a.backends {
-		b.TrackWakeTriggered(ctx, m)
-	}
+	props := map[string]any{"is_preview": m.IsPreview}
+	a.events.track(ctx, productWakeTriggeredEvent, props, a.events.withNamespace(m.Namespace))
 }

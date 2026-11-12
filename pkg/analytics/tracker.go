@@ -13,49 +13,23 @@
 
 package analytics
 
-import "context"
-
-// analyticsBackend is implemented by each analytics provider.
-// Add a new method here when an event gains PostHog coverage.
-type analyticsBackend interface {
-	TrackImageBuild(ctx context.Context, meta *ImageBuildMetadata)
-	TrackDeployPipelineTriggered(ctx context.Context, m DeployPipelineTriggeredMetadata)
-	TrackDeployPreviewTriggered(ctx context.Context, m DeployPreviewTriggeredMetadata)
-	TrackWakeTriggered(ctx context.Context, m WakeTriggeredMetadata)
-	TrackUp(meta *UpMetricsMetadata)
-	TrackUpStarted(service, namespace, repoURL, workflowID string)
-	TrackDeployStarted(meta DeployStartedMetadata)
-	TrackDeploy(meta DeployMetadata)
-}
-
-// closer is implemented by backends that hold resources that need flushing on exit.
-type closer interface {
-	Close()
-}
-
-// Tracker dispatches analytics events to all registered backends.
+// Tracker sends analytics events to Mixpanel: the regular events through
+// trackFn, and the product events through the non-blocking events client.
 type Tracker struct {
-	trackFn  func(event string, success bool, props map[string]any)
-	backends []analyticsBackend
+	trackFn func(event string, success bool, props map[string]any)
+	events  *productEventClient
 }
 
-// NewAnalyticsTracker creates a Tracker wired to all active backends.
+// NewAnalyticsTracker creates a Tracker that sends events to Mixpanel.
 func NewAnalyticsTracker() *Tracker {
 	return &Tracker{
 		trackFn: track,
-		backends: []analyticsBackend{
-			newMixpanelBackend(),
-			newPostHogBackend(),
-		},
+		events:  newProductEventClient(),
 	}
 }
 
-// Close flushes and shuts down every backend that holds resources.
+// Close waits for the pending product events to be sent.
 // Call this once before the process exits (e.g. at.Close() right after root.Execute() in main).
-func (t *Tracker) Close() {
-	for _, b := range t.backends {
-		if c, ok := b.(closer); ok {
-			c.Close()
-		}
-	}
+func (a *Tracker) Close() {
+	a.events.Close()
 }

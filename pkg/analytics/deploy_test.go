@@ -14,11 +14,14 @@
 package analytics
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDeployTracker(t *testing.T) {
@@ -86,7 +89,7 @@ func TestDeployTracker(t *testing.T) {
 			},
 		},
 		{
-			name: "error set",
+			name: "unknown error sent as a category",
 			metadata: DeployMetadata{
 				Success:                true,
 				IsOktetoRepo:           true,
@@ -111,7 +114,7 @@ func TestDeployTracker(t *testing.T) {
 					"hasDependenciesSection": true,
 					"hasBuildSection":        true,
 					"isRemote":               true,
-					"error":                  assert.AnError.Error(),
+					"error":                  "unknown",
 				},
 			},
 		},
@@ -138,23 +141,7 @@ func TestDeployTracker(t *testing.T) {
 	}
 }
 
-func TestAnalyticsTracker_TrackDeployStarted(t *testing.T) {
-	var captured DeployStartedMetadata
-	mock := &mockAnalyticsBackend{
-		trackDeployStartedFn: func(meta DeployStartedMetadata) { captured = meta },
-	}
-	tracker := &Tracker{
-		trackFn:  func(_ string, _ bool, _ map[string]any) {},
-		backends: []analyticsBackend{mock},
-	}
-
-	meta := DeployStartedMetadata{Namespace: "dev-ns", RepoURL: "https://github.com/org/repo", IsRedeploy: true}
-	tracker.TrackDeployStarted(meta)
-
-	assert.Equal(t, meta, captured)
-}
-
-func TestDeployMetadata_ToPostHogProps(t *testing.T) {
+func TestDeployMetadata_ToProductEventProps(t *testing.T) {
 	t.Run("new fields hashed and conditional", func(t *testing.T) {
 		props := (&DeployMetadata{
 			Success:           true,
@@ -164,7 +151,7 @@ func TestDeployMetadata_ToPostHogProps(t *testing.T) {
 			ParentExecutionID: "exec-1",
 			IsPreview:         true,
 			Duration:          90 * time.Second,
-		}).toPostHogProps()
+		}).toProductEventProps()
 
 		assert.Equal(t, "compose", props["manifest_archetype"])
 		assert.Equal(t, "compose", props["manifest_syntax"])
@@ -176,7 +163,7 @@ func TestDeployMetadata_ToPostHogProps(t *testing.T) {
 	})
 
 	t.Run("empty optional fields omitted, defaults applied", func(t *testing.T) {
-		props := (&DeployMetadata{Success: true}).toPostHogProps()
+		props := (&DeployMetadata{Success: true}).toProductEventProps()
 
 		assert.Equal(t, "pipeline", props["manifest_archetype"])
 		assert.Equal(t, "regular", props["namespace_type"])
@@ -187,14 +174,14 @@ func TestDeployMetadata_ToPostHogProps(t *testing.T) {
 	})
 }
 
-func TestDeployStartedMetadata_ToPostHogProps(t *testing.T) {
+func TestDeployStartedMetadata_ToProductEventProps(t *testing.T) {
 	t.Run("repo_url hashed, parent_execution_id present", func(t *testing.T) {
 		props := (&DeployStartedMetadata{
 			RepoURL:           "https://github.com/org/repo",
 			ParentExecutionID: "exec-1",
 			IsPreview:         true,
 			IsRedeploy:        true,
-		}).toPostHogProps()
+		}).toProductEventProps()
 
 		assert.Equal(t, true, props["is_within_preview"])
 		assert.Equal(t, true, props["is_redeploy"])
@@ -203,11 +190,22 @@ func TestDeployStartedMetadata_ToPostHogProps(t *testing.T) {
 	})
 
 	t.Run("empty fields omitted", func(t *testing.T) {
-		props := (&DeployStartedMetadata{}).toPostHogProps()
+		props := (&DeployStartedMetadata{}).toProductEventProps()
 
 		assert.NotContains(t, props, "repo_url")
 		assert.NotContains(t, props, "parent_execution_id")
 		assert.Equal(t, false, props["is_within_preview"])
 		assert.Equal(t, false, props["is_redeploy"])
 	})
+}
+
+func TestDeployTracker_ErrorIsCategorized(t *testing.T) {
+	var props map[string]any
+	tracker := Tracker{
+		trackFn: func(_ string, _ bool, p map[string]any) { props = p },
+	}
+
+	tracker.TrackDeploy(DeployMetadata{Err: oktetoErrors.UserError{E: errors.New("error executing command './deploy.sh --password=pass': exit status 1")}})
+
+	require.Equal(t, "user_error", props["error"])
 }
