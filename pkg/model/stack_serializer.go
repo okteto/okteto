@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -162,13 +163,42 @@ type ServiceRaw struct {
 	EnvFilesSneakCase        env.Files              `yaml:"env_file,omitempty"`
 	Args                     ArgsStack              `yaml:"args,omitempty"`
 	Entrypoint               CommandStack           `yaml:"entrypoint,omitempty"`
-	Environment              env.Environment        `yaml:"environment,omitempty"`
+	Environment              stackEnvironment       `yaml:"environment,omitempty"`
 	Expose                   []PortRaw              `yaml:"expose,omitempty"`
 	Ports                    []PortRaw              `yaml:"ports,omitempty"`
 	CapDrop                  []apiv1.Capability     `yaml:"capDrop,omitempty"`
 	CapDropSneakCase         []apiv1.Capability     `yaml:"cap_drop,omitempty"`
 	CapAdd                   []apiv1.Capability     `yaml:"capAdd,omitempty"`
 	Public                   bool                   `yaml:"public,omitempty"`
+}
+
+// stackEnvironment decodes values already expanded by ExpandStackEnvs.
+// The shared env.Environment decoder also expands values, which would consume
+// escaped dollars and interpolate variable contents a second time.
+type stackEnvironment []env.Var
+
+func (e *stackEnvironment) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	values := make(map[string]string)
+	var list []string
+	if err := unmarshal(&list); err == nil {
+		for _, entry := range list {
+			parts := strings.SplitN(entry, "=", 2)
+			value := os.Getenv(parts[0])
+			if len(parts) == 2 {
+				value = parts[1]
+			}
+			values[parts[0]] = value
+		}
+	} else if err := unmarshal(&values); err != nil {
+		return err
+	}
+	result := make(stackEnvironment, 0, len(values))
+	for name, value := range values {
+		result = append(result, env.Var{Name: name, Value: value})
+	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].Name < result[j].Name })
+	*e = result
+	return nil
 }
 
 // serviceAccountExtension is the compose service extension that sets the pod ServiceAccount
