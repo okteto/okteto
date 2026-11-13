@@ -670,6 +670,7 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 	}
 
 	var checkURL *url.URL
+	isHTTPS := false
 	for _, possibleURL := range testStrings[1:] {
 		if possibleURL == "-f" || possibleURL == "--fail" {
 			continue
@@ -684,12 +685,16 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 				u = nil
 				continue
 			}
+		} else {
+			isHTTPS = strings.EqualFold(u.Scheme, "https")
 		}
 		checkURL = u
 		break
 	}
 
-	if checkURL == nil {
+	// The HTTP probe has no scheme, so it would send plain HTTP to an HTTPS
+	// endpoint. Keep the curl command instead.
+	if checkURL == nil || isHTTPS {
 		return
 	}
 
