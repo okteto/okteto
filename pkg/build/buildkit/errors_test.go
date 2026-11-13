@@ -184,6 +184,45 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			},
 		},
 		{
+			name: "failed RUN step whose command contains a connection error",
+			err:  errors.New(`failed to solve: process "/bin/sh -c curl localhost:8080 || echo 'connect: connection refused' && false" did not complete successfully: exit code: 1`),
+			expected: oktetoErrors.UserError{
+				E: errors.New(`failed to solve: process "/bin/sh -c curl localhost:8080 || echo 'connect: connection refused' && false" did not complete successfully: exit code: 1`),
+			},
+		},
+		{
+			name: "failed RUN step whose command contains not found",
+			err:  errors.New(`failed to solve: process "/bin/sh -c which jq || (echo 'jq not found' && false)" did not complete successfully: exit code: 1`),
+			expected: oktetoErrors.UserError{
+				E: errors.New(`failed to solve: process "/bin/sh -c which jq || (echo 'jq not found' && false)" did not complete successfully: exit code: 1`),
+			},
+		},
+		{
+			name: "failed RUN step whose command contains a registry 5xx",
+			err:  errors.New(`failed to solve: process "/bin/sh -c echo 'unexpected status from GET request to https://registry.example.com/v2/app/manifests/1: 500 Internal Server Error' && false" did not complete successfully: exit code: 1`),
+			expected: oktetoErrors.UserError{
+				E: errors.New(`failed to solve: process "/bin/sh -c echo 'unexpected status from GET request to https://registry.example.com/v2/app/manifests/1: 500 Internal Server Error' && false" did not complete successfully: exit code: 1`),
+			},
+		},
+		{
+			name: "dockerfile syntax error",
+			err:  errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: RUNN (did you mean RUN?) not found"),
+			expected: oktetoErrors.UserError{
+				E: errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: RUNN (did you mean RUN?) not found"),
+			},
+		},
+		{
+			name: "cmd error whose message is a failed step",
+			err: CommandErr{
+				Err:   errors.New(`process "/bin/sh -c make" did not complete successfully: exit code: 2`),
+				Stage: "deploy",
+			},
+			expected: CommandErr{
+				Err:   errors.New(`process "/bin/sh -c make" did not complete successfully: exit code: 2`),
+				Stage: "deploy",
+			},
+		},
+		{
 			name: "cmd error",
 			err: CommandErr{
 				Err:    assert.AnError,
@@ -505,6 +544,26 @@ func TestExtractImageTagFromFailedToAuthorize(t *testing.T) {
 		t.Run(tt.err.Error(), func(t *testing.T) {
 			got := extractImageFromError(tt.err)
 			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestIsBuildStepFailure(t *testing.T) {
+	tests := []struct {
+		err      error
+		name     string
+		expected bool
+	}{
+		{name: "nil", err: nil, expected: false},
+		{name: "failed RUN", err: errors.New(`failed to solve: process "/bin/sh -c false" did not complete successfully: exit code: 1`), expected: true},
+		{name: "COPY of a missing file", err: errors.New(`failed to solve: failed to compute cache key: failed to calculate checksum of ref abc::def: "/app.json": not found`), expected: true},
+		{name: "dockerfile syntax error", err: errors.New("failed to solve: dockerfile parse error on line 2: unknown instruction: RUNN"), expected: true},
+		{name: "base image not found", err: errors.New("failed to solve: docker.io/library/nope:latest: not found"), expected: false},
+		{name: "connection refused", err: errors.New("rpc error: code = Unavailable desc = connect: connection refused"), expected: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, IsBuildStepFailure(tt.err))
 		})
 	}
 }

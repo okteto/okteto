@@ -136,6 +136,21 @@ func TestImageBuildErrorReason(t *testing.T) {
 			expected: buildErrorDockerfileFailed,
 		},
 		{
+			name:     "dockerfile RUN step echoing a buildkit rewrite trigger",
+			err:      buildkit.GetSolveErrorMessage(errors.New(`failed to solve: process "/bin/sh -c curl localhost:8080 || echo 'connect: connection refused' && false" did not complete successfully: exit code: 1`)),
+			expected: buildErrorDockerfileFailed,
+		},
+		{
+			name:     "dockerfile RUN step echoing not found",
+			err:      buildkit.GetSolveErrorMessage(errors.New(`failed to solve: process "/bin/sh -c which jq || (echo 'jq not found' && false)" did not complete successfully: exit code: 1`)),
+			expected: buildErrorDockerfileFailed,
+		},
+		{
+			name:     "dockerfile RUN step echoing the secrets message",
+			err:      buildkit.GetSolveErrorMessage(errors.New(`failed to solve: process "/bin/sh -c echo 'failed to process build secrets' && false" did not complete successfully: exit code: 1`)),
+			expected: buildErrorDockerfileFailed,
+		},
+		{
 			name:     "dockerfile COPY of a missing file",
 			err:      buildkit.GetSolveErrorMessage(errors.New(`failed to solve: failed to compute cache key: failed to calculate checksum of ref 4f3c::abc: "/package.json": not found`)),
 			expected: buildErrorDockerfileFailed,
