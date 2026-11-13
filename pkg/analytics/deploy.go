@@ -14,6 +14,7 @@
 package analytics
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -22,9 +23,7 @@ import (
 )
 
 const (
-	deployEvent                 = "Deploy"
-	posthogDeployStartedEvent   = "deploy_started"
-	posthogDeployCompletedEvent = "deploy_completed"
+	deployEvent = "Deploy"
 )
 
 // DeployMetadata contains the metadata of a deploy event
@@ -65,7 +64,16 @@ func (d *DeployMetadata) errorReason() string {
 	}
 }
 
-func (d *DeployMetadata) toPostHogProps() map[string]any {
+// errorCategory returns errorReason, or "unknown" for errors it doesn't classify.
+func (d *DeployMetadata) errorCategory() string {
+	if reason := d.errorReason(); reason != "" {
+		return reason
+	}
+	return "unknown"
+}
+
+// toProductEventProps returns the properties of the deploy_completed product event.
+func (d *DeployMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
 		"result":                   d.Success,
 		"manifest_archetype":       d.manifestArchetype(),
@@ -127,7 +135,8 @@ type DeployStartedMetadata struct {
 	IsRedeploy        bool
 }
 
-func (d *DeployStartedMetadata) toPostHogProps() map[string]any {
+// toProductEventProps returns the properties of the deploy_started product event.
+func (d *DeployStartedMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
 		"is_within_preview": d.IsPreview,
 		"is_redeploy":       d.IsRedeploy,
@@ -146,12 +155,10 @@ func (d *DeployStartedMetadata) toPostHogProps() map[string]any {
 
 // TrackDeployStarted fires the deploy_started event at the beginning of the deploy command.
 func (a *Tracker) TrackDeployStarted(metadata DeployStartedMetadata) {
-	for _, b := range a.backends {
-		b.TrackDeployStarted(metadata)
-	}
+	a.events.track(context.Background(), productDeployStartedEvent, metadata.toProductEventProps(), a.events.withNamespace(metadata.Namespace))
 }
 
-// TrackDeploy sends a tracking event to mixpanel when the user deploys from command okteto deploy
+// TrackDeploy sends the Deploy and deploy_completed events when the user deploys from command okteto deploy
 func (a *Tracker) TrackDeploy(metadata DeployMetadata) {
 	if metadata.PipelineType == "" {
 		metadata.PipelineType = "pipeline"
@@ -167,10 +174,9 @@ func (a *Tracker) TrackDeploy(metadata DeployMetadata) {
 		"isRemote":               metadata.IsRemote,
 	}
 	if metadata.Err != nil {
-		props["error"] = metadata.Err.Error()
+		// Never the raw error: it can hold command lines, URLs and credentials.
+		props["error"] = metadata.errorCategory()
 	}
 	a.trackFn(deployEvent, metadata.Success, props)
-	for _, b := range a.backends {
-		b.TrackDeploy(metadata)
-	}
+	a.events.track(context.Background(), productDeployCompletedEvent, metadata.toProductEventProps(), a.events.withNamespace(metadata.Namespace))
 }
