@@ -40,7 +40,9 @@ const (
 // rewritten into UserErrors with a new message (see buildkit.GetSolveErrorMessage
 // and the BuildKit connectors), so the message is the only thing left to match on.
 const (
-	secretErrorMsg            = "failed to process build secrets"
+	// The build-secrets error always reaches the classifier with this prefix (runner.go and opt.go
+	// in pkg/build/buildkit). Matching the prefix keeps a command quoted later in a message from matching.
+	secretErrorPrefix         = "failed to create build solver: failed to process build secrets"
 	queueTimeoutMsg           = "waiting in the Okteto Build queue timed out"
 	buildkitUnavailableMsg    = "buildkit service is not available"
 	buildkitWaitTimeoutMsg    = "buildkit service not available for"
@@ -50,30 +52,24 @@ const (
 	registryServerErrorMsg    = "the registry returned '"
 	registryDigestErrorMsg    = "error accessing image at registry"
 	imageNotAccessibleMsg     = "is not accessible or it does not exist"
-	// BuildKit's own errors, returned as they are by GetSolveErrorMessage:
-	// a failed RUN step, a COPY/ADD of a missing file and a Dockerfile syntax error
-	runStepFailedMsg     = "did not complete successfully"
-	copyChecksumErrorMsg = "failed to calculate checksum of ref"
-	dockerfileParseMsg   = "dockerfile parse error"
 )
 
 // imageBuildErrorReason maps a service build error to a bounded category for
 // the image_build analytics event. The order matters: the secrets error wraps a
 // file-not-found error, which would otherwise read as a missing Dockerfile, and
 // the Dockerfile step errors hold the user's command, which must not be matched
-// against the connection and registry messages.
+// against the connection and registry messages. GetSolveErrorMessage doesn't
+// rewrite those step errors, so they reach this function as BuildKit returned them.
 func imageBuildErrorReason(err error) string {
 	if err == nil {
 		return ""
 	}
 	msg := err.Error()
 	switch {
-	case strings.Contains(msg, secretErrorMsg):
+	case strings.HasPrefix(msg, secretErrorPrefix):
 		return buildErrorSecretError
 	case errors.As(err, &buildkit.CommandErr{}),
-		strings.Contains(msg, runStepFailedMsg),
-		strings.Contains(msg, copyChecksumErrorMsg),
-		strings.Contains(msg, dockerfileParseMsg):
+		buildkit.IsBuildStepFailure(err):
 		return buildErrorDockerfileFailed
 	case strings.Contains(msg, queueTimeoutMsg):
 		return buildErrorQueueTimeout
