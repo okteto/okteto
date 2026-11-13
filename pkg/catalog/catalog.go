@@ -25,6 +25,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/remote"
 )
 
 const (
@@ -103,8 +104,8 @@ func (s SecretVariables) RemoteRunFlags() []string {
 		return nil
 	}
 	return []string{
-		fmt.Sprintf("--%s %q", ActionFlag, s.Action),
-		fmt.Sprintf("--%s %q", SecretVariablesEndpointFlag, s.Endpoint),
+		remote.CommandFlag(ActionFlag, s.Action),
+		remote.CommandFlag(SecretVariablesEndpointFlag, s.Endpoint),
 	}
 }
 

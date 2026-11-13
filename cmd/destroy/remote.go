@@ -182,9 +182,10 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 	return nil
 }
 
+// getCommandFlags returns the remote-run flags for the destroy, with the values quoted for the shell
 func getCommandFlags(opts *Options) ([]string, error) {
 	commandFlags := []string{
-		fmt.Sprintf("--name \"%s\"", opts.Name),
+		remote.CommandFlag("name", opts.Name),
 	}
 
 	if opts.ForceDestroy {
@@ -198,7 +199,7 @@ func getCommandFlags(opts *Options) ([]string, error) {
 			return nil, err
 		}
 		for _, v := range variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=%q", v.Name, v.Value))
+			varsToAddForDeploy = append(varsToAddForDeploy, remote.CommandFlag("var", v.Name+"="+v.Value))
 		}
 		commandFlags = append(commandFlags, strings.Join(varsToAddForDeploy, " "))
 	}
