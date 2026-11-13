@@ -68,6 +68,26 @@ func writeRepoFile(t *testing.T, root, name, content string) {
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 }
 
+// initTestRepo creates a git repository in a temp dir and returns its path and
+// worktree. Commit signing is disabled in the repository's config so the tests
+// do not depend on the machine's global git config: go-git v6 honors
+// commit.gpgSign and fails to commit when no signer is set up.
+func initTestRepo(t *testing.T) (string, *git.Worktree) {
+	t.Helper()
+	dir := t.TempDir()
+	repo, err := git.PlainInit(dir, false)
+	require.NoError(t, err)
+
+	cfg, err := repo.Config()
+	require.NoError(t, err)
+	cfg.Raw.Section("commit").SetOption("gpgsign", "false")
+	require.NoError(t, repo.SetConfig(cfg))
+
+	worktree, err := repo.Worktree()
+	require.NoError(t, err)
+	return dir, worktree
+}
+
 func commitAll(t *testing.T, worktree *git.Worktree, message string) string {
 	t.Helper()
 	require.NoError(t, worktree.AddWithOptions(&git.AddOptions{All: true}))
@@ -79,11 +99,7 @@ func commitAll(t *testing.T, worktree *git.Worktree, message string) string {
 }
 
 func TestOktetoGitWorktreeStatus_goGitFallbackHonoursNestedGitignore(t *testing.T) {
-	dir := t.TempDir()
-	repo, err := git.PlainInit(dir, false)
-	require.NoError(t, err)
-	worktree, err := repo.Worktree()
-	require.NoError(t, err)
+	dir, worktree := initTestRepo(t)
 
 	writeRepoFile(t, dir, ".gitignore", "*.log\n")
 	writeRepoFile(t, dir, "sub/.gitignore", "build/\n")
@@ -106,11 +122,7 @@ func TestOktetoGitWorktreeStatus_goGitFallbackHonoursNestedGitignore(t *testing.
 }
 
 func TestOktetoGitWorktreeStatus_goGitFallbackCleanWhenOnlyIgnoredFiles(t *testing.T) {
-	dir := t.TempDir()
-	repo, err := git.PlainInit(dir, false)
-	require.NoError(t, err)
-	worktree, err := repo.Worktree()
-	require.NoError(t, err)
+	dir, worktree := initTestRepo(t)
 
 	writeRepoFile(t, dir, ".gitignore", "node_modules/\n")
 	writeRepoFile(t, dir, "main.go", "package main")
@@ -124,11 +136,7 @@ func TestOktetoGitWorktreeStatus_goGitFallbackCleanWhenOnlyIgnoredFiles(t *testi
 }
 
 func TestOktetoGitRepositoryGetLatestSHA_goGitFallbackFiltersByPath(t *testing.T) {
-	dir := t.TempDir()
-	repo, err := git.PlainInit(dir, false)
-	require.NoError(t, err)
-	worktree, err := repo.Worktree()
-	require.NoError(t, err)
+	dir, worktree := initTestRepo(t)
 
 	writeRepoFile(t, dir, "api/main.go", "package main")
 	first := commitAll(t, worktree, "add api")
