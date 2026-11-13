@@ -76,7 +76,7 @@ func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
 		},
 		{
 			name:         "Readiness",
-			test:         []string{"curl https://0.0.0.0:8080/readiness"},
+			test:         []string{"curl http://0.0.0.0:8080/readiness"},
 			expectedTest: HealtcheckTest{},
 			expectedHTTP: HTTPHealtcheck{Path: "/readiness", Port: int32(8080)},
 		},
@@ -95,11 +95,21 @@ func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
 			if !reflect.DeepEqual(check.Test, tc.expectedTest) {
 				t.Fatalf("expected %v but got %v", tc.expectedTest, check.Test)
 			}
-			if !reflect.DeepEqual(check.Test, tc.expectedTest) {
+			if !reflect.DeepEqual(check.HTTP, &tc.expectedHTTP) {
 				t.Fatalf("expected %v but got %v", tc.expectedHTTP, check.HTTP)
 			}
 		})
 	}
+}
+
+func Test_translateHealtcheckCurlToHTTPKeepsHTTPSCheck(t *testing.T) {
+	test := HealtcheckTest{"curl", "-f", "https://localhost:8443/healthz"}
+	check := HealthCheck{Test: test}
+
+	translateHealtcheckCurlToHTTP(&check)
+
+	require.Nil(t, check.HTTP)
+	require.Equal(t, test, check.Test)
 }
 
 func Test_DeployReplicasUnmarshalling(t *testing.T) {
@@ -400,7 +410,7 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 		{
 			name:          "healthcheck http through test with https",
 			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl https://0.0.0.0:8080/readiness\n    image: okteto/vote:1"),
-			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/readiness", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{}, Readiness: true},
+			expected:      &HealthCheck{Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{"curl", "https://0.0.0.0:8080/readiness"}, Readiness: true},
 			expectedError: false,
 		},
 		{
