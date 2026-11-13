@@ -56,7 +56,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Name: "test",
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name test"},
 		},
 		{
 			name: "name multiple words",
@@ -65,7 +65,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Name: "this is a test",
 				},
 			},
-			expected: []string{"--name \"this is a test\""},
+			expected: []string{"--name 'this is a test'"},
 		},
 		{
 			name: "force destroy set",
@@ -75,7 +75,7 @@ func TestGetCommandFlags(t *testing.T) {
 					ForceDestroy: true,
 				},
 			},
-			expected: []string{"--name \"test\"", "--force-destroy"},
+			expected: []string{"--name test", "--force-destroy"},
 		},
 		{
 			name: "variables set",
@@ -88,7 +88,7 @@ func TestGetCommandFlags(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"--name \"test\"", "--var a=\"b\" --var c=\"d\""},
+			expected: []string{"--name test", "--var a=b --var c=d"},
 		},
 		{
 			name: "multiword var value",
@@ -98,7 +98,56 @@ func TestGetCommandFlags(t *testing.T) {
 					Variables: []string{"test=multi word value"},
 				},
 			},
-			expected: []string{"--name \"test\"", "--var test=\"multi word value\""},
+			expected: []string{"--name test", "--var 'test=multi word value'"},
+		},
+		{
+			name: "name with command substitution",
+			config: config{
+				opts: &Options{
+					Name: "$(echo x)",
+				},
+			},
+			expected: []string{"--name '$(echo x)'"},
+		},
+		{
+			name: "var value with command substitution",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"A=$(echo x)"},
+				},
+			},
+			expected: []string{"--name test", "--var 'A=$(echo x)'"},
+		},
+		{
+			name: "var value with a newline",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"A=multi\nline"},
+				},
+			},
+			expected: []string{"--name test", `--var 'A=multi\nline'`},
+		},
+		{
+			name: "var name with command substitution",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"$(echo x)=y"},
+				},
+			},
+			expected: []string{"--name test", "--var '$(echo x)=y'"},
+		},
+		{
+			name: "empty var value",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"A="},
+				},
+			},
+			expected: []string{"--name test", "--var A="},
 		},
 		{
 			// a stored variable with the same name travels as a --var, which remote-run doesn't read the action from
@@ -111,10 +160,10 @@ func TestGetCommandFlags(t *testing.T) {
 				},
 			},
 			expected: []string{
-				"--name \"test\"",
-				"--var OKTETO_ACTION_NAME=\"stored-action\"",
-				"--catalog-action \"action-name\"",
-				"--catalog-secret-variables-endpoint \"https://okteto.example/internal/catalog/secret-variables\"",
+				"--name test",
+				"--var OKTETO_ACTION_NAME=stored-action",
+				"--catalog-action action-name",
+				"--catalog-secret-variables-endpoint https://okteto.example/internal/catalog/secret-variables",
 			},
 		},
 		{
@@ -127,10 +176,10 @@ func TestGetCommandFlags(t *testing.T) {
 				},
 			},
 			expected: []string{
-				"--name \"test\"",
+				"--name test",
 				"--force-destroy",
-				"--catalog-action \"action-name\"",
-				"--catalog-secret-variables-endpoint \"https://okteto.example/internal/catalog/secret-variables\"",
+				"--catalog-action action-name",
+				"--catalog-secret-variables-endpoint https://okteto.example/internal/catalog/secret-variables",
 			},
 		},
 	}
@@ -183,7 +232,7 @@ func TestDestroyRemoteWithCtx(t *testing.T) {
 		BaseImage:        manifest.Destroy.Image,
 		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 		TemplateName:     templateName,
-		CommandFlags:     []string{"--name \"test\""},
+		CommandFlags:     []string{"--name test"},
 		DockerfileName:   dockerfileTemporalName,
 		Deployable: deployable.Entity{
 			Commands: manifest.Destroy.Commands,
@@ -240,7 +289,7 @@ func TestDestroyRemote(t *testing.T) {
 		BaseImage:        manifest.Destroy.Image,
 		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 		TemplateName:     templateName,
-		CommandFlags:     []string{"--name \"test\""},
+		CommandFlags:     []string{"--name test"},
 		DockerfileName:   dockerfileTemporalName,
 		Deployable: deployable.Entity{
 			Commands: manifest.Destroy.Commands,
@@ -295,7 +344,7 @@ func TestDestroyRemoteWithError(t *testing.T) {
 		BaseImage:        manifest.Destroy.Image,
 		ManifestPathFlag: "/path/to/manifest/okteto.yml",
 		TemplateName:     templateName,
-		CommandFlags:     []string{"--name \"test\""},
+		CommandFlags:     []string{"--name test"},
 		DockerfileName:   dockerfileTemporalName,
 		Deployable: deployable.Entity{
 			Commands: manifest.Destroy.Commands,

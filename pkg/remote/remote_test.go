@@ -14,12 +14,17 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"testing"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
+	"github.com/moby/buildkit/frontend/dockerfile/shell"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -613,6 +618,70 @@ func TestDockerfileWithCache(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok, "Expected cache mount pattern not found: %s", pattern)
 	}
+}
+
+// envFromDockerfile returns the value BuildKit gives to each ENV instruction of the Dockerfile
+func envFromDockerfile(t *testing.T, dockerfile []byte) map[string]string {
+	t.Helper()
+	result, err := parser.Parse(bytes.NewReader(dockerfile))
+	require.NoError(t, err)
+	stages, _, err := instructions.Parse(result.AST, nil)
+	require.NoError(t, err)
+
+	lex := shell.NewLex('\\')
+	buildEnv := shell.EnvsFromSlice([]string{"HOME=/root"})
+	env := map[string]string{}
+	for _, stage := range stages {
+		for _, cmd := range stage.Commands {
+			envCmd, ok := cmd.(*instructions.EnvCommand)
+			if !ok {
+				continue
+			}
+			for _, kv := range envCmd.Env {
+				value, _, err := lex.ProcessWord(kv.Value, buildEnv)
+				require.NoError(t, err)
+				env[kv.Key] = value
+			}
+		}
+	}
+	return env
+}
+
+func TestCreateDockerfileKeepsCommandSpecificEnvVarsLiteral(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		ioCtrl:             io.NewIOController(),
+		generateSocketName: fakeNameGenerator{name: "okteto-socket.sock"}.GenerateName,
+	}
+	values := map[string]string{
+		constants.OktetoOriginEnvVar:     "x\nRUN echo injected",
+		constants.OktetoDeployTypeEnvVar: "$HOME ${HOME} `id` $(id)",
+		constants.OktetoWorkflowIDEnvVar: `say "hi" it's C:\path`,
+		constants.OktetoIsPreviewEnvVar:  "",
+	}
+
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		BaseImage:      "alpine",
+		DockerfileName: "Dockerfile",
+		Command:        "deploy",
+		Manifest:       &model.Manifest{Name: "test"},
+		// createDockerfile quotes the map in place
+		OktetoCommandSpecificEnvVars: maps.Clone(values),
+	})
+	require.NoError(t, err)
+	dockerfile, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+
+	env := envFromDockerfile(t, dockerfile)
+	assert.Equal(t, `x\nRUN echo injected`, env[constants.OktetoOriginEnvVar])
+	assert.Equal(t, values[constants.OktetoDeployTypeEnvVar], env[constants.OktetoDeployTypeEnvVar])
+	assert.Equal(t, values[constants.OktetoWorkflowIDEnvVar], env[constants.OktetoWorkflowIDEnvVar])
+	assert.Equal(t, "", env[constants.OktetoIsPreviewEnvVar])
 }
 
 func TestCacheIsolationBetweenTestContexts(t *testing.T) {
