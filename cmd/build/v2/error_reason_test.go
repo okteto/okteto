@@ -157,7 +157,7 @@ func TestImageBuildErrorReason(t *testing.T) {
 		},
 		{
 			name:     "dockerfile syntax error",
-			err:      buildkit.GetSolveErrorMessage(errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: RUNN")),
+			err:      buildkit.GetSolveErrorMessage(errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: FOO")),
 			expected: buildErrorDockerfileFailed,
 		},
 		{

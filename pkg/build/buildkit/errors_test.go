@@ -206,9 +206,9 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 		},
 		{
 			name: "dockerfile syntax error",
-			err:  errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: RUNN (did you mean RUN?) not found"),
+			err:  errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: FOO, instruction not found"),
 			expected: oktetoErrors.UserError{
-				E: errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: RUNN (did you mean RUN?) not found"),
+				E: errors.New("failed to solve: dockerfile parse error on line 3: unknown instruction: FOO, instruction not found"),
 			},
 		},
 		{
@@ -557,7 +557,7 @@ func TestIsBuildStepFailure(t *testing.T) {
 		{name: "nil", err: nil, expected: false},
 		{name: "failed RUN", err: errors.New(`failed to solve: process "/bin/sh -c false" did not complete successfully: exit code: 1`), expected: true},
 		{name: "COPY of a missing file", err: errors.New(`failed to solve: failed to compute cache key: failed to calculate checksum of ref abc::def: "/app.json": not found`), expected: true},
-		{name: "dockerfile syntax error", err: errors.New("failed to solve: dockerfile parse error on line 2: unknown instruction: RUNN"), expected: true},
+		{name: "dockerfile syntax error", err: errors.New("failed to solve: dockerfile parse error on line 2: unknown instruction: FOO"), expected: true},
 		{name: "base image not found", err: errors.New("failed to solve: docker.io/library/nope:latest: not found"), expected: false},
 		{name: "connection refused", err: errors.New("rpc error: code = Unavailable desc = connect: connection refused"), expected: false},
 	}
