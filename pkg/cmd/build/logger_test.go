@@ -69,7 +69,7 @@ func TestTestNameFromStep(t *testing.T) {
 		},
 		{
 			name:  "unterminated quote",
-			step:  `[runner 9/9] RUN /okteto/bin/okteto remote-run test --name 'my te`,
+			step:  `[runner 9/9] RUN /okteto/bin/okteto remote-run test --name 'my test`,
 			found: false,
 		},
 		{
