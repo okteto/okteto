@@ -335,6 +335,7 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+RUN okteto git-credential install --system --log-output=plain || true
 
 RUN \
   \
@@ -439,6 +440,7 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+RUN okteto git-credential install --system --log-output=plain || true
 
 RUN \
   \
@@ -524,6 +526,7 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+RUN okteto git-credential install --system --log-output=plain || true
 
 RUN \
   \
