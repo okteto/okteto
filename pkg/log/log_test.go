@@ -57,6 +57,18 @@ func Test_RedactMessage(t *testing.T) {
 			masked:   []string{"A\nB\nC"},
 			expected: "***",
 		},
+		{
+			name:     "secret that holds a GitHub token is masked whole",
+			message:  `config={"github":"` + classicToken + `","db":"other-secret"}`,
+			masked:   []string{`{"github":"` + classicToken + `","db":"other-secret"}`},
+			expected: "config=***",
+		},
+		{
+			name:     "GitHub token that isn't a known secret",
+			message:  "token " + installationToken + " and other-secret",
+			masked:   []string{"other-secret"},
+			expected: "token *** and ***",
+		},
 	}
 
 	for _, tt := range tests {

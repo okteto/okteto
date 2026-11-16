@@ -419,7 +419,8 @@ func redactMessage(message string) string {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 	if log.isMasked {
-		return log.replacer.Replace(message)
+		// Known values first: a secret that holds a GitHub token is masked whole, not only its token
+		return maskGitHubTokens(log.replacer.Replace(message))
 	}
 	return message
 }
