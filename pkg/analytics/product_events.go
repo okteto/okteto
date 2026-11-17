@@ -50,6 +50,11 @@ const (
 
 	// namespaceUIDTimeout bounds the namespace UID lookup of an enricher.
 	namespaceUIDTimeout = 5 * time.Second
+
+	// noGeolocationIP tells the Mixpanel client not to ask Mixpanel to geolocate
+	// the event from the request IP. posthog-go disabled GeoIP by default, so the
+	// product events were never geolocated.
+	noGeolocationIP = "0"
 )
 
 // eventTracker is the part of mixpanel.Mixpanel the product events use.
@@ -124,7 +129,7 @@ func (c *productEventClient) track(ctx context.Context, event string, eventProps
 		for _, enrich := range enrichers {
 			enrich(ctx, props)
 		}
-		if err := c.client.Track(distinctID, event, &mixpanel.Event{Timestamp: &ts, Properties: props}); err != nil {
+		if err := c.client.Track(distinctID, event, &mixpanel.Event{IP: noGeolocationIP, Timestamp: &ts, Properties: props}); err != nil {
 			oktetoLog.Infof("failed to send %s analytics event: %s", event, err)
 		}
 	}()

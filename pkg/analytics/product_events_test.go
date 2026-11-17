@@ -33,6 +33,7 @@ type sentEvent struct {
 	props      map[string]any
 	distinctID string
 	event      string
+	ip         string
 }
 
 // fakeEventTracker records the events sent to Mixpanel. When block is set,
@@ -50,7 +51,7 @@ func (f *fakeEventTracker) Track(distinctID, eventName string, e *mixpanel.Event
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.events = append(f.events, sentEvent{distinctID: distinctID, event: eventName, timestamp: e.Timestamp, props: e.Properties})
+	f.events = append(f.events, sentEvent{distinctID: distinctID, event: eventName, timestamp: e.Timestamp, props: e.Properties, ip: e.IP})
 	return f.err
 }
 
@@ -177,6 +178,7 @@ func TestProductEventClient_Track_SendsCommonAndEventProperties(t *testing.T) {
 	require.Equal(t, "test_event", ev.event)
 	require.Equal(t, "user-123", ev.distinctID)
 	require.Equal(t, fixedEventTime, *ev.timestamp)
+	require.Equal(t, noGeolocationIP, ev.ip, "product events are not geolocated, as in PostHog")
 	require.Equal(t, "val", ev.props["key"])
 	require.Equal(t, "ACME Corp", ev.props["customer_name"])
 	require.Equal(t, "cluster-uuid-1234", ev.props["cluster_id"])
