@@ -3420,3 +3420,64 @@ func Test_UnmarshalRestartOnFailureInvalidMaxRetries(t *testing.T) {
 		assert.ErrorContains(t, err, "invalid restart policy", restart)
 	}
 }
+
+func Test_DependsOnRequiredAndRestart(t *testing.T) {
+	notRequired := false
+	tests := []struct {
+		name     string
+		manifest string
+		expected DependsOn
+	}{
+		{
+			name: "required false and restart true are accepted",
+			manifest: `services:
+  app:
+    image: nginx
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+        restart: true
+  db:
+    image: postgres
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+`,
+			expected: DependsOn{"db": {Condition: DependsOnServiceHealthy, Required: &notRequired, Restart: true}},
+		},
+		{
+			name: "an optional dependency on an undefined service is skipped",
+			manifest: `services:
+  app:
+    image: nginx
+    depends_on:
+      cache:
+        condition: service_started
+        required: false
+`,
+			expected: DependsOn{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stack, err := ReadStack([]byte(tt.manifest), true)
+			require.NoError(t, err)
+			require.NoError(t, stack.Services.ValidateDependsOn(stack.Services.getNames()))
+			assert.Equal(t, tt.expected, stack.Services["app"].DependsOn)
+		})
+	}
+}
+
+func Test_DependsOnRequiredUndefinedServiceFails(t *testing.T) {
+	manifest := `services:
+  app:
+    image: nginx
+    depends_on:
+      cache:
+        condition: service_started
+        required: true
+`
+	stack, err := ReadStack([]byte(manifest), true)
+	require.NoError(t, err)
+	assert.ErrorIs(t, stack.Services.ValidateDependsOn(stack.Services.getNames()), errDependsOn)
+}
