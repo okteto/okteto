@@ -90,8 +90,10 @@ func TestRepository_symlinkedWorkingDirSeesUncommittedChanges(t *testing.T) {
 
 // TestFindTopLevelGitDir_symlinkedWorkingDir covers the same scenario for the
 // repository detection of okteto deploy, which otherwise warns "Repository not
-// detected" and leaves OKTETO_GIT_COMMIT and OKTETO_GIT_BRANCH unset.
+// detected" and leaves OKTETO_GIT_COMMIT and OKTETO_GIT_BRANCH unset. Without
+// git, the go-git fallback still fails until go-git/go-billy#255 is released.
 func TestFindTopLevelGitDir_symlinkedWorkingDir(t *testing.T) {
+	requireGitBinary(t)
 	link, target := newSymlinkedRepo(t)
 
 	dir, err := FindTopLevelGitDir(link)
