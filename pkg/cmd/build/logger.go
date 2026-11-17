@@ -17,19 +17,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/build/buildkit"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/tonistiigi/units"
-)
-
-var (
-	nameRegex = regexp.MustCompile(`--name\s+"([^"]+)"`)
 )
 
 const (
@@ -223,9 +219,7 @@ func (t *trace) removeCompletedSteps() {
 		if v.completed {
 			// We need to specify the command test in order to not affect okteto deploy on remote
 			if strings.Contains(v.name, "remote-run test") && v.cached {
-				match := nameRegex.FindStringSubmatch(v.name)
-				if len(match) > 1 {
-					name := match[1]
+				if name, ok := testNameFromStep(v.name); ok {
 					oktetoLog.Information("Skipping test container '%s', CACHED", name)
 				} else {
 					oktetoLog.Information("Skipping test container, CACHED")
@@ -234,6 +228,25 @@ func (t *trace) removeCompletedSteps() {
 			delete(t.ongoing, k)
 		}
 	}
+}
+
+// testNameFromStep returns the --name flag of a `remote-run test` step. The step name is the RUN instruction, where
+// the flag values are quoted for the shell, so they are read back with the shell's rules
+func testNameFromStep(step string) (string, bool) {
+	_, args, found := strings.Cut(step, "remote-run test")
+	if !found {
+		return "", false
+	}
+	words, err := shellquote.Split(args)
+	if err != nil {
+		return "", false
+	}
+	for i := 0; i < len(words)-1; i++ {
+		if words[i] == "--name" {
+			return words[i+1], true
+		}
+	}
+	return "", false
 }
 
 func hasCommandLogs(v *vertexInfo) bool {
