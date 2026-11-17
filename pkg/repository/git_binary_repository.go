@@ -62,6 +62,7 @@ func newGitBinaryRepository(executor CommandExecutor, path string) (gitBinaryRep
 		dir = filepath.Dir(dir)
 	}
 
+	// Unlike go-git, git honors GIT_DIR and GIT_WORK_TREE, as the status, ls-files and diff calls already did
 	toplevel, err := runGit(context.Background(), executor, dir, gitPath, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return gitBinaryRepository{}, err
