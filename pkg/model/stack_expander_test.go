@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ExpandStackEnvs(t *testing.T) {
@@ -166,5 +167,31 @@ volumes:
 			assert.Equal(t, tt.expectedStack, string(result))
 
 		})
+	}
+}
+
+func TestStackEscapedEnvironment(t *testing.T) {
+	t.Setenv("ESCAPED_TARGET", "host-value")
+	t.Setenv("EXPANSION_SOURCE", "${ESCAPED_TARGET}")
+	t.Setenv("UNSET_TARGET", "")
+	for name, environment := range map[string]string{
+		"map":  "      LITERAL: $${ESCAPED_TARGET}\n      INDIRECT: ${EXPANSION_SOURCE}\n      NORMAL: ${ESCAPED_TARGET}\n      UNSET: $${UNSET_TARGET}\n      MULTILINE: |\n        prefix\n        $${ESCAPED_TARGET}\n",
+		"list": "      - LITERAL=$${ESCAPED_TARGET}\n      - INDIRECT=${EXPANSION_SOURCE}\n      - NORMAL=${ESCAPED_TARGET}\n      - UNSET=$${UNSET_TARGET}\n      - |\n        MULTILINE=prefix\n        $${ESCAPED_TARGET}\n",
+	} {
+		for mode, compose := range map[string]bool{"compose": true, "stack": false} {
+			t.Run(name+"/"+mode, func(t *testing.T) {
+				s, err := ReadStack([]byte("services:\n  app:\n    image: nginx\n    environment:\n"+environment), compose)
+				require.NoError(t, err)
+				values := map[string]string{}
+				for _, variable := range s.Services["app"].Environment {
+					values[variable.Name] = variable.Value
+				}
+				assert.Equal(t, "${ESCAPED_TARGET}", values["LITERAL"])
+				assert.Equal(t, "${ESCAPED_TARGET}", values["INDIRECT"])
+				assert.Equal(t, "host-value", values["NORMAL"])
+				assert.Equal(t, "${UNSET_TARGET}", values["UNSET"])
+				assert.Equal(t, "prefix\n${ESCAPED_TARGET}\n", values["MULTILINE"])
+			})
+		}
 	}
 }
