@@ -20,8 +20,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-git/go-git/v6"
-	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -604,4 +605,47 @@ func TestFindTopLevelGitRepoFromPath_worktreeConfig(t *testing.T) {
 	repo, err := FindTopLevelGitRepoFromPath(dir)
 	require.NoError(t, err)
 	require.NotNil(t, repo)
+}
+
+// TestFindTopLevelGitRepoFromPath_linkedWorktree covers running okteto from a
+// worktree created with "git worktree add". Its .git is a file pointing to
+// .git/worktrees/<name> in the main repository, and the remotes and branches
+// live in the main repository's .git, which the "commondir" file points to.
+func TestFindTopLevelGitRepoFromPath_linkedWorktree(t *testing.T) {
+	tmp := t.TempDir()
+	mainDir := filepath.Join(tmp, "main")
+	mainRepo, err := git.PlainInit(mainDir, false)
+	require.NoError(t, err)
+	_, err = mainRepo.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{"https://github.com/okteto/movies.git"}})
+	require.NoError(t, err)
+	mainWorktree, err := mainRepo.Worktree()
+	require.NoError(t, err)
+	writeRepoFile(t, mainDir, "README.md", "movies")
+	head := commitAll(t, mainWorktree, "initial")
+	feature := plumbing.NewBranchReferenceName("feature")
+	require.NoError(t, mainRepo.Storer.SetReference(plumbing.NewHashReference(feature, plumbing.NewHash(head))))
+
+	// Lay out the linked worktree the way "git worktree add -b feature <tmp>/wt"
+	// does. Its HEAD is its own, so it is on "feature" while the main
+	// repository stays on "master".
+	worktreeDir := filepath.Join(tmp, "wt")
+	worktreeGitDir := filepath.Join(mainDir, ".git", "worktrees", "wt")
+	require.NoError(t, os.MkdirAll(worktreeGitDir, 0o755))
+	require.NoError(t, os.MkdirAll(worktreeDir, 0o755))
+	writeRepoFile(t, worktreeGitDir, "HEAD", "ref: "+feature.String()+"\n")
+	writeRepoFile(t, worktreeGitDir, "commondir", "../..\n")
+	writeRepoFile(t, worktreeGitDir, "gitdir", filepath.Join(worktreeDir, ".git")+"\n")
+	writeRepoFile(t, worktreeDir, ".git", "gitdir: "+worktreeGitDir+"\n")
+
+	repo, err := FindTopLevelGitRepoFromPath(worktreeDir)
+	require.NoError(t, err)
+
+	origin, err := repo.Remote("origin")
+	require.NoError(t, err)
+	require.Equal(t, []string{"https://github.com/okteto/movies.git"}, origin.Config().URLs)
+
+	ref, err := repo.Head()
+	require.NoError(t, err)
+	require.Equal(t, feature, ref.Name())
+	require.Equal(t, head, ref.Hash().String())
 }
