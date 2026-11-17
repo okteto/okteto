@@ -24,7 +24,62 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// TestCommandRejectsInvalidOverride checks that the cobra command passes the arguments after '--'
+// and the --command flag to parseTestArgs. These errors are returned before connecting to any cluster
+func TestCommandRejectsInvalidOverride(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		expectedErr error
+	}{
+		{
+			name:        "dash without test name",
+			args:        []string{"--", "go", "test"},
+			expectedErr: errCommandOverrideTarget,
+		},
+		{
+			name:        "dash with several test names",
+			args:        []string{"lint", "unit", "--", "go", "test"},
+			expectedErr: errCommandOverrideTarget,
+		},
+		{
+			name:        "dash without command",
+			args:        []string{"unit", "--"},
+			expectedErr: errEmptyCommandAfterDash,
+		},
+		{
+			name:        "command flag without test name",
+			args:        []string{"--command", "go test ./..."},
+			expectedErr: errCommandOverrideTarget,
+		},
+		{
+			name:        "empty command flag",
+			args:        []string{"unit", "--command", ""},
+			expectedErr: errEmptyCommandFlag,
+		},
+		{
+			name:        "dash and command flag together",
+			args:        []string{"unit", "--command", "go test ./...", "--", "go", "test"},
+			expectedErr: errCommandOverrideConflict,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := Test(context.Background(), io.NewIOController(), nil, nil, nil)
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+
+			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
 
 type fakeSvcFromRegex struct {
 	err error

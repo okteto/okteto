@@ -62,9 +62,13 @@ type Options struct {
 	K8sContext       string
 	Name             string
 	Variables        []string
-	Timeout          time.Duration
-	Deploy           bool
-	NoCache          bool
+	// Commands are the values of the --command flag, which replace the commands of the selected test container
+	Commands []string
+	Timeout  time.Duration
+	Deploy   bool
+	NoCache  bool
+	// override is the command override resolved from the '--' arguments or the --command flag
+	override commandOverride
 }
 
 type builder interface {
@@ -80,33 +84,39 @@ type insightsTracker interface {
 func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, at *analytics.Tracker, insights insightsTracker) *cobra.Command {
 	options := &Options{}
 	cmd := &cobra.Command{
-		Use:   "test [testName...]",
-		Short: "Run tests using Remote Execution",
-		RunE: func(cmd *cobra.Command, servicesToTest []string) error {
+		Use:                   "test [testName...] [flags] [-- COMMAND [args...]]",
+		DisableFlagsInUseLine: true,
+		Short:                 "Run tests using Remote Execution",
+		Example: `# Run the test containers defined in the Okteto Manifest
+okteto test
+
+# Run the 'unit' test container replacing its commands with a single one
+okteto test unit -- go test ./pkg/api -run TestLogin
+
+# Run the 'unit' test container replacing its commands with several ones, run in order
+okteto test unit --command "go mod download" --command "go test ./pkg/api -run TestLogin"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
 				return err
 			}
 
+			testContainers, override, err := parseTestArgs(args, cmd.ArgsLenAtDash(), options.Commands)
+			if err != nil {
+				return err
+			}
+			options.override = override
+
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			exit := make(chan error, 1)
-
-			// Filter out empty strings, as 'okteto test ""' passes an empty string as argument, provoking a failure
-			testContainers := make([]string, 0)
-			for _, svc := range servicesToTest {
-				if svc == "" {
-					continue
-				}
-
-				testContainers = append(testContainers, svc)
-			}
 
 			go func() {
 				startTime := time.Now()
 				metadata, err := doRun(ctx, testContainers, options, ioCtrl, k8sLogger, &ProxyTracker{at}, insights, at)
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
+				metadata.CommandOverride = override.isSet()
 				at.TrackTest(metadata)
 				exit <- err
 			}()
@@ -129,6 +139,7 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrite the current Okteto Namespace")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable to be injected in the test commands (can be set more than once)")
+	cmd.Flags().StringArrayVar(&options.Commands, "command", []string{}, "replace the commands of the test container, which must be the only one named (can be set more than once, run in order)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the Test Container to run. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
 	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Force execution of the commands in the 'deploy' section")
@@ -338,7 +349,8 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}(testAnalytics)
 
 	for _, name := range testServices {
-		test := manifest.Test[name]
+		overridden := options.override.appliesTo(name)
+		test := options.override.resolveTest(name, manifest.Test[name])
 
 		ctxCwd := path.Clean(path.Join(cwd, test.Context))
 
@@ -405,7 +417,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			params.CacheInvalidationKey = "const"
 		}
 
-		ioCtrl.Out().Infof("Executing test container '%s'", name)
+		if overridden {
+			ioCtrl.Out().Infof("Executing test container '%s' with overridden commands", name)
+		} else {
+			ioCtrl.Out().Infof("Executing test container '%s'", name)
+		}
 		testMetadata := analytics.SingleTestMetadata{
 			DevenvName: manifest.Name,
 			TestName:   name,
@@ -416,7 +432,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		err = runner.Run(ctx, params)
 		testMetadata.Duration = time.Since(testStartTime)
 		testMetadata.Success = err == nil
-		testAnalytics = append(testAnalytics, &testMetadata)
+		// A run with overridden commands is not a run of the test container defined in the
+		// manifest, so it is not published to Insights to keep the test metrics accurate
+		if !overridden {
+			testAnalytics = append(testAnalytics, &testMetadata)
+		}
 		if err != nil {
 			// If it is a commandErr, it means that there was an error in the tests themselves, so we should return that error directly
 			var cmdErr buildkit.CommandErr
