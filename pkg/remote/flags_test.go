@@ -16,30 +16,37 @@ package remote
 import (
 	"testing"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
 )
 
+// TestCommandFlag reads each flag back with the shell's rules, so it checks what remote-run receives rather than the
+// quoting style
 func TestCommandFlag(t *testing.T) {
 	tests := []struct {
 		name     string
 		value    string
 		expected string
 	}{
-		{name: "plain value", value: "test", expected: "--name test"},
-		{name: "empty value", value: "", expected: "--name ''"},
-		{name: "spaces", value: "this is a test", expected: "--name 'this is a test'"},
-		{name: "command substitution", value: "$(echo x)", expected: "--name '$(echo x)'"},
-		{name: "backticks", value: "`echo x`", expected: "--name '`echo x`'"},
-		{name: "env var reference", value: "$HOME", expected: "--name '$HOME'"},
-		{name: "single quote", value: "it's", expected: `--name 'it'"'"'s'`},
-		{name: "double quotes", value: `say "hi"`, expected: `--name 'say "hi"'`},
-		{name: "backslash", value: `C:\path`, expected: `--name 'C:\path'`},
-		{name: "newline", value: "multi\nline", expected: `--name 'multi\nline'`},
+		{name: "plain value", value: "test", expected: "test"},
+		{name: "empty value", value: "", expected: ""},
+		{name: "spaces", value: "this is a test", expected: "this is a test"},
+		{name: "command substitution", value: "$(echo x)", expected: "$(echo x)"},
+		{name: "backticks", value: "`echo x`", expected: "`echo x`"},
+		{name: "env var reference", value: "$HOME", expected: "$HOME"},
+		{name: "single quote", value: "it's", expected: "it's"},
+		{name: "double quotes", value: `say "hi"`, expected: `say "hi"`},
+		{name: "backslash", value: `C:\path`, expected: `C:\path`},
+		{name: "comment and separator", value: "a # b; c", expected: "a # b; c"},
+		{name: "tab and carriage return", value: "a\tb\rc", expected: "a\tb\rc"},
+		{name: "newline", value: "multi\nline", expected: `multi\nline`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, CommandFlag("name", tt.value))
+			args, err := shellquote.Split(CommandFlag("name", tt.value))
+			require.NoError(t, err)
+			require.Equal(t, []string{"--name", tt.expected}, args)
 		})
 	}
 }
