@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/stretchr/testify/require"
 )
@@ -75,6 +77,12 @@ func writeRepoFile(t *testing.T, root, name, content string) {
 func initTestRepo(t *testing.T) (string, *git.Worktree) {
 	t.Helper()
 	dir := t.TempDir()
+	return dir, initTestRepoAt(t, dir)
+}
+
+// initTestRepoAt creates the git repository of initTestRepo at dir and returns its worktree
+func initTestRepoAt(t *testing.T, dir string) *git.Worktree {
+	t.Helper()
 	repo, err := git.PlainInit(dir, false)
 	require.NoError(t, err)
 
@@ -85,7 +93,7 @@ func initTestRepo(t *testing.T) (string, *git.Worktree) {
 
 	worktree, err := repo.Worktree()
 	require.NoError(t, err)
-	return dir, worktree
+	return worktree
 }
 
 func commitAll(t *testing.T, worktree *git.Worktree, message string) string {
@@ -149,4 +157,87 @@ func TestOktetoGitRepositoryGetLatestSHA_goGitFallbackFiltersByPath(t *testing.T
 	sha, err := oktetoGitRepository{repo: opened, root: dir}.GetLatestSHA(context.Background(), "api/main.go", gitBinaryMissing{})
 	require.NoError(t, err)
 	require.Equal(t, first, sha)
+}
+
+// withoutGitBinary empties PATH for the test, so the repository code can't find
+// git and falls back on go-git.
+func withoutGitBinary(t *testing.T) {
+	t.Helper()
+	t.Setenv("PATH", "")
+}
+
+func TestGitRepositoryGetter_goGitFallbackWithoutGitBinary(t *testing.T) {
+	withoutGitBinary(t)
+	dir, worktree := initTestRepo(t)
+	writeRepoFile(t, dir, "api/main.go", "package main")
+	commitAll(t, worktree, "initial")
+
+	repo, err := gitRepositoryGetter{}.get(dir)
+	require.NoError(t, err)
+	require.IsType(t, oktetoGitRepository{}, repo)
+}
+
+// git is installed but doesn't resolve the repository, as when it refuses a
+// checkout owned by another user. GIT_CEILING_DIRECTORIES stops git's search
+// below the repository's root, and go-git ignores it.
+func TestGitRepositoryGetter_goGitFallbackWhenGitCantResolveRepository(t *testing.T) {
+	requireGitBinary(t)
+	dir, worktree := initTestRepo(t)
+	writeRepoFile(t, dir, "api/main.go", "package main")
+	commitAll(t, worktree, "initial")
+	t.Setenv("GIT_CEILING_DIRECTORIES", dir)
+
+	repo, err := gitRepositoryGetter{}.get(filepath.Join(dir, "api"))
+	require.NoError(t, err)
+	require.IsType(t, oktetoGitRepository{}, repo)
+
+	root, err := FindTopLevelGitDir(filepath.Join(dir, "api"))
+	require.NoError(t, err)
+	require.Equal(t, dir, root)
+}
+
+func TestFindTopLevelGitDir_goGitFallbackFromSubdir(t *testing.T) {
+	withoutGitBinary(t)
+	dir, worktree := initTestRepo(t)
+	writeRepoFile(t, dir, "api/main.go", "package main")
+	commitAll(t, worktree, "initial")
+
+	root, err := FindTopLevelGitDir(filepath.Join(dir, "api"))
+	require.NoError(t, err)
+	require.Equal(t, dir, root)
+}
+
+func TestGetBranch_goGitFallback(t *testing.T) {
+	withoutGitBinary(t)
+	dir, worktree := initTestRepo(t)
+	writeRepoFile(t, dir, "api/main.go", "package main")
+	commitAll(t, worktree, "initial")
+	require.NoError(t, worktree.Checkout(&git.CheckoutOptions{Branch: plumbing.NewBranchReferenceName("feature/x"), Create: true}))
+
+	branch, err := GetBranch(filepath.Join(dir, "api"))
+	require.NoError(t, err)
+	require.Equal(t, "feature/x", branch)
+}
+
+func TestGetRemoteURL_goGitFallbackPrefersOrigin(t *testing.T) {
+	withoutGitBinary(t)
+	dir, _ := initTestRepo(t)
+	repo, err := git.PlainOpen(dir)
+	require.NoError(t, err)
+	_, err = repo.CreateRemote(&config.RemoteConfig{Name: "fork", URLs: []string{"https://github.com/fork/repo.git"}})
+	require.NoError(t, err)
+	_, err = repo.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{"https://github.com/okteto/repo.git"}})
+	require.NoError(t, err)
+
+	url, err := GetRemoteURL(dir)
+	require.NoError(t, err)
+	require.Equal(t, "https://github.com/okteto/repo.git", url)
+}
+
+func TestGetRemoteURL_goGitFallbackWithoutRemotes(t *testing.T) {
+	withoutGitBinary(t)
+	dir, _ := initTestRepo(t)
+
+	_, err := GetRemoteURL(dir)
+	require.ErrorIs(t, err, errNoRemote)
 }

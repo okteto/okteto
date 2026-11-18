@@ -18,9 +18,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,8 +61,8 @@ func (fr fakeRepository) GetLatestSHA(context.Context, string, LocalGitInterface
 	return fr.commit, fr.err
 }
 
-func (fr fakeRepository) Log(logOpts *git.LogOptions) (object.CommitIter, error) {
-	return nil, nil
+func (fr fakeRepository) RemoteURL() (string, error) {
+	return "", fr.err
 }
 
 func (fr fakeRepository) GetDiff(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error) {
