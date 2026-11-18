@@ -93,6 +93,7 @@ ENV {{$key}}={{$val}}
 
 ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
 ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
+ENV {{ .InternalAPIHostnameArgName }}="{{ .InternalAPIHostname }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -192,6 +193,8 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
+	// InternalAPIHostname is the hostname the build maps to the internal IP of the Okteto API, empty when there is no IP
+	InternalAPIHostname string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -223,6 +226,8 @@ type dockerfileTemplateProperties struct {
 	SSHAgentPortArgName          string
 	SSHAgentPort                 string
 	SSHAgentSocketArgName        string
+	InternalAPIHostnameArgName   string
+	InternalAPIHostname          string
 	Caches                       []string
 	TestName                     string
 	ManifestName                 string
@@ -274,6 +279,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	params.SSHAgentHostname = sc.SSHAgentHostname
 	params.SSHAgentPort = sc.SSHAgentPort
+	params.InternalAPIHostname = internalAPIHostname(*sc)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -368,6 +374,10 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		// Set the envvar to be able to load the ssh-agent socket for a build secret
 		os.Setenv(constants.OktetoSshAgentSocketEnvVar, r.generateSocketName())
 		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=%s", constants.OktetoSshAgentSocketEnvVar))
+	}
+
+	if params.InternalAPIHostname != "" {
+		buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: params.InternalAPIHostname, IP: sc.InternalAPIIP})
 	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
@@ -521,6 +531,8 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		SSHAgentPort:                 params.SSHAgentPort,
 		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
 		SSHAgentSocketArgName:        constants.OktetoSshAgentSocketEnvVar,
+		InternalAPIHostname:          params.InternalAPIHostname,
+		InternalAPIHostnameArgName:   constants.OktetoInternalAPIHostnameEnvVar,
 	}
 
 	dockerfileSyntax.prepareEnvVars()
@@ -641,6 +653,16 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	}
 
 	return extraHosts
+}
+
+// internalAPIHostname returns the hostname remote-run reaches the internal routes of the Okteto API through, or empty
+// when the installation doesn't publish the IP to map it to: the wildcard DNS record resolves it to the ingress, which
+// doesn't serve them
+func internalAPIHostname(sc types.ClusterMetadata) string {
+	if sc.InternalAPIIP == "" {
+		return ""
+	}
+	return sc.InternalAPIHostname
 }
 
 func addDefinedHosts(extraHosts []types.HostMap, definedHosts []model.Host) []types.HostMap {

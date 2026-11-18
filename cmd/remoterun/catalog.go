@@ -17,10 +17,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
 	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/catalog"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -61,6 +64,9 @@ type catalogSecretVariables struct {
 	client   catalogSecretVariablesGetter
 	action   string
 	endpoint string
+	// internalAPIHostname is the hostname the remote build maps to the internal
+	// IP of the Okteto API, empty when the installation doesn't publish it
+	internalAPIHostname string
 	// phase is the operation whose commands get the variables
 	phase catalog.Phase
 	// forceDestroy runs the destroy commands without the variables when they
@@ -90,6 +96,17 @@ func (invalidCatalogSecretVariableNamesError) Error() string {
 	return "the catalog secret variables have invalid names"
 }
 
+// internalAPINotMappedError is returned when the endpoint is on a hostname the
+// remote build doesn't map to the internal IP of the Okteto API, so the
+// request isn't sent
+type internalAPINotMappedError struct {
+	hostname string
+}
+
+func (e internalAPINotMappedError) Error() string {
+	return fmt.Sprintf("the catalog secret variables can't be fetched: the Okteto installation doesn't publish the internal IP of %s", e.hostname)
+}
+
 // addCatalogSecretVariablesFlags adds the flags to get the catalog secret
 // variables. They are only read from these flags, so a variable can't change
 // them
@@ -102,7 +119,12 @@ func addCatalogSecretVariablesFlags(cmd *cobra.Command, action, endpoint *string
 // of the action, for the commands of the phase. Without an action, nothing is
 // fetched
 func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (catalogSecretVariables, error) {
-	c := catalogSecretVariables{action: action, endpoint: endpoint, phase: phase}
+	c := catalogSecretVariables{
+		action:              action,
+		endpoint:            endpoint,
+		phase:               phase,
+		internalAPIHostname: os.Getenv(constants.OktetoInternalAPIHostnameEnvVar),
+	}
 	if action == "" {
 		return c, nil
 	}
@@ -126,7 +148,7 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 		return nil, nil
 	}
 
-	variables, err := c.client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	variables, err := c.fetch(ctx)
 	if err == nil && len(variables.Unresolved) > 0 && !c.skipsUnresolved() {
 		err = unresolvedCatalogSecretVariablesError{variables: variables.Unresolved}
 	}
@@ -158,6 +180,22 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
+// fetch gets the catalog secret variables from the endpoint. An https endpoint
+// is only called when the remote build maps its hostname to the internal IP of
+// the Okteto API: the wildcard DNS record resolves it to the ingress, which
+// doesn't serve it, so the request would only time out. Older installations
+// give an http endpoint on the API service, which is called as before
+func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretVariables, error) {
+	u, err := url.Parse(c.endpoint)
+	if err != nil {
+		return types.CatalogSecretVariables{}, fmt.Errorf("invalid catalog secret variables endpoint: %w", err)
+	}
+	if u.Scheme == "https" && (c.internalAPIHostname == "" || u.Hostname() != c.internalAPIHostname) {
+		return types.CatalogSecretVariables{}, internalAPINotMappedError{hostname: u.Hostname()}
+	}
+	return c.client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+}
+
 // skipsUnresolved is true when the commands run without the variables that
 // can't be resolved, with a warning per variable, instead of failing. Only
 // destroy does: deploy always fails
@@ -177,6 +215,7 @@ func (c catalogSecretVariables) logError(err error) {
 	oktetoLog.SetStage(catalogSecretVariablesStage)
 	var unresolved unresolvedCatalogSecretVariablesError
 	var invalidNames invalidCatalogSecretVariableNamesError
+	var notMapped internalAPINotMappedError
 	switch {
 	case errors.As(err, &unresolved):
 		for _, v := range unresolved.variables {
@@ -188,6 +227,8 @@ func (c catalogSecretVariables) logError(err error) {
 			oktetoLog.Println(line)
 		}
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint()))
+	case errors.As(err, &notMapped):
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, %s", c.retryHint()))
 	}
 	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", err.Error())
 }

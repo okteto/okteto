@@ -381,6 +381,14 @@ func TestGetClusterMetadata(t *testing.T) {
 								Name:  "divertCRDSEnabled",
 								Value: "true",
 							},
+							{
+								Name:  "internalAPIIP",
+								Value: "10.20.30.40",
+							},
+							{
+								Name:  "internalAPIHostname",
+								Value: "okteto-internal-api.test.okteto.com",
+							},
 						},
 					},
 				},
@@ -393,6 +401,8 @@ func TestGetClusterMetadata(t *testing.T) {
 					BuildKitInternalIP:  "10.10.10.10",
 					PublicDomain:        "test.okteto.com",
 					DivertCRDSEnabled:   true,
+					InternalAPIIP:       "10.20.30.40",
+					InternalAPIHostname: "okteto-internal-api.test.okteto.com",
 				},
 			},
 		},
