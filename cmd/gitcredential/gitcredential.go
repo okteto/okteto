@@ -16,6 +16,8 @@ package gitcredential
 import (
 	"context"
 
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +39,7 @@ func GitCredential(ctx context.Context) *cobra.Command {
 Usage: printf 'protocol=https\nhost=github.com\npath=owner/repo.git\n\n' | okteto git-credential get
 
 It sends OKTETO_TOKEN to the Okteto instance in OKTETO_URL (or OKTETO_CONTEXT).
-"store" and "erase" do nothing.
+"store" and "erase" do nothing. OKTETO_DISABLE_GIT_CREDENTIAL_HELPER=true turns it off.
 
 More info about Git credential helpers here: https://git-scm.com/docs/gitcredentials
 `,
@@ -93,4 +95,10 @@ func IsGitCredentialHelperCommand(args []string) bool {
 // skips what these commands don't need, such as analytics
 func IsGitCredentialCommand(args []string) bool {
 	return len(args) > 1 && args[1] == commandName
+}
+
+// isDisabled returns true when OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns the helper off,
+// for users who keep their own GitHub credentials in Git
+func isDisabled() bool {
+	return env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
 }

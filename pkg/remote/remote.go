@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -100,7 +101,7 @@ ARG {{ .InvalidateCacheArgName }}
 
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
-RUN okteto git-credential install --system --log-output=plain || true
+{{ if .InstallGitCredentialHelper }}RUN okteto git-credential install --system --log-output=plain || true{{ end }}
 
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,id={{cacheID $.RepositoryURL $.ManifestName $.TestName $path}},target={{$path}},sharing=private {{end}}\
@@ -229,6 +230,8 @@ type dockerfileTemplateProperties struct {
 	ManifestName                 string
 	RepositoryURL                string
 	Artifacts                    []model.Artifact
+	// InstallGitCredentialHelper is false when OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns the helper off
+	InstallGitCredentialHelper bool
 }
 
 // NewRunner creates a new Runner for remote
@@ -511,6 +514,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoDependencyEnvVars:      params.DependenciesEnvVars,
 		OktetoPrefixEnvVars:          getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
+		InstallGitCredentialHelper:   !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar),
 		Command:                      params.Command,
 		Caches:                       params.Caches,
 		TestName:                     params.TestName,

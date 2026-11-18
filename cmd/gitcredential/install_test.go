@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/require"
 )
 
@@ -174,4 +175,19 @@ func TestInstall_WithGitKeepsTheHelpersOfOtherHosts(t *testing.T) {
 	helpers, err := git(ctx, "config", "--global", "--get-all", "credential.https://gitlab.com.helper")
 	require.NoError(t, err)
 	require.Equal(t, "store\n", helpers)
+}
+
+func TestInstallCommand_TurnedOffLeavesTheGitConfig(t *testing.T) {
+	requireGit(t)
+	const content = "[credential \"https://github.com\"]\n\thelper = osxkeychain\n"
+	useGlobalGitConfig(t, content)
+	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
+	cmd := Install()
+	cmd.SetArgs([]string{"--global"})
+
+	require.NoError(t, cmd.Execute())
+
+	got, err := os.ReadFile(os.Getenv("GIT_CONFIG_GLOBAL"))
+	require.NoError(t, err)
+	require.Equal(t, content, string(got))
 }

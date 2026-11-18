@@ -618,6 +618,32 @@ func TestDockerfileWithCache(t *testing.T) {
 	}
 }
 
+func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
+	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		ioCtrl:             io.NewIOController(),
+		generateSocketName: fakeNameGenerator{name: "okteto-socket.sock"}.GenerateName,
+	}
+
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		DockerfileName: "Dockerfile.deploy",
+		Command:        "deploy",
+		Manifest:       &model.Manifest{Name: "test-manifest"},
+	})
+
+	require.NoError(t, err)
+	d, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+	require.NotContains(t, string(d), "git-credential")
+	require.Contains(t, string(d), "RUN okteto registrytoken install --force --log-output=json")
+}
+
 func TestCacheIsolationBetweenTestContexts(t *testing.T) {
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
 	nameGenerator := fakeNameGenerator{

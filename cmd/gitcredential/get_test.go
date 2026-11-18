@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
@@ -177,6 +178,21 @@ func TestGet_OtherHostsNeverBuildTheClient(t *testing.T) {
 	}
 
 	stdout, stderr := runGet("protocol=https\nhost=gitlab.com\npath=acme/infra.git\n\n", provider)
+
+	require.False(t, called)
+	require.Empty(t, stdout)
+	require.Empty(t, stderr)
+}
+
+func TestGet_TurnedOffNeverAsksTheAPI(t *testing.T) {
+	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
+	called := false
+	provider := func() (credentialsGetter, error) {
+		called = true
+		return nil, errTokenNotSet
+	}
+
+	stdout, stderr := runGet(githubRequest, provider)
 
 	require.False(t, called)
 	require.Empty(t, stdout)

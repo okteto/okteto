@@ -66,7 +66,8 @@ func get(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, provide
 		writeFailure(stderr, "", err)
 		return
 	}
-	if !req.isGitHub() {
+	// Turned off, Git asks the user's own helpers as if Okteto's weren't there
+	if !req.isGitHub() || isDisabled() {
 		return
 	}
 

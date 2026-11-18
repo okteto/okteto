@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -57,9 +58,16 @@ It replaces the other credential helpers for https://github.com at that scope, a
 and sets useHttpPath so Git sends the repository in its requests. With --global, the empty helper it writes
 also drops the helpers that the system config sets for github.com, such as osxkeychain or Git Credential
 Manager, and useHttpPath makes "store" and "cache" skip the github.com credentials they saved without a path.
-There is no uninstall: remove the credential "https://github.com" section from the Git config by hand.`,
+There is no uninstall: remove the credential "https://github.com" section from the Git config by hand.
+
+It does nothing when OKTETO_DISABLE_GIT_CREDENTIAL_HELPER is true.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if isDisabled() {
+				oktetoLog.Information("Okteto's Git credential helper is turned off by %s, skipping", constants.OktetoDisableGitCredentialHelperEnvVar)
+				return nil
+			}
+
 			scope := globalFlag
 			if opts.system {
 				scope = systemFlag
