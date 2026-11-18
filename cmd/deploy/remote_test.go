@@ -61,7 +61,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Name:    "test",
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name test"},
 		},
 		{
 			name: "name set",
@@ -71,7 +71,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name test"},
 		},
 		{
 			name: "name multiple words",
@@ -81,7 +81,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"this is a test\""},
+			expected: []string{"--name 'this is a test'"},
 		},
 		{
 			name: "namespace is not set",
@@ -92,7 +92,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Timeout:   5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name test"},
 		},
 		{
 			name: "manifest path is not set",
@@ -104,7 +104,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name test"},
 		},
 		{
 			name: "variables set",
@@ -118,7 +118,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\"", "--var a=\"b\" --var c=\"d\""},
+			expected: []string{"--name test", "--var a=b --var c=d"},
 		},
 		{
 			name: "wait is not set",
@@ -129,7 +129,7 @@ func TestGetCommandFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name test"},
 		},
 		{
 			name: "multiword var value",
@@ -139,7 +139,56 @@ func TestGetCommandFlags(t *testing.T) {
 					Variables: []string{"test=multi word value"},
 				},
 			},
-			expected: []string{"--name \"test\"", "--var test=\"multi word value\""},
+			expected: []string{"--name test", "--var 'test=multi word value'"},
+		},
+		{
+			name: "name with command substitution",
+			config: config{
+				opts: &Options{
+					Name: "$(echo x)",
+				},
+			},
+			expected: []string{"--name '$(echo x)'"},
+		},
+		{
+			name: "var value with command substitution",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"A=$(echo x)"},
+				},
+			},
+			expected: []string{"--name test", "--var 'A=$(echo x)'"},
+		},
+		{
+			name: "var value with a newline",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"A=multi\nline"},
+				},
+			},
+			expected: []string{"--name test", `--var 'A=multi\nline'`},
+		},
+		{
+			name: "var name with command substitution",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"$(echo x)=y"},
+				},
+			},
+			expected: []string{"--name test", "--var '$(echo x)=y'"},
+		},
+		{
+			name: "empty var value",
+			config: config{
+				opts: &Options{
+					Name:      "test",
+					Variables: []string{"A="},
+				},
+			},
+			expected: []string{"--name test", "--var A="},
 		},
 		{
 			name: "wrong multiword var value",
@@ -221,7 +270,7 @@ func TestDeployRemoteWithCtx(t *testing.T) {
 		BaseImage:           manifest.Deploy.Image,
 		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
-		CommandFlags:        []string{"--name \"test\""},
+		CommandFlags:        []string{"--name test"},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
 		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
 		DockerfileName:      dockerfileTemporalName,
@@ -323,7 +372,7 @@ func TestDeployRemote(t *testing.T) {
 		BaseImage:           manifest.Deploy.Image,
 		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
-		CommandFlags:        []string{"--name \"test\""},
+		CommandFlags:        []string{"--name test"},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
 		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
 		DockerfileName:      dockerfileTemporalName,
@@ -393,7 +442,7 @@ func TestDeployRemoteWithError(t *testing.T) {
 		BaseImage:           manifest.Deploy.Image,
 		ManifestPathFlag:    "/path/to/manifest/okteto.yml",
 		TemplateName:        templateName,
-		CommandFlags:        []string{"--name \"test\""},
+		CommandFlags:        []string{"--name test"},
 		BuildEnvVars:        map[string]string{"BUILD_VAR_1": "value"},
 		DependenciesEnvVars: map[string]string{"DEP_VAR_1": "value"},
 		DockerfileName:      dockerfileTemporalName,
@@ -503,10 +552,10 @@ func TestDeployRemoteForwardsTheCatalogSecretVariablesToRemoteRun(t *testing.T) 
 
 	require.NoError(t, err)
 	expected := []string{
-		`--name "test"`,
-		`--var OKTETO_ACTION_NAME="stored-action"`,
-		`--catalog-action "action-name"`,
-		`--catalog-secret-variables-endpoint "https://okteto.example/internal/catalog/secret-variables"`,
+		`--name test`,
+		`--var OKTETO_ACTION_NAME=stored-action`,
+		`--catalog-action action-name`,
+		`--catalog-secret-variables-endpoint https://okteto.example/internal/catalog/secret-variables`,
 	}
 	require.Equal(t, expected, params.CommandFlags)
 }

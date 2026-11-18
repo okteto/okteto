@@ -181,9 +181,10 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 	return nil
 }
 
+// GetCommandFlags returns the remote-run flags with the name and the variables, quoted for the shell
 func GetCommandFlags(name string, vars []string) ([]string, error) {
 	var commandFlags []string
-	commandFlags = append(commandFlags, fmt.Sprintf("--name %q", name))
+	commandFlags = append(commandFlags, remote.CommandFlag("name", name))
 	if len(vars) > 0 {
 		var varsToAddForDeploy []string
 		variables, err := env.Parse(vars)
@@ -191,7 +192,7 @@ func GetCommandFlags(name string, vars []string) ([]string, error) {
 			return nil, err
 		}
 		for _, v := range variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s=%q", v.Name, v.Value))
+			varsToAddForDeploy = append(varsToAddForDeploy, remote.CommandFlag("var", v.Name+"="+v.Value))
 		}
 		commandFlags = append(commandFlags, strings.Join(varsToAddForDeploy, " "))
 	}

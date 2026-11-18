@@ -15,14 +15,13 @@ package utils
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 
-	"github.com/go-git/go-git/v6/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/repository"
@@ -35,23 +34,7 @@ var (
 
 // GetBranch returns the branch from a .git directory
 func GetBranch(path string) (string, error) {
-	repo, err := repository.FindTopLevelGitRepoFromPath(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	branch := head.Name()
-	if !branch.IsBranch() {
-		return "", fmt.Errorf("git repo is not on a valid branch")
-	}
-
-	name := strings.TrimPrefix(branch.String(), "refs/heads/")
-	return name, nil
+	return repository.GetBranch(path)
 }
 
 // GetRandomSHA returns a random sha generated on the fly
@@ -89,7 +72,7 @@ func IsOktetoRepo() bool {
 }
 
 func isOktetoRepoFromURL(repoUrl string) bool {
-	endpoint, err := transport.ParseURL(repoUrl)
+	endpoint, err := transport.NewEndpoint(repoUrl)
 	if err != nil {
 		oktetoLog.Infof("failed to get endpoint in isOktetoRepoFromURL: %v", err)
 		return false

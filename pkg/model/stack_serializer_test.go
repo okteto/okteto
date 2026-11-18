@@ -2048,10 +2048,21 @@ func Test_validateEnvFiles(t *testing.T) {
 
 func Test_Environment(t *testing.T) {
 	tests := []struct {
-		name        string
-		manifest    []byte
-		environment env.Environment
+		name          string
+		manifest      []byte
+		environment   env.Environment
+		expectedError bool
 	}{
+		{
+			name:          "invalid scalar environment",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    environment: FOO=bar"),
+			expectedError: true,
+		},
+		{
+			name:        "duplicate list entry",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    environment:\n      - A=1\n      - A=2"),
+			environment: env.Environment{env.Var{Name: "A", Value: "2"}},
+		},
 		{
 			name:        "envs",
 			manifest:    []byte("services:\n  app:\n    environment:\n        env: production\n    image: okteto/vote:1"),
@@ -2084,9 +2095,11 @@ func Test_Environment(t *testing.T) {
 			t.Setenv("OKTETO_ENVTEST", "myvalue")
 
 			s, err := ReadStack(tt.manifest, false)
-			if err != nil {
-				t.Fatal(err)
+			if tt.expectedError {
+				require.Error(t, err)
+				return
 			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.environment, s.Services["app"].Environment)
 			if len(s.Services["app"].Environment) != len(tt.environment) {
 				t.Fatalf("Bad unmarshal of envs")

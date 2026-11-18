@@ -34,7 +34,11 @@ type TestOptions struct {
 	OktetoHome   string
 	Token        string
 	TestNames    []string
-	NoCache      bool
+	// Commands are passed as --command flags, replacing the commands of the test container
+	Commands []string
+	// CommandArgs are passed after '--', replacing the commands of the test container
+	CommandArgs []string
+	NoCache     bool
 }
 
 // RunOktetoTestAndGetOutput runs an okteto test command and returns the output
@@ -81,6 +85,14 @@ func getTestCmd(oktetoPath string, testOptions *TestOptions) *exec.Cmd {
 	}
 	if testOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, testOptions.Token))
+	}
+	for _, command := range testOptions.Commands {
+		cmd.Args = append(cmd.Args, "--command", command)
+	}
+	// '--' must be the last argument, as everything after it is the command to run
+	if len(testOptions.CommandArgs) > 0 {
+		cmd.Args = append(cmd.Args, "--")
+		cmd.Args = append(cmd.Args, testOptions.CommandArgs...)
 	}
 
 	return cmd

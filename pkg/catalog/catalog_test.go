@@ -27,13 +27,13 @@ var testSecretVariables = SecretVariables{
 	Endpoint:   "https://okteto.example/internal/catalog/secret-variables",
 }
 
-// remote reports whether runsInRemote was called, and returns inRemote
-type remote struct {
+// fakeRemote reports whether runsInRemote was called, and returns inRemote
+type fakeRemote struct {
 	inRemote bool
 	called   bool
 }
 
-func (r *remote) runsInRemote() bool {
+func (r *fakeRemote) runsInRemote() bool {
 	r.called = true
 	return r.inRemote
 }
@@ -56,11 +56,24 @@ func TestSecretVariablesFromEnvWithoutVariables(t *testing.T) {
 
 func TestRemoteRunFlags(t *testing.T) {
 	expected := []string{
-		`--catalog-action "action-name"`,
-		`--catalog-secret-variables-endpoint "https://okteto.example/internal/catalog/secret-variables"`,
+		`--catalog-action action-name`,
+		`--catalog-secret-variables-endpoint https://okteto.example/internal/catalog/secret-variables`,
 	}
 
 	require.Equal(t, expected, testSecretVariables.RemoteRunFlags())
+}
+
+func TestRemoteRunFlagsQuotesTheValuesForTheShell(t *testing.T) {
+	s := SecretVariables{
+		Action:   "$(echo x)",
+		Endpoint: "https://okteto.example/$HOME",
+	}
+	expected := []string{
+		`--catalog-action '$(echo x)'`,
+		`--catalog-secret-variables-endpoint 'https://okteto.example/$HOME'`,
+	}
+
+	require.Equal(t, expected, s.RemoteRunFlags())
 }
 
 func TestRemoteRunFlagsWithoutAction(t *testing.T) {
@@ -68,7 +81,7 @@ func TestRemoteRunFlagsWithoutAction(t *testing.T) {
 }
 
 func TestCheckSecretVariablesWithoutReferences(t *testing.T) {
-	r := &remote{}
+	r := &fakeRemote{}
 
 	got, err := CheckSecretVariables(SecretVariables{Action: "action-name"}, DeployPhase, r.runsInRemote)
 
@@ -78,7 +91,7 @@ func TestCheckSecretVariablesWithoutReferences(t *testing.T) {
 }
 
 func TestCheckSecretVariablesWithAnEmptyList(t *testing.T) {
-	r := &remote{}
+	r := &fakeRemote{}
 	s := testSecretVariables
 	s.References = "[]"
 
@@ -93,7 +106,7 @@ func TestCheckSecretVariablesInRemote(t *testing.T) {
 	phases := []Phase{DeployPhase, DestroyPhase}
 	for _, phase := range phases {
 		t.Run(string(phase), func(t *testing.T) {
-			got, err := CheckSecretVariables(testSecretVariables, phase, (&remote{inRemote: true}).runsInRemote)
+			got, err := CheckSecretVariables(testSecretVariables, phase, (&fakeRemote{inRemote: true}).runsInRemote)
 
 			require.NoError(t, err)
 			require.Equal(t, testSecretVariables, got)
@@ -102,7 +115,7 @@ func TestCheckSecretVariablesInRemote(t *testing.T) {
 }
 
 func TestCheckSecretVariablesFailsOnLocalDeploy(t *testing.T) {
-	got, err := CheckSecretVariables(testSecretVariables, DeployPhase, (&remote{}).runsInRemote)
+	got, err := CheckSecretVariables(testSecretVariables, DeployPhase, (&fakeRemote{}).runsInRemote)
 
 	require.ErrorIs(t, err, ErrSecretVariablesNeedRemote)
 	require.EqualError(t, err, "catalog variables of type `secret` are only supported with deploy on remote. Enable remote execution and try again")
@@ -113,7 +126,7 @@ func TestCheckSecretVariablesFailsOnLocalDeploy(t *testing.T) {
 }
 
 func TestCheckSecretVariablesFailsOnLocalDestroyPointingToForceDestroy(t *testing.T) {
-	_, err := CheckSecretVariables(testSecretVariables, DestroyPhase, (&remote{}).runsInRemote)
+	_, err := CheckSecretVariables(testSecretVariables, DestroyPhase, (&fakeRemote{}).runsInRemote)
 
 	require.ErrorIs(t, err, ErrSecretVariablesNeedRemote)
 	var uErr oktetoErrors.UserError
@@ -125,7 +138,7 @@ func TestCheckSecretVariablesFailsWithoutEndpoint(t *testing.T) {
 	s := testSecretVariables
 	s.Endpoint = ""
 
-	got, err := CheckSecretVariables(s, DeployPhase, (&remote{inRemote: true}).runsInRemote)
+	got, err := CheckSecretVariables(s, DeployPhase, (&fakeRemote{inRemote: true}).runsInRemote)
 
 	require.ErrorIs(t, err, errSecretVariablesEndpointNotSet)
 	require.Equal(t, SecretVariables{}, got)
@@ -135,7 +148,7 @@ func TestCheckSecretVariablesFailsWithoutAction(t *testing.T) {
 	s := testSecretVariables
 	s.Action = ""
 
-	got, err := CheckSecretVariables(s, DeployPhase, (&remote{inRemote: true}).runsInRemote)
+	got, err := CheckSecretVariables(s, DeployPhase, (&fakeRemote{inRemote: true}).runsInRemote)
 
 	require.ErrorIs(t, err, errActionNotSet)
 	require.EqualError(t, err, "the development environment has catalog secret variables, but OKTETO_ACTION_NAME is not set")
@@ -146,7 +159,7 @@ func TestCheckSecretVariablesFailsWithInvalidReferences(t *testing.T) {
 	phases := []Phase{DeployPhase, DestroyPhase}
 	for _, phase := range phases {
 		t.Run(string(phase), func(t *testing.T) {
-			r := &remote{inRemote: true}
+			r := &fakeRemote{inRemote: true}
 			s := testSecretVariables
 			s.References = `{"name":`
 

@@ -144,6 +144,43 @@ func Test_GetSolveErrorMessage(t *testing.T) {
 			},
 		},
 		{
+			name: "registry access denied - HEAD 403 from ECR",
+			err:  errors.New("build failed: failed to solve: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/deploy:1.0: failed to resolve source metadata for 123456789012.dkr.ecr.eu-west-1.amazonaws.com/deploy:1.0: unexpected status from HEAD request to https://123456789012.dkr.ecr.eu-west-1.amazonaws.com/v2/deploy/manifests/1.0: 403 Forbidden"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the image '123456789012.dkr.ecr.eu-west-1.amazonaws.com/deploy:1.0' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
+			},
+		},
+		{
+			name: "registry access denied - GET 401",
+			err:  errors.New("failed to solve: registry.example.com/ns/base:1.0: failed to resolve source metadata for registry.example.com/ns/base:1.0: unexpected status from GET request to https://registry.example.com/v2/ns/base/manifests/1.0: 401 Unauthorized"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the image 'registry.example.com/ns/base:1.0' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
+			},
+		},
+		{
+			name: "registry access denied - push 403",
+			err:  errors.New("failed to solve: failed to push registry.example.com/ns/app:dev: unexpected status from PUT request to https://registry.example.com/v2/ns/app/manifests/dev: 403 Forbidden"),
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("the image '' is not accessible or it does not exist"),
+				Hint: `Please verify the name of the image to make sure it exists.
+    When using private registries, make sure Okteto Registry Credentials are correctly configured.
+    See more at: https://www.okteto.com/docs/admin/registry-credentials/`,
+			},
+		},
+		{
+			name: "registry other 4xx status",
+			err:  errors.New("failed to solve: registry.example.com/ns/base:1.0: failed to resolve source metadata for registry.example.com/ns/base:1.0: unexpected status from GET request to https://registry.example.com/v2/ns/base/manifests/1.0: 400 Bad Request"),
+			expected: oktetoErrors.UserError{
+				E: errors.New("failed to solve: registry.example.com/ns/base:1.0: failed to resolve source metadata for registry.example.com/ns/base:1.0: unexpected status from GET request to https://registry.example.com/v2/ns/base/manifests/1.0: 400 Bad Request"),
+			},
+		},
+		{
 			name: "registry host not found",
 			err:  errors.New("failed to solve: image: failed to do request: Head 'https://non-existing.okteto.dev/v2/xxxx/cli/manifests/debug-4': dial tcp: lookup non-existing.okteto.dev on xx.xxxx.x.xx:xx: no such host"),
 			expected: oktetoErrors.UserError{

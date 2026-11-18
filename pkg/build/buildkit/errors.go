@@ -69,7 +69,8 @@ func isImageIsNotAccessibleErr(err error) bool {
 		isNotLoggedIntoRegistry(err) ||
 		isPullAccessDenied(err) ||
 		isNotFound(err) ||
-		isHostNotFound(err)
+		isHostNotFound(err) ||
+		isRegistryAccessDenied(err)
 }
 
 // GetSolveErrorMessage returns the parsed error message
@@ -150,6 +151,10 @@ var (
 	// containerd registry client errors, e.g.
 	// "unexpected status from HEAD request to https://<registry>/v2/<name>/manifests/<tag>: 500 Internal Server Error"
 	regexForRegistryServerErr = regexp.MustCompile(`unexpected status from [A-Z]+ request to (\S+): (5\d\d[A-Za-z ]*)`)
+
+	// regexForRegistryAccessDeniedErr matches a registry 401 or 403 response in the containerd registry client errors,
+	// e.g. "unexpected status from HEAD request to https://<registry>/v2/<name>/manifests/<tag>: 403 Forbidden"
+	regexForRegistryAccessDeniedErr = regexp.MustCompile(`unexpected status from [A-Z]+ request to \S+: 40[13] `)
 )
 
 func extractImageFromError(err error) string {
@@ -262,6 +267,12 @@ func isNotFound(err error) bool {
 // isHostNotFound returns true when the error is because the host is not found
 func isHostNotFound(err error) bool {
 	return strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "no such host")
+}
+
+// isRegistryAccessDenied returns true when the registry answers 401 or 403, which is what basic-auth registries like
+// ECR return when the credentials are missing, invalid or expired
+func isRegistryAccessDenied(err error) bool {
+	return regexForRegistryAccessDeniedErr.MatchString(err.Error())
 }
 
 // isFailedChecksum returns true when the error is because the build process cannot calculate checksum of a layer.
