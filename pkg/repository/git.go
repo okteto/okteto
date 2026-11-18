@@ -613,6 +613,8 @@ func FindTopLevelGitRepoFromPath(path string) (*git.Repository, error) {
 		DetectDotGit: true,
 		// Read the remotes and branches of a linked worktree ("git worktree add")
 		// from the main repository's .git, which its "commondir" file points to.
+		// go-git v5.16.5 never closes that file, so on Windows it stays open
+		// until okteto exits.
 		EnableDotGitCommonDir: true,
 	}
 	return git.PlainOpenWithOptions(path, opts)
