@@ -49,7 +49,6 @@ func Test_ImageBuildMetadata_toProps(t *testing.T) {
 		"buildContextHash":                "contextHash",
 		"buildContextHashDurationSeconds": float64(5),
 		"initiator":                       "me",
-		"service":                         "test-service",
 		"result":                          true,
 		"buildkitDurationSeconds":         25,
 		"buildContextDurationMs":          int64(3000),

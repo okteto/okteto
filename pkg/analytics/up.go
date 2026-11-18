@@ -265,7 +265,7 @@ func (u *UpMetricsMetadata) productProps() map[string]any {
 		"isBuildExecuted": u.isBuildExecuted,
 		"reconnectCount":  u.reconnectCount,
 		"workflowID":      u.workflowID,
-		"service":         u.service,
+		"service":         hashService(u.service),
 		"repoURL":         repoURL,
 	}
 	if !u.success {
@@ -290,9 +290,19 @@ func (a *Tracker) TrackUpStarted(service, namespace, repoURL, workflowID string)
 		hashedRepoURL = hashString(normalizeRepoURL(repoURL))
 	}
 	props := map[string]any{
-		"service":    service,
+		"service":    hashService(service),
 		"repoURL":    hashedRepoURL,
 		"workflowID": workflowID,
 	}
 	a.events.track(context.Background(), productUpStartedEvent, props, a.events.withNamespace(namespace))
+}
+
+// hashService returns the hash of a service name, as imageBuild sends it in
+// "name", or "" when there is no service. Service names are user-defined, so
+// they are never sent raw.
+func hashService(service string) string {
+	if service == "" {
+		return ""
+	}
+	return hashString(service)
 }

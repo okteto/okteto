@@ -13,8 +13,9 @@
 
 package analytics
 
-// Tracker sends analytics events to Mixpanel: the regular events through
-// trackFn, and the product events through the non-blocking events client.
+// Tracker sends analytics events to Mixpanel: most events through trackFn, and
+// the product events plus imageBuild, Deploy and Up through the non-blocking
+// events client.
 type Tracker struct {
 	trackFn func(event string, success bool, props map[string]any)
 	events  *productEventClient

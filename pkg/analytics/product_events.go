@@ -48,8 +48,10 @@ const (
 	// so a slow network can't hold the CLI on exit.
 	productEventsCloseTimeout = 5 * time.Second
 
-	// namespaceUIDTimeout bounds the namespace UID lookup of an enricher.
-	namespaceUIDTimeout = 5 * time.Second
+	// namespaceUIDTimeout bounds the namespace UID lookup of an enricher. It is
+	// well under productEventsCloseTimeout, so an event whose lookup fails (e.g. the
+	// cluster API is unreachable) is still sent, without the UID, before Close gives up.
+	namespaceUIDTimeout = 2 * time.Second
 
 	// noGeolocationIP tells the Mixpanel client not to ask Mixpanel to geolocate
 	// the event from the request IP. posthog-go disabled GeoIP by default, so the
@@ -111,30 +113,40 @@ func (c *productEventClient) track(ctx context.Context, event string, eventProps
 	}
 	props := commonProductEventProperties()
 	maps.Copy(props, eventProps)
-	c.send(ctx, distinctID, event, noGeolocationIP, props, enrichers)
+	// The event time is taken here, not when the goroutine sends it, so a slow
+	// enricher or request doesn't shift it (Mixpanel stores it in seconds).
+	ts := c.now()
+	c.send(ctx, distinctID, event, noGeolocationIP, &ts, props, enrichers)
 }
 
 // trackWithProductProperties sends a Mixpanel event that PostHog also tracked
-// (imageBuild, Deploy, Up), with the common product properties added. The rest
-// is what track() does for it: its common properties, its distinct ID (the user
-// ID, or the machine ID when there is none) and geolocation.
+// (imageBuild, Deploy, Up) in the background. The rest is what track() does for
+// it: its common properties, its distinct ID (the user ID, or the machine ID
+// when there is none), geolocation, and no client timestamp (Mixpanel uses the
+// time it receives the event, so a machine with a wrong clock doesn't lose it).
+// The common product properties and the enrichers only apply to Okteto contexts,
+// as PostHog only received these events from them: other contexts send what
+// they sent before, without their kubeconfig context name or a namespace lookup.
 // Events are dropped when analytics is disabled and after Close.
 func (c *productEventClient) trackWithProductProperties(ctx context.Context, event string, success bool, eventProps map[string]any, enrichers ...enricherFn) {
 	if c == nil || c.client == nil || !analyticsEnabled() {
 		return
 	}
-	props := commonProductEventProperties()
+	props := map[string]any{}
+	if okteto.IsOkteto() {
+		props = commonProductEventProperties()
+	} else {
+		enrichers = nil
+	}
 	maps.Copy(props, eventProps)
 	addTrackProperties(props, success)
-	c.send(ctx, getTrackID(), event, "", props, enrichers)
+	c.send(ctx, getTrackID(), event, "", nil, props, enrichers)
 }
 
 // send runs the enrichers and sends the event in its own goroutine. An empty ip
-// lets Mixpanel geolocate the event from the request IP.
-func (c *productEventClient) send(ctx context.Context, distinctID, event, ip string, props map[string]any, enrichers []enricherFn) {
-	// The event time is taken here, not when the goroutine sends it, so a slow
-	// enricher or request doesn't shift it (Mixpanel stores it in seconds).
-	ts := c.now()
+// lets Mixpanel geolocate the event from the request IP, and a nil ts lets
+// Mixpanel use the time it receives the event.
+func (c *productEventClient) send(ctx context.Context, distinctID, event, ip string, ts *time.Time, props map[string]any, enrichers []enricherFn) {
 
 	c.mu.Lock()
 	if c.closed {
@@ -150,7 +162,7 @@ func (c *productEventClient) send(ctx context.Context, distinctID, event, ip str
 		for _, enrich := range enrichers {
 			enrich(ctx, props)
 		}
-		if err := c.client.Track(distinctID, event, &mixpanel.Event{IP: ip, Timestamp: &ts, Properties: props}); err != nil {
+		if err := c.client.Track(distinctID, event, &mixpanel.Event{IP: ip, Timestamp: ts, Properties: props}); err != nil {
 			oktetoLog.Infof("failed to send %s analytics event: %s", event, err)
 		}
 	}()

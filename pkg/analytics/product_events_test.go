@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -62,11 +63,13 @@ func (f *fakeEventTracker) sent() []sentEvent {
 }
 
 type mockNamespaceUIDResolver struct {
-	err error
-	uid string
+	err   error
+	uid   string
+	calls atomic.Int32
 }
 
 func (m *mockNamespaceUIDResolver) GetNamespaceUID(_ context.Context, _ string) (string, error) {
+	m.calls.Add(1)
 	return m.uid, m.err
 }
 
@@ -108,7 +111,24 @@ func setupAnalyticsContextWithUser(t *testing.T, analyticsEnabled bool, userID s
 				CompanyName:    "ACME Corp",
 				ClusterID:      "cluster-uuid-1234",
 				ClusterVersion: "1.2.3",
+				IsOkteto:       true,
 				Analytics:      true,
+			},
+		},
+	}
+}
+
+// setupKubernetesAnalyticsContext installs a context added from a kubeconfig
+// (not an Okteto context): no user ID and the kubeconfig context name as its name.
+func setupKubernetesAnalyticsContext(t *testing.T) {
+	t.Helper()
+	setupAnalyticsContextWithUser(t, true, "")
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "gke_project_zone_cluster",
+		Contexts: map[string]*okteto.Context{
+			"gke_project_zone_cluster": {
+				Name:      "gke_project_zone_cluster",
+				Analytics: true,
 			},
 		},
 	}
@@ -234,7 +254,7 @@ func TestProductEventClient_TrackWithProductProperties_SendsTrackAndProductPrope
 	ev := events[0]
 	require.Equal(t, "Merged", ev.event)
 	require.Equal(t, "user-123", ev.distinctID)
-	require.Equal(t, fixedEventTime, *ev.timestamp)
+	require.Nil(t, ev.timestamp, "Mixpanel sets the time, as for the other track() events")
 	require.Empty(t, ev.ip, "the Mixpanel events keep being geolocated")
 	require.Equal(t, "val", ev.props["key"])
 	require.Equal(t, "ns-uid", ev.props["namespace"])
@@ -263,6 +283,31 @@ func TestProductEventClient_TrackWithProductProperties_FallsBackToMachineID(t *t
 	require.Len(t, events, 1)
 	require.Equal(t, "test-machine", events[0].distinctID)
 	require.Equal(t, false, events[0].props["success"])
+}
+
+// Contexts added from a kubeconfig send these events as they did before: no
+// product properties (e.g. their kubeconfig context name as clusterURL) and no
+// namespace lookup against their cluster.
+func TestProductEventClient_TrackWithProductProperties_KubernetesContext(t *testing.T) {
+	setupKubernetesAnalyticsContext(t)
+	fake := &fakeEventTracker{}
+	resolver := &mockNamespaceUIDResolver{uid: "ns-uid"}
+	c := newTestEventClient(fake, resolver)
+
+	c.trackWithProductProperties(context.Background(), "Merged", true, map[string]any{"key": "val"}, c.withNamespace("dev-ns"))
+	c.Close()
+
+	events := fake.sent()
+	require.Len(t, events, 1)
+	ev := events[0]
+	require.Equal(t, "test-machine", ev.distinctID)
+	require.Equal(t, "val", ev.props["key"])
+	require.Equal(t, true, ev.props["success"])
+	require.Equal(t, KubernetesContext, ev.props["contextType"])
+	for _, key := range []string{"clusterURL", "clusterID", "userID", "customerName", "namespace"} {
+		require.NotContains(t, ev.props, key)
+	}
+	require.Zero(t, resolver.calls.Load(), "no namespace lookup against a non-Okteto cluster")
 }
 
 func TestProductEventClient_TrackWithProductProperties_AnalyticsDisabled(t *testing.T) {

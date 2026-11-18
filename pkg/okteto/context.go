@@ -508,9 +508,9 @@ func AddSchema(oCtx string) string {
 }
 
 // NormalizeClusterURL returns the canonical form of an Okteto cluster URL used
-// as the cluster_url analytics property: the full URL with an https scheme and
+// as the clusterURL analytics property: the full URL with an https scheme and
 // without a trailing slash. This is the contract shared with backend event
-// emitters so CLI and backend events group by the same cluster_url value.
+// emitters so CLI and backend events group by the same clusterURL value.
 func NormalizeClusterURL(clusterURL string) string {
 	if clusterURL == "" {
 		return ""

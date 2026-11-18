@@ -47,19 +47,20 @@ type DeployMetadata struct {
 	WaitForDependencies    bool
 }
 
-// errorCategory returns the category of the deploy error, or "unknown" for
-// errors it doesn't classify. The raw error is never sent.
-func (d *DeployMetadata) errorCategory() string {
+// errorCategory returns the category of a deploy or test error, or "unknown"
+// for errors it doesn't classify. The raw error is never sent: it can hold
+// command lines, URLs and credentials.
+func errorCategory(err error) string {
 	switch {
-	case errors.Is(d.Err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands):
+	case errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands):
 		return "no_deploy_commands"
-	case errors.Is(d.Err, oktetoErrors.ErrTimeout):
+	case errors.Is(err, oktetoErrors.ErrTimeout):
 		return "timeout"
-	case errors.Is(d.Err, oktetoErrors.ErrCommandFailed):
+	case errors.Is(err, oktetoErrors.ErrCommandFailed):
 		return "command_failed"
-	case errors.Is(d.Err, oktetoErrors.ErrInternalServerError):
+	case errors.Is(err, oktetoErrors.ErrInternalServerError):
 		return "internal_server_error"
-	case errors.As(d.Err, &oktetoErrors.UserError{}):
+	case errors.As(err, &oktetoErrors.UserError{}):
 		return "user_error"
 	default:
 		return "unknown"
@@ -85,8 +86,7 @@ func (d *DeployMetadata) toProps() map[string]any {
 		"namespaceType": d.namespaceType(),
 	}
 	if d.Err != nil {
-		// Never the raw error: it can hold command lines, URLs and credentials.
-		props["error"] = d.errorCategory()
+		props["error"] = errorCategory(d.Err)
 	}
 	if d.RepoURL != "" {
 		props["repoURL"] = hashString(normalizeRepoURL(d.RepoURL))

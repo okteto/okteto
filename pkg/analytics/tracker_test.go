@@ -197,7 +197,7 @@ func TestTracker_TrackUpStarted(t *testing.T) {
 
 	require.Empty(t, *tracked)
 	require.Equal(t, productUpStartedEvent, ev.event)
-	require.Equal(t, "api", ev.props["service"])
+	require.Equal(t, hashString("api"), ev.props["service"], "service names are never sent raw")
 	require.Equal(t, "ns-uid-456", ev.props["namespace"])
 	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
 	require.Equal(t, "wf-abc-123", ev.props["workflowID"])

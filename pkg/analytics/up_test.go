@@ -324,7 +324,7 @@ func Test_UpMetricsMetadata_ProductProps(t *testing.T) {
 			expected: baseProps(map[string]any{
 				"result":     true,
 				"workflowID": "wf-1",
-				"service":    "api",
+				"service":    hashString("api"),
 				"repoURL":    hashedTestRepoURL,
 			}),
 		},

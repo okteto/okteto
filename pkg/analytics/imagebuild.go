@@ -63,8 +63,7 @@ func (m *ImageBuildMetadata) toProps() map[string]any {
 		"buildContextHashDurationSeconds": m.BuildContextHashDuration.Seconds(),
 		"initiator":                       m.Initiator,
 
-		"service": m.Name,
-		"result":  m.Success,
+		"result": m.Success,
 	}
 
 	if m.Name != "" {

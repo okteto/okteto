@@ -244,7 +244,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 		}
 		pc.analyticsTracker.TrackDeployPipelineTriggered(ctx, analytics.DeployPipelineTriggeredMetadata{
 			WorkflowID: opts.WorkflowID,
-			// parentWorkflowId is sourced only from the backend-injected env var; opts.ParentWorkflowID
+			// parentWorkflowID is sourced only from the backend-injected env var; opts.ParentWorkflowID
 			// is the GraphQL mutation argument and is intentionally not used for the analytics event.
 			ParentWorkflowID: os.Getenv(constants.OktetoParentWorkflowIDEnvVar),
 			RepoURL:          opts.Repository,

@@ -88,7 +88,7 @@ func TestDeployMetadata_ToProps_ErrorIsCategorized(t *testing.T) {
 	require.Equal(t, "user_error", props["error"])
 }
 
-func TestDeployMetadata_ErrorCategory(t *testing.T) {
+func TestErrorCategory(t *testing.T) {
 	tests := []struct {
 		err      error
 		name     string
@@ -103,7 +103,7 @@ func TestDeployMetadata_ErrorCategory(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, (&DeployMetadata{Err: tt.err}).errorCategory())
+			require.Equal(t, tt.expected, errorCategory(tt.err))
 		})
 	}
 }
