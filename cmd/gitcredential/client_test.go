@@ -58,6 +58,13 @@ func TestAPIConfigFromEnv(t *testing.T) {
 			expected:   apiConfig{url: "https://okteto.example.com", token: "okteto-token", serverName: "10.0.0.1:443"},
 		},
 		{
+			name:        "internal server name without a port",
+			url:         "https://okteto.example.com",
+			token:       "okteto-token",
+			serverName:  "10.0.0.1",
+			expectedErr: errInvalidServerName,
+		},
+		{
 			name:     "OKTETO_CONTEXT when OKTETO_URL is not set",
 			context:  "https://okteto.example.com",
 			token:    "okteto-token",

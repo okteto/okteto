@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -29,6 +30,8 @@ import (
 var (
 	errURLNotSet   = fmt.Errorf("neither %s nor %s is set", model.OktetoURLEnvVar, model.OktetoContextEnvVar)
 	errTokenNotSet = fmt.Errorf("%s is not set", model.OktetoTokenEnvVar)
+
+	errInvalidServerName = fmt.Errorf("%s is not a host and port", constants.OktetoInternalServerNameEnvVar)
 )
 
 // apiConfig is the Okteto instance and token the helper calls the API with
@@ -55,10 +58,17 @@ func apiConfigFromEnv() (apiConfig, error) {
 	if token == "" {
 		return apiConfig{}, errTokenNotSet
 	}
+	// okteto.SetServerNameOverride exits on a value it can't split
+	serverName := os.Getenv(constants.OktetoInternalServerNameEnvVar)
+	if serverName != "" {
+		if _, _, err := net.SplitHostPort(serverName); err != nil {
+			return apiConfig{}, fmt.Errorf("%w: %s", errInvalidServerName, err)
+		}
+	}
 	return apiConfig{
 		url:        oktetoURL,
 		token:      token,
-		serverName: os.Getenv(constants.OktetoInternalServerNameEnvVar),
+		serverName: serverName,
 	}, nil
 }
 
