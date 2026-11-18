@@ -423,7 +423,7 @@ func (ogr oktetoGitRepository) Worktree() (gitWorktreeInterface, error) {
 	if err != nil {
 		return nil, err
 	}
-	return oktetoGitWorktree{worktree: worktree}, nil
+	return oktetoGitWorktree{worktree: worktree, path: ogr.root}, nil
 }
 
 func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
@@ -470,10 +470,22 @@ func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, cont
 
 type oktetoGitWorktree struct {
 	worktree *git.Worktree
+	// path is the path the repository was opened from
+	path string
 }
 
+// GetRoot returns the root of the worktree in the form of the path the repository was opened from, as the git binary
+// repository does. go-git v5 returns it with the symlinks resolved
 func (ogr oktetoGitWorktree) GetRoot() string {
-	return ogr.worktree.Filesystem.Root()
+	root := ogr.worktree.Filesystem.Root()
+	if ogr.path == "" {
+		return root
+	}
+	inPathForm, err := rootInPathForm(ogr.path, root)
+	if err != nil {
+		return root
+	}
+	return inPathForm
 }
 
 type oktetoGitStatus struct {

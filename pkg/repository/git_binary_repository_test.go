@@ -194,6 +194,8 @@ func TestGitBinaryRepositoryRemoteURL_remoteInWorktreeConfig(t *testing.T) {
 	require.NoError(t, err)
 	cfg, err := goGitRepo.Config()
 	require.NoError(t, err)
+	// git only reads extensions with repository format version 1, which go-git v5 doesn't set
+	cfg.Raw.Section("core").SetOption("repositoryformatversion", "1")
 	cfg.Raw.Section("extensions").SetOption("worktreeConfig", "true")
 	require.NoError(t, goGitRepo.SetConfig(cfg))
 	writeRepoFile(t, dir, ".git/config.worktree", "[remote \"origin\"]\n\turl = https://github.com/okteto/repo.git\n")
