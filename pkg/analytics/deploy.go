@@ -47,7 +47,9 @@ type DeployMetadata struct {
 	WaitForDependencies    bool
 }
 
-func (d *DeployMetadata) errorReason() string {
+// errorCategory returns the category of the deploy error, or "unknown" for
+// errors it doesn't classify. The raw error is never sent.
+func (d *DeployMetadata) errorCategory() string {
 	switch {
 	case errors.Is(d.Err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands):
 		return "no_deploy_commands"
@@ -60,52 +62,46 @@ func (d *DeployMetadata) errorReason() string {
 	case errors.As(d.Err, &oktetoErrors.UserError{}):
 		return "user_error"
 	default:
-		return ""
+		return "unknown"
 	}
 }
 
-// errorCategory returns errorReason, or "unknown" for errors it doesn't classify.
-func (d *DeployMetadata) errorCategory() string {
-	if reason := d.errorReason(); reason != "" {
-		return reason
-	}
-	return "unknown"
-}
-
-// toProductEventProps returns the properties of the deploy_completed product event.
-func (d *DeployMetadata) toProductEventProps() map[string]any {
+// toProps returns the properties of the Deploy event: the Mixpanel ones plus
+// the ones that PostHog's deploy_completed had and Deploy didn't. The ported
+// optional ones are omitted when empty.
+func (d *DeployMetadata) toProps() map[string]any {
 	props := map[string]any{
-		"result":                   d.Success,
-		"manifest_archetype":       d.manifestArchetype(),
-		"is_within_preview":        d.IsPreview,
-		"is_redeploy":              d.IsRedeploy,
-		"has_dependencies_section": d.HasDependenciesSection,
-		"has_build_section":        d.HasBuildSection,
-		"is_remote":                d.IsRemote,
-		"namespace_type":           d.namespaceType(),
+		"pipelineType":           d.manifestArchetype(),
+		"isOktetoRepository":     d.IsOktetoRepo,
+		"duration":               d.Duration.Seconds(),
+		"deployType":             d.DeployType,
+		"isPreview":              d.IsPreview,
+		"hasDependenciesSection": d.HasDependenciesSection,
+		"hasBuildSection":        d.HasBuildSection,
+		"isRemote":               d.IsRemote,
+
+		"result":        d.Success,
+		"isRedeploy":    d.IsRedeploy,
+		"namespaceType": d.namespaceType(),
+	}
+	if d.Err != nil {
+		// Never the raw error: it can hold command lines, URLs and credentials.
+		props["error"] = d.errorCategory()
 	}
 	if d.RepoURL != "" {
-		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
+		props["repoURL"] = hashString(normalizeRepoURL(d.RepoURL))
 	}
 	if d.ManifestSyntax != "" {
-		props["manifest_syntax"] = d.ManifestSyntax
+		props["manifestSyntax"] = d.ManifestSyntax
 	}
 	if d.WorkflowID != "" {
-		props["workflow_id"] = d.WorkflowID
+		props["workflowID"] = d.WorkflowID
 	}
 	if d.ParentExecutionID != "" {
-		props["parent_execution_id"] = d.ParentExecutionID
+		props["parentExecutionID"] = d.ParentExecutionID
 	}
 	if d.WaitForDependencies {
-		props["wait_for_dependencies"] = true
-	}
-	if secs := d.Duration.Seconds(); secs > 0 {
-		props["duration_seconds"] = secs
-	}
-	if !d.Success {
-		if reason := d.errorReason(); reason != "" {
-			props["error_reason"] = reason
-		}
+		props["waitForDependencies"] = true
 	}
 	return props
 }
@@ -138,17 +134,17 @@ type DeployStartedMetadata struct {
 // toProductEventProps returns the properties of the deploy_started product event.
 func (d *DeployStartedMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
-		"is_within_preview": d.IsPreview,
-		"is_redeploy":       d.IsRedeploy,
+		"isPreview":  d.IsPreview,
+		"isRedeploy": d.IsRedeploy,
 	}
 	if d.RepoURL != "" {
-		props["repo_url"] = hashString(normalizeRepoURL(d.RepoURL))
+		props["repoURL"] = hashString(normalizeRepoURL(d.RepoURL))
 	}
 	if d.WorkflowID != "" {
-		props["workflow_id"] = d.WorkflowID
+		props["workflowID"] = d.WorkflowID
 	}
 	if d.ParentExecutionID != "" {
-		props["parent_execution_id"] = d.ParentExecutionID
+		props["parentExecutionID"] = d.ParentExecutionID
 	}
 	return props
 }
@@ -158,25 +154,7 @@ func (a *Tracker) TrackDeployStarted(metadata DeployStartedMetadata) {
 	a.events.track(context.Background(), productDeployStartedEvent, metadata.toProductEventProps(), a.events.withNamespace(metadata.Namespace))
 }
 
-// TrackDeploy sends the Deploy and deploy_completed events when the user deploys from command okteto deploy
+// TrackDeploy sends the Deploy event when the user deploys from command okteto deploy
 func (a *Tracker) TrackDeploy(metadata DeployMetadata) {
-	if metadata.PipelineType == "" {
-		metadata.PipelineType = "pipeline"
-	}
-	props := map[string]any{
-		"pipelineType":           metadata.PipelineType,
-		"isOktetoRepository":     metadata.IsOktetoRepo,
-		"duration":               metadata.Duration.Seconds(),
-		"deployType":             metadata.DeployType,
-		"isPreview":              metadata.IsPreview,
-		"hasDependenciesSection": metadata.HasDependenciesSection,
-		"hasBuildSection":        metadata.HasBuildSection,
-		"isRemote":               metadata.IsRemote,
-	}
-	if metadata.Err != nil {
-		// Never the raw error: it can hold command lines, URLs and credentials.
-		props["error"] = metadata.errorCategory()
-	}
-	a.trackFn(deployEvent, metadata.Success, props)
-	a.events.track(context.Background(), productDeployCompletedEvent, metadata.toProductEventProps(), a.events.withNamespace(metadata.Namespace))
+	a.events.trackWithProductProperties(context.Background(), deployEvent, metadata.Success, metadata.toProps(), a.events.withNamespace(metadata.Namespace))
 }

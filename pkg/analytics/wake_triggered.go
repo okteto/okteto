@@ -23,6 +23,6 @@ type WakeTriggeredMetadata struct {
 
 // TrackWakeTriggered sends a wake_triggered event.
 func (a *Tracker) TrackWakeTriggered(ctx context.Context, m WakeTriggeredMetadata) {
-	props := map[string]any{"is_preview": m.IsPreview}
+	props := map[string]any{"isPreview": m.IsPreview}
 	a.events.track(ctx, productWakeTriggeredEvent, props, a.events.withNamespace(m.Namespace))
 }

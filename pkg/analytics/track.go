@@ -246,7 +246,20 @@ func track(event string, success bool, props map[string]any) {
 	if !analyticsEnabled() {
 		return
 	}
+	if props == nil {
+		props = map[string]any{}
+	}
+	addTrackProperties(props, success)
 
+	e := &mixpanel.Event{Properties: props}
+	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
+		oktetoLog.Infof("Failed to send analytics: %s", err)
+	}
+}
+
+// addTrackProperties adds the properties track() sends on every event.
+// Must only be called after analyticsEnabled() returns true.
+func addTrackProperties(props map[string]any, success bool) {
 	// record the origin so events from nested okteto deploys and manifest dependencies ("okteto-deploy") can be told apart
 	origin := config.GetDeployOrigin()
 
@@ -260,9 +273,6 @@ func track(event string, success bool, props map[string]any) {
 		mpOS = "Linux"
 	}
 
-	if props == nil {
-		props = map[string]any{}
-	}
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
 	props["machine_id"] = get().MachineID
@@ -283,11 +293,6 @@ func track(event string, success bool, props map[string]any) {
 
 	props["context"] = okteto.GetContext().CompanyName
 	props["isTrial"] = okteto.GetContext().IsTrial
-
-	e := &mixpanel.Event{Properties: props}
-	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
-		oktetoLog.Infof("Failed to send analytics: %s", err)
-	}
 }
 
 func disabledByOktetoAdmin() bool {

@@ -28,14 +28,14 @@ type DeployPreviewTriggeredMetadata struct {
 // toProductEventProps returns the properties of the deploy_preview_triggered product event.
 func (m DeployPreviewTriggeredMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
-		"workflow_id": m.WorkflowID,
-		"is_redeploy": m.IsRedeploy,
+		"workflowID": m.WorkflowID,
+		"isRedeploy": m.IsRedeploy,
 	}
 	if m.ParentWorkflowID != "" {
-		props["parent_workflow_id"] = m.ParentWorkflowID
+		props["parentWorkflowID"] = m.ParentWorkflowID
 	}
 	if m.RepoURL != "" {
-		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+		props["repoURL"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	return props
 }

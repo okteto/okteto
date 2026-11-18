@@ -180,17 +180,17 @@ func TestProductEventClient_Track_SendsCommonAndEventProperties(t *testing.T) {
 	require.Equal(t, fixedEventTime, *ev.timestamp)
 	require.Equal(t, noGeolocationIP, ev.ip, "product events are not geolocated, as in PostHog")
 	require.Equal(t, "val", ev.props["key"])
-	require.Equal(t, "ACME Corp", ev.props["customer_name"])
-	require.Equal(t, "cluster-uuid-1234", ev.props["cluster_id"])
-	require.Equal(t, "https://okteto.example.com", ev.props["cluster_url"])
-	require.Equal(t, "1.2.3", ev.props["cluster_version"])
-	require.Equal(t, "user-123", ev.props["user_id"])
-	require.Equal(t, "test-version", ev.props["cli_version"])
+	require.Equal(t, "ACME Corp", ev.props["customerName"])
+	require.Equal(t, "cluster-uuid-1234", ev.props["clusterID"])
+	require.Equal(t, "https://okteto.example.com", ev.props["clusterURL"])
+	require.Equal(t, "1.2.3", ev.props["clusterVersion"])
+	require.Equal(t, "user-123", ev.props["userID"])
+	require.Equal(t, "test-version", ev.props["cliVersion"])
 	require.NotEmpty(t, ev.props["os"])
 	require.NotEmpty(t, ev.props["arch"])
 	require.Equal(t, "test-machine", ev.props["machine_id"])
-	require.Equal(t, "cli", ev.props["measurement_source"])
-	require.Equal(t, "cli", ev.props["trigger_source"])
+	require.Equal(t, "cli", ev.props["measurementSource"])
+	require.Equal(t, "cli", ev.props["triggerSource"])
 }
 
 // The product events keep PostHog's properties: they must not get the default
@@ -215,10 +215,74 @@ func TestProductEventClient_Track_EventPropertiesOverrideCommon(t *testing.T) {
 	fake := &fakeEventTracker{}
 	c := newTestEventClient(fake, nil)
 
-	c.track(context.Background(), "test_event", map[string]any{"cluster_id": "override"})
+	c.track(context.Background(), "test_event", map[string]any{"clusterID": "override"})
 	c.Close()
 
-	require.Equal(t, "override", fake.sent()[0].props["cluster_id"])
+	require.Equal(t, "override", fake.sent()[0].props["clusterID"])
+}
+
+func TestProductEventClient_TrackWithProductProperties_SendsTrackAndProductProperties(t *testing.T) {
+	setupAnalyticsContext(t, true)
+	fake := &fakeEventTracker{}
+	c := newTestEventClient(fake, &mockNamespaceUIDResolver{uid: "ns-uid"})
+
+	c.trackWithProductProperties(context.Background(), "Merged", true, map[string]any{"key": "val"}, c.withNamespace("dev-ns"))
+	c.Close()
+
+	events := fake.sent()
+	require.Len(t, events, 1)
+	ev := events[0]
+	require.Equal(t, "Merged", ev.event)
+	require.Equal(t, "user-123", ev.distinctID)
+	require.Equal(t, fixedEventTime, *ev.timestamp)
+	require.Empty(t, ev.ip, "the Mixpanel events keep being geolocated")
+	require.Equal(t, "val", ev.props["key"])
+	require.Equal(t, "ns-uid", ev.props["namespace"])
+	// properties track() adds
+	require.Equal(t, true, ev.props["success"])
+	require.Equal(t, "test-version", ev.props["version"])
+	require.Equal(t, "ACME Corp", ev.props["context"])
+	require.NotEmpty(t, ev.props["$os"])
+	// common product properties
+	require.Equal(t, "ACME Corp", ev.props["customerName"])
+	require.Equal(t, "cluster-uuid-1234", ev.props["clusterID"])
+	require.Equal(t, "test-version", ev.props["cliVersion"])
+	require.Equal(t, "test-machine", ev.props["machine_id"])
+}
+
+// The Mixpanel events keep track()'s distinct ID: the machine ID when there is no user.
+func TestProductEventClient_TrackWithProductProperties_FallsBackToMachineID(t *testing.T) {
+	setupAnalyticsContextWithUser(t, true, "")
+	fake := &fakeEventTracker{}
+	c := newTestEventClient(fake, nil)
+
+	c.trackWithProductProperties(context.Background(), "Merged", false, nil)
+	c.Close()
+
+	events := fake.sent()
+	require.Len(t, events, 1)
+	require.Equal(t, "test-machine", events[0].distinctID)
+	require.Equal(t, false, events[0].props["success"])
+}
+
+func TestProductEventClient_TrackWithProductProperties_AnalyticsDisabled(t *testing.T) {
+	setupAnalyticsContext(t, false)
+	fake := &fakeEventTracker{}
+	c := newTestEventClient(fake, nil)
+
+	c.trackWithProductProperties(context.Background(), "Merged", true, nil)
+	c.Close()
+
+	require.Empty(t, fake.sent())
+}
+
+func TestProductEventClient_TrackWithProductProperties_NilClientDoesNotPanic(t *testing.T) {
+	setupAnalyticsContext(t, true)
+	var c *productEventClient
+
+	require.NotPanics(t, func() {
+		c.trackWithProductProperties(context.Background(), "Merged", true, nil)
+	})
 }
 
 func TestProductEventClient_Track_AppliesEnrichersBeforeSending(t *testing.T) {
@@ -343,8 +407,8 @@ func TestProductEventClient_AgentType_OmittedWhenNoAgent(t *testing.T) {
 
 	props := commonProductEventProperties()
 
-	require.NotContains(t, props, "agent_type")
-	require.Equal(t, false, props["is_agent"])
+	require.NotContains(t, props, "agentType")
+	require.Equal(t, false, props["isAgent"])
 }
 
 func TestProductEventClient_AgentType_PresentWhenAgent(t *testing.T) {
@@ -356,8 +420,8 @@ func TestProductEventClient_AgentType_PresentWhenAgent(t *testing.T) {
 
 	props := commonProductEventProperties()
 
-	require.Equal(t, true, props["is_agent"])
-	require.Equal(t, "claude_code", props["agent_type"])
+	require.Equal(t, true, props["isAgent"])
+	require.Equal(t, "claude_code", props["agentType"])
 }
 
 func TestCommonProductEventProperties_TriggerSource(t *testing.T) {
@@ -377,7 +441,7 @@ func TestCommonProductEventProperties_TriggerSource(t *testing.T) {
 			t.Setenv("OKTETO_ORIGIN", tt.origin)
 			t.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", tt.withinDeployContext)
 
-			require.Equal(t, tt.expected, commonProductEventProperties()["trigger_source"])
+			require.Equal(t, tt.expected, commonProductEventProperties()["triggerSource"])
 		})
 	}
 }
@@ -407,9 +471,9 @@ func TestCommonProductEventProperties_Automation(t *testing.T) {
 
 			props := commonProductEventProperties()
 
-			require.Equal(t, tt.isCI, props["is_ci"])
-			require.Equal(t, tt.isAgent, props["is_agent"])
-			require.Equal(t, tt.isAutomation, props["is_automation"])
+			require.Equal(t, tt.isCI, props["isCI"])
+			require.Equal(t, tt.isAgent, props["isAgent"])
+			require.Equal(t, tt.isAutomation, props["isAutomation"])
 		})
 	}
 }

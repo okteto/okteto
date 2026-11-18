@@ -15,6 +15,7 @@ package analytics
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -24,188 +25,109 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeployTracker(t *testing.T) {
-	tt := []struct {
-		expected mockEvent
+func TestDeployMetadata_ToProps(t *testing.T) {
+	props := (&DeployMetadata{
+		Success:                true,
+		IsOktetoRepo:           true,
+		Duration:               2 * time.Second,
+		PipelineType:           model.StackType,
+		DeployType:             "deploy",
+		IsPreview:              true,
+		IsRedeploy:             true,
+		HasDependenciesSection: true,
+		HasBuildSection:        true,
+		IsRemote:               true,
+		RepoURL:                "https://github.com/org/repo",
+		ManifestSyntax:         "compose",
+		WorkflowID:             "wf-1",
+		ParentExecutionID:      "exec-1",
+		WaitForDependencies:    true,
+	}).toProps()
+
+	require.Equal(t, map[string]any{
+		"pipelineType":           "compose",
+		"isOktetoRepository":     true,
+		"duration":               2.0,
+		"deployType":             "deploy",
+		"isPreview":              true,
+		"hasDependenciesSection": true,
+		"hasBuildSection":        true,
+		"isRemote":               true,
+		"result":                 true,
+		"isRedeploy":             true,
+		"namespaceType":          "preview",
+		"repoURL":                hashedTestRepoURL,
+		"manifestSyntax":         "compose",
+		"workflowID":             "wf-1",
+		"parentExecutionID":      "exec-1",
+		"waitForDependencies":    true,
+	}, props)
+}
+
+func TestDeployMetadata_ToProps_DefaultsAndOmittedFields(t *testing.T) {
+	props := (&DeployMetadata{Success: true}).toProps()
+
+	require.Equal(t, map[string]any{
+		"pipelineType":           "pipeline",
+		"isOktetoRepository":     false,
+		"duration":               0.0,
+		"deployType":             "",
+		"isPreview":              false,
+		"hasDependenciesSection": false,
+		"hasBuildSection":        false,
+		"isRemote":               false,
+		"result":                 true,
+		"isRedeploy":             false,
+		"namespaceType":          "regular",
+	}, props)
+}
+
+func TestDeployMetadata_ToProps_ErrorIsCategorized(t *testing.T) {
+	props := (&DeployMetadata{Err: oktetoErrors.UserError{E: errors.New("error executing command './deploy.sh --password=pass': exit status 1")}}).toProps()
+
+	require.Equal(t, "user_error", props["error"])
+}
+
+func TestDeployMetadata_ErrorCategory(t *testing.T) {
+	tests := []struct {
+		err      error
 		name     string
-		metadata DeployMetadata
+		expected string
 	}{
-		{
-			name: "all fields set",
-			metadata: DeployMetadata{
-				Success:                true,
-				IsOktetoRepo:           true,
-				Err:                    nil,
-				Duration:               2 * time.Second,
-				PipelineType:           model.PipelineType,
-				DeployType:             "deploy",
-				IsPreview:              true,
-				HasDependenciesSection: true,
-				HasBuildSection:        true,
-				IsRemote:               true,
-			},
-			expected: mockEvent{
-				event:   deployEvent,
-				success: true,
-				props: map[string]any{
-					"pipelineType":           model.PipelineType,
-					"isOktetoRepository":     true,
-					"duration":               (2 * time.Second).Seconds(),
-					"deployType":             "deploy",
-					"isPreview":              true,
-					"hasDependenciesSection": true,
-					"hasBuildSection":        true,
-					"isRemote":               true,
-				},
-			},
-		},
-		{
-			name: "pipeline type not set",
-			metadata: DeployMetadata{
-				Success:                true,
-				IsOktetoRepo:           true,
-				Err:                    nil,
-				Duration:               2 * time.Second,
-				PipelineType:           "",
-				DeployType:             "deploy",
-				IsPreview:              true,
-				HasDependenciesSection: true,
-				HasBuildSection:        true,
-				IsRemote:               true,
-			},
-			expected: mockEvent{
-				event:   deployEvent,
-				success: true,
-				props: map[string]any{
-					"pipelineType":           model.PipelineType,
-					"isOktetoRepository":     true,
-					"duration":               (2 * time.Second).Seconds(),
-					"deployType":             "deploy",
-					"isPreview":              true,
-					"hasDependenciesSection": true,
-					"hasBuildSection":        true,
-					"isRemote":               true,
-				},
-			},
-		},
-		{
-			name: "unknown error sent as a category",
-			metadata: DeployMetadata{
-				Success:                true,
-				IsOktetoRepo:           true,
-				Err:                    assert.AnError,
-				Duration:               2 * time.Second,
-				PipelineType:           "",
-				DeployType:             "deploy",
-				IsPreview:              true,
-				HasDependenciesSection: true,
-				HasBuildSection:        true,
-				IsRemote:               true,
-			},
-			expected: mockEvent{
-				event:   deployEvent,
-				success: true,
-				props: map[string]any{
-					"pipelineType":           model.PipelineType,
-					"isOktetoRepository":     true,
-					"duration":               (2 * time.Second).Seconds(),
-					"deployType":             "deploy",
-					"isPreview":              true,
-					"hasDependenciesSection": true,
-					"hasBuildSection":        true,
-					"isRemote":               true,
-					"error":                  "unknown",
-				},
-			},
-		},
+		{name: "no deploy commands", err: oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands, expected: "no_deploy_commands"},
+		{name: "timeout", err: fmt.Errorf("deploy: %w", oktetoErrors.ErrTimeout), expected: "timeout"},
+		{name: "command failed", err: oktetoErrors.ErrCommandFailed, expected: "command_failed"},
+		{name: "internal server error", err: oktetoErrors.ErrInternalServerError, expected: "internal_server_error"},
+		{name: "user error", err: oktetoErrors.UserError{E: errors.New("bad manifest")}, expected: "user_error"},
+		{name: "unclassified error", err: assert.AnError, expected: "unknown"},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			eventReceived := &mockEvent{}
-			tracker := Tracker{
-				trackFn: func(event string, success bool, props map[string]any) {
-					eventReceived = &mockEvent{
-						event:   event,
-						success: success,
-						props:   props,
-					}
-				},
-			}
-
-			tracker.TrackDeploy(tc.metadata)
-
-			assert.Equal(t, tc.expected.event, eventReceived.event)
-			assert.Equal(t, tc.expected.success, eventReceived.success)
-			assert.Equal(t, tc.expected.props, eventReceived.props)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, (&DeployMetadata{Err: tt.err}).errorCategory())
 		})
 	}
 }
 
-func TestDeployMetadata_ToProductEventProps(t *testing.T) {
-	t.Run("new fields hashed and conditional", func(t *testing.T) {
-		props := (&DeployMetadata{
-			Success:           true,
-			PipelineType:      model.StackType,
-			RepoURL:           "https://github.com/org/repo",
-			ManifestSyntax:    "compose",
-			ParentExecutionID: "exec-1",
-			IsPreview:         true,
-			Duration:          90 * time.Second,
-		}).toProductEventProps()
-
-		assert.Equal(t, "compose", props["manifest_archetype"])
-		assert.Equal(t, "compose", props["manifest_syntax"])
-		assert.Equal(t, "preview", props["namespace_type"])
-		assert.Equal(t, true, props["is_within_preview"])
-		assert.Equal(t, "exec-1", props["parent_execution_id"])
-		assert.Equal(t, 90.0, props["duration_seconds"])
-		assert.Equal(t, hashString("https://github.com/org/repo"), props["repo_url"])
-	})
-
-	t.Run("empty optional fields omitted, defaults applied", func(t *testing.T) {
-		props := (&DeployMetadata{Success: true}).toProductEventProps()
-
-		assert.Equal(t, "pipeline", props["manifest_archetype"])
-		assert.Equal(t, "regular", props["namespace_type"])
-		assert.NotContains(t, props, "repo_url")
-		assert.NotContains(t, props, "manifest_syntax")
-		assert.NotContains(t, props, "parent_execution_id")
-		assert.NotContains(t, props, "duration_seconds")
-	})
-}
-
 func TestDeployStartedMetadata_ToProductEventProps(t *testing.T) {
-	t.Run("repo_url hashed, parent_execution_id present", func(t *testing.T) {
-		props := (&DeployStartedMetadata{
-			RepoURL:           "https://github.com/org/repo",
-			ParentExecutionID: "exec-1",
-			IsPreview:         true,
-			IsRedeploy:        true,
-		}).toProductEventProps()
+	props := (&DeployStartedMetadata{
+		RepoURL:           "https://github.com/org/repo",
+		WorkflowID:        "wf-1",
+		ParentExecutionID: "exec-1",
+		IsPreview:         true,
+		IsRedeploy:        true,
+	}).toProductEventProps()
 
-		assert.Equal(t, true, props["is_within_preview"])
-		assert.Equal(t, true, props["is_redeploy"])
-		assert.Equal(t, "exec-1", props["parent_execution_id"])
-		assert.Equal(t, hashString("https://github.com/org/repo"), props["repo_url"])
-	})
-
-	t.Run("empty fields omitted", func(t *testing.T) {
-		props := (&DeployStartedMetadata{}).toProductEventProps()
-
-		assert.NotContains(t, props, "repo_url")
-		assert.NotContains(t, props, "parent_execution_id")
-		assert.Equal(t, false, props["is_within_preview"])
-		assert.Equal(t, false, props["is_redeploy"])
-	})
+	require.Equal(t, map[string]any{
+		"isPreview":         true,
+		"isRedeploy":        true,
+		"repoURL":           hashedTestRepoURL,
+		"workflowID":        "wf-1",
+		"parentExecutionID": "exec-1",
+	}, props)
 }
 
-func TestDeployTracker_ErrorIsCategorized(t *testing.T) {
-	var props map[string]any
-	tracker := Tracker{
-		trackFn: func(_ string, _ bool, p map[string]any) { props = p },
-	}
+func TestDeployStartedMetadata_ToProductEventProps_OmitsEmptyFields(t *testing.T) {
+	props := (&DeployStartedMetadata{}).toProductEventProps()
 
-	tracker.TrackDeploy(DeployMetadata{Err: oktetoErrors.UserError{E: errors.New("error executing command './deploy.sh --password=pass': exit status 1")}})
-
-	require.Equal(t, "user_error", props["error"])
+	require.Equal(t, map[string]any{"isPreview": false, "isRedeploy": false}, props)
 }

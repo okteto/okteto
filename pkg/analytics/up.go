@@ -15,6 +15,7 @@ package analytics
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	"github.com/google/uuid"
@@ -78,7 +79,7 @@ func NewUpMetricsMetadata() *UpMetricsMetadata {
 	}
 }
 
-// WorkflowID returns the unique ID that correlates up_started and up events for this session.
+// WorkflowID returns the unique ID that correlates the up_started and Up events of this session.
 func (u *UpMetricsMetadata) WorkflowID() string {
 	return u.workflowID
 }
@@ -253,45 +254,33 @@ func (u *UpMetricsMetadata) errorReason() string {
 	}
 }
 
-// toProductEventProps returns the properties of the up product event.
-func (u *UpMetricsMetadata) toProductEventProps() map[string]any {
-	props := map[string]any{
-		"result":             u.success,
-		"manifest_type":      string(u.manifestType),
-		"is_interactive":     u.isInteractive,
-		"is_build_executed":  u.isBuildExecuted,
-		"is_deploy_executed": u.hasRunDeploy,
-		"has_build_section":  u.hasBuildSection,
-		"has_deploy_section": u.hasDeploySection,
-		"is_reconnect":       u.isReconnect,
-		"reconnect_count":    u.reconnectCount,
-		"is_auto_down":       u.isAutoDownEnabled,
-	}
+// productProps returns the properties that PostHog's up event had and Up didn't.
+func (u *UpMetricsMetadata) productProps() map[string]any {
 	repoURL := ""
 	if u.repoURL != "" {
 		repoURL = hashString(normalizeRepoURL(u.repoURL))
 	}
-	props["workflow_id"] = u.workflowID
-	props["service"] = u.service
-	props["repo_url"] = repoURL
-	props["duration_seconds"] = int(u.execDuration.Seconds())
-	props["initial_sync_duration_seconds"] = int(u.initialSyncDuration.Seconds())
-	props["dev_container_creation_duration_seconds"] = int(u.devContainerCreationDuration.Seconds())
-	if u.isReconnect && u.reconnectCause != "" {
-		props["reconnect_cause"] = u.reconnectCause
+	props := map[string]any{
+		"result":          u.success,
+		"isBuildExecuted": u.isBuildExecuted,
+		"reconnectCount":  u.reconnectCount,
+		"workflowID":      u.workflowID,
+		"service":         u.service,
+		"repoURL":         repoURL,
 	}
 	if !u.success {
 		if reason := u.errorReason(); reason != "" {
-			props["error_reason"] = reason
+			props["errorReason"] = reason
 		}
 	}
 	return props
 }
 
-// TrackUp sends the Up and up events when the user activates a development container.
+// TrackUp sends the Up event when the user activates a development container.
 func (a *Tracker) TrackUp(m *UpMetricsMetadata) {
-	a.trackFn(upEvent, m.success, m.toProps())
-	a.events.track(context.Background(), productUpEvent, m.toProductEventProps(), a.events.withNamespace(m.namespace))
+	props := m.toProps()
+	maps.Copy(props, m.productProps())
+	a.events.trackWithProductProperties(context.Background(), upEvent, m.success, props, a.events.withNamespace(m.namespace))
 }
 
 // TrackUpStarted fires the up_started event at the beginning of the up command.
@@ -301,9 +290,9 @@ func (a *Tracker) TrackUpStarted(service, namespace, repoURL, workflowID string)
 		hashedRepoURL = hashString(normalizeRepoURL(repoURL))
 	}
 	props := map[string]any{
-		"service":     service,
-		"repo_url":    hashedRepoURL,
-		"workflow_id": workflowID,
+		"service":    service,
+		"repoURL":    hashedRepoURL,
+		"workflowID": workflowID,
 	}
 	a.events.track(context.Background(), productUpStartedEvent, props, a.events.withNamespace(namespace))
 }

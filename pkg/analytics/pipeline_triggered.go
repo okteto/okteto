@@ -30,16 +30,16 @@ type DeployPipelineTriggeredMetadata struct {
 // toProductEventProps returns the properties of the deploy_pipeline_triggered product event.
 func (m DeployPipelineTriggeredMetadata) toProductEventProps() map[string]any {
 	props := map[string]any{
-		"workflow_id":       m.WorkflowID,
-		"is_within_preview": m.IsWithinPreview,
-		"is_redeploy":       m.IsRedeploy,
-		"deploy_type":       m.DeployType,
+		"workflowID":   m.WorkflowID,
+		"isPreview":    m.IsWithinPreview,
+		"isRedeploy":   m.IsRedeploy,
+		"deploySource": m.DeployType,
 	}
 	if m.ParentWorkflowID != "" {
-		props["parent_workflow_id"] = m.ParentWorkflowID
+		props["parentWorkflowID"] = m.ParentWorkflowID
 	}
 	if m.RepoURL != "" {
-		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+		props["repoURL"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
 	return props
 }

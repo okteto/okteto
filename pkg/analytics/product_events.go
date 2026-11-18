@@ -30,18 +30,18 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-// Product events. They used to be sent to PostHog and now go to Mixpanel with
-// the same names and properties, so the reports built on them keep working.
-// They don't go through track(): they carry their own common
-// properties (commonProductEventProperties) instead of the ones track() adds.
+// Product events: the events that used to go to PostHog and have no Mixpanel
+// counterpart. They keep their PostHog names, with the properties in camelCase.
+// They don't go through track(): they carry their own common properties
+// (commonProductEventProperties) instead of the ones track() adds.
+// The PostHog events fired from the same call as a Mixpanel event (image_build,
+// deploy_completed and up) are now properties of imageBuild, Deploy and Up
+// (see trackWithProductProperties).
 const (
-	productImageBuildEvent              = "image_build"
 	productDeployStartedEvent           = "deploy_started"
-	productDeployCompletedEvent         = "deploy_completed"
 	productDeployPipelineTriggeredEvent = "deploy_pipeline_triggered"
 	productDeployPreviewTriggeredEvent  = "deploy_preview_triggered"
 	productUpStartedEvent               = "up_started"
-	productUpEvent                      = "up"
 	productWakeTriggeredEvent           = "wake_triggered"
 
 	// productEventsCloseTimeout bounds how long Close waits for in-flight events,
@@ -97,7 +97,7 @@ func newProductEventClient() *productEventClient {
 	}
 }
 
-// track sends event with the common product properties plus eventProps.
+// track sends a product event with the common product properties plus eventProps.
 // Events are dropped when analytics is disabled, when there is no user ID
 // (the distinct ID, as in PostHog) and after Close.
 func (c *productEventClient) track(ctx context.Context, event string, eventProps map[string]any, enrichers ...enricherFn) {
@@ -111,6 +111,27 @@ func (c *productEventClient) track(ctx context.Context, event string, eventProps
 	}
 	props := commonProductEventProperties()
 	maps.Copy(props, eventProps)
+	c.send(ctx, distinctID, event, noGeolocationIP, props, enrichers)
+}
+
+// trackWithProductProperties sends a Mixpanel event that PostHog also tracked
+// (imageBuild, Deploy, Up), with the common product properties added. The rest
+// is what track() does for it: its common properties, its distinct ID (the user
+// ID, or the machine ID when there is none) and geolocation.
+// Events are dropped when analytics is disabled and after Close.
+func (c *productEventClient) trackWithProductProperties(ctx context.Context, event string, success bool, eventProps map[string]any, enrichers ...enricherFn) {
+	if c == nil || c.client == nil || !analyticsEnabled() {
+		return
+	}
+	props := commonProductEventProperties()
+	maps.Copy(props, eventProps)
+	addTrackProperties(props, success)
+	c.send(ctx, getTrackID(), event, "", props, enrichers)
+}
+
+// send runs the enrichers and sends the event in its own goroutine. An empty ip
+// lets Mixpanel geolocate the event from the request IP.
+func (c *productEventClient) send(ctx context.Context, distinctID, event, ip string, props map[string]any, enrichers []enricherFn) {
 	// The event time is taken here, not when the goroutine sends it, so a slow
 	// enricher or request doesn't shift it (Mixpanel stores it in seconds).
 	ts := c.now()
@@ -129,7 +150,7 @@ func (c *productEventClient) track(ctx context.Context, event string, eventProps
 		for _, enrich := range enrichers {
 			enrich(ctx, props)
 		}
-		if err := c.client.Track(distinctID, event, &mixpanel.Event{IP: noGeolocationIP, Timestamp: &ts, Properties: props}); err != nil {
+		if err := c.client.Track(distinctID, event, &mixpanel.Event{IP: ip, Timestamp: &ts, Properties: props}); err != nil {
 			oktetoLog.Infof("failed to send %s analytics event: %s", event, err)
 		}
 	}()
@@ -187,37 +208,37 @@ func (c *productEventClient) withPreview(previewName string) enricherFn {
 	return c.withNamespaceUID("preview", previewName)
 }
 
-// commonProductEventProperties returns the properties sent on every product event,
-// with the names PostHog used. Some duplicate a property track() sends on the
-// other Mixpanel events (customer_name/context, cli_version/version, os/$os,
-// trigger_source/origin); they are kept so the product events stay as they were.
+// commonProductEventProperties returns the properties PostHog sent on every
+// product event, in camelCase. Some duplicate a property track() sends
+// (customerName/context, cliVersion/version, os/$os, triggerSource/origin);
+// they are kept for now. machine_id keeps the name track() uses.
 // Must only be called after analyticsEnabled() returns true: GetContext() Fatalf's
 // on an uninitialized context.
 //
-// agent_type is omitted when is_agent is false.
+// agentType is omitted when isAgent is false.
 func commonProductEventProperties() map[string]any {
 	ctx := okteto.GetContext()
 	agent := getAgent()
 	ci := isCI()
 	props := map[string]any{
-		"customer_name":   ctx.CompanyName,
-		"cluster_id":      ctx.ClusterID,
-		"cluster_url":     okteto.NormalizeClusterURL(ctx.Name),
-		"cluster_version": ctx.ClusterVersion,
-		"user_id":         ctx.UserID,
+		"customerName":   ctx.CompanyName,
+		"clusterID":      ctx.ClusterID,
+		"clusterURL":     okteto.NormalizeClusterURL(ctx.Name),
+		"clusterVersion": ctx.ClusterVersion,
+		"userID":         ctx.UserID,
 
-		"cli_version":        config.VersionString,
-		"os":                 runtime.GOOS,
-		"arch":               runtime.GOARCH,
-		"machine_id":         get().MachineID,
-		"measurement_source": "cli",
-		"trigger_source":     config.GetDeployOrigin(),
-		"is_agent":           agent != "",
-		"is_ci":              ci,
-		"is_automation":      ci || agent != "",
+		"cliVersion":        config.VersionString,
+		"os":                runtime.GOOS,
+		"arch":              runtime.GOARCH,
+		"machine_id":        get().MachineID,
+		"measurementSource": "cli",
+		"triggerSource":     config.GetDeployOrigin(),
+		"isAgent":           agent != "",
+		"isCI":              ci,
+		"isAutomation":      ci || agent != "",
 	}
 	if agent != "" {
-		props["agent_type"] = agent
+		props["agentType"] = agent
 	}
 	return props
 }

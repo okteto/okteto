@@ -29,8 +29,8 @@ type ImageBuildMetadata struct {
 	RepoURL                  string
 	BuildContextHash         string
 	Initiator                string
-	ErrorReason              string // image_build: bounded error category on failure, never the raw error
-	ConnectionType           string // image_build: proxy or legacy
+	ErrorReason              string // bounded error category on failure, never the raw error
+	ConnectionType           string // proxy or legacy
 	WaitForBuildkitAvailable time.Duration
 	BuildkitDuration         time.Duration
 	ContextTransferDuration  time.Duration
@@ -38,7 +38,7 @@ type ImageBuildMetadata struct {
 	CacheHitDuration         time.Duration
 	BuildDuration            time.Duration
 	CloneDuration            time.Duration
-	BuildContextSize         int64 // image_build: build context size in bytes
+	BuildContextSize         int64 // build context size in bytes
 	CacheHit                 bool
 	Success                  bool
 }
@@ -47,7 +47,10 @@ func NewImageBuildMetadata() *ImageBuildMetadata {
 	return &ImageBuildMetadata{}
 }
 
-func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
+// toProps returns the properties of the imageBuild event: the Mixpanel ones
+// plus the ones that PostHog's image_build had and imageBuild didn't.
+// The ported ones with zero/empty values are omitted.
+func (m *ImageBuildMetadata) toProps() map[string]any {
 	props := map[string]any{
 		"name":                            m.Name,
 		"repoURL":                         m.RepoURL,
@@ -59,6 +62,9 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
 		"buildContextHash":                m.BuildContextHash,
 		"buildContextHashDurationSeconds": m.BuildContextHashDuration.Seconds(),
 		"initiator":                       m.Initiator,
+
+		"service": m.Name,
+		"result":  m.Success,
 	}
 
 	if m.Name != "" {
@@ -67,47 +73,25 @@ func (m *ImageBuildMetadata) toMixpanelProps() map[string]any {
 	if m.RepoURL != "" {
 		props["repoURL"] = hashString(normalizeRepoURL(m.RepoURL))
 	}
-
-	return props
-}
-
-// toProductEventProps returns the properties of the image_build product event.
-// Fields with zero/empty values are omitted.
-func (m *ImageBuildMetadata) toProductEventProps() map[string]any {
-	props := map[string]any{
-		"service":  m.Name,
-		"result":   m.Success,
-		"is_cache": m.CacheHit,
-	}
-	if d := int(m.BuildDuration.Seconds()); d > 0 {
-		props["duration_seconds"] = d
-	}
-	if d := int(m.WaitForBuildkitAvailable.Seconds()); d > 0 {
-		props["queue_duration_seconds"] = d
-	}
 	if d := int(m.BuildkitDuration.Seconds()); d > 0 {
-		props["buildkit_duration_seconds"] = d
+		props["buildkitDurationSeconds"] = d
 	}
 	if d := m.ContextTransferDuration.Milliseconds(); d > 0 {
-		props["build_context_duration_ms"] = d
+		props["buildContextDurationMs"] = d
 	}
 	if m.BuildContextSize > 0 {
-		props["build_context_size_bytes"] = m.BuildContextSize
+		props["buildContextSizeBytes"] = m.BuildContextSize
 	}
 	if m.ConnectionType != "" {
-		props["connection_type"] = m.ConnectionType
-	}
-	if m.RepoURL != "" {
-		props["repo_url"] = hashString(normalizeRepoURL(m.RepoURL))
+		props["connectionType"] = m.ConnectionType
 	}
 	if !m.Success && m.ErrorReason != "" {
-		props["error_reason"] = m.ErrorReason
+		props["errorReason"] = m.ErrorReason
 	}
 	return props
 }
 
-// TrackImageBuild sends the imageBuild and image_build events.
+// TrackImageBuild sends the imageBuild event.
 func (a *Tracker) TrackImageBuild(ctx context.Context, m *ImageBuildMetadata) {
-	a.trackFn(imageBuildEvent, m.Success, m.toMixpanelProps())
-	a.events.track(ctx, productImageBuildEvent, m.toProductEventProps(), a.events.withNamespace(m.Namespace))
+	a.events.trackWithProductProperties(ctx, imageBuildEvent, m.Success, m.toProps(), a.events.withNamespace(m.Namespace))
 }

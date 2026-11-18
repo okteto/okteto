@@ -22,7 +22,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
-// Categories of the image_build analytics event's error_reason property.
+// Categories of the imageBuild analytics event's errorReason property.
 // The raw error is never sent: it can hold credentials (e.g. tokens in a
 // registry or git URL) or local paths.
 const (
@@ -55,7 +55,7 @@ const (
 )
 
 // imageBuildErrorReason maps a service build error to a bounded category for
-// the image_build analytics event. The order matters: the secrets error wraps a
+// the imageBuild analytics event. The order matters: the secrets error wraps a
 // file-not-found error, which would otherwise read as a missing Dockerfile, and
 // the Dockerfile step errors hold the user's command, which must not be matched
 // against the connection and registry messages. GetSolveErrorMessage doesn't

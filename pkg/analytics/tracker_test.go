@@ -21,7 +21,6 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -84,41 +83,13 @@ func TestTracker_TrackImageBuild(t *testing.T) {
 	tracker.TrackImageBuild(context.Background(), meta)
 	ev := sendOne(t, tracker, fake)
 
-	require.Equal(t, []mockEvent{{event: imageBuildEvent, success: true, props: meta.toMixpanelProps()}}, *tracked)
-	require.Equal(t, productImageBuildEvent, ev.event)
+	require.Empty(t, *tracked, "imageBuild is sent with the product properties, not through trackFn")
+	require.Equal(t, imageBuildEvent, ev.event)
 	require.Equal(t, "user-123", ev.distinctID)
-	require.Equal(t, "api", ev.props["service"])
-	require.Equal(t, true, ev.props["result"])
-	require.Equal(t, 30, ev.props["duration_seconds"])
-	require.Equal(t, 5, ev.props["queue_duration_seconds"])
-	require.Equal(t, "proxy", ev.props["connection_type"])
-	require.Equal(t, hashedTestRepoURL, ev.props["repo_url"])
+	requireContainsProps(t, meta.toProps(), ev.props)
+	require.Equal(t, true, ev.props["success"])
 	require.Equal(t, "ns-uid-xyz", ev.props["namespace"])
-	require.NotContains(t, ev.props, "error_reason")
-	require.Equal(t, "ACME Corp", ev.props["customer_name"])
-}
-
-func TestTracker_TrackImageBuild_SendsErrorCategory(t *testing.T) {
-	setupAnalyticsContext(t, true)
-	fake := &fakeEventTracker{}
-	tracker, _ := newTestTracker(fake, nil)
-
-	tracker.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: false, ErrorReason: "queue_timeout"})
-	ev := sendOne(t, tracker, fake)
-
-	require.Equal(t, false, ev.props["result"])
-	require.Equal(t, "queue_timeout", ev.props["error_reason"])
-}
-
-func TestTracker_TrackImageBuild_OmitsErrorCategoryOnSuccess(t *testing.T) {
-	setupAnalyticsContext(t, true)
-	fake := &fakeEventTracker{}
-	tracker, _ := newTestTracker(fake, nil)
-
-	tracker.TrackImageBuild(context.Background(), &ImageBuildMetadata{Success: true, ErrorReason: "unknown"})
-	ev := sendOne(t, tracker, fake)
-
-	require.NotContains(t, ev.props, "error_reason")
+	require.Equal(t, "ACME Corp", ev.props["customerName"])
 }
 
 func TestTracker_TrackDeployPipelineTriggered(t *testing.T) {
@@ -140,15 +111,16 @@ func TestTracker_TrackDeployPipelineTriggered(t *testing.T) {
 	require.Empty(t, *tracked)
 	require.Equal(t, productDeployPipelineTriggeredEvent, ev.event)
 	require.Equal(t, "user-123", ev.distinctID)
-	require.Equal(t, "wf-abc-123", ev.props["workflow_id"])
-	require.Equal(t, "wf-parent-1", ev.props["parent_workflow_id"])
-	require.Equal(t, hashedTestRepoURL, ev.props["repo_url"])
-	require.Equal(t, "git_url", ev.props["deploy_type"])
-	require.Equal(t, true, ev.props["is_within_preview"])
-	require.Equal(t, false, ev.props["is_redeploy"])
+	require.Equal(t, "wf-abc-123", ev.props["workflowID"])
+	require.Equal(t, "wf-parent-1", ev.props["parentWorkflowID"])
+	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
+	require.Equal(t, "git_url", ev.props["deploySource"])
+	require.Equal(t, true, ev.props["isPreview"])
+	require.Equal(t, false, ev.props["isRedeploy"])
 	require.Equal(t, "ns-uid-xyz", ev.props["namespace"])
+	require.NotContains(t, ev.props, "deployType", "Deploy.deployType holds other values")
 	require.NotContains(t, ev.props, "success")
-	require.NotContains(t, ev.props, "ui_element", "the CLI never sent ui_element to PostHog")
+	require.NotContains(t, ev.props, "uiElement", "the CLI never sent ui_element to PostHog")
 }
 
 func TestTracker_TrackDeployPipelineTriggered_OmitsEmptyOptionalFields(t *testing.T) {
@@ -159,8 +131,8 @@ func TestTracker_TrackDeployPipelineTriggered_OmitsEmptyOptionalFields(t *testin
 	tracker.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{WorkflowID: "wf-1"})
 	ev := sendOne(t, tracker, fake)
 
-	require.NotContains(t, ev.props, "repo_url")
-	require.NotContains(t, ev.props, "parent_workflow_id")
+	require.NotContains(t, ev.props, "repoURL")
+	require.NotContains(t, ev.props, "parentWorkflowID")
 }
 
 func TestTracker_TrackDeployPreviewTriggered(t *testing.T) {
@@ -179,13 +151,13 @@ func TestTracker_TrackDeployPreviewTriggered(t *testing.T) {
 	ev := sendOne(t, tracker, fake)
 
 	require.Equal(t, productDeployPreviewTriggeredEvent, ev.event)
-	require.Equal(t, "wf-preview-456", ev.props["workflow_id"])
-	require.Equal(t, "wf-parent-2", ev.props["parent_workflow_id"])
-	require.Equal(t, hashedTestRepoURL, ev.props["repo_url"])
-	require.Equal(t, true, ev.props["is_redeploy"])
+	require.Equal(t, "wf-preview-456", ev.props["workflowID"])
+	require.Equal(t, "wf-parent-2", ev.props["parentWorkflowID"])
+	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
+	require.Equal(t, true, ev.props["isRedeploy"])
 	require.Equal(t, "preview-uid-xyz", ev.props["preview"], "the preview UID is sent, never its name")
 	require.NotContains(t, ev.props, "namespace")
-	require.NotContains(t, ev.props, "ui_element", "the CLI never sent ui_element to PostHog")
+	require.NotContains(t, ev.props, "uiElement", "the CLI never sent ui_element to PostHog")
 }
 
 func TestTracker_TrackDeployPreviewTriggered_OmitsEmptyOptionalFields(t *testing.T) {
@@ -196,8 +168,8 @@ func TestTracker_TrackDeployPreviewTriggered_OmitsEmptyOptionalFields(t *testing
 	tracker.TrackDeployPreviewTriggered(context.Background(), DeployPreviewTriggeredMetadata{WorkflowID: "wf-1"})
 	ev := sendOne(t, tracker, fake)
 
-	require.NotContains(t, ev.props, "repo_url")
-	require.NotContains(t, ev.props, "parent_workflow_id")
+	require.NotContains(t, ev.props, "repoURL")
+	require.NotContains(t, ev.props, "parentWorkflowID")
 	require.Equal(t, "", ev.props["preview"])
 }
 
@@ -211,8 +183,8 @@ func TestTracker_TrackWakeTriggered(t *testing.T) {
 
 	require.Equal(t, productWakeTriggeredEvent, ev.event)
 	require.Equal(t, "ns-uid-wake", ev.props["namespace"])
-	require.Equal(t, true, ev.props["is_preview"])
-	require.NotContains(t, ev.props, "workflow_id")
+	require.Equal(t, true, ev.props["isPreview"])
+	require.NotContains(t, ev.props, "workflowID")
 }
 
 func TestTracker_TrackUpStarted(t *testing.T) {
@@ -227,8 +199,8 @@ func TestTracker_TrackUpStarted(t *testing.T) {
 	require.Equal(t, productUpStartedEvent, ev.event)
 	require.Equal(t, "api", ev.props["service"])
 	require.Equal(t, "ns-uid-456", ev.props["namespace"])
-	require.Equal(t, hashedTestRepoURL, ev.props["repo_url"])
-	require.Equal(t, "wf-abc-123", ev.props["workflow_id"])
+	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
+	require.Equal(t, "wf-abc-123", ev.props["workflowID"])
 }
 
 func TestTracker_TrackUpStarted_EmptyFieldsSentAsEmpty(t *testing.T) {
@@ -241,8 +213,8 @@ func TestTracker_TrackUpStarted_EmptyFieldsSentAsEmpty(t *testing.T) {
 
 	require.Equal(t, "", ev.props["service"])
 	require.Equal(t, "", ev.props["namespace"])
-	require.Equal(t, "", ev.props["repo_url"])
-	require.Equal(t, "", ev.props["workflow_id"])
+	require.Equal(t, "", ev.props["repoURL"])
+	require.Equal(t, "", ev.props["workflowID"])
 }
 
 func TestTracker_TrackUp(t *testing.T) {
@@ -250,6 +222,7 @@ func TestTracker_TrackUp(t *testing.T) {
 	fake := &fakeEventTracker{}
 	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-789"})
 	meta := &UpMetricsMetadata{
+		workflowID:      "wf-up-1",
 		success:         true,
 		manifestType:    model.OktetoManifestType,
 		isBuildExecuted: true,
@@ -265,30 +238,13 @@ func TestTracker_TrackUp(t *testing.T) {
 	tracker.TrackUp(meta)
 	ev := sendOne(t, tracker, fake)
 
-	require.Equal(t, []mockEvent{{event: upEvent, success: true, props: meta.toProps()}}, *tracked)
-	require.Equal(t, productUpEvent, ev.event)
-	require.Equal(t, true, ev.props["result"])
-	require.Equal(t, "manifest", ev.props["manifest_type"])
-	require.Equal(t, true, ev.props["is_build_executed"])
-	require.Equal(t, "api", ev.props["service"])
+	require.Empty(t, *tracked, "Up is sent with the product properties, not through trackFn")
+	require.Equal(t, upEvent, ev.event)
+	requireContainsProps(t, meta.toProps(), ev.props)
+	requireContainsProps(t, meta.productProps(), ev.props)
+	require.Equal(t, true, ev.props["success"])
+	require.Equal(t, "wf-up-1", ev.props["workflowID"])
 	require.Equal(t, "ns-uid-789", ev.props["namespace"])
-	require.Equal(t, hashedTestRepoURL, ev.props["repo_url"])
-	require.Equal(t, 90, ev.props["duration_seconds"])
-	require.Equal(t, 1, ev.props["reconnect_count"])
-	require.Equal(t, "unrecognised", ev.props["reconnect_cause"])
-	require.NotContains(t, ev.props, "error_reason")
-}
-
-func TestTracker_TrackUp_FailureIncludesErrorReason(t *testing.T) {
-	setupAnalyticsContext(t, true)
-	fake := &fakeEventTracker{}
-	tracker, _ := newTestTracker(fake, nil)
-
-	tracker.TrackUp(&UpMetricsMetadata{success: false, failActivate: true})
-	ev := sendOne(t, tracker, fake)
-
-	require.Equal(t, false, ev.props["result"])
-	require.Equal(t, "fail_activate", ev.props["error_reason"])
 }
 
 func TestTracker_TrackDeployStarted(t *testing.T) {
@@ -308,10 +264,10 @@ func TestTracker_TrackDeployStarted(t *testing.T) {
 	require.Empty(t, *tracked)
 	require.Equal(t, productDeployStartedEvent, ev.event)
 	require.Equal(t, "ns-uid-654", ev.props["namespace"])
-	require.Equal(t, hashedTestRepoURL, ev.props["repo_url"])
-	require.Equal(t, "wf-deploy-1", ev.props["workflow_id"])
-	require.Equal(t, true, ev.props["is_within_preview"])
-	require.Equal(t, true, ev.props["is_redeploy"])
+	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
+	require.Equal(t, "wf-deploy-1", ev.props["workflowID"])
+	require.Equal(t, true, ev.props["isPreview"])
+	require.Equal(t, true, ev.props["isRedeploy"])
 	require.NotContains(t, ev.props, "success", "deploy_started never had a success property")
 	require.NotContains(t, ev.props, "result")
 }
@@ -320,8 +276,7 @@ func TestTracker_TrackDeploy(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
 	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-789"})
-
-	tracker.TrackDeploy(DeployMetadata{
+	meta := DeployMetadata{
 		Success:                true,
 		PipelineType:           model.OktetoManifestType,
 		Namespace:              "dev-ns",
@@ -330,57 +285,37 @@ func TestTracker_TrackDeploy(t *testing.T) {
 		IsRedeploy:             true,
 		HasDependenciesSection: true,
 		WaitForDependencies:    true,
-	})
+	}
+
+	tracker.TrackDeploy(meta)
 	ev := sendOne(t, tracker, fake)
 
-	require.Len(t, *tracked, 1)
-	require.Equal(t, deployEvent, (*tracked)[0].event)
-	require.Equal(t, productDeployCompletedEvent, ev.event)
-	require.Equal(t, true, ev.props["result"])
-	require.Equal(t, "manifest", ev.props["manifest_archetype"])
-	require.Equal(t, "wf-deploy-1", ev.props["workflow_id"])
+	require.Empty(t, *tracked, "Deploy is sent with the product properties, not through trackFn")
+	require.Equal(t, deployEvent, ev.event)
+	requireContainsProps(t, meta.toProps(), ev.props)
+	require.Equal(t, true, ev.props["success"])
+	require.Equal(t, "wf-deploy-1", ev.props["workflowID"])
 	require.Equal(t, "ns-uid-789", ev.props["namespace"])
-	require.Equal(t, float64(45), ev.props["duration_seconds"])
-	require.Equal(t, "regular", ev.props["namespace_type"])
-	require.Equal(t, true, ev.props["is_redeploy"])
-	require.Equal(t, true, ev.props["has_dependencies_section"])
-	require.Equal(t, true, ev.props["wait_for_dependencies"])
-	require.NotContains(t, ev.props, "error_reason")
+	require.NotContains(t, ev.props, "error")
 }
 
-func TestTracker_TrackDeploy_UnknownErrorOmitsErrorReason(t *testing.T) {
+func TestTracker_TrackDeploy_ErrorIsCategorized(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
 	tracker, _ := newTestTracker(fake, nil)
 
-	tracker.TrackDeploy(DeployMetadata{Success: false, Err: assert.AnError})
+	tracker.TrackDeploy(DeployMetadata{Success: false, Err: oktetoErrors.UserError{E: errors.New("error executing command './deploy.sh --password=pass': exit status 1")}})
 	ev := sendOne(t, tracker, fake)
 
-	require.NotContains(t, ev.props, "error_reason")
+	require.Equal(t, false, ev.props["success"])
+	require.Equal(t, "user_error", ev.props["error"])
 }
 
-func TestTracker_TrackDeploy_KnownErrorsSetErrorReason(t *testing.T) {
-	tests := []struct {
-		err            error
-		name           string
-		expectedReason string
-	}{
-		{name: "no deploy commands", err: oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands, expectedReason: "no_deploy_commands"},
-		{name: "timeout", err: oktetoErrors.ErrTimeout, expectedReason: "timeout"},
-		{name: "command failed", err: oktetoErrors.ErrCommandFailed, expectedReason: "command_failed"},
-		{name: "internal server error", err: oktetoErrors.ErrInternalServerError, expectedReason: "internal_server_error"},
-		{name: "user error", err: oktetoErrors.UserError{E: errors.New("something went wrong")}, expectedReason: "user_error"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			setupAnalyticsContext(t, true)
-			fake := &fakeEventTracker{}
-			tracker, _ := newTestTracker(fake, nil)
-
-			tracker.TrackDeploy(DeployMetadata{Success: false, Err: tt.err})
-			ev := sendOne(t, tracker, fake)
-
-			require.Equal(t, tt.expectedReason, ev.props["error_reason"])
-		})
+// requireContainsProps checks that every property in expected was sent with the same value.
+func requireContainsProps(t *testing.T, expected, sent map[string]any) {
+	t.Helper()
+	for k, v := range expected {
+		require.Contains(t, sent, k)
+		require.Equal(t, v, sent[k], k)
 	}
 }

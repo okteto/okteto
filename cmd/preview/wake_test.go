@@ -41,7 +41,7 @@ func Test_ExecuteWakePreview(t *testing.T) {
 		expectTracked bool
 	}{
 		{
-			name:          "wake succeeds, tracks is_preview true",
+			name:          "wake succeeds, tracks isPreview true",
 			wakeErr:       nil,
 			expectTracked: true,
 		},

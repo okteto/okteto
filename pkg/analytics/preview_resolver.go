@@ -28,7 +28,7 @@ import (
 // environment. It first checks the platform env var (set when running inside a
 // preview); if not set, it calls checkPreview with the active namespace so that
 // `okteto ns use <preview-name>` is also detected. Pass nil to skip the API check.
-// It feeds Mixpanel's Deploy.isPreview and the is_within_preview product event property.
+// It feeds the isPreview property of Deploy and the product events.
 func IsWithinPreview(ctx context.Context, checkPreview func(context.Context, string) error) bool {
 	if os.Getenv(constants.OktetoIsPreviewEnvVar) == "true" {
 		return true

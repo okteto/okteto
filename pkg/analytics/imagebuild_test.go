@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
+func Test_ImageBuildMetadata_toProps(t *testing.T) {
 	m := &ImageBuildMetadata{
 		Name:                     "test-service",
 		RepoURL:                  "http://myrepo.url",
@@ -28,9 +28,14 @@ func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 		CacheHitDuration:         5 * time.Second,
 		BuildDuration:            5 * time.Second,
 		WaitForBuildkitAvailable: 12 * time.Second,
+		BuildkitDuration:         25 * time.Second,
+		ContextTransferDuration:  3 * time.Second,
+		BuildContextSize:         20_000_000,
 		BuildContextHash:         "contextHash",
 		BuildContextHashDuration: 5 * time.Second,
+		ConnectionType:           "proxy",
 		Initiator:                "me",
+		Success:                  true,
 	}
 
 	expectedProps := map[string]any{
@@ -44,9 +49,15 @@ func Test_ImageBuildMetadata_toMixpanelProps(t *testing.T) {
 		"buildContextHash":                "contextHash",
 		"buildContextHashDurationSeconds": float64(5),
 		"initiator":                       "me",
+		"service":                         "test-service",
+		"result":                          true,
+		"buildkitDurationSeconds":         25,
+		"buildContextDurationMs":          int64(3000),
+		"buildContextSizeBytes":           int64(20_000_000),
+		"connectionType":                  "proxy",
 	}
 
-	require.Equal(t, expectedProps, m.toMixpanelProps())
+	require.Equal(t, expectedProps, m.toProps())
 }
 
 func Test_NewImageBuildMetadata(t *testing.T) {
@@ -54,59 +65,25 @@ func Test_NewImageBuildMetadata(t *testing.T) {
 	require.IsType(t, &ImageBuildMetadata{}, NewImageBuildMetadata())
 }
 
-func Test_ImageBuildMetadata_toProductEventProps(t *testing.T) {
-	m := &ImageBuildMetadata{
-		Name:                     "api",
-		Success:                  true,
-		BuildDuration:            30 * time.Second,
-		WaitForBuildkitAvailable: 5 * time.Second,
-		BuildkitDuration:         25 * time.Second,
-		ContextTransferDuration:  3 * time.Second,
-		BuildContextSize:         20_000_000,
-		CacheHit:                 true,
-		ConnectionType:           "proxy",
-		RepoURL:                  "https://github.com/org/repo",
-	}
+func Test_ImageBuildMetadata_toProps_omitsZeroPortedFields(t *testing.T) {
+	props := (&ImageBuildMetadata{Name: "api", Success: true}).toProps()
 
-	props := m.toProductEventProps()
-
-	require.Equal(t, "api", props["service"])
-	require.Equal(t, 30, props["duration_seconds"])
-	require.Equal(t, 5, props["queue_duration_seconds"])
-	require.Equal(t, int64(3000), props["build_context_duration_ms"])
-	require.Equal(t, true, props["result"])
-	require.Equal(t, int64(20_000_000), props["build_context_size_bytes"])
-	require.Equal(t, true, props["is_cache"])
-	require.Equal(t, "proxy", props["connection_type"])
-	require.Equal(t, "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3", props["repo_url"])
-	require.NotContains(t, props, "error_reason", "error_reason must be omitted on success")
+	require.NotContains(t, props, "buildkitDurationSeconds")
+	require.NotContains(t, props, "buildContextDurationMs")
+	require.NotContains(t, props, "buildContextSizeBytes")
+	require.NotContains(t, props, "connectionType")
+	require.NotContains(t, props, "errorReason")
 }
 
-func Test_ImageBuildMetadata_toProductEventProps_omitsZeroFields(t *testing.T) {
-	m := &ImageBuildMetadata{
-		Name:    "api",
-		Success: true,
-	}
-
-	props := m.toProductEventProps()
-
-	require.NotContains(t, props, "duration_seconds")
-	require.NotContains(t, props, "queue_duration_seconds")
-	require.NotContains(t, props, "build_context_duration_ms")
-	require.NotContains(t, props, "build_context_size_bytes")
-	require.NotContains(t, props, "connection_type")
-	require.NotContains(t, props, "repo_url")
-	require.NotContains(t, props, "error_reason")
-}
-
-func Test_ImageBuildMetadata_toProductEventProps_withError(t *testing.T) {
-	m := &ImageBuildMetadata{
-		Success:     false,
-		ErrorReason: "image_not_found",
-	}
-
-	props := m.toProductEventProps()
+func Test_ImageBuildMetadata_toProps_withError(t *testing.T) {
+	props := (&ImageBuildMetadata{Success: false, ErrorReason: "image_not_found"}).toProps()
 
 	require.Equal(t, false, props["result"])
-	require.Equal(t, "image_not_found", props["error_reason"])
+	require.Equal(t, "image_not_found", props["errorReason"])
+}
+
+func Test_ImageBuildMetadata_toProps_omitsErrorReasonOnSuccess(t *testing.T) {
+	props := (&ImageBuildMetadata{Success: true, ErrorReason: "image_not_found"}).toProps()
+
+	require.NotContains(t, props, "errorReason")
 }
