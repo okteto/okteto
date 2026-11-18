@@ -87,6 +87,17 @@ func translateGitCredentialsErr(err error) error {
 	case strings.Contains(msg, "not-authorized"), strings.Contains(msg, "401 Unauthorized"):
 		return ErrGitCredentialsNotAuthorized
 	default:
-		return err
+		return withoutResponseBody(err)
 	}
+}
+
+// withoutResponseBody drops the response body that the GraphQL client adds to the error of
+// a non-200 answer, such as an ingress's HTML error page: Git prints the helper's error in
+// the deploy logs, and the status says enough
+func withoutResponseBody(err error) error {
+	msg := err.Error()
+	if i := strings.Index(msg, " body: "); i >= 0 {
+		return errors.New(msg[:i])
+	}
+	return err
 }

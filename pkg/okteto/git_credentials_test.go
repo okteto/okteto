@@ -134,3 +134,14 @@ func TestGetGitCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestGetGitCredentials_DropsTheBodyOfAnErrorResponse(t *testing.T) {
+	client := &fakeGraphQLClient{
+		err: errors.New(`non-200 OK status code: 502 Bad Gateway body: "<html><body><h1>502 Bad Gateway</h1></body></html>\n"`),
+	}
+	uc := newUserClient(client, nil, "")
+
+	_, err := uc.GetGitCredentials(context.Background(), "github.com", "acme/infra")
+
+	require.EqualError(t, err, "non-200 OK status code: 502 Bad Gateway")
+}
