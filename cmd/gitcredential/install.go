@@ -54,7 +54,10 @@ func Install() *cobra.Command {
 		Long: `Install Okteto's Git credential helper for https://github.com in the global or system Git config.
 
 It replaces the other credential helpers for https://github.com at that scope, as "gh auth setup-git" does,
-and sets useHttpPath so Git sends the repository in its requests.`,
+and sets useHttpPath so Git sends the repository in its requests. With --global, the empty helper it writes
+also drops the helpers that the system config sets for github.com, such as osxkeychain or Git Credential
+Manager, and useHttpPath makes "store" and "cache" skip the github.com credentials they saved without a path.
+There is no uninstall: remove the credential "https://github.com" section from the Git config by hand.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			scope := globalFlag
