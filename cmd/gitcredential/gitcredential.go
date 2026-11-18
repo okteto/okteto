@@ -73,23 +73,20 @@ func noopCmd(action string) *cobra.Command {
 }
 
 // IsGitCredentialHelperCommand returns true when Git runs the helper, so main
-// can keep stdout free of anything but the credentials
+// can keep stdout free of anything but the credentials. Flags may come before the
+// action: Git appends it to the helper, so "!okteto git-credential -l debug" runs
+// "okteto git-credential -l debug get".
 func IsGitCredentialHelperCommand(args []string) bool {
-	validArgsLength := 3
-	if len(args) != validArgsLength {
+	if !IsGitCredentialCommand(args) {
 		return false
 	}
-
-	if args[1] != commandName {
-		return false
+	for _, arg := range args[2:] {
+		switch arg {
+		case actionGet, actionStore, actionErase:
+			return true
+		}
 	}
-
-	switch args[2] {
-	case actionGet, actionStore, actionErase:
-		return true
-	default:
-		return false
-	}
+	return false
 }
 
 // IsGitCredentialCommand returns true for any git-credential command, so main

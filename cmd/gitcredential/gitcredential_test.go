@@ -41,6 +41,16 @@ func TestIsGitCredentialHelperCommand(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "get with a flag before it",
+			args:     []string{"okteto", "git-credential", "-l", "debug", "get"},
+			expected: true,
+		},
+		{
+			name:     "get with a flag after it",
+			args:     []string{"okteto", "git-credential", "get", "--log-level", "debug"},
+			expected: true,
+		},
+		{
 			name:     "install",
 			args:     []string{"okteto", "git-credential", "install", "--system"},
 			expected: false,
