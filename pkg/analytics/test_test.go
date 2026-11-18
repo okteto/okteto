@@ -29,6 +29,7 @@ func TestTrackTest(t *testing.T) {
 	var duration float64
 	var stagesCount int
 	var errStr string
+	var commandOverride bool
 	tracker := Tracker{
 		trackFn: func(ev string, ok bool, props map[string]any) {
 			event = ev
@@ -38,23 +39,39 @@ func TestTrackTest(t *testing.T) {
 			duration = props["duration"].(float64)
 			stagesCount = props["stagesCount"].(int)
 			errStr = props["error"].(string)
+			commandOverride = props["commandOverride"].(bool)
 		},
 	}
 
 	tracker.TrackTest(TestMetadata{
-		Deployed:    true,
-		WasBuilt:    true,
-		Success:     false,
-		Duration:    time.Second * 5,
-		StagesCount: 3,
-		Err:         fmt.Errorf("my-error"),
+		Deployed:        true,
+		WasBuilt:        true,
+		Success:         false,
+		Duration:        time.Second * 5,
+		StagesCount:     3,
+		Err:             fmt.Errorf("my-error"),
+		CommandOverride: true,
 	})
 
 	require.True(t, deployed)
 	require.True(t, wasBuilt)
+	require.True(t, commandOverride)
 	require.False(t, success)
 	require.Equal(t, errStr, "my-error")
 	require.Equal(t, "Test", event)
 	require.Equal(t, float64(5), duration)
 	require.Equal(t, 3, stagesCount)
+}
+
+func TestTrackTestWithoutCommandOverride(t *testing.T) {
+	var commandOverride bool
+	tracker := Tracker{
+		trackFn: func(_ string, _ bool, props map[string]any) {
+			commandOverride = props["commandOverride"].(bool)
+		},
+	}
+
+	tracker.TrackTest(TestMetadata{Success: true})
+
+	require.False(t, commandOverride)
 }

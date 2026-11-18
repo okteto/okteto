@@ -40,6 +40,10 @@ type TestMetadata struct {
 
 	// StagesCount is the number of sections that were tested (entries in the manifest test map)
 	StagesCount int
+
+	// CommandOverride is whether the commands of the selected test container were replaced
+	// from the command line ('--' or --command) instead of using the ones in the manifest
+	CommandOverride bool
 }
 
 // SingleTestMetadata contains the metadata of a single test execution
@@ -66,11 +70,12 @@ type SingleTestMetadata struct {
 // TrackTest sends a tracking event to mixpanel when the user runs tests through the command okteto test
 func (a *Tracker) TrackTest(metadata TestMetadata) {
 	props := map[string]any{
-		"duration":    metadata.Duration.Seconds(),
-		"deployed":    metadata.Deployed,
-		"wasBuilt":    metadata.WasBuilt,
-		"success":     metadata.Success,
-		"stagesCount": metadata.StagesCount,
+		"duration":        metadata.Duration.Seconds(),
+		"deployed":        metadata.Deployed,
+		"wasBuilt":        metadata.WasBuilt,
+		"success":         metadata.Success,
+		"stagesCount":     metadata.StagesCount,
+		"commandOverride": metadata.CommandOverride,
 	}
 	if metadata.Err != nil {
 		props["error"] = metadata.Err.Error()
