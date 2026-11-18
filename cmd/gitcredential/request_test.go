@@ -165,6 +165,26 @@ func TestRequestRepository(t *testing.T) {
 			path:        "acme//infra",
 			expectedErr: errMissingRepository,
 		},
+		{
+			name:     "every character GitHub allows",
+			path:     "acme-2/my_infra.v2.git",
+			expected: "acme-2/my_infra.v2",
+		},
+		{
+			name:        "terminal escape sequence decoded by Git",
+			path:        "acme/infra\x1b[31m.git",
+			expectedErr: errInvalidRepository,
+		},
+		{
+			name:        "space in the owner",
+			path:        "ac me/infra",
+			expectedErr: errInvalidRepository,
+		},
+		{
+			name:        "parent directory as repo",
+			path:        "acme/..",
+			expectedErr: errInvalidRepository,
+		},
 	}
 
 	for _, tt := range tests {

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 )
 
@@ -26,6 +27,10 @@ const githubHost = "github.com"
 var (
 	errMissingPath       = fmt.Errorf("the request from Git has no repository path, set %s to true", useHTTPPathKey)
 	errMissingRepository = errors.New("the path in the request from Git has no repository")
+	errInvalidRepository = errors.New("the path in the request from Git isn't a GitHub repository")
+
+	// githubName has the characters GitHub allows in owner and repository names
+	githubName = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 )
 
 // request is the part of Git's credential request the helper needs.
@@ -85,5 +90,14 @@ func (r request) repository() (string, error) {
 	if owner == "" || repo == "" {
 		return "", errMissingRepository
 	}
+	// Git decodes the URL's percent escapes, so the path can hold any character,
+	// a terminal escape sequence included
+	if !isGitHubName(owner) || !isGitHubName(repo) {
+		return "", errInvalidRepository
+	}
 	return fmt.Sprintf("%s/%s", owner, repo), nil
+}
+
+func isGitHubName(name string) bool {
+	return name != "." && name != ".." && githubName.MatchString(name)
 }

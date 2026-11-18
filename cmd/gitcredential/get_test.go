@@ -113,6 +113,12 @@ func TestGet(t *testing.T) {
 			expectedStderr: "okteto: no GitHub credentials for github.com: the request from Git has no repository path, set credential.https://github.com.useHttpPath to true\n",
 		},
 		{
+			name:           "path with a terminal escape sequence",
+			input:          "protocol=https\nhost=github.com\npath=acme/infra\x1b[31m.git\n\n",
+			creds:          types.GitCredentials{Password: "token"},
+			expectedStderr: "okteto: no GitHub credentials for github.com: the path in the request from Git isn't a GitHub repository\n",
+		},
+		{
 			name:  "another host gets nothing",
 			input: "protocol=https\nhost=gitlab.com\npath=acme/infra.git\n\n",
 			creds: types.GitCredentials{Password: "token"},
