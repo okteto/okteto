@@ -419,6 +419,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 		if overridden {
 			ioCtrl.Out().Infof("Executing test container '%s' with overridden commands", name)
+			for _, command := range test.Commands {
+				ioCtrl.Logger().Debugf("Overridden command for test container '%s': %s", name, command.Command)
+			}
 		} else {
 			ioCtrl.Out().Infof("Executing test container '%s'", name)
 		}

@@ -16,9 +16,9 @@ package test
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
+	"al.essio.dev/pkg/shellescape"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -32,9 +32,6 @@ var (
 	errEmptyCommandAfterDash   = errors.New("no command provided after '--'")
 	errEmptyCommandFlag        = errors.New("'--command' cannot be empty")
 	errCommandOverrideTarget   = errors.New("overriding the commands requires exactly one test container name")
-
-	// safeShellArg matches the arguments that a POSIX shell reads as a single word without quoting
-	safeShellArg = regexp.MustCompile(`^[A-Za-z0-9_@%+=:,./-]+$`)
 )
 
 // commandOverride replaces the commands of a single test container with the
@@ -105,9 +102,9 @@ func parseTestArgs(args []string, argsLenAtDash int, commandFlags []string) ([]s
 }
 
 // getOverrideCommands returns the commands that replace the ones of the test container.
-// The arguments after '--' are joined into a single command, quoting them so each one
-// reaches the program as received by the remote shell ('sh -c'). Each '--command' flag
-// value is a command run as is
+// The arguments after '--' are joined into a single command, quoting the ones that are not
+// safe shell words so each one reaches the program unchanged through the remote shell ('sh -c'),
+// including spaces, '|', '$', '#' or quotes. Each '--command' flag value is a command run as is
 func getOverrideCommands(hasDash bool, dashArgs, commandFlags []string) ([]model.TestCommand, error) {
 	if hasDash && len(commandFlags) > 0 {
 		return nil, errCommandOverrideConflict
@@ -117,7 +114,7 @@ func getOverrideCommands(hasDash bool, dashArgs, commandFlags []string) ([]model
 		if strings.TrimSpace(strings.Join(dashArgs, "")) == "" {
 			return nil, errEmptyCommandAfterDash
 		}
-		command := joinShellArgs(dashArgs)
+		command := shellescape.QuoteCommand(dashArgs)
 		return []model.TestCommand{{Name: command, Command: command}}, nil
 	}
 
@@ -129,21 +126,6 @@ func getOverrideCommands(hasDash bool, dashArgs, commandFlags []string) ([]model
 		commands = append(commands, model.TestCommand{Name: command, Command: command})
 	}
 	return commands, nil
-}
-
-// joinShellArgs joins the arguments into a single command for a POSIX shell. Arguments that
-// are not safe words are wrapped in single quotes, so each one reaches the program unchanged
-// (including spaces, '|', '$', '#' or quotes)
-func joinShellArgs(args []string) string {
-	quoted := make([]string, 0, len(args))
-	for _, arg := range args {
-		if safeShellArg.MatchString(arg) {
-			quoted = append(quoted, arg)
-			continue
-		}
-		quoted = append(quoted, "'"+strings.ReplaceAll(arg, "'", `'"'"'`)+"'")
-	}
-	return strings.Join(quoted, " ")
 }
 
 func newCommandOverrideError(err error) error {

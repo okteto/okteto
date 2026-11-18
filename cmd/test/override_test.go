@@ -117,7 +117,9 @@ func TestParseTestArgsWithOverride(t *testing.T) {
 	}
 }
 
-func TestJoinShellArgs(t *testing.T) {
+// TestParseTestArgsQuotesDashArgs validates that the arguments after '--' are joined into a
+// single command where each argument reaches the program unchanged through the remote shell
+func TestParseTestArgsQuotesDashArgs(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     []string
@@ -162,7 +164,9 @@ func TestJoinShellArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, joinShellArgs(tt.args))
+			_, override, err := parseTestArgs(append([]string{"unit"}, tt.args...), 1, nil)
+			require.NoError(t, err)
+			require.Equal(t, []model.TestCommand{{Name: tt.expected, Command: tt.expected}}, override.commands)
 		})
 	}
 }
