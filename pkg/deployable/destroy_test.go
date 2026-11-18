@@ -16,6 +16,7 @@ package deployable
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -38,6 +39,21 @@ func (e printingExecutor) Execute(_ model.DeployCommand, _ []string) error {
 }
 
 func (printingExecutor) CleanUp(_ error) {}
+
+// linePrintingExecutor logs each line of the output on its own, as the
+// executors do with the output of the commands
+type linePrintingExecutor struct {
+	lines []string
+}
+
+func (e linePrintingExecutor) Execute(_ model.DeployCommand, _ []string) error {
+	for _, line := range e.lines {
+		oktetoLog.Println(line)
+	}
+	return nil
+}
+
+func (linePrintingExecutor) CleanUp(_ error) {}
 
 // captureLogOutput sends the okteto logger output to the returned buffer, with
 // masking disabled, until the test finishes
@@ -245,4 +261,41 @@ func TestCleanUp(t *testing.T) {
 	runner.CleanUp(nil)
 
 	require.True(t, executor.cleaned)
+}
+
+func TestRunDestroyAddsCatalogSecretVariablesAfterTheVariables(t *testing.T) {
+	setFakeOktetoContext(t)
+	exec := &fakeDestroyExecutor{}
+	runner := &DestroyRunner{Executor: exec}
+
+	err := runner.RunDestroy(context.Background(), DestroyParameters{
+		Variables:              []string{"CATALOG_TEST_TOKEN=from-var"},
+		CatalogSecretVariables: []string{"CATALOG_TEST_TOKEN=secret-value"},
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "destroy", Command: "destroy"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{{"CATALOG_TEST_TOKEN=from-var", "CATALOG_TEST_TOKEN=secret-value"}}, exec.envs)
+	assert.Empty(t, os.Getenv("CATALOG_TEST_TOKEN"))
+}
+
+func TestRunDestroyMasksShortCatalogSecretValues(t *testing.T) {
+	setFakeOktetoContext(t)
+	out := captureLogOutput(t)
+	runner := &DestroyRunner{
+		Executor: printingExecutor{output: "pin: 1234"},
+	}
+
+	err := runner.RunDestroy(context.Background(), DestroyParameters{
+		CatalogSecretVariables: []string{"PIN=1234"},
+		Deployable: Entity{
+			Commands: []model.DeployCommand{{Name: "print", Command: "print"}},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "pin: ***")
+	assert.NotContains(t, out.String(), "1234")
 }

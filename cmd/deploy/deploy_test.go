@@ -14,6 +14,7 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -1566,6 +1567,99 @@ func TestShouldRunInRemoteDeploy(t *testing.T) {
 			assert.Equal(t, result, tt.expected)
 		})
 	}
+}
+
+// capturePlainLogs sends the okteto logger output to the returned buffer in plain format until the test finishes
+func capturePlainLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	out := &bytes.Buffer{}
+	oktetoLog.Init(logrus.WarnLevel)
+	oktetoLog.SetOutputFormat(oktetoLog.PlainFormat)
+	oktetoLog.SetOutput(out)
+	t.Cleanup(func() { oktetoLog.Init(logrus.WarnLevel) })
+	return out
+}
+
+// manifestWithDeployCommands returns a manifest whose deploy commands run locally unless remote execution is on
+func manifestWithDeployCommands() *model.Manifest {
+	return &model.Manifest{Deploy: &model.DeployInfo{Commands: []model.DeployCommand{{Name: "echo", Command: "echo"}}}}
+}
+
+func TestWarnIfLocalExecutionWarnsWhenTheCommandsRunLocally(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	out := capturePlainLogs(t)
+
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands()})
+
+	require.Equal(t, "WARNING: "+localExecutionDeprecatedWarning+"\n", out.String())
+}
+
+func TestWarnIfLocalExecutionWarnsWhenRemoteExecutionIsTurnedOff(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "true")
+	out := capturePlainLogs(t)
+
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands(), RunInRemoteSet: true})
+
+	require.Equal(t, "WARNING: "+localExecutionDeprecatedWarning+"\n", out.String())
+}
+
+func TestWarnIfLocalExecutionDoesNotWarnWhenTheCommandsRunRemotely(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "true")
+	out := capturePlainLogs(t)
+
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands()})
+
+	require.Empty(t, out.String())
+}
+
+func TestWarnIfLocalExecutionDoesNotWarnWithoutDeployCommands(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	out := capturePlainLogs(t)
+
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: &model.Manifest{Deploy: &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{}}}})
+
+	require.Empty(t, out.String())
+}
+
+func TestWarnIfLocalExecutionDoesNotWarnWithoutDeploySection(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	out := capturePlainLogs(t)
+
+	(&Command{}).warnIfLocalExecution(&Options{Manifest: &model.Manifest{Dependencies: deps.ManifestSection{"db": &deps.Dependency{}}}})
+
+	require.Empty(t, out.String())
+}
+
+func TestWarnIfLocalExecutionDoesNotWarnInsideARemoteExecution(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	out := capturePlainLogs(t)
+
+	(&Command{IsRemote: true}).warnIfLocalExecution(&Options{Manifest: manifestWithDeployCommands(), RunInRemoteSet: true})
+
+	require.Empty(t, out.String())
+}
+
+func TestShouldRunInRemoteLogsNothing(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	out := capturePlainLogs(t)
+
+	require.False(t, ShouldRunInRemote(&Options{Manifest: manifestWithDeployCommands()}))
+	require.Empty(t, out.String())
+}
+
+func TestRunWarnsOnceThatLocalExecutionIsDeprecatedWhenTheManifestIsLoaded(t *testing.T) {
+	t.Setenv(constants.OktetoForceRemote, "")
+	resetLogBuffer(t)
+	deployer := &fakeDeployer{}
+	deployer.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(deployer, nil)
+	deployer.On("Deploy", mock.Anything, mock.Anything).Return(nil)
+	c := newRunWithDependenciesCommand(t, deps.ManifestSection{}, &capturingPipelineDeployer{}, deployer)
+
+	require.NoError(t, c.Run(context.Background(), &Options{Name: "movies", Namespace: "test"}))
+
+	output := deployOutput(t, c)
+	require.Contains(t, output, `"stage":"Load manifest","message":" !  Local execution is deprecated and will be removed in a future release.`)
+	require.Equal(t, 1, strings.Count(output, "Local execution is deprecated"))
 }
 
 func TestOktetoManifestPathFlag(t *testing.T) {

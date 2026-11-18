@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/catalog"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -102,6 +103,13 @@ type Options struct {
 	DestroyAll          bool
 	RunInRemote         bool
 	RunInRemoteSet      bool
+
+	// CatalogSecretVariables are the catalog secret variables of the development environment. They are read from the
+	// env before any variable is loaded
+	CatalogSecretVariables catalog.SecretVariables
+	// catalogSecretVariablesToForward are the catalog secret variables remote-run gets the values of. They are empty
+	// when the destroy commands need none
+	catalogSecretVariablesToForward catalog.SecretVariables
 }
 
 type destroyInterface interface {
@@ -153,6 +161,8 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 `,
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			readCatalogSecretVariables(options)
+
 			options.RunInRemoteSet = cmd.Flags().Changed("remote")
 
 			if options.ManifestPath != "" {
@@ -460,6 +470,17 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
+	// no stage is set yet, and the json output drops the lines logged without one. On an error, the stage stays set
+	// for the error status and the error the command ends with
+	oktetoLog.SetStage(catalog.SecretVariablesStage)
+	if err := checkCatalogSecretVariables(opts); err != nil {
+		if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+			return err
+		}
+		return err
+	}
+	oktetoLog.SetStage("")
+
 	if opts.DestroyDependencies {
 		if err := dc.destroyDependencies(ctx, opts); err != nil {
 			if err := dc.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
@@ -522,6 +543,34 @@ func (dc *destroyCommand) destroy(ctx context.Context, opts *Options) error {
 	}
 
 	return commandErr
+}
+
+// readCatalogSecretVariables reads the catalog secret variables the backend sets on the installer job. It has to run
+// before the context is loaded, which sets .env files and Okteto Variables as env vars, and before stored variables
+// are loaded, as any of them can hold a variable with the same name
+func readCatalogSecretVariables(options *Options) {
+	options.CatalogSecretVariables = catalog.SecretVariablesFromEnv()
+}
+
+// checkCatalogSecretVariables checks the catalog secret variables before any destroy command runs, and keeps the ones
+// remote-run has to get the values of. A manifest without destroy commands needs none. A failed check doesn't stop a
+// force destroy: its commands run without the secret variables, as they already run despite their errors
+func checkCatalogSecretVariables(opts *Options) error {
+	if opts.Manifest.Destroy == nil || len(opts.Manifest.Destroy.Commands) == 0 {
+		return nil
+	}
+	secretVariables, err := catalog.CheckSecretVariables(opts.CatalogSecretVariables, catalog.DestroyPhase, func() bool {
+		return shouldRunInRemote(opts)
+	})
+	if err != nil && opts.ForceDestroy {
+		oktetoLog.Warning("Running the destroy commands without the catalog secret variables: %s", err)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	opts.catalogSecretVariablesToForward = secretVariables
+	return nil
 }
 
 func (dc *destroyCommand) destroyDependencies(ctx context.Context, opts *Options) error {

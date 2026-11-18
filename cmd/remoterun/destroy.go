@@ -23,6 +23,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
@@ -40,14 +41,17 @@ type destroyRunner interface {
 
 // DestroyOptions flags accepted by the remote-run destroy command
 type DestroyOptions struct {
-	Name         string
-	Variables    []string
-	ForceDestroy bool
+	Name                           string
+	CatalogAction                  string
+	CatalogSecretVariablesEndpoint string
+	Variables                      []string
+	ForceDestroy                   bool
 }
 
 // DestroyCommand struct with the dependencies needed to run the destroy operation
 type DestroyCommand struct {
-	runner destroyRunner
+	runner                 destroyRunner
+	catalogSecretVariables catalogSecretVariables
 }
 
 // Destroy starts the destroy command remotely. This is the command executed in the
@@ -119,8 +123,16 @@ It is important that this command does the minimum and must not do calculations 
 				ForceDestroy: options.ForceDestroy,
 			}
 
+			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, catalog.DestroyPhase)
+			if err != nil {
+				return err
+			}
+
+			secretVariables.forceDestroy = options.ForceDestroy
+
 			c := &DestroyCommand{
-				runner: runner,
+				runner:                 runner,
+				catalogSecretVariables: secretVariables,
 			}
 
 			sshAgentHostname := os.Getenv(constants.OktetoSshAgentHostnameEnvVar)
@@ -151,6 +163,7 @@ It is important that this command does the minimum and must not do calculations 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands")
+	addCatalogSecretVariablesFlags(cmd, &options.CatalogAction, &options.CatalogSecretVariablesEndpoint)
 	return cmd
 }
 
@@ -166,6 +179,13 @@ func (c *DestroyCommand) Run(ctx context.Context, params deployable.DestroyParam
 		}
 	}
 
+	// No command runs if the catalog secret variables can't be got, unless the destroy is forced: then the commands run
+	// without them
+	catalogVars, err := c.catalogSecretVariables.get(ctx)
+	if err != nil {
+		return err
+	}
+	params.CatalogSecretVariables = catalogVars
 	return c.runner.RunDestroy(ctx, params)
 }
 

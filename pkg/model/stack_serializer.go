@@ -19,6 +19,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -146,10 +148,10 @@ type ServiceRaw struct {
 	Deploy                   *DeployInfoRaw         `yaml:"deploy,omitempty"`
 	MemswapLimit             *WarningType           `yaml:"memswap_limit,omitempty"`
 	OomKillDisable           *WarningType           `yaml:"oom_kill_disable,omitempty"`
-	MemReservation           Quantity               `yaml:"mem_reservation,omitempty"`
+	MemReservation           ComposeMemory          `yaml:"mem_reservation,omitempty"`
 	CpuCount                 Quantity               `yaml:"cpu_count,omitempty"`
 	Cpus                     Quantity               `yaml:"cpus,omitempty"`
-	MemLimit                 Quantity               `yaml:"mem_limit,omitempty"`
+	MemLimit                 ComposeMemory          `yaml:"mem_limit,omitempty"`
 	Restart                  string                 `yaml:"restart,omitempty"`
 	Image                    string                 `yaml:"image,omitempty"`
 	Workdir                  string                 `yaml:"workdir,omitempty"`
@@ -161,13 +163,42 @@ type ServiceRaw struct {
 	EnvFilesSneakCase        env.Files              `yaml:"env_file,omitempty"`
 	Args                     ArgsStack              `yaml:"args,omitempty"`
 	Entrypoint               CommandStack           `yaml:"entrypoint,omitempty"`
-	Environment              env.Environment        `yaml:"environment,omitempty"`
+	Environment              stackEnvironment       `yaml:"environment,omitempty"`
 	Expose                   []PortRaw              `yaml:"expose,omitempty"`
 	Ports                    []PortRaw              `yaml:"ports,omitempty"`
 	CapDrop                  []apiv1.Capability     `yaml:"capDrop,omitempty"`
 	CapDropSneakCase         []apiv1.Capability     `yaml:"cap_drop,omitempty"`
 	CapAdd                   []apiv1.Capability     `yaml:"capAdd,omitempty"`
 	Public                   bool                   `yaml:"public,omitempty"`
+}
+
+// stackEnvironment decodes values already expanded by ExpandStackEnvs.
+// The shared env.Environment decoder also expands values, which would consume
+// escaped dollars and interpolate variable contents a second time.
+type stackEnvironment []env.Var
+
+func (e *stackEnvironment) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	values := make(map[string]string)
+	var list []string
+	if err := unmarshal(&list); err == nil {
+		for _, entry := range list {
+			parts := strings.SplitN(entry, "=", 2)
+			value := os.Getenv(parts[0])
+			if len(parts) == 2 {
+				value = parts[1]
+			}
+			values[parts[0]] = value
+		}
+	} else if err := unmarshal(&values); err != nil {
+		return err
+	}
+	result := make(stackEnvironment, 0, len(values))
+	for name, value := range values {
+		result = append(result, env.Var{Name: name, Value: value})
+	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].Name < result[j].Name })
+	*e = result
+	return nil
 }
 
 // serviceAccountExtension is the compose service extension that sets the pod ServiceAccount
@@ -224,7 +255,7 @@ type DeployComposeResources struct {
 	Devices    *WarningType           `json:"devices,omitempty" yaml:"devices,omitempty"`
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 	Cpus       Quantity               `json:"cpus,omitempty" yaml:"cpus,omitempty"`
-	Memory     Quantity               `json:"memory,omitempty" yaml:"memory,omitempty"`
+	Memory     ComposeMemory          `json:"memory,omitempty" yaml:"memory,omitempty"`
 }
 
 type VolumeTopLevel struct {
@@ -425,7 +456,7 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	svc := &Service{}
 	var err error
 
-	svc.Resources = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
+	svc.Resources = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit.Quantity, serviceRaw.MemReservation.Quantity)
 
 	svc.Replicas = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
 
@@ -566,12 +597,16 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 
 	svc.User = serviceRaw.User
 
-	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
+	var restartRetries int32
+	svc.RestartPolicy, restartRetries, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
 	if err != nil {
 		return nil, err
 	}
 	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
+	}
+	if svc.BackOffLimit == 0 {
+		svc.BackOffLimit = restartRetries
 	}
 
 	// Extract endpoint_mode from deploy section
@@ -1113,23 +1148,33 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{ContainerPort: p.ContainerPort, Protocol: p.Protocol}, nil
 }
 
-func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, error) {
+// getRestartPolicy returns the restart policy and, for the compose
+// `restart: on-failure[:max-retries]` form, the retry count (0 when none is
+// given). deploy.restart_policy.condition wins over restart when set.
+func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, int32, error) {
 	var restart string
 	if deployInfo != nil && deployInfo.RestartPolicy != nil {
 		restart = deployInfo.RestartPolicy.Condition
 	}
 	if restart == "" {
+		if policy, retries, found := strings.Cut(restartPolicy, ":"); found && policy == "on-failure" {
+			maxRetries, err := strconv.ParseInt(retries, 10, 32)
+			if err != nil || maxRetries < 0 {
+				return apiv1.RestartPolicyAlways, 0, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restartPolicy)
+			}
+			return apiv1.RestartPolicyOnFailure, int32(maxRetries), nil
+		}
 		restart = restartPolicy
 	}
 	switch restart {
 	case "none", "never", "no":
-		return apiv1.RestartPolicyNever, nil
+		return apiv1.RestartPolicyNever, 0, nil
 	case "always", "", "unless-stopped", "any":
-		return apiv1.RestartPolicyAlways, nil
+		return apiv1.RestartPolicyAlways, 0, nil
 	case "on-failure":
-		return apiv1.RestartPolicyOnFailure, nil
+		return apiv1.RestartPolicyOnFailure, 0, nil
 	default:
-		return apiv1.RestartPolicyAlways, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
+		return apiv1.RestartPolicyAlways, 0, fmt.Errorf("cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
 	}
 }
 func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) *StackResources {
@@ -1160,6 +1205,46 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 	return resources
 }
 
+// ComposeMemory is a compose memory value. Compose uses its own byte units
+// ("300m" is 300 MiB, "1g" / "1gb" is 1 GiB), which Kubernetes reads
+// differently ("300m" is 0.3 bytes) or rejects, so those are converted here.
+// Other values, like "512Mi" or a plain byte count, are parsed as before.
+type ComposeMemory struct {
+	Quantity
+}
+
+var composeBytesRegex = regexp.MustCompile(`(?i)^([0-9]+(?:\.[0-9]+)?)\s*(b|k|kb|m|mb|g|gb)$`)
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (m *ComposeMemory) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	if err := unmarshal(&raw); err == nil {
+		if bytes, ok := parseComposeBytes(raw); ok {
+			m.Value = *resource.NewQuantity(bytes, resource.BinarySI)
+			return nil
+		}
+	}
+	return m.Quantity.UnmarshalYAML(unmarshal)
+}
+
+func parseComposeBytes(value string) (int64, bool) {
+	match := composeBytesRegex.FindStringSubmatch(strings.TrimSpace(value))
+	if match == nil {
+		return 0, false
+	}
+	number, err := strconv.ParseFloat(match[1], 64)
+	if err != nil {
+		return 0, false
+	}
+	multiplier := map[string]float64{
+		"b": 1,
+		"k": 1 << 10, "kb": 1 << 10,
+		"m": 1 << 20, "mb": 1 << 20,
+		"g": 1 << 30, "gb": 1 << 30,
+	}[strings.ToLower(match[2])]
+	return int64(number * multiplier), true
+}
+
 func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) int32 {
 	if replicas != nil {
 		return *replicas
@@ -1180,7 +1265,7 @@ func (r DeployComposeResources) applyTo(resources *ServiceResources) {
 		resources.CPU = r.Cpus
 	}
 	if !r.Memory.Value.IsZero() {
-		resources.Memory = r.Memory
+		resources.Memory = r.Memory.Quantity
 	}
 }
 

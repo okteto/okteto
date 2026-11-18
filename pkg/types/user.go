@@ -37,6 +37,40 @@ type ExecutionFile struct {
 	Content string
 }
 
+// Reasons why a catalog secret variable can't be resolved
+const (
+	CatalogSecretNotFoundReason    = "secret_not_found"
+	CatalogSecretNotLabeledReason  = "secret_not_labeled"
+	CatalogSecretKeyNotFoundReason = "key_not_found"
+)
+
+// CatalogSecretVariables are the catalog secret variables of a development environment: the values of the ones that
+// can be resolved, and the ones that can't
+type CatalogSecretVariables struct {
+	Variables  []CatalogSecretVariable           `json:"variables"`
+	Unresolved []UnresolvedCatalogSecretVariable `json:"unresolved"`
+}
+
+// CatalogSecretVariable is a catalog secret variable with its value
+type CatalogSecretVariable struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// UnresolvedCatalogSecretVariable is a catalog secret variable whose Secret or key doesn't exist, or whose Secret
+// isn't labelled to be read by catalog items
+type UnresolvedCatalogSecretVariable struct {
+	Variable     string              `json:"variable"`
+	Reason       string              `json:"reason"`
+	SecretKeyRef CatalogSecretKeyRef `json:"secretKeyRef"`
+}
+
+// CatalogSecretKeyRef is the key of the Secret a catalog secret variable refers to
+type CatalogSecretKeyRef struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
+
 // KnownHostsConfig contains the SSH known hosts configuration
 type KnownHostsConfig struct {
 	Content string

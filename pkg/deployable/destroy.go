@@ -37,6 +37,10 @@ type DestroyParameters struct {
 	Deployable   Entity
 	Variables    []string
 	ForceDestroy bool
+	// CatalogSecretVariables are the "key=value" secret variables of the
+	// catalog item. They are added only to the env of the commands, after the
+	// platform variables
+	CatalogSecretVariables []string
 }
 
 // RunDestroy executes the custom commands received as part of DestroyParameters
@@ -47,6 +51,7 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 	platformVars, cleanupPlatformEnv := GetPlatformEnvironment(ctx)
 	defer cleanupPlatformEnv()
 	params.Variables = append(params.Variables, platformVars...)
+	params.Variables = appendCatalogSecretVariables(params.Variables, params.CatalogSecretVariables)
 	params.Variables = appendGatewayEnvVars(params.Variables)
 
 	// Set up helm version based on environment variable
@@ -54,8 +59,8 @@ func (dr *DestroyRunner) RunDestroy(ctx context.Context, params DestroyParameter
 		return err
 	}
 
-	// Masking has to be enabled after the platform values are added to be
-	// applied to them
+	// Masking has to be enabled after the platform and catalog values are
+	// added to be applied to them
 	oktetoLog.EnableMasking()
 	for _, command := range params.Deployable.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)

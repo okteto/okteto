@@ -193,7 +193,7 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("1Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("1Gi")}},
 				},
 			},
 			},
@@ -224,11 +224,11 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("1Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("1Gi")}},
 				},
 				Reservations: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("2Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("2Gi")}},
 				},
 			},
 			},
@@ -249,11 +249,11 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
 				Limits: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("1Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("1Gi")}},
 				},
 				Reservations: DeployComposeResources{
 					Cpus:   Quantity{resource.MustParse("1")},
-					Memory: Quantity{resource.MustParse("2Gi")},
+					Memory: ComposeMemory{Quantity{resource.MustParse("2Gi")}},
 				},
 			},
 			},
@@ -2048,10 +2048,21 @@ func Test_validateEnvFiles(t *testing.T) {
 
 func Test_Environment(t *testing.T) {
 	tests := []struct {
-		name        string
-		manifest    []byte
-		environment env.Environment
+		name          string
+		manifest      []byte
+		environment   env.Environment
+		expectedError bool
 	}{
+		{
+			name:          "invalid scalar environment",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    environment: FOO=bar"),
+			expectedError: true,
+		},
+		{
+			name:        "duplicate list entry",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    environment:\n      - A=1\n      - A=2"),
+			environment: env.Environment{env.Var{Name: "A", Value: "2"}},
+		},
 		{
 			name:        "envs",
 			manifest:    []byte("services:\n  app:\n    environment:\n        env: production\n    image: okteto/vote:1"),
@@ -2084,9 +2095,11 @@ func Test_Environment(t *testing.T) {
 			t.Setenv("OKTETO_ENVTEST", "myvalue")
 
 			s, err := ReadStack(tt.manifest, false)
-			if err != nil {
-				t.Fatal(err)
+			if tt.expectedError {
+				require.Error(t, err)
+				return
 			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.environment, s.Services["app"].Environment)
 			if len(s.Services["app"].Environment) != len(tt.environment) {
 				t.Fatalf("Bad unmarshal of envs")
@@ -3324,4 +3337,99 @@ endpoints:
 	require.Len(t, s.Endpoints["main"].Rules, 2)
 	assert.Equal(t, "web-app", s.Endpoints["main"].Rules[0].Service)
 	assert.Equal(t, "api", s.Endpoints["main"].Rules[1].Service)
+}
+
+func Test_UnmarshalComposeMemoryUnits(t *testing.T) {
+	tests := []struct {
+		name     string
+		memory   string
+		expected int64
+	}{
+		{name: "megabytes-short", memory: "300m", expected: 300 * 1024 * 1024},
+		{name: "megabytes-long", memory: "512mb", expected: 512 * 1024 * 1024},
+		{name: "gigabytes-short", memory: "1g", expected: 1024 * 1024 * 1024},
+		{name: "gigabytes-long", memory: "1gb", expected: 1024 * 1024 * 1024},
+		{name: "kilobytes", memory: "512k", expected: 512 * 1024},
+		{name: "bytes", memory: "2048b", expected: 2048},
+		{name: "uppercase", memory: "1G", expected: 1024 * 1024 * 1024},
+		{name: "fractional", memory: "1.5g", expected: 1536 * 1024 * 1024},
+		{name: "kubernetes-units", memory: "512Mi", expected: 512 * 1024 * 1024},
+		{name: "plain-bytes", memory: "1048576", expected: 1048576},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    mem_limit: " + tt.memory + "\n    mem_reservation: " + tt.memory + "\n")
+			s, err := ReadStack(manifest, true)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, s.Services["app"].Resources.Limits.Memory.Value.Value())
+			assert.Equal(t, tt.expected, s.Services["app"].Resources.Requests.Memory.Value.Value())
+		})
+	}
+}
+
+func Test_UnmarshalComposeDeployResourcesMemoryUnits(t *testing.T) {
+	manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    deploy:\n      resources:\n        limits:\n          memory: 300m\n        reservations:\n          memory: 1gb\n")
+
+	s, err := ReadStack(manifest, true)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(300*1024*1024), s.Services["app"].Resources.Limits.Memory.Value.Value())
+	assert.Equal(t, int64(1024*1024*1024), s.Services["app"].Resources.Requests.Memory.Value.Value())
+}
+
+func Test_UnmarshalRestartOnFailureWithMaxRetries(t *testing.T) {
+	manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: on-failure:3")
+
+	s, err := ReadStack(manifest, true)
+
+	require.NoError(t, err)
+	assert.Equal(t, apiv1.RestartPolicyOnFailure, s.Services["app"].RestartPolicy)
+	assert.Equal(t, int32(3), s.Services["app"].BackOffLimit)
+	assert.True(t, s.Services["app"].IsJob())
+}
+
+func Test_UnmarshalRestartIgnoredWhenDeployConditionIsSet(t *testing.T) {
+	for _, restart := range []string{"on-failure:3", "on-failure:abc"} {
+		manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: \"" + restart + "\"\n    deploy:\n      restart_policy:\n        condition: on-failure")
+
+		s, err := ReadStack(manifest, true)
+
+		require.NoError(t, err, restart)
+		assert.Equal(t, apiv1.RestartPolicyOnFailure, s.Services["app"].RestartPolicy, restart)
+		assert.Equal(t, int32(0), s.Services["app"].BackOffLimit, restart)
+		assert.True(t, s.Services["app"].IsDeployment(), restart)
+	}
+}
+
+func Test_UnmarshalRestartDeployMaxAttemptsOverRestartRetries(t *testing.T) {
+	manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: on-failure:3\n    deploy:\n      restart_policy:\n        max_attempts: 5")
+
+	s, err := ReadStack(manifest, true)
+
+	require.NoError(t, err)
+	assert.Equal(t, apiv1.RestartPolicyOnFailure, s.Services["app"].RestartPolicy)
+	assert.Equal(t, int32(5), s.Services["app"].BackOffLimit)
+}
+
+func Test_UnmarshalRestartOnFailureWithoutRetriesIsDeployment(t *testing.T) {
+	for _, restart := range []string{"on-failure", "on-failure:0"} {
+		manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: \"" + restart + "\"")
+
+		s, err := ReadStack(manifest, true)
+
+		require.NoError(t, err, restart)
+		assert.Equal(t, apiv1.RestartPolicyOnFailure, s.Services["app"].RestartPolicy, restart)
+		assert.Equal(t, int32(0), s.Services["app"].BackOffLimit, restart)
+		assert.True(t, s.Services["app"].IsDeployment(), restart)
+	}
+}
+
+func Test_UnmarshalRestartOnFailureInvalidMaxRetries(t *testing.T) {
+	for _, restart := range []string{"on-failure:abc", "on-failure:-1", "on-failure:", "on-failure:2147483648"} {
+		manifest := []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: \"" + restart + "\"")
+
+		_, err := ReadStack(manifest, true)
+
+		assert.ErrorContains(t, err, "invalid restart policy", restart)
+	}
 }

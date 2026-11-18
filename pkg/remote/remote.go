@@ -695,6 +695,10 @@ func (dfP *dockerfileTemplateProperties) prepareEnvVars() {
 	for k, v := range dfP.OktetoPrefixEnvVars {
 		dfP.OktetoPrefixEnvVars[k] = formatEnvVarValueForDocker(v)
 	}
+	// These values can come from the user's --var, so they are quoted like the remote-run flags
+	for k, v := range dfP.OktetoCommandSpecificEnvVars {
+		dfP.OktetoCommandSpecificEnvVars[k] = quoteForDockerfile(v)
+	}
 }
 
 func formatEnvVarValueForDocker(value string) string {
