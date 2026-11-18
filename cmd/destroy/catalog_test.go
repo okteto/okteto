@@ -37,6 +37,7 @@ var testCatalogSecretVariables = catalog.SecretVariables{
 	References: `[{"name":"API_TOKEN","secretKeyRef":{"name":"creds","key":"token"}}]`,
 	Action:     "action-name",
 	Endpoint:   "https://okteto.example/internal/catalog/secret-variables",
+	TokenFile:  "/run/secrets/catalog-secret-variables/token",
 }
 
 // catalogSecretVariablesWithReferences returns the test catalog secret variables with the references provided
@@ -298,6 +299,7 @@ func TestReadCatalogSecretVariablesReadsThemFromTheEnv(t *testing.T) {
 	t.Setenv(catalog.SecretVariablesEnvVar, testCatalogSecretVariables.References)
 	t.Setenv(model.OktetoActionNameEnvVar, testCatalogSecretVariables.Action)
 	t.Setenv(catalog.SecretVariablesEndpointEnvVar, testCatalogSecretVariables.Endpoint)
+	t.Setenv(catalog.SecretVariablesTokenFileEnvVar, testCatalogSecretVariables.TokenFile)
 	options := &Options{}
 
 	readCatalogSecretVariables(options)

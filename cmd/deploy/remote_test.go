@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
+	"github.com/okteto/okteto/pkg/catalog"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -558,4 +559,5 @@ func TestDeployRemoteForwardsTheCatalogSecretVariablesToRemoteRun(t *testing.T) 
 		`--catalog-secret-variables-endpoint https://okteto.example/internal/catalog/secret-variables`,
 	}
 	require.Equal(t, expected, params.CommandFlags)
+	require.Equal(t, []remote.FileSecret{{ID: catalog.SecretVariablesTokenSecretID, Path: "/run/secrets/catalog-secret-variables/token"}}, params.Secrets)
 }
