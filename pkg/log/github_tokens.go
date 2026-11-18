@@ -21,7 +21,3 @@ import "regexp"
 // they are masked by their shape. A dot is only part of a token when more of it follows,
 // so the period that ends a sentence stays.
 var githubTokenPattern = regexp.MustCompile(`gh[pousr]_[A-Za-z0-9_-]{30,}(?:\.[A-Za-z0-9_-]+)*|github_pat_[A-Za-z0-9_]{30,}`)
-
-func maskGitHubTokens(message string) string {
-	return githubTokenPattern.ReplaceAllString(message, "***")
-}

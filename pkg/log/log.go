@@ -70,15 +70,16 @@ type logger struct {
 	out    *logrus.Logger
 	file   *logrus.Entry
 
-	buf      *bytes.Buffer
-	replacer *strings.Replacer
-	spinner  *spinnerLogger
+	buf     *bytes.Buffer
+	spinner *spinnerLogger
 
 	stage      string
 	outputMode string
 
 	maskedWords []string
-	isMasked    bool
+	// masked is the copy of maskedWords that EnableMasking takes
+	masked   []string
+	isMasked bool
 
 	// mu guards stage, buf and the masking fields: dependencies deployed in parallel log at the same time
 	mu sync.RWMutex
@@ -397,15 +398,7 @@ func EnableMasking() {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 	log.isMasked = true
-	sort.Slice(log.maskedWords, func(i, j int) bool {
-		return len(log.maskedWords[i]) > len(log.maskedWords[j])
-	})
-	oldnew := []string{}
-	for _, maskWord := range log.maskedWords {
-		oldnew = append(oldnew, maskWord)
-		oldnew = append(oldnew, "***")
-	}
-	log.replacer = strings.NewReplacer(oldnew...)
+	log.masked = append([]string(nil), log.maskedWords...)
 }
 
 // DisableMasking will stop redacting secrets and vars
@@ -419,10 +412,52 @@ func redactMessage(message string) string {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 	if log.isMasked {
-		// Known values first: a secret that holds a GitHub token is masked whole, not only its token
-		return maskGitHubTokens(log.replacer.Replace(message))
+		return mask(message, log.masked)
 	}
 	return message
+}
+
+// mask replaces the masked values and the GitHub tokens in message with "***". It finds
+// both in the original message and masks the union of what they cover: a value that holds
+// a token is masked whole, and a value that is part of a token, such as "github" in
+// "github_pat_…", doesn't break the token's shape and leave the rest of it in the clear.
+func mask(message string, values []string) string {
+	spans := githubTokenPattern.FindAllStringIndex(message, -1)
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		for start := 0; ; {
+			i := strings.Index(message[start:], value)
+			if i < 0 {
+				break
+			}
+			spans = append(spans, []int{start + i, start + i + len(value)})
+			start += i + len(value)
+		}
+	}
+	if len(spans) == 0 {
+		return message
+	}
+	sort.Slice(spans, func(i, j int) bool { return spans[i][0] < spans[j][0] })
+
+	var sb strings.Builder
+	written := 0
+	start, end := spans[0][0], spans[0][1]
+	for _, span := range spans[1:] {
+		if span[0] < end {
+			end = max(end, span[1])
+			continue
+		}
+		sb.WriteString(message[written:start])
+		sb.WriteString("***")
+		written = end
+		start, end = span[0], span[1]
+	}
+	sb.WriteString(message[written:start])
+	sb.WriteString("***")
+	sb.WriteString(message[end:])
+	return sb.String()
 }
 
 // GetOutputBuffer returns a copy of the buffer of the running command.

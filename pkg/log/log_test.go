@@ -64,6 +64,24 @@ func Test_RedactMessage(t *testing.T) {
 			expected: "config=***",
 		},
 		{
+			name:     "known value that is the prefix of a GitHub token",
+			message:  "token " + fineGrainedToken + " here",
+			masked:   []string{"github"},
+			expected: "token *** here",
+		},
+		{
+			name:     "known value inside a GitHub token",
+			message:  "token " + classicToken,
+			masked:   []string{"a1B2a1"},
+			expected: "token ***",
+		},
+		{
+			name:     "known values that overlap are masked together",
+			message:  "abcdefgh",
+			masked:   []string{"abcdef", "cdefgh"},
+			expected: "***",
+		},
+		{
 			name:     "GitHub token that isn't a known secret",
 			message:  "token " + installationToken + " and other-secret",
 			masked:   []string{"other-secret"},
