@@ -43,6 +43,18 @@ func newSymlinkedRepo(t *testing.T) (link, target string) {
 	return link, target
 }
 
+// TestFindTopLevelGitRepoFromPath_symlinkedWorkingDir checks that the go-git
+// fallback opens a repository from a working directory that is a symlink to a
+// repository outside the symlink's parent directory, which go-git v6 refused
+// with "path escapes from parent".
+func TestFindTopLevelGitRepoFromPath_symlinkedWorkingDir(t *testing.T) {
+	link, _ := newSymlinkedRepo(t)
+
+	repo, err := FindTopLevelGitRepoFromPath(link)
+	require.NoError(t, err)
+	require.NotNil(t, repo)
+}
+
 // TestRepository_symlinkedWorkingDir reproduces the failure seen when running
 // okteto from a working directory that is a symlink to a repository outside
 // the symlink's parent directory. go-git v6 refuses to open it with "path
@@ -90,10 +102,9 @@ func TestRepository_symlinkedWorkingDirSeesUncommittedChanges(t *testing.T) {
 
 // TestFindTopLevelGitDir_symlinkedWorkingDir covers the same scenario for the
 // repository detection of okteto deploy, which otherwise warns "Repository not
-// detected" and leaves OKTETO_GIT_COMMIT and OKTETO_GIT_BRANCH unset. Without
-// git, the go-git fallback still fails until go-git/go-billy#255 is released.
+// detected" and leaves OKTETO_GIT_COMMIT and OKTETO_GIT_BRANCH unset. It runs
+// with and without git: the go-git v5 fallback opens symlinked working dirs.
 func TestFindTopLevelGitDir_symlinkedWorkingDir(t *testing.T) {
-	requireGitBinary(t)
 	link, target := newSymlinkedRepo(t)
 
 	dir, err := FindTopLevelGitDir(link)

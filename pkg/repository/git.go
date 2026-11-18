@@ -25,9 +25,9 @@ import (
 	"time"
 
 	giturls "github.com/chainguard-dev/git-urls"
-	"github.com/go-git/go-git/v6"
-	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/go-git/go-git/v6/plumbing/object"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/ignore"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -473,7 +473,7 @@ type oktetoGitWorktree struct {
 }
 
 func (ogr oktetoGitWorktree) GetRoot() string {
-	return ogr.worktree.Filesystem().Root()
+	return ogr.worktree.Filesystem.Root()
 }
 
 type oktetoGitStatus struct {
@@ -661,6 +661,11 @@ func GetRemoteURL(path string) (string, error) {
 func FindTopLevelGitRepoFromPath(path string) (*git.Repository, error) {
 	opts := &git.PlainOpenOptions{
 		DetectDotGit: true,
+		// Read the remotes and branches of a linked worktree ("git worktree add")
+		// from the main repository's .git, which its "commondir" file points to.
+		// go-git v5.16.5 never closes that file, so on Windows it stays open
+		// until okteto exits.
+		EnableDotGitCommonDir: true,
 	}
 	return git.PlainOpenWithOptions(path, opts)
 }
