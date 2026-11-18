@@ -44,7 +44,6 @@ type UserInterface interface {
 	GetExecutionFiles(ctx context.Context) ([]ExecutionFile, error)
 	GetKnownHostsConfig(ctx context.Context) (KnownHostsConfig, error)
 	GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (CatalogSecretVariables, error)
-	GetGitCredentials(ctx context.Context, host, repository string) (GitCredentials, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions

@@ -14,304 +14,236 @@
 package gitcredential
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"encoding/pem"
-	"io"
+	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"sync"
+	"net/url"
 	"testing"
+	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
 
-const gitCredentialsResponse = `{"data":{"gitCredentials":{"username":"x-access-token","password":"token","expiresAt":"2026-11-13T10:00:00Z","reason":null}}}`
+const credentialsResponseBody = `{"username":"x-access-token","password":"token","expiresAt":"2026-11-13T10:00:00Z"}`
 
-func TestAPIConfigFromEnv(t *testing.T) {
+// receivedRequest is what the fake endpoint got
+type receivedRequest struct {
+	method        string
+	path          string
+	host          string
+	repository    string
+	authorization string
+}
+
+// fakeEndpoint answers every request with status and body, and records the last request in received
+func fakeEndpoint(t *testing.T, status int, body string, received *receivedRequest) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*received = receivedRequest{
+			method:        r.Method,
+			path:          r.URL.Path,
+			host:          r.URL.Query().Get(hostQueryParam),
+			repository:    r.URL.Query().Get(repositoryQueryParam),
+			authorization: r.Header.Get("Authorization"),
+		}
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func mustParseURL(t *testing.T, raw string) *url.URL {
+	t.Helper()
+	u, err := url.Parse(raw)
+	require.NoError(t, err)
+	return u
+}
+
+func setEndpointEnv(t *testing.T, endpoint, token string) {
+	t.Helper()
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, endpoint)
+	t.Setenv(model.OktetoTokenEnvVar, token)
+}
+
+func TestNewGetterFromEnv(t *testing.T) {
 	tests := []struct {
 		expectedErr error
 		name        string
-		url         string
-		context     string
+		endpoint    string
 		token       string
-		serverName  string
-		expected    apiConfig
 	}{
 		{
-			name:     "OKTETO_URL",
-			url:      "https://okteto.example.com",
-			token:    "okteto-token",
-			expected: apiConfig{url: "https://okteto.example.com", token: "okteto-token"},
-		},
-		{
-			name:       "internal server name in remote runs",
-			url:        "https://okteto.example.com",
-			token:      "okteto-token",
-			serverName: "10.0.0.1:443",
-			expected:   apiConfig{url: "https://okteto.example.com", token: "okteto-token", serverName: "10.0.0.1:443"},
-		},
-		{
-			name:        "internal server name without a port",
-			url:         "https://okteto.example.com",
+			name:        "no endpoint",
 			token:       "okteto-token",
-			serverName:  "10.0.0.1",
-			expectedErr: errInvalidServerName,
+			expectedErr: errEndpointNotSet,
 		},
 		{
-			name:     "OKTETO_CONTEXT when OKTETO_URL is not set",
-			context:  "https://okteto.example.com",
-			token:    "okteto-token",
-			expected: apiConfig{url: "https://okteto.example.com", token: "okteto-token"},
-		},
-		{
-			name:     "OKTETO_URL first, as in the rest of the CLI",
-			url:      "https://okteto.example.com",
-			context:  "https://other.example.com",
-			token:    "okteto-token",
-			expected: apiConfig{url: "https://okteto.example.com", token: "okteto-token"},
-		},
-		{
-			name:        "no Okteto URL",
+			name:        "endpoint without a scheme",
+			endpoint:    "okteto-api.okteto:8080/internal/git/credentials",
 			token:       "okteto-token",
-			expectedErr: errURLNotSet,
+			expectedErr: errInvalidEndpoint,
+		},
+		{
+			name:        "endpoint with another scheme",
+			endpoint:    "ftp://okteto-api.okteto/internal/git/credentials",
+			token:       "okteto-token",
+			expectedErr: errInvalidEndpoint,
+		},
+		{
+			name:        "endpoint that isn't a URL",
+			endpoint:    "http://okteto-api.okteto:port/internal",
+			token:       "okteto-token",
+			expectedErr: errInvalidEndpoint,
 		},
 		{
 			name:        "no token",
-			url:         "https://okteto.example.com",
+			endpoint:    "http://okteto-api.okteto:8080/internal/git/credentials",
 			expectedErr: errTokenNotSet,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(model.OktetoURLEnvVar, tt.url)
-			t.Setenv(model.OktetoContextEnvVar, tt.context)
-			t.Setenv(model.OktetoTokenEnvVar, tt.token)
-			t.Setenv(constants.OktetoInternalServerNameEnvVar, tt.serverName)
+			setEndpointEnv(t, tt.endpoint, tt.token)
 
-			cfg, err := apiConfigFromEnv()
+			_, err := newGetterFromEnv()
 
 			require.ErrorIs(t, err, tt.expectedErr)
-			require.Equal(t, tt.expected, cfg)
 		})
 	}
 }
 
-func TestCertificateFor(t *testing.T) {
-	store := &okteto.ContextStore{
-		Contexts: map[string]*okteto.Context{
-			"https://okteto.example.com": {Name: "https://okteto.example.com", Certificate: "cert"},
-		},
-	}
+func TestGetGitCredentials_SendsTheRepositoryAndTheToken(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
+	setEndpointEnv(t, server.URL+"/internal/git/credentials", "okteto-token")
+	getter, err := newGetterFromEnv()
+	require.NoError(t, err)
 
+	_, err = getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
+
+	require.NoError(t, err)
+	require.Equal(t, receivedRequest{
+		method:        http.MethodGet,
+		path:          "/internal/git/credentials",
+		host:          "github.com",
+		repository:    "acme/infra",
+		authorization: "Bearer okteto-token",
+	}, received)
+}
+
+func TestGetGitCredentials_ReadsTheCredentials(t *testing.T) {
 	tests := []struct {
 		name     string
-		url      string
-		expected string
+		body     string
+		expected gitCredentials
 	}{
 		{
-			name:     "URL with a scheme",
-			url:      "https://okteto.example.com",
-			expected: "cert",
-		},
-		{
-			name:     "URL with a trailing slash",
-			url:      "https://okteto.example.com/",
-			expected: "cert",
-		},
-		{
-			name:     "URL without a scheme",
-			url:      "okteto.example.com",
-			expected: "cert",
-		},
-		{
-			name:     "instance without a context",
-			url:      "https://other.example.com",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, certificateFor(store, tt.url))
-		})
-	}
-}
-
-func TestDecodeContextStore(t *testing.T) {
-	tests := []struct {
-		name        string
-		content     string
-		expectedErr bool
-	}{
-		{
-			name:    "store with its current context",
-			content: `{"contexts":{"https://okteto.example.com":{"name":"https://okteto.example.com","certificate":"cert"}},"current-context":"https://okteto.example.com"}`,
-		},
-		{
-			name:        "store without a current context",
-			content:     `{"contexts":{"https://okteto.example.com":{"name":"https://okteto.example.com","certificate":"cert"}}}`,
-			expectedErr: true,
-		},
-		{
-			name:        "current context missing from the store",
-			content:     `{"contexts":{"https://okteto.example.com":{"name":"https://okteto.example.com"}},"current-context":"https://other.example.com"}`,
-			expectedErr: true,
-		},
-		{
-			name:        "field the CLI doesn't know",
-			content:     `{"contexts":{"https://okteto.example.com":{"name":"https://okteto.example.com"}},"current-context":"https://okteto.example.com","new-field":true}`,
-			expectedErr: true,
-		},
-		{
-			name:        "not JSON",
-			content:     "not json",
-			expectedErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := decodeContextStore([]byte(tt.content))
-
-			require.Equal(t, tt.expectedErr, err != nil)
-		})
-	}
-}
-
-// apiRequest is what the fake Okteto API got
-type apiRequest struct {
-	Variables     map[string]string `json:"variables"`
-	Query         string            `json:"query"`
-	authorization string
-	path          string
-	mu            sync.Mutex
-}
-
-func (r *apiRequest) record(req *http.Request) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.authorization = req.Header.Get("Authorization")
-	r.path = req.URL.Path
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		return
-	}
-	_ = json.Unmarshal(body, r)
-}
-
-func fakeAPIHandler(got *apiRequest) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		got.record(r)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(gitCredentialsResponse))
-	}
-}
-
-// useOktetoFolder points the CLI to an empty Okteto folder, so no context store is found.
-// It also clears the internal server name: the override it sets is global and can't be undone.
-func useOktetoFolder(t *testing.T) {
-	t.Helper()
-	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
-	t.Setenv(constants.OktetoInternalServerNameEnvVar, "")
-	okteto.CurrentStore = nil
-	t.Cleanup(func() {
-		okteto.CurrentStore = nil
-	})
-}
-
-// saveContextStore saves a context store with the instance and its certificate
-func saveContextStore(t *testing.T, oktetoURL string, cert []byte) {
-	t.Helper()
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
-	store := okteto.ContextStore{
-		CurrentContext: oktetoURL,
-		Contexts: map[string]*okteto.Context{
-			oktetoURL: {
-				Name:        oktetoURL,
-				Certificate: base64.StdEncoding.EncodeToString(certPEM),
-				IsOkteto:    true,
+			name: "token with an expiry",
+			body: credentialsResponseBody,
+			expected: gitCredentials{
+				Username:  "x-access-token",
+				Password:  "token",
+				ExpiresAt: time.Date(2026, 11, 13, 10, 0, 0, 0, time.UTC),
 			},
 		},
+		{
+			name:     "token without an expiry",
+			body:     `{"username":"x-access-token","password":"token"}`,
+			expected: gitCredentials{Username: "x-access-token", Password: "token"},
+		},
+		{
+			name:     "expiry that can't be read keeps the token",
+			body:     `{"username":"x-access-token","password":"token","expiresAt":"in an hour"}`,
+			expected: gitCredentials{Username: "x-access-token", Password: "token"},
+		},
+		{
+			name:     "only a reason",
+			body:     `{"reason":"link your GitHub account in Okteto, in Settings → Integrations"}`,
+			expected: gitCredentials{Reason: "link your GitHub account in Okteto, in Settings → Integrations"},
+		},
 	}
-	content, err := json.Marshal(store)
-	require.NoError(t, err)
-	path := config.GetOktetoContextsStorePath()
-	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0700))
-	require.NoError(t, os.WriteFile(path, content, 0600))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var received receivedRequest
+			server := fakeEndpoint(t, http.StatusOK, tt.body, &received)
+			getter := &endpointClient{httpClient: server.Client(), endpoint: mustParseURL(t, server.URL), token: "okteto-token"}
+
+			creds, err := getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, creds)
+		})
+	}
 }
 
-func TestGet_CallsTheOktetoAPIWithTheTokenInTheEnv(t *testing.T) {
-	got := &apiRequest{}
-	server := httptest.NewServer(fakeAPIHandler(got))
-	t.Cleanup(server.Close)
-	useOktetoFolder(t)
-	t.Setenv(model.OktetoURLEnvVar, server.URL)
-	t.Setenv(model.OktetoContextEnvVar, "")
-	t.Setenv(model.OktetoTokenEnvVar, "okteto-token")
+func TestGetGitCredentials_ErrorStatusIsNoCredentials(t *testing.T) {
+	tests := []struct {
+		name        string
+		expectedErr string
+		status      int
+	}{
+		{name: "bad repository", status: http.StatusBadRequest, expectedErr: "the Okteto API answered 400 Bad Request"},
+		{name: "caller not accepted", status: http.StatusUnauthorized, expectedErr: "the Okteto API answered 401 Unauthorized"},
+		{name: "older Okteto without the endpoint", status: http.StatusNotFound, expectedErr: "the Okteto API answered 404 Not Found"},
+		{name: "method not allowed", status: http.StatusMethodNotAllowed, expectedErr: "the Okteto API answered 405 Method Not Allowed"},
+		{name: "server error", status: http.StatusInternalServerError, expectedErr: "the Okteto API answered 500 Internal Server Error"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var received receivedRequest
+			server := fakeEndpoint(t, tt.status, "", &received)
+			getter := &endpointClient{httpClient: server.Client(), endpoint: mustParseURL(t, server.URL), token: "okteto-token"}
+
+			_, err := getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
+
+			require.EqualError(t, err, tt.expectedErr)
+		})
+	}
+}
+
+func TestGetGitCredentials_AnswerThatIsNotJSON(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, "<html>token</html>", &received)
+	getter := &endpointClient{httpClient: server.Client(), endpoint: mustParseURL(t, server.URL), token: "okteto-token"}
+
+	_, err := getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
+
+	require.EqualError(t, err, "could not read the answer of the Okteto API")
+}
+
+func TestGetGitCredentials_UnreachableEndpoint(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
+	getter := &endpointClient{httpClient: server.Client(), endpoint: mustParseURL(t, server.URL), token: "okteto-token"}
+	server.Close()
+
+	_, err := getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
+
+	require.ErrorContains(t, err, "could not reach the Okteto API")
+}
+
+func TestGet_FromTheEndpoint(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
+	setEndpointEnv(t, server.URL+"/internal/git/credentials", "okteto-token")
 
 	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
-	require.Empty(t, stderr)
 	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=1794564000\n", stdout)
-	got.mu.Lock()
-	defer got.mu.Unlock()
-	require.Equal(t, "Bearer okteto-token", got.authorization)
-	require.Equal(t, "/graphql", got.path)
-	require.Contains(t, got.Query, "gitCredentials(host: $host, repository: $repository)")
-	require.Equal(t, map[string]string{"host": "github.com", "repository": "acme/infra"}, got.Variables)
+	require.Empty(t, stderr)
 }
 
-func TestGet_TrustsTheCertificateOfTheStoredContext(t *testing.T) {
-	server := httptest.NewTLSServer(fakeAPIHandler(&apiRequest{}))
-	t.Cleanup(server.Close)
-	useOktetoFolder(t)
-	saveContextStore(t, server.URL, server.Certificate().Raw)
-	t.Setenv(model.OktetoURLEnvVar, server.URL)
-	t.Setenv(model.OktetoContextEnvVar, "")
-	t.Setenv(model.OktetoTokenEnvVar, "okteto-token")
-
-	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
-
-	require.Empty(t, stderr)
-	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=1794564000\n", stdout)
-}
-
-func TestGet_IgnoresAContextStoreItCantRead(t *testing.T) {
-	server := httptest.NewServer(fakeAPIHandler(&apiRequest{}))
-	t.Cleanup(server.Close)
-	useOktetoFolder(t)
-	path := config.GetOktetoContextsStorePath()
-	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0700))
-	require.NoError(t, os.WriteFile(path, []byte("not json"), 0600))
-	t.Setenv(model.OktetoURLEnvVar, server.URL)
-	t.Setenv(model.OktetoContextEnvVar, "")
-	t.Setenv(model.OktetoTokenEnvVar, "okteto-token")
-
-	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
-
-	require.Empty(t, stderr)
-	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=1794564000\n", stdout)
-}
-
-func TestGet_FailsTLSWithoutAStoredContext(t *testing.T) {
-	server := httptest.NewTLSServer(fakeAPIHandler(&apiRequest{}))
-	t.Cleanup(server.Close)
-	useOktetoFolder(t)
-	t.Setenv(model.OktetoURLEnvVar, server.URL)
-	t.Setenv(model.OktetoContextEnvVar, "")
-	t.Setenv(model.OktetoTokenEnvVar, "okteto-token")
+func TestGet_WithoutTheEndpointEnvPrintsNothing(t *testing.T) {
+	setEndpointEnv(t, "", "okteto-token")
 
 	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
 	require.Empty(t, stdout)
-	require.Contains(t, stderr, "okteto: no GitHub credentials for acme/infra: ")
-	require.Contains(t, stderr, "certificate")
+	require.Empty(t, stderr)
 }

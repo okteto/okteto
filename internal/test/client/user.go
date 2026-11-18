@@ -35,8 +35,6 @@ type FakeUserClient struct {
 	ClusterInfo               *types.ClusterInfo
 	CatalogSecretVariables    types.CatalogSecretVariables
 	ErrCatalogSecretVariables error
-	GitCredentials            types.GitCredentials
-	ErrGitCredentials         error
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -114,11 +112,4 @@ func (c *FakeUserClient) GetCatalogSecretVariables(_ context.Context, _, _ strin
 		return types.CatalogSecretVariables{}, c.ErrCatalogSecretVariables
 	}
 	return c.CatalogSecretVariables, nil
-}
-
-func (c *FakeUserClient) GetGitCredentials(_ context.Context, _, _ string) (types.GitCredentials, error) {
-	if c.ErrGitCredentials != nil {
-		return types.GitCredentials{}, c.ErrGitCredentials
-	}
-	return c.GitCredentials, nil
 }

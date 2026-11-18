@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,10 +32,10 @@ type fakeGetter struct {
 	err        error
 	host       string
 	repository string
-	creds      types.GitCredentials
+	creds      gitCredentials
 }
 
-func (f *fakeGetter) GetGitCredentials(_ context.Context, host, repository string) (types.GitCredentials, error) {
+func (f *fakeGetter) GetGitCredentials(_ context.Context, host, repository string) (gitCredentials, error) {
 	f.host = host
 	f.repository = repository
 	return f.creds, f.err
@@ -58,14 +57,14 @@ func TestGet(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
-		creds          types.GitCredentials
+		creds          gitCredentials
 		expectedStdout string
 		expectedStderr string
 	}{
 		{
 			name:  "token with an expiry",
 			input: githubRequest,
-			creds: types.GitCredentials{
+			creds: gitCredentials{
 				Username:  "x-access-token",
 				Password:  "token",
 				ExpiresAt: time.Date(2026, 11, 13, 10, 0, 0, 0, time.UTC),
@@ -75,19 +74,19 @@ func TestGet(t *testing.T) {
 		{
 			name:           "token without an expiry",
 			input:          githubRequest,
-			creds:          types.GitCredentials{Username: "x-access-token", Password: "token"},
+			creds:          gitCredentials{Username: "x-access-token", Password: "token"},
 			expectedStdout: "username=x-access-token\npassword=token\n",
 		},
 		{
 			name:           "token without a username",
 			input:          githubRequest,
-			creds:          types.GitCredentials{Password: "token"},
+			creds:          gitCredentials{Password: "token"},
 			expectedStdout: "username=x-access-token\npassword=token\n",
 		},
 		{
 			name:           "no token prints the API's reason",
 			input:          githubRequest,
-			creds:          types.GitCredentials{Reason: "link your GitHub account in Okteto, in Settings → Integrations"},
+			creds:          gitCredentials{Reason: "link your GitHub account in Okteto, in Settings → Integrations"},
 			expectedStderr: "okteto: no GitHub credentials for acme/infra: link your GitHub account in Okteto, in Settings → Integrations\n",
 		},
 		{
@@ -98,36 +97,36 @@ func TestGet(t *testing.T) {
 		{
 			name:           "reason with control characters stays on one line",
 			input:          githubRequest,
-			creds:          types.GitCredentials{Reason: "ask an admin\n\tto add it\x1b[31m"},
+			creds:          gitCredentials{Reason: "ask an admin\n\tto add it\x1b[31m"},
 			expectedStderr: "okteto: no GitHub credentials for acme/infra: ask an admin to add it [31m\n",
 		},
 		{
 			name:           "password with a newline",
 			input:          githubRequest,
-			creds:          types.GitCredentials{Username: "x-access-token", Password: "token\nusername=evil"},
+			creds:          gitCredentials{Username: "x-access-token", Password: "token\nusername=evil"},
 			expectedStderr: "okteto: no GitHub credentials for acme/infra: the Okteto API returned a credential with a newline or NUL character\n",
 		},
 		{
 			name:           "request without a path",
 			input:          "protocol=https\nhost=github.com\n\n",
-			creds:          types.GitCredentials{Password: "token"},
+			creds:          gitCredentials{Password: "token"},
 			expectedStderr: "okteto: no GitHub credentials for github.com: the request from Git has no repository path, set credential.https://github.com.useHttpPath to true\n",
 		},
 		{
 			name:           "path with a terminal escape sequence",
 			input:          "protocol=https\nhost=github.com\npath=acme/infra\x1b[31m.git\n\n",
-			creds:          types.GitCredentials{Password: "token"},
+			creds:          gitCredentials{Password: "token"},
 			expectedStderr: "okteto: no GitHub credentials for github.com: the path in the request from Git isn't a GitHub repository\n",
 		},
 		{
 			name:  "another host gets nothing",
 			input: "protocol=https\nhost=gitlab.com\npath=acme/infra.git\n\n",
-			creds: types.GitCredentials{Password: "token"},
+			creds: gitCredentials{Password: "token"},
 		},
 		{
 			name:  "plain http gets nothing",
 			input: "protocol=http\nhost=github.com\npath=acme/infra.git\n\n",
-			creds: types.GitCredentials{Password: "token"},
+			creds: gitCredentials{Password: "token"},
 		},
 	}
 
@@ -142,7 +141,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestGet_AsksForTheRepositoryOnGitHub(t *testing.T) {
-	getter := &fakeGetter{creds: types.GitCredentials{Password: "token"}}
+	getter := &fakeGetter{creds: gitCredentials{Password: "token"}}
 
 	runGet("protocol=https\nhost=GitHub.com\npath=acme/infra.git/info/lfs\n\n", providerFor(getter))
 
@@ -151,12 +150,12 @@ func TestGet_AsksForTheRepositoryOnGitHub(t *testing.T) {
 }
 
 func TestGet_APIErrorPrintsOneLine(t *testing.T) {
-	getter := &fakeGetter{err: errors.New("graphql: internal-server-error")}
+	getter := &fakeGetter{err: errors.New("the Okteto API answered 500 Internal Server Error")}
 
 	stdout, stderr := runGet(githubRequest, providerFor(getter))
 
 	require.Empty(t, stdout)
-	require.Equal(t, "okteto: no GitHub credentials for acme/infra: graphql: internal-server-error\n", stderr)
+	require.Equal(t, "okteto: no GitHub credentials for acme/infra: the Okteto API answered 500 Internal Server Error\n", stderr)
 }
 
 func TestGet_ProviderErrorPrintsOneLine(t *testing.T) {
@@ -168,6 +167,17 @@ func TestGet_ProviderErrorPrintsOneLine(t *testing.T) {
 
 	require.Empty(t, stdout)
 	require.Equal(t, "okteto: no GitHub credentials for acme/infra: OKTETO_TOKEN is not set\n", stderr)
+}
+
+func TestGet_WithoutTheEndpointPrintsNothing(t *testing.T) {
+	provider := func() (credentialsGetter, error) {
+		return nil, errEndpointNotSet
+	}
+
+	stdout, stderr := runGet(githubRequest, provider)
+
+	require.Empty(t, stdout)
+	require.Empty(t, stderr)
 }
 
 func TestGet_OtherHostsNeverBuildTheClient(t *testing.T) {

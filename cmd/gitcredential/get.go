@@ -21,8 +21,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/okteto/okteto/pkg/types"
 )
 
 const (
@@ -37,11 +35,11 @@ var (
 
 // credentialsGetter asks the Okteto API for the credentials of a repository
 type credentialsGetter interface {
-	GetGitCredentials(ctx context.Context, host, repository string) (types.GitCredentials, error)
+	GetGitCredentials(ctx context.Context, host, repository string) (gitCredentials, error)
 }
 
 // getterProvider builds the credentialsGetter. It is only called for GitHub requests,
-// so other hosts never need OKTETO_URL or OKTETO_TOKEN.
+// so other hosts never need OKTETO_GIT_CREDENTIALS_ENDPOINT or OKTETO_TOKEN.
 type getterProvider func() (credentialsGetter, error)
 
 // noCredentialsError is returned when the API answers without a token. Its message
@@ -78,6 +76,10 @@ func get(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, provide
 	}
 
 	creds, err := fetch(ctx, provider, repository)
+	// Outside Okteto's installer and remote runs, Git asks the user's own helpers
+	if errors.Is(err, errEndpointNotSet) {
+		return
+	}
 	if err != nil {
 		writeFailure(stderr, repository, err)
 		return
@@ -88,10 +90,10 @@ func get(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, provide
 	}
 }
 
-func fetch(ctx context.Context, provider getterProvider, repository string) (types.GitCredentials, error) {
+func fetch(ctx context.Context, provider getterProvider, repository string) (gitCredentials, error) {
 	getter, err := provider()
 	if err != nil {
-		return types.GitCredentials{}, err
+		return gitCredentials{}, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
@@ -99,23 +101,23 @@ func fetch(ctx context.Context, provider getterProvider, repository string) (typ
 
 	creds, err := getter.GetGitCredentials(ctx, githubHost, repository)
 	if err != nil {
-		return types.GitCredentials{}, err
+		return gitCredentials{}, err
 	}
 	if creds.Password == "" {
-		return types.GitCredentials{}, noCredentialsError{reason: creds.Reason}
+		return gitCredentials{}, noCredentialsError{reason: creds.Reason}
 	}
 	if creds.Username == "" {
 		creds.Username = defaultUsername
 	}
 	if hasControlChars(creds.Username) || hasControlChars(creds.Password) {
-		return types.GitCredentials{}, errInvalidCredentials
+		return gitCredentials{}, errInvalidCredentials
 	}
 	return creds, nil
 }
 
 // format writes the credentials in Git's credential format. password_expiry_utc
 // is a Unix timestamp; Git older than 2.41 ignores it.
-func format(creds types.GitCredentials) string {
+func format(creds gitCredentials) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "username=%s\n", creds.Username)
 	fmt.Fprintf(&sb, "password=%s\n", creds.Password)

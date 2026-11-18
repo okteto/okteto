@@ -14,125 +14,127 @@
 package gitcredential
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
+	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
+)
+
+const (
+	hostQueryParam       = "host"
+	repositoryQueryParam = "repository"
+
+	// maxResponseSize caps what the helper reads from the endpoint, whose answer is a few short fields
+	maxResponseSize = 64 << 10
 )
 
 var (
-	errURLNotSet   = fmt.Errorf("neither %s nor %s is set", model.OktetoURLEnvVar, model.OktetoContextEnvVar)
-	errTokenNotSet = fmt.Errorf("%s is not set", model.OktetoTokenEnvVar)
-
-	errInvalidServerName = fmt.Errorf("%s is not a host and port", constants.OktetoInternalServerNameEnvVar)
+	// errEndpointNotSet means the helper runs outside an Okteto installer and its remote runs,
+	// where there are no credentials to give
+	errEndpointNotSet  = fmt.Errorf("%s is not set", constants.OktetoGitCredentialsEndpointEnvVar)
+	errInvalidEndpoint = fmt.Errorf("%s is not an http or https URL", constants.OktetoGitCredentialsEndpointEnvVar)
+	errTokenNotSet     = fmt.Errorf("%s is not set", model.OktetoTokenEnvVar)
 )
 
-// apiConfig is the Okteto instance and token the helper calls the API with
-type apiConfig struct {
-	url   string
-	token string
-	// serverName is the internal address of the Okteto API in remote runs
-	serverName string
+// gitCredentials are the credentials Okteto gives for a Git repository.
+// Without credentials, Password is empty and Reason says why
+type gitCredentials struct {
+	// ExpiresAt is zero when the expiry is unknown
+	ExpiresAt time.Time
+	Username  string
+	Password  string
+	// Reason is a sentence for the user, set when there are no credentials
+	Reason string
 }
 
-// apiConfigFromEnv reads the Okteto instance from OKTETO_URL or OKTETO_CONTEXT, in
-// the same order as the rest of the CLI, and the token from OKTETO_TOKEN. In remote
-// runs it also reads the internal address of the API that remote-run gets as --server-name:
-// Git starts the helper as a separate process that doesn't get that flag.
-func apiConfigFromEnv() (apiConfig, error) {
-	oktetoURL := os.Getenv(model.OktetoURLEnvVar)
-	if oktetoURL == "" {
-		oktetoURL = os.Getenv(model.OktetoContextEnvVar)
+// credentialsResponse is the body of the endpoint's 200 answer: the credentials, or only the reason
+type credentialsResponse struct {
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	ExpiresAt string `json:"expiresAt"`
+	Reason    string `json:"reason"`
+}
+
+// endpointClient asks the endpoint that Okteto sets in its installer and remote runs for the credentials
+type endpointClient struct {
+	httpClient *http.Client
+	endpoint   *url.URL
+	token      string
+}
+
+// newGetterFromEnv returns the client for the endpoint in OKTETO_GIT_CREDENTIALS_ENDPOINT and the
+// token in OKTETO_TOKEN. The endpoint only answers inside the cluster, so it doesn't load an
+// Okteto context.
+func newGetterFromEnv() (credentialsGetter, error) {
+	endpoint := os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar)
+	if endpoint == "" {
+		return nil, errEndpointNotSet
 	}
-	if oktetoURL == "" {
-		return apiConfig{}, errURLNotSet
+	u, err := url.Parse(endpoint)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return nil, errInvalidEndpoint
 	}
 	token := os.Getenv(model.OktetoTokenEnvVar)
 	if token == "" {
-		return apiConfig{}, errTokenNotSet
+		return nil, errTokenNotSet
 	}
-	// okteto.SetServerNameOverride exits on a value it can't split
-	serverName := os.Getenv(constants.OktetoInternalServerNameEnvVar)
-	if serverName != "" {
-		if _, _, err := net.SplitHostPort(serverName); err != nil {
-			return apiConfig{}, fmt.Errorf("%w: %s", errInvalidServerName, err)
-		}
-	}
-	return apiConfig{
-		url:        oktetoURL,
+	return &endpointClient{
+		httpClient: &http.Client{},
+		endpoint:   u,
 		token:      token,
-		serverName: serverName,
 	}, nil
 }
 
-// newGetterFromEnv returns the CLI's Okteto API client for the instance and token in
-// the env, so proxies, the server name and the context certificate work as in the rest
-// of the CLI. It sends the token as is and doesn't load the Okteto context: that calls
-// the API and writes the context store on every Git request, and swaps an installer's
-// token for the token of its user.
-func newGetterFromEnv() (credentialsGetter, error) {
-	cfg, err := apiConfigFromEnv()
-	if err != nil {
-		return nil, err
-	}
-	okteto.SetServerNameOverride(cfg.serverName)
-	client, err := okteto.NewOktetoClientStateless(&okteto.ClientCfg{
-		CtxName: cfg.url,
-		Token:   cfg.token,
-		Cert:    storedCertificate(cfg.url),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return client.User(), nil
-}
+// GetGitCredentials returns the credentials Okteto gives for a repository ("owner/repo") of a Git host.
+// Without credentials, the endpoint explains why in Reason.
+func (c *endpointClient) GetGitCredentials(ctx context.Context, host, repository string) (gitCredentials, error) {
+	u := *c.endpoint
+	query := u.Query()
+	query.Set(hostQueryParam, host)
+	query.Set(repositoryQueryParam, repository)
+	u.RawQuery = query.Encode()
 
-// storedCertificate returns the certificate of the Okteto context saved for the
-// instance, if there is one. The certificate is optional, so a store that can't be
-// read means no certificate. It reads the store itself because okteto.GetContextStore
-// exits when it can't.
-func storedCertificate(oktetoURL string) string {
-	content, err := os.ReadFile(config.GetOktetoContextsStorePath())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return ""
+		return gitCredentials{}, err
 	}
-	store, err := decodeContextStore(content)
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		oktetoLog.Infof("ignoring the Okteto context store: %s", err)
-		return ""
+		return gitCredentials{}, fmt.Errorf("could not reach the Okteto API: %w", err)
 	}
-	return certificateFor(store, oktetoURL)
-}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
-// decodeContextStore decodes the store as strictly as okteto.GetContextStore does. The
-// client checks a certificate that the system doesn't trust against the current
-// context, which loads the store again and exits on a store this would accept.
-func decodeContextStore(content []byte) (*okteto.ContextStore, error) {
-	dec := json.NewDecoder(bytes.NewReader(content))
-	dec.DisallowUnknownFields()
-	store := &okteto.ContextStore{}
-	if err := dec.Decode(store); err != nil {
-		return nil, err
+	// The endpoint answers its errors without a body
+	if resp.StatusCode != http.StatusOK {
+		return gitCredentials{}, fmt.Errorf("the Okteto API answered %s", resp.Status)
 	}
-	if _, ok := store.Contexts[store.CurrentContext]; !ok {
-		return nil, fmt.Errorf("the current context %q is not in the store", store.CurrentContext)
-	}
-	return store, nil
-}
 
-// certificateFor returns the certificate of the context of the instance in the store,
-// which keys contexts by their URL with a scheme and without a trailing slash
-func certificateFor(store *okteto.ContextStore, oktetoURL string) string {
-	okCtx, ok := store.Contexts[okteto.NormalizeClusterURL(oktetoURL)]
-	if !ok || okCtx == nil {
-		return ""
+	var body credentialsResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseSize)).Decode(&body); err != nil {
+		return gitCredentials{}, errors.New("could not read the answer of the Okteto API")
 	}
-	return okCtx.Certificate
+
+	creds := gitCredentials{
+		Username: body.Username,
+		Password: body.Password,
+		Reason:   body.Reason,
+	}
+	// Git uses the token until it fails when it doesn't know the expiry, so an expiry
+	// that can't be read is dropped instead of the token
+	if t, err := time.Parse(time.RFC3339, body.ExpiresAt); err == nil {
+		creds.ExpiresAt = t
+	}
+	return creds, nil
 }
