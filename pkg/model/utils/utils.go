@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-git/go-git/v5"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/repository"
 )
@@ -66,7 +67,32 @@ func findRepoName(repoURL string) string {
 	return possibleName
 }
 func GetRepositoryURL(path string) (string, error) {
-	return repository.GetRemoteURL(path)
+	repo, err := repository.FindTopLevelGitRepoFromPath(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	origin, err := repo.Remote("origin")
+	if err != nil {
+		if err != git.ErrRemoteNotFound {
+			return "", fmt.Errorf("failed to get the git repo's remote configuration: %w", err)
+		}
+	}
+
+	if origin != nil {
+		return origin.Config().URLs[0], nil
+	}
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git repo's remote information: %w", err)
+	}
+
+	if len(remotes) == 0 {
+		return "", fmt.Errorf("git repo doesn't have any remote")
+	}
+
+	return remotes[0].Config().URLs[0], nil
 }
 
 type Graph map[string][]string

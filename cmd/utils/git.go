@@ -15,6 +15,7 @@ package utils
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"os"
 	"strings"
@@ -34,7 +35,23 @@ var (
 
 // GetBranch returns the branch from a .git directory
 func GetBranch(path string) (string, error) {
-	return repository.GetBranch(path)
+	repo, err := repository.FindTopLevelGitRepoFromPath(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	branch := head.Name()
+	if !branch.IsBranch() {
+		return "", fmt.Errorf("git repo is not on a valid branch")
+	}
+
+	name := strings.TrimPrefix(branch.String(), "refs/heads/")
+	return name, nil
 }
 
 // GetRandomSHA returns a random sha generated on the fly
