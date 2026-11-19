@@ -1,6 +1,0 @@
-.git
-.dockerignore
-Dockerfile
-okteto.yaml
-README.md
-vendor/bundle

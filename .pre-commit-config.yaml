@@ -97,7 +97,6 @@ repos:
         name: run markdownlint
         description: check Markdown files with markdownlint
         args: [--config=.github/linters/.markdown-lint.yml]
-        exclude: ^samples/
         types: [markdown]
         files: \.md$
 
@@ -108,7 +107,7 @@ repos:
       - id: shellcheck
         name: run shellcheck
         description: check Shell scripts with shellcheck
-        exclude: ^samples/|^scripts/ci/push-image.sh
+        exclude: ^scripts/ci/push-image.sh
 
   # yaml files check
   - repo: https://github.com/adrienverge/yamllint
