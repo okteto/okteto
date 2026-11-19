@@ -32,11 +32,7 @@ You keep writing code in your local IDE. As soon as you save a file, the change 
 - **Live previews for every change**: developers, QA and product managers can open the running application and validate it hands-on, without setting it up locally.
 - **On your infrastructure**: Okteto runs on your own Kubernetes clusters, including air-gapped installations, with centrally managed access to clusters, registries and cloud credentials.
 
-## Getting started
-
-[Install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/), then follow the [Deploy your app](https://www.okteto.com/docs/get-started/deploy-your-app/) guide or browse the [Okteto tutorials](https://www.okteto.com/tutorials/).
-
-### Okteto Open Source CLI
+## Okteto Open Source CLI
 
 The Okteto Open Source CLI requires access to a Kubernetes cluster. It lets you develop your applications with `okteto up` directly in your own cluster. If you want to share application environments across your team, CI and agents, take a look at the [Okteto Platform](https://okteto.com), which is [free for small teams](https://www.okteto.com/free-tier/).
 
@@ -49,7 +45,7 @@ The Okteto Open Source CLI supports the following commands:
 > [!NOTE]
 > ⚠️ Notice: The open-source version of Okteto only supports the [dev section](https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional) of the Okteto manifest. For additional features and full functionality, consider exploring the [Okteto Platform](https://www.okteto.com/get-demo/).
 
-### Okteto Platform
+## Okteto Platform
 
 The Okteto Platform requires the installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all the Okteto CLI commands are available (`build`, `deploy`, `test`, `up`, `down`, `destroy`, etc). The Okteto Platform adds:
 
