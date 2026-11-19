@@ -30,10 +30,11 @@ toolchain version:
 
 **Do NOT touch** these — they are not the build toolchain:
 
-- the `golang:1` floating tag in the `okteto.yml` `dev` section
+- `okteto/golang:1` floating tags (`okteto.yml` `dev`, `samples/`, `pkg/linguist/dev.go`)
 - `okteto/golang:1.22` / `golang:1.20` strings inside `pkg/schema` tests (`schema_test.go`,
   `test_test.go`) and `integration/validate/manifests/` (e.g. `valid-movies.yml`) — they assert
   manifest parsing
+- `samples/golang/go.mod`
 
 ## WORKFLOW
 
