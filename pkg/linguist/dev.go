@@ -16,7 +16,24 @@ package linguist
 import (
 	"sort"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/env"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
+	apiv1 "k8s.io/api/core/v1"
 )
+
+type languageDefault struct {
+	securityContext *model.SecurityContext
+	image           string
+	path            string
+	command         []string
+	environment     []env.Var
+	volumes         []model.Volume
+	forward         []forward.Forward
+	reverse         []model.Reverse
+	remote          int
+}
 
 const (
 	Javascript = "javascript"
@@ -34,13 +51,248 @@ const (
 	Unrecognized = "other"
 )
 
-// supportedLanguages are the languages that can be selected when the linguist can't detect one
-var supportedLanguages = []string{Javascript, golang, Rust, Python, Gradle, Maven, Ruby, Csharp, Php}
+var (
+	languageDefaults map[string]languageDefault
+	forwardDefaults  map[string][]forward.Forward
+)
+
+func init() {
+	languageDefaults = make(map[string]languageDefault)
+	forwardDefaults = make(map[string][]forward.Forward)
+	languageDefaults[Javascript] = languageDefault{
+		image:   "okteto/node:14",
+		path:    "/usr/src/app",
+		command: []string{"bash"}, forward: []forward.Forward{
+			{
+				Local:  9229,
+				Remote: 9229,
+			},
+		},
+	}
+	forwardDefaults[Javascript] = []forward.Forward{
+		{
+			Local:  3000,
+			Remote: 3000,
+		},
+	}
+
+	languageDefaults[golang] = languageDefault{
+		image:   "okteto/golang:1",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		securityContext: &model.SecurityContext{
+			Capabilities: &model.Capabilities{
+				Add: []apiv1.Capability{"SYS_PTRACE"},
+			},
+		},
+		forward: []forward.Forward{
+			{
+				Local:  2345,
+				Remote: 2345,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/go/pkg/",
+			},
+			{
+				RemotePath: "/root/.cache/go-build/",
+			},
+		},
+	}
+	forwardDefaults[golang] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Rust] = languageDefault{
+		image:   "okteto/rust:1",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/usr/local/cargo/registry",
+			},
+			{
+				RemotePath: "/home/root/app/target",
+			},
+		},
+	}
+	forwardDefaults[Rust] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Python] = languageDefault{
+		image:   "okteto/python:3",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		reverse: []model.Reverse{
+			{
+				Local:  9000,
+				Remote: 9000,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/root/.cache/pip",
+			},
+		},
+	}
+	forwardDefaults[Python] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Gradle] = languageDefault{
+		image:   "okteto/gradle:6.5",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		forward: []forward.Forward{
+			{
+				Local:  5005,
+				Remote: 5005,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/home/gradle/.gradle",
+			},
+		},
+	}
+	forwardDefaults[Gradle] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Maven] = languageDefault{
+		image:   "okteto/maven:3",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		forward: []forward.Forward{
+			{
+				Local:  5005,
+				Remote: 5005,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/root/.m2",
+			},
+		},
+	}
+	forwardDefaults[Maven] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Ruby] = languageDefault{
+		image:   "okteto/ruby:2",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		forward: []forward.Forward{
+			{
+				Local:  1234,
+				Remote: 1234,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/usr/local/bundle/cache",
+			},
+		},
+	}
+	forwardDefaults[Ruby] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Csharp] = languageDefault{
+		image:   "okteto/dotnetcore:3",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		environment: []env.Var{
+			{
+				Name:  "ASPNETCORE_ENVIRONMENT",
+				Value: "Development",
+			},
+			{
+				Name:  "VSTEST_HOST_DEBUG",
+				Value: "0",
+			},
+			{
+				Name:  "VSTEST_RUNNER_DEBUG",
+				Value: "0",
+			},
+		},
+		forward: []forward.Forward{},
+		remote:  22000,
+	}
+	forwardDefaults[Csharp] = []forward.Forward{
+		{
+			Local:  5000,
+			Remote: 5000,
+		},
+	}
+
+	languageDefaults[Php] = languageDefault{
+		image:   "okteto/php:7",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		reverse: []model.Reverse{
+			{
+				Local:  9000,
+				Remote: 9000,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				RemotePath: "/root/.composer/cache",
+			},
+		},
+	}
+	forwardDefaults[Php] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[Unrecognized] = languageDefault{
+		image:   model.DefaultImage,
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		forward: []forward.Forward{},
+	}
+	forwardDefaults[Unrecognized] = []forward.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+}
 
 // GetSupportedLanguages returns a list of supported languages
 func GetSupportedLanguages() []string {
-	l := make([]string, len(supportedLanguages), len(supportedLanguages)+1)
-	copy(l, supportedLanguages)
+	l := []string{}
+	for k := range languageDefaults {
+		if k != Unrecognized {
+			l = append(l, k)
+		}
+	}
+
 	sort.Strings(l)
 	l = append(l, Unrecognized)
 
