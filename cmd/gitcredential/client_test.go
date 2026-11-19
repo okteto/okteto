@@ -26,7 +26,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const credentialsResponseBody = `{"username":"x-access-token","password":"token","expiresAt":"2026-11-13T10:00:00Z"}`
+const (
+	credentialsResponseBody = `{"username":"x-access-token","password":"token","expiresAt":"2026-11-13T10:00:00Z"}`
+
+	internalAPIHostname = "okteto-internal-api.example.com"
+	internalAPIEndpoint = "https://okteto-internal-api.example.com:8443/internal/git/credentials"
+
+	// fakeEndpointHostname is the hostname of httptest's TLS servers
+	fakeEndpointHostname = "127.0.0.1"
+)
 
 // receivedRequest is what the fake endpoint got
 type receivedRequest struct {
@@ -40,7 +48,7 @@ type receivedRequest struct {
 // fakeEndpoint answers every request with status and body, and records the last request in received
 func fakeEndpoint(t *testing.T, status int, body string, received *receivedRequest) *httptest.Server {
 	t.Helper()
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*received = receivedRequest{
 			method:        r.Method,
 			path:          r.URL.Path,
@@ -62,52 +70,79 @@ func mustParseURL(t *testing.T, raw string) *url.URL {
 	return u
 }
 
-func setEndpointEnv(t *testing.T, endpoint, token string) {
+func setEndpointEnv(t *testing.T, endpoint, mappedHostname, token string) {
 	t.Helper()
 	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, endpoint)
+	t.Setenv(constants.OktetoInternalAPIHostnameEnvVar, mappedHostname)
 	t.Setenv(model.OktetoTokenEnvVar, token)
 }
 
 func TestNewGetterFromEnv(t *testing.T) {
 	tests := []struct {
-		expectedErr error
-		name        string
-		endpoint    string
-		token       string
+		expectedErr    error
+		name           string
+		endpoint       string
+		mappedHostname string
+		token          string
 	}{
 		{
-			name:        "no endpoint",
-			token:       "okteto-token",
-			expectedErr: errEndpointNotSet,
+			name:           "no endpoint",
+			mappedHostname: internalAPIHostname,
+			token:          "okteto-token",
+			expectedErr:    errEndpointNotSet,
 		},
 		{
-			name:        "endpoint without a scheme",
-			endpoint:    "okteto-api.okteto:8080/internal/git/credentials",
-			token:       "okteto-token",
-			expectedErr: errInvalidEndpoint,
+			name:           "http endpoint",
+			endpoint:       "http://okteto-internal-api.example.com:8080/internal/git/credentials",
+			mappedHostname: internalAPIHostname,
+			token:          "okteto-token",
+			expectedErr:    errInvalidEndpoint,
 		},
 		{
-			name:        "endpoint with another scheme",
-			endpoint:    "ftp://okteto-api.okteto/internal/git/credentials",
-			token:       "okteto-token",
-			expectedErr: errInvalidEndpoint,
+			name:           "endpoint without a scheme",
+			endpoint:       "okteto-internal-api.example.com:8443/internal/git/credentials",
+			mappedHostname: internalAPIHostname,
+			token:          "okteto-token",
+			expectedErr:    errInvalidEndpoint,
 		},
 		{
-			name:        "endpoint that isn't a URL",
-			endpoint:    "http://okteto-api.okteto:port/internal",
-			token:       "okteto-token",
-			expectedErr: errInvalidEndpoint,
+			name:           "endpoint with another scheme",
+			endpoint:       "ftp://okteto-internal-api.example.com/internal/git/credentials",
+			mappedHostname: internalAPIHostname,
+			token:          "okteto-token",
+			expectedErr:    errInvalidEndpoint,
 		},
 		{
-			name:        "no token",
-			endpoint:    "http://okteto-api.okteto:8080/internal/git/credentials",
-			expectedErr: errTokenNotSet,
+			name:           "endpoint that isn't a URL",
+			endpoint:       "https://okteto-internal-api.example.com:port/internal",
+			mappedHostname: internalAPIHostname,
+			token:          "okteto-token",
+			expectedErr:    errInvalidEndpoint,
+		},
+		{
+			name:        "no hostname mapped to the API",
+			endpoint:    internalAPIEndpoint,
+			token:       "okteto-token",
+			expectedErr: endpointNotMappedError{hostname: internalAPIHostname},
+		},
+		{
+			name:           "endpoint on another hostname than the mapped one",
+			endpoint:       "https://okteto.example.com/internal/git/credentials",
+			mappedHostname: internalAPIHostname,
+			token:          "okteto-token",
+			expectedErr:    endpointNotMappedError{hostname: "okteto.example.com"},
+		},
+		{
+			name:           "no token",
+			endpoint:       internalAPIEndpoint,
+			mappedHostname: internalAPIHostname,
+			expectedErr:    errTokenNotSet,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setEndpointEnv(t, tt.endpoint, tt.token)
+			setEndpointEnv(t, tt.endpoint, tt.mappedHostname, tt.token)
 
 			_, err := newGetterFromEnv()
 
@@ -116,11 +151,18 @@ func TestNewGetterFromEnv(t *testing.T) {
 	}
 }
 
+func TestNewGetterFromEnv_MappedHTTPSEndpoint(t *testing.T) {
+	setEndpointEnv(t, internalAPIEndpoint, internalAPIHostname, "okteto-token")
+
+	_, err := newGetterFromEnv()
+
+	require.NoError(t, err)
+}
+
 func TestGetGitCredentials_SendsTheRepositoryAndTheToken(t *testing.T) {
 	var received receivedRequest
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	setEndpointEnv(t, server.URL+"/internal/git/credentials", "okteto-token")
-	getter, err := newGetterFromEnv()
+	getter, err := newGetter(server.URL+"/internal/git/credentials", fakeEndpointHostname, "okteto-token", server.Client())
 	require.NoError(t, err)
 
 	_, err = getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
@@ -231,19 +273,33 @@ func TestGetGitCredentials_UnreachableEndpoint(t *testing.T) {
 func TestGet_FromTheEndpoint(t *testing.T) {
 	var received receivedRequest
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	setEndpointEnv(t, server.URL+"/internal/git/credentials", "okteto-token")
+	provider := func() (credentialsGetter, error) {
+		return newGetter(server.URL+"/internal/git/credentials", fakeEndpointHostname, "okteto-token", server.Client())
+	}
 
-	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
+	stdout, stderr := runGet(githubRequest, provider)
 
 	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=1794564000\n", stdout)
 	require.Empty(t, stderr)
 }
 
 func TestGet_WithoutTheEndpointEnvPrintsNothing(t *testing.T) {
-	setEndpointEnv(t, "", "okteto-token")
+	setEndpointEnv(t, "", internalAPIHostname, "okteto-token")
 
 	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
 	require.Empty(t, stdout)
 	require.Empty(t, stderr)
+}
+
+func TestGet_EndpointNotMappedSendsNoToken(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
+	setEndpointEnv(t, server.URL+"/internal/git/credentials", "", "okteto-token")
+
+	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
+
+	require.Empty(t, stdout)
+	require.Equal(t, "okteto: no GitHub credentials for acme/infra: 127.0.0.1 isn't mapped to the internal IP of the Okteto API\n", stderr)
+	require.Equal(t, receivedRequest{}, received)
 }

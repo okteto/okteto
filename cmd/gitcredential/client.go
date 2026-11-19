@@ -40,9 +40,20 @@ var (
 	// errEndpointNotSet means the helper runs outside an Okteto installer and its remote runs,
 	// where there are no credentials to give
 	errEndpointNotSet  = fmt.Errorf("%s is not set", constants.OktetoGitCredentialsEndpointEnvVar)
-	errInvalidEndpoint = fmt.Errorf("%s is not an http or https URL", constants.OktetoGitCredentialsEndpointEnvVar)
+	errInvalidEndpoint = fmt.Errorf("%s is not an https URL", constants.OktetoGitCredentialsEndpointEnvVar)
 	errTokenNotSet     = fmt.Errorf("%s is not set", model.OktetoTokenEnvVar)
 )
+
+// endpointNotMappedError is returned when the endpoint's hostname isn't the one Okteto maps to
+// the internal IP of its API. Public DNS resolves that hostname to the ingress, where any user
+// can serve it, so the token is never sent there
+type endpointNotMappedError struct {
+	hostname string
+}
+
+func (e endpointNotMappedError) Error() string {
+	return fmt.Sprintf("%s isn't mapped to the internal IP of the Okteto API", e.hostname)
+}
 
 // gitCredentials are the credentials Okteto gives for a Git repository.
 // Without credentials, Password is empty and Reason says why
@@ -74,20 +85,32 @@ type endpointClient struct {
 // token in OKTETO_TOKEN. The endpoint only answers inside the cluster, so it doesn't load an
 // Okteto context.
 func newGetterFromEnv() (credentialsGetter, error) {
-	endpoint := os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar)
+	return newGetter(
+		os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar),
+		os.Getenv(constants.OktetoInternalAPIHostnameEnvVar),
+		os.Getenv(model.OktetoTokenEnvVar),
+		&http.Client{},
+	)
+}
+
+// newGetter only accepts an https endpoint on internalAPIHostname, the hostname that Okteto's
+// installer and remote runs map to the internal IP of the API
+func newGetter(endpoint, internalAPIHostname, token string, httpClient *http.Client) (credentialsGetter, error) {
 	if endpoint == "" {
 		return nil, errEndpointNotSet
 	}
 	u, err := url.Parse(endpoint)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" {
 		return nil, errInvalidEndpoint
 	}
-	token := os.Getenv(model.OktetoTokenEnvVar)
+	if internalAPIHostname == "" || u.Hostname() != internalAPIHostname {
+		return nil, endpointNotMappedError{hostname: u.Hostname()}
+	}
 	if token == "" {
 		return nil, errTokenNotSet
 	}
 	return &endpointClient{
-		httpClient: &http.Client{},
+		httpClient: httpClient,
 		endpoint:   u,
 		token:      token,
 	}, nil
