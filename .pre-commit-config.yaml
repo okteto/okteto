@@ -39,8 +39,6 @@ repos:
     hooks:
       - id: check-added-large-files
         description: prevent giant files from being committed
-      - id: check-ast
-        description: simply check whether files parse as valid python
       - id: check-case-conflict
         description: check for files with names that would conflict on a case-insensitive filesystem like MacOS HFS+ or Windows FAT
       - id: check-executables-have-shebangs
@@ -56,8 +54,6 @@ repos:
         description: checks that scripts with shebangs are executable
       - id: check-vcs-permalinks
         description: ensures that links to vcs websites are permalinks
-      - id: check-xml
-        description: attempts to load all xml files to verify syntax
       - id: check-yaml
         description: attempts to load all yaml files to verify syntax
         exclude: ^integration/validate/manifests/invalid-syntax\.yml$|k8s\.yml$
@@ -97,7 +93,6 @@ repos:
         name: run markdownlint
         description: check Markdown files with markdownlint
         args: [--config=.github/linters/.markdown-lint.yml]
-        exclude: ^samples/
         types: [markdown]
         files: \.md$
 
@@ -108,7 +103,7 @@ repos:
       - id: shellcheck
         name: run shellcheck
         description: check Shell scripts with shellcheck
-        exclude: ^samples/|^scripts/ci/push-image.sh
+        exclude: ^scripts/ci/push-image.sh
 
   # yaml files check
   - repo: https://github.com/adrienverge/yamllint

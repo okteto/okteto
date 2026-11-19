@@ -10,7 +10,6 @@
 # Documentation and examples (not needed for build)
 /docs/
 /images/
-/samples/
 /CODE_OF_CONDUCT.md
 /CODEOWNERS
 /contributing.md

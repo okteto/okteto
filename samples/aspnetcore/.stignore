@@ -1,7 +1,0 @@
-.git
-out
-bin
-obj/Debug
-obj/Release
-core.*.*.*
-obj/helloworld.csproj.nuget.cache
