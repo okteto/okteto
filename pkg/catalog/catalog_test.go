@@ -104,7 +104,7 @@ func TestRemoteRunSecretsWithoutTokenFile(t *testing.T) {
 	require.Empty(t, s.RemoteRunSecrets())
 }
 
-// The installer drops the references when the repository isn't the catalog item's, but keeps the token file
+// Without references nothing is fetched, so the token file isn't forwarded even when it's set
 func TestCheckSecretVariablesWithoutReferencesForwardsNoToken(t *testing.T) {
 	s := testSecretVariables
 	s.References = ""
