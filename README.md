@@ -38,7 +38,7 @@ You keep writing code in your local IDE. As soon as you save a file, the change 
 
 ### Okteto Open Source CLI
 
-The Okteto Open Source CLI requires access to a Kubernetes cluster. It lets you develop your applications with `okteto up` directly in your own cluster. If you want to share application environments across your team, CI and agents, take a look at the [Okteto Platform](https://okteto.com).
+The Okteto Open Source CLI requires access to a Kubernetes cluster. It lets you develop your applications with `okteto up` directly in your own cluster. If you want to share application environments across your team, CI and agents, take a look at the [Okteto Platform](https://okteto.com), which is [free for small teams](https://www.okteto.com/free-tier/).
 
 The Okteto Open Source CLI supports the following commands:
 
@@ -62,6 +62,9 @@ The Okteto Platform requires the installation of the [Okteto Helm Chart](https:/
 - Environment lifecycle management at scale: automatic sleep and wake, garbage collection, quotas and resource management
 
 And much more! Please take a look at the [Okteto Platform docs](https://www.okteto.com/docs) to learn more.
+
+> [!TIP]
+> The Okteto Platform is free for small teams. The [Okteto free tier](https://www.okteto.com/free-tier/) includes up to 5 users and 500 environments per month on your own Kubernetes cluster, with a one-year license and no credit card required.
 
 ## Features Comparison
 
