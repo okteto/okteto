@@ -94,7 +94,7 @@ If a pull request does not have one of these labels checks will fail and PR merg
 
 ## Development Guide
 
-Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.26](https://go.dev/doc/go1.26). It uses go modules for dependency management.
+Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.27](https://go.dev/doc/go1.27). It uses go modules for dependency management.
 
 ### Building
 
