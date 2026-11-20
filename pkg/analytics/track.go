@@ -64,17 +64,23 @@ var (
 )
 
 func init() {
-	c := &http.Client{
+	mixpanelClient = mixpanel.NewFromClient(newMixpanelHTTPClient(), mixpanelToken, "https://analytics.okteto.com")
+}
+
+// newMixpanelHTTPClient returns the HTTP client used to send analytics. It honors
+// HTTPS_PROXY / NO_PROXY, so users who can only reach the internet through a proxy
+// still send events.
+func newMixpanelHTTPClient() *http.Client {
+	return &http.Client{
 		Timeout: time.Second * 5,
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			Dial: (&net.Dialer{
 				Timeout: 5 * time.Second,
 			}).Dial,
 			TLSHandshakeTimeout: 5 * time.Second,
 		},
 	}
-
-	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://analytics.okteto.com")
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
@@ -240,7 +246,20 @@ func track(event string, success bool, props map[string]any) {
 	if !analyticsEnabled() {
 		return
 	}
+	if props == nil {
+		props = map[string]any{}
+	}
+	addTrackProperties(props, success)
 
+	e := &mixpanel.Event{Properties: props}
+	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
+		oktetoLog.Infof("Failed to send analytics: %s", err)
+	}
+}
+
+// addTrackProperties adds the properties track() sends on every event.
+// Must only be called after analyticsEnabled() returns true.
+func addTrackProperties(props map[string]any, success bool) {
 	// record the origin so events from nested okteto deploys and manifest dependencies ("okteto-deploy") can be told apart
 	origin := config.GetDeployOrigin()
 
@@ -254,9 +273,6 @@ func track(event string, success bool, props map[string]any) {
 		mpOS = "Linux"
 	}
 
-	if props == nil {
-		props = map[string]any{}
-	}
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
 	props["machine_id"] = get().MachineID
@@ -277,11 +293,6 @@ func track(event string, success bool, props map[string]any) {
 
 	props["context"] = okteto.GetContext().CompanyName
 	props["isTrial"] = okteto.GetContext().IsTrial
-
-	e := &mixpanel.Event{Properties: props}
-	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
-		oktetoLog.Infof("Failed to send analytics: %s", err)
-	}
 }
 
 func disabledByOktetoAdmin() bool {

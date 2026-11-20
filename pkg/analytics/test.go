@@ -78,7 +78,7 @@ func (a *Tracker) TrackTest(metadata TestMetadata) {
 		"commandOverride": metadata.CommandOverride,
 	}
 	if metadata.Err != nil {
-		props["error"] = metadata.Err.Error()
+		props["error"] = errorCategory(metadata.Err)
 	}
 	a.trackFn(testEvent, metadata.Success, props)
 }
