@@ -340,6 +340,8 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+RUN okteto git-credential install --system --log-output=plain || true
+ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
   \
@@ -444,6 +446,8 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+RUN okteto git-credential install --system --log-output=plain || true
+ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
   \
@@ -529,6 +533,8 @@ ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
 RUN okteto registrytoken install --force --log-output=json
+RUN okteto git-credential install --system --log-output=plain || true
+ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
   \
@@ -618,6 +624,70 @@ func TestDockerfileWithCache(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok, "Expected cache mount pattern not found: %s", pattern)
 	}
+}
+
+func TestRunPassesTheGitCredentialsEndpoint(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "http://okteto-api.okteto:8080/internal/git/credentials")
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "namespace",
+			},
+		},
+	}
+	fs := afero.NewMemMapFs()
+	var buildArgs []string
+	rdc := Runner{
+		builder: fakeBuilder{assertOptions: func(o *types.BuildOptions) {
+			buildArgs = o.BuildArgs
+		}},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		oktetoClientProvider: client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
+			Users: client.NewFakeUsersClient(&types.User{}),
+		}),
+		ioCtrl: io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		generateSocketName: fakeNameGenerator{name: "test"}.GenerateName,
+	}
+
+	err := rdc.Run(context.Background(), &Params{
+		Manifest: &model.Manifest{Deploy: &model.DeployInfo{Image: "test-image"}},
+	})
+
+	require.NoError(t, err)
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT=http://okteto-api.okteto:8080/internal/git/credentials")
+}
+
+func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
+	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		ioCtrl:             io.NewIOController(),
+		generateSocketName: fakeNameGenerator{name: "okteto-socket.sock"}.GenerateName,
+	}
+
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		DockerfileName: "Dockerfile.deploy",
+		Command:        "deploy",
+		Manifest:       &model.Manifest{Name: "test-manifest"},
+	})
+
+	require.NoError(t, err)
+	d, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+	require.NotContains(t, string(d), "git-credential")
+	require.NotContains(t, string(d), constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, string(d), "RUN okteto registrytoken install --force --log-output=json")
 }
 
 // envFromDockerfile returns the value BuildKit gives to each ENV instruction of the Dockerfile

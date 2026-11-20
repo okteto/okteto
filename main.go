@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
 	"github.com/okteto/okteto/cmd/exec"
+	"github.com/okteto/okteto/cmd/gitcredential"
 	"github.com/okteto/okteto/cmd/kubetoken"
 	"github.com/okteto/okteto/cmd/logs"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -88,17 +89,27 @@ func main() {
 	ioController := io.NewIOController()
 	ioController.Logger().SetLevel(io.WarnLevel)
 	oktetoLog.Init(logrus.WarnLevel) // TODO: Remove when we fully move to ioController
-	if registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+	isCredentialHelper := registrytoken.IsRegistryCredentialHelperCommand(os.Args) || gitcredential.IsGitCredentialHelperCommand(os.Args)
+	if isCredentialHelper {
 		oktetoLog.SetOutputFormat(io.SilentFormat)
 		ioController.SetOutputFormat(io.SilentFormat)
+	}
+	// Git reads the helper's stdout as credentials, so anything the CLI logs, a fatal error
+	// included, goes to stderr, where Git shows it
+	if gitcredential.IsGitCredentialHelperCommand(os.Args) {
+		oktetoLog.SetOutput(os.Stderr)
 	}
 
 	var logLevel string
 	var outputMode string
 	var serverNameOverride string
 
-	if err := analytics.Init(); err != nil {
-		oktetoLog.Infof("error initializing okteto analytics: %s", err)
+	// Git runs the credential helper on every request: it skips analytics, which write their
+	// config on the first run and stop the command when the Okteto folder can't be read
+	if !gitcredential.IsGitCredentialCommand(os.Args) {
+		if err := analytics.Init(); err != nil {
+			oktetoLog.Infof("error initializing okteto analytics: %s", err)
+		}
 	}
 
 	okteto.InitContextWithDeprecatedToken()
@@ -112,7 +123,7 @@ func main() {
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
-			if !registrytoken.IsRegistryCredentialHelperCommand(os.Args) {
+			if !isCredentialHelper {
 				oktetoLog.SetLevel(logLevel)          // TODO: Remove when we fully move to ioController
 				oktetoLog.SetOutputFormat(outputMode) // TODO: Remove when we fully move to ioController
 
@@ -157,6 +168,7 @@ func main() {
 
 	root.AddCommand(kubetoken.NewKubetokenCmd().Cmd())
 	root.AddCommand(registrytoken.RegistryToken(ctx))
+	root.AddCommand(gitcredential.GitCredential(ctx))
 
 	root.AddCommand(build.Build(ctx, ioController, at, insights, k8sLogger))
 
