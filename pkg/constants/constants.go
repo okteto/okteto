@@ -170,6 +170,10 @@ const (
 	// OktetoSshAgentSocketEnvVar Env variable defining the socket where the ssh-forwarder will listen
 	OktetoSshAgentSocketEnvVar = "OKTETO_SSH_AGENT_SOCKET"
 
+	// OktetoInternalAPIHostnameEnvVar Env variable defining the hostname a remote build maps to the internal IP of the
+	// Okteto API. It's empty when the installation doesn't publish that IP
+	OktetoInternalAPIHostnameEnvVar = "OKTETO_INTERNAL_API_HOSTNAME"
+
 	// OktetoSharedEnvironmentEnvVar Env variable containing the namespace of the shared environment in divert
 	OktetoSharedEnvironmentEnvVar = "OKTETO_SHARED_ENVIRONMENT"
 

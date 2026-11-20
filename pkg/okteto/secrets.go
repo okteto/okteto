@@ -298,6 +298,10 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.SSHAgentHostname = string(v.Value)
 		case "sshAgentPort":
 			metadata.SSHAgentPort = string(v.Value)
+		case "internalAPIIP":
+			metadata.InternalAPIIP = string(v.Value)
+		case "internalAPIHostname":
+			metadata.InternalAPIHostname = string(v.Value)
 		case "cliMinVersion":
 			metadata.CliMinVersion = string(v.Value)
 		case "cliClusterVersion":
