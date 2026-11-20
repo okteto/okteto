@@ -90,7 +90,7 @@ func TestRunDestroysWithTheCatalogSecretVariables(t *testing.T) {
 	runner := &fakeDestroyRunner{}
 	command := &DestroyCommand{
 		runner: runner,
-		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{
+		catalogSecretVariables: newTestCatalogSecretVariables(t, &client.FakeUserClient{
 			CatalogSecretVariables: types.CatalogSecretVariables{
 				Variables: []types.CatalogSecretVariable{{Name: "API_TOKEN", Value: "abc"}},
 			},
@@ -113,7 +113,7 @@ func TestRunDoesNotDestroyWhenCatalogSecretVariablesFail(t *testing.T) {
 	runner := &fakeDestroyRunner{}
 	command := &DestroyCommand{
 		runner:                 runner,
-		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase),
+		catalogSecretVariables: newTestCatalogSecretVariables(t, &client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase),
 	}
 
 	err := command.Run(context.Background(), deployable.DestroyParameters{Name: "test-destroy"})
@@ -127,7 +127,7 @@ func TestRunForceDestroysWithoutTheCatalogSecretVariablesWhenTheyFail(t *testing
 	setTestOktetoContext(t)
 	out := captureJSONLogs(t)
 	runner := &fakeDestroyRunner{}
-	secretVariables := newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase)
+	secretVariables := newTestCatalogSecretVariables(t, &client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DestroyPhase)
 	secretVariables.forceDestroy = true
 	command := &DestroyCommand{
 		runner:                 runner,
@@ -151,7 +151,7 @@ func TestRunDestroysWithoutTheUnresolvedCatalogSecretVariables(t *testing.T) {
 	runner := &fakeDestroyRunner{}
 	command := &DestroyCommand{
 		runner:                 runner,
-		catalogSecretVariables: newTestCatalogSecretVariables(withUnresolvedCatalogSecretVariables(), catalog.DestroyPhase),
+		catalogSecretVariables: newTestCatalogSecretVariables(t, withUnresolvedCatalogSecretVariables(), catalog.DestroyPhase),
 	}
 	runner.On("RunDestroy", deployable.DestroyParameters{
 		Name:                   "test-destroy",

@@ -39,6 +39,7 @@ var testCatalogSecretVariables = catalog.SecretVariables{
 	References: `[{"name":"API_TOKEN","secretKeyRef":{"name":"creds","key":"token"}}]`,
 	Action:     "action-name",
 	Endpoint:   "https://okteto.example/internal/catalog/secret-variables",
+	TokenFile:  "/run/secrets/catalog-secret-variables/token",
 }
 
 // catalogManifest returns a manifest with deploy commands that run remotely when remote is true
@@ -155,6 +156,7 @@ func TestReadCatalogSecretVariablesAndSetVariablesReadsThemBeforeAVariableWithTh
 	t.Setenv(catalog.SecretVariablesEnvVar, testCatalogSecretVariables.References)
 	t.Setenv(model.OktetoActionNameEnvVar, testCatalogSecretVariables.Action)
 	t.Setenv(catalog.SecretVariablesEndpointEnvVar, testCatalogSecretVariables.Endpoint)
+	t.Setenv(catalog.SecretVariablesTokenFileEnvVar, testCatalogSecretVariables.TokenFile)
 	options := &Options{Variables: []string{
 		"OKTETO_CATALOG_SECRET_VARIABLES=[]",
 		"OKTETO_CATALOG_SECRET_VARIABLES_ENDPOINT=https://var.example",
@@ -171,6 +173,7 @@ func TestReadCatalogSecretVariablesAndSetVariablesIgnoresAVariableWithTheirNameO
 	t.Setenv(catalog.SecretVariablesEnvVar, "")
 	t.Setenv(model.OktetoActionNameEnvVar, "")
 	t.Setenv(catalog.SecretVariablesEndpointEnvVar, "")
+	t.Setenv(catalog.SecretVariablesTokenFileEnvVar, "")
 	options := &Options{Variables: []string{`OKTETO_CATALOG_SECRET_VARIABLES=[{"name":"API_TOKEN"}]`}}
 
 	err := readCatalogSecretVariablesAndSetVariables(options, setTestEnv(t))

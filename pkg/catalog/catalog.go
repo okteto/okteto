@@ -38,6 +38,18 @@ const (
 	// sets it on the installer job
 	SecretVariablesEndpointEnvVar = "OKTETO_CATALOG_SECRET_VARIABLES_ENDPOINT"
 
+	// SecretVariablesTokenFileEnvVar is the path of the file with the token remote-run gets the values of the secret
+	// variables with: a short-lived Kubernetes token bound to the installer pod, which the kubelet refreshes. The
+	// backend sets it on the installer job. Older installations don't, and their endpoint takes the user's token
+	SecretVariablesTokenFileEnvVar = "OKTETO_CATALOG_SECRET_VARIABLES_TOKEN_FILE"
+
+	// SecretVariablesTokenSecretID is the id of the build secret that forwards the token file to remote-run. Only the
+	// id reaches the Dockerfile
+	SecretVariablesTokenSecretID = "catalog-secret-variables-token"
+
+	// SecretVariablesTokenPath is where remote-run reads the token from: BuildKit's default target for the secret
+	SecretVariablesTokenPath = "/run/secrets/" + SecretVariablesTokenSecretID
+
 	// ActionFlag is the remote-run flag with the action whose catalog secret variables it gets
 	ActionFlag = "catalog-action"
 
@@ -79,6 +91,9 @@ type SecretVariables struct {
 	Action string
 	// Endpoint is the URL remote-run gets the values of the secret variables from
 	Endpoint string
+	// TokenFile is the path of the file with the token remote-run gets the values of the secret variables with. It's
+	// empty on older installations
+	TokenFile string
 }
 
 // secretVariableReference is the reference of a catalog secret variable. Only its name is read here
@@ -94,6 +109,7 @@ func SecretVariablesFromEnv() SecretVariables {
 		References: os.Getenv(SecretVariablesEnvVar),
 		Action:     os.Getenv(model.OktetoActionNameEnvVar),
 		Endpoint:   os.Getenv(SecretVariablesEndpointEnvVar),
+		TokenFile:  os.Getenv(SecretVariablesTokenFileEnvVar),
 	}
 }
 
@@ -107,6 +123,16 @@ func (s SecretVariables) RemoteRunFlags() []string {
 		remote.CommandFlag(ActionFlag, s.Action),
 		remote.CommandFlag(SecretVariablesEndpointFlag, s.Endpoint),
 	}
+}
+
+// RemoteRunSecrets returns the build secrets the remote-run RUN mounts to get the values of the secret variables: the
+// token file, which BuildKit reads when the RUN mounts it. It returns none when there is no action to get them for,
+// or on older installations without the token file, where remote-run gets them with the user's token
+func (s SecretVariables) RemoteRunSecrets() []remote.FileSecret {
+	if s.Action == "" || s.TokenFile == "" {
+		return nil
+	}
+	return []remote.FileSecret{{ID: SecretVariablesTokenSecretID, Path: s.TokenFile}}
 }
 
 // names returns the names of the secret variables in the references
