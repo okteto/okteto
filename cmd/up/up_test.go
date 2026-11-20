@@ -651,3 +651,25 @@ func (fb *fakeBuilder) GetSvcToBuildFromRegex(_ *model.Manifest, _ model.ImageFr
 func (*fakeBuilder) GetConnector() buildCmd.BuildkitConnector {
 	return nil
 }
+
+func TestValidateAutocreateImageFailsWithoutImage(t *testing.T) {
+	dev := &model.Dev{Name: "api", Autocreate: true}
+
+	err := validateAutocreateImage(dev)
+
+	var userErr oktetoErrors.UserError
+	require.ErrorAs(t, err, &userErr)
+	assert.Contains(t, userErr.E.Error(), "'image' is required for development container 'api'")
+}
+
+func TestValidateAutocreateImageSucceedsWithImage(t *testing.T) {
+	dev := &model.Dev{Name: "api", Autocreate: true, Image: "python:alpine"}
+
+	assert.NoError(t, validateAutocreateImage(dev))
+}
+
+func TestValidateAutocreateImageSucceedsWithoutAutocreate(t *testing.T) {
+	dev := &model.Dev{Name: "api"}
+
+	assert.NoError(t, validateAutocreateImage(dev))
+}
