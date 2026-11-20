@@ -541,8 +541,8 @@ github.com/nwaples/rardecode/v2 v2.2.0 h1:4ufPGHiNe1rYJxYfehALLjup4Ls3ck42CWwjKi
 github.com/nwaples/rardecode/v2 v2.2.0/go.mod h1:7uz379lSxPe6j9nvzxUZ+n7mnJNgjsRNb6IbvGVHRmw=
 github.com/oklog/ulid/v2 v2.1.2 h1:IEclFb9JNvzYA6MW2SCxbLzcHTVsfqm3PrqGQJH5zec=
 github.com/oklog/ulid/v2 v2.1.2/go.mod h1:rcEKHmBBKfef9DhnvX7y1HZBYxjXb0cP5ExxNsTT1QQ=
-github.com/okteto/buildkit v0.35.1-0.20261112074422-d987d85bd8a3 h1:DRARq+HvdyQOWtr3DkXIGmZrzsvWfCty7COhrhiVkIM=
-github.com/okteto/buildkit v0.35.1-0.20261112074422-d987d85bd8a3/go.mod h1:1bLB7NqbvyIScAVGCmYzQWHxdrJq42ZpdvBqlQRnoOk=
+github.com/okteto/buildkit v0.35.2-0.20261120071757-2ea2d399aff8 h1:JrLzIAeN8ZI4pPRLryJ6lKm/ZgQmk/RJILHOdWVZzDw=
+github.com/okteto/buildkit v0.35.2-0.20261120071757-2ea2d399aff8/go.mod h1:1bLB7NqbvyIScAVGCmYzQWHxdrJq42ZpdvBqlQRnoOk=
 github.com/onsi/ginkgo/v2 v2.32.0 h1:Hw7s2pVrQo/8Yz5N77qdnpHaoc+c6cC9WIV1Jce+J6E=
 github.com/onsi/ginkgo/v2 v2.32.0/go.mod h1:+aXOY+vzZ5mu2iI2HpTZUPmM//oQfsNFX6gU9kNcA44=
 github.com/onsi/gomega v1.40.0 h1:Vtol0e1MghCD2ZVIilPDIg44XSL9l2QAn8ZNaljWcJc=
