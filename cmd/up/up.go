@@ -298,6 +298,10 @@ okteto up api -- echo this is a test
 				return fmt.Errorf("error in 'dev' section of your manifest: %w", err)
 			}
 
+			if err := validateAutocreateImage(dev); err != nil {
+				return err
+			}
+
 			up.Dev = dev
 
 			// only if the context is an okteto one, we should verify if the namespace has to be woken up
@@ -388,6 +392,18 @@ okteto up api -- echo this is a test
 	}
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "resets the file synchronization service. Use it if the file synchronization service stops working")
 	return cmd
+}
+
+// validateAutocreateImage returns an error if 'autocreate' is enabled but no image is defined.
+// Okteto never deploys a default image the user hasn't explicitly configured.
+func validateAutocreateImage(dev *model.Dev) error {
+	if !dev.Autocreate || dev.Image != "" {
+		return nil
+	}
+	return oktetoErrors.UserError{
+		E:    fmt.Errorf("'image' is required for development container '%s' when 'autocreate' is enabled", dev.Name),
+		Hint: "Set the 'image' field of your development container in your Okteto manifest.\n    More information is available here: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional",
+	}
 }
 
 func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
