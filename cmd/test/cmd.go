@@ -224,7 +224,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	if err := manifest.Test.Validate(); err != nil {
 		if errors.Is(err, model.ErrNoTestsDefined) {
-			oktetoLog.Information("There are no tests configured in your Okteto Manifest. For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test")
+			oktetoLog.Information("There are no tests configured in your Okteto Manifest. For more information, check the documentation: https://www.okteto.com/docs/reference/okteto-manifest/#test-object-optional")
 			return analytics.TestMetadata{}, nil
 		}
 
@@ -272,7 +272,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 
 	if options.Deploy && manifest.Deploy == nil {
-		oktetoLog.Warning("Nothing to deploy. The 'deploy' section of your Okteto Manifest is empty. For more information, check the docs: https://okteto.com/docs/core/okteto-manifest/#deploy")
+		oktetoLog.Warning("Nothing to deploy. The 'deploy' section of your Okteto Manifest is empty. For more information, check the docs: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional")
 	} else if options.Deploy && manifest.Deploy != nil {
 		c := deployCMD.Command{
 			GetManifest: func(path string, fs afero.Fs) (*model.Manifest, error) {
