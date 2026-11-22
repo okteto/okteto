@@ -47,7 +47,7 @@ The Okteto Open Source CLI supports the following commands:
 
 ## Okteto Platform
 
-The Okteto Platform requires the installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/overview/) in your Kubernetes cluster. In this mode, all the Okteto CLI commands are available (`build`, `deploy`, `test`, `up`, `down`, `destroy`, etc). The Okteto Platform adds:
+The Okteto Platform requires the installation of the [Okteto Helm Chart](https://www.okteto.com/docs/get-started/install/) in your Kubernetes cluster. In this mode, all the Okteto CLI commands are available (`build`, `deploy`, `test`, `up`, `down`, `destroy`, etc). The Okteto Platform adds:
 
 - Application environments built from one versioned definition, including the cloud dependencies your application needs
 - Remote builds, deployments and tests (`okteto test`), so developers, CI and agents don't need to run the application stack themselves
@@ -78,7 +78,7 @@ And much more! Please take a look at the [Okteto Platform docs](https://www.okte
 ## Useful links
 
 - [Install the Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/)
-- [Deploy your app](https://www.okteto.com/docs/get-started/deploy-your-app/)
+- [Quickstart](https://www.okteto.com/docs/get-started/quickstart/)
 - [Okteto tutorials](https://www.okteto.com/tutorials/)
 - [CLI reference](https://okteto.com/docs/reference/okteto-cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/okteto-manifest/)

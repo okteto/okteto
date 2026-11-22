@@ -473,7 +473,7 @@ func GetInferredManifest(cwd string, fs afero.Fs) (*Manifest, error) {
 
 	return nil, oktetoErrors.UserError{
 		E:    oktetoErrors.ErrCouldNotInferAnyManifest,
-		Hint: "Check https://www.okteto.com/docs/get-started/deploy-your-app/ to deploy your application",
+		Hint: "Check https://www.okteto.com/docs/get-started/quickstart/ to deploy your application",
 	}
 }
 
