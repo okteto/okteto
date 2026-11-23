@@ -315,6 +315,35 @@ func TestCatalogSecretVariablesNeverLogsTheToken(t *testing.T) {
 	require.NotContains(t, out.String(), testCatalogSecretVariablesToken)
 }
 
+// The commands run in the same RUN and can read the mounted token
+func TestCatalogSecretVariablesMasksTheTokenInTheCommandsOutput(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{}, catalog.DeployPhase)
+
+	_, err := c.get(context.Background())
+	oktetoLog.EnableMasking()
+	oktetoLog.SetStage("Deploy")
+	oktetoLog.Println("the command printed " + testCatalogSecretVariablesToken)
+
+	require.NoError(t, err)
+	require.NotContains(t, out.String(), testCatalogSecretVariablesToken)
+	require.Contains(t, out.String(), "the command printed ***")
+}
+
+// On an installation whose endpoint only takes the installer's token, the error says why it got the user's
+func TestCatalogSecretVariablesSaysTheUserTokenWasUsedWhenTheRequestFails(t *testing.T) {
+	out := captureJSONLogs(t)
+	requestErr := errors.New("catalog secret variables request failed: 401 Unauthorized")
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{ErrCatalogSecretVariables: requestErr}, catalog.DeployPhase)
+	c.tokenFile = filepath.Join(t.TempDir(), "missing")
+
+	_, err := c.get(context.Background())
+
+	require.ErrorIs(t, err, requestErr)
+	require.EqualError(t, err, "catalog secret variables request failed: 401 Unauthorized ("+c.tokenFile+" isn't mounted, so the request used the user's token)")
+	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.ErrorLevel, err.Error()))
+}
+
 func TestCatalogSecretVariablesReturnsTheVariables(t *testing.T) {
 	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 		CatalogSecretVariables: types.CatalogSecretVariables{

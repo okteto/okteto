@@ -128,10 +128,10 @@ func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (ca
 // newCatalogSecretVariablesClient returns the client that gets the catalog
 // secret variables with the token as the bearer, instead of the user's token.
 // Without a token it uses the user's, which the endpoint of older
-// installations takes. It reaches the endpoint with the TLS settings of the
-// context
+// installations takes. It reaches the endpoint directly, ignoring the proxy
+// env vars, with the TLS settings of the context
 func newCatalogSecretVariablesClient(token string) (catalogSecretVariablesGetter, error) {
-	var opts []okteto.Option
+	opts := []okteto.Option{okteto.WithoutProxy()}
 	if token != "" {
 		opts = append(opts, okteto.WithToken(token))
 	}
@@ -185,17 +185,24 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 
 // fetch gets the catalog secret variables from the endpoint. The token is the
 // copy of the installer's file that BuildKit mounted when the RUN started, so
-// it's fresh. It is never logged, and never reaches the env of the commands
+// it's fresh. It is never logged nor set in the env of the commands, but the
+// secret is mounted for the whole RUN and they can read the file, so it's
+// masked in their output like the user's token
 func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretVariables, error) {
 	token, err := c.readToken()
 	if err != nil {
 		return types.CatalogSecretVariables{}, err
 	}
+	oktetoLog.AddMaskedWord(token)
 	client, err := c.newClient(token)
 	if err != nil {
 		return types.CatalogSecretVariables{}, err
 	}
-	return client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	variables, err := client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	if err != nil && token == "" {
+		return types.CatalogSecretVariables{}, fmt.Errorf("%w (%s isn't mounted, so the request used the user's token)", err, c.tokenFile)
+	}
+	return variables, err
 }
 
 // readToken reads the token the endpoint authenticates the installer with. It
