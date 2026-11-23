@@ -50,21 +50,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 		{
 			name: "image is set without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
-				sha:       "sha",
-			},
-			b: &build.Info{
-				Image: "nginx",
-			},
-			expectedImage: "nginx",
-		},
-		{
-			name: "image is set with no clean project",
-			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
 			},
 			b: &build.Info{
 				Image: "nginx",
@@ -74,9 +60,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 		{
 			name: "image is set with access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
-				sha:       "sha",
 			},
 			b: &build.Info{
 				Image: "nginx",
@@ -86,9 +70,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 		{
 			name: "image is set but in okteto dev registry",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
-				sha:       "sha",
 			},
 			b: &build.Info{
 				Dockerfile: "Dockerfile",
@@ -100,9 +82,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 		{
 			name: "image is set but in okteto global registry",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: true,
-				sha:       "sha",
 			},
 			b: &build.Info{
 				Dockerfile: "Dockerfile",
@@ -114,9 +94,7 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 		{
 			name: "image inferred without access to global",
 			cfg: fakeConfig{
-				isClean:   true,
 				hasAccess: false,
-				sha:       "sha",
 			},
 			b: &build.Info{
 				Dockerfile: "Dockerfile",
@@ -125,24 +103,9 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto",
 		},
 		{
-			name: "image inferred without clean project",
+			name: "image inferred with access to global registry but no feature flag enabled",
 			cfg: fakeConfig{
-				isClean:   false,
-				hasAccess: true,
-				sha:       "sha",
-			},
-			b: &build.Info{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto",
-		},
-		{
-			name: "image inferred with clean project, has access to global registry but no feature flag enabled",
-			cfg: fakeConfig{
-				isClean:             true,
 				hasAccess:           true,
-				sha:                 "sha",
 				isSmartBuildsEnable: false,
 			},
 			b: &build.Info{
@@ -152,25 +115,9 @@ func Test_ImageTaggerWithoutVolumes_GetServiceDevImageReference(t *testing.T) {
 			expectedImage: "okteto.dev/test-test:okteto",
 		},
 		{
-			name: "image inferred with clean project, has access to global registry and feature flag enabled",
+			name: "image inferred with access to global registry and feature flag enabled",
 			cfg: fakeConfig{
-				isClean:             true,
 				hasAccess:           true,
-				sha:                 "sha",
-				isSmartBuildsEnable: true,
-			},
-			b: &build.Info{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			expectedImage: "okteto.dev/test-test:okteto",
-		},
-		{
-			name: "image inferred with clean project, has access to global registry, feature flag enabled and empty build hash",
-			cfg: fakeConfig{
-				isClean:             true,
-				hasAccess:           true,
-				sha:                 "",
 				isSmartBuildsEnable: true,
 			},
 			b: &build.Info{

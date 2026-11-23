@@ -216,20 +216,16 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 }
 
 type fakeConfig struct {
-	sha                 string
 	repoURL             string
 	globalNamespace     string
 	namespace           string
 	registryURL         string
-	isClean             bool
 	hasAccess           bool
 	isOkteto            bool
 	isSmartBuildsEnable bool
 }
 
 func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
-func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
 func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
 func (fc fakeConfig) IsOktetoCluster() bool                  { return fc.isOkteto }
 func (fc fakeConfig) GetAnonymizedRepo() string              { return fc.repoURL }
