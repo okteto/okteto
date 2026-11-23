@@ -15,14 +15,18 @@ package okteto
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -41,11 +45,55 @@ type catalogSecretVariablesErrorResponse struct {
 	Reason string `json:"reason"`
 }
 
+// CatalogSecretVariablesClient gets the catalog secret variables from the
+// internal API of Okteto
+type CatalogSecretVariablesClient struct {
+	httpClient *http.Client
+}
+
+// NewCatalogSecretVariablesClient returns the client that gets the catalog
+// secret variables from endpoint, an https URL it reaches through
+// internalAPIIP, as NewInternalAPIHTTPClient does. It fails without both. It
+// sends the token of the current context, or the one of the options, and
+// trusts the certificate of the current context
+func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Option) (*CatalogSecretVariablesClient, error) {
+	cfg := defaultOktetoClientCfg()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	if cfg.Token == "" {
+		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, cfg.CtxName)
+	}
+
+	// The certificate comes from the context already resolved, which doesn't
+	// need the context file on disk. Without a current context there's none,
+	// and GetContext would exit
+	var certs []*x509.Certificate
+	if cfg.CtxName != "" {
+		if cert, err := GetContextCertificateStateless(GetContext().Certificate); err == nil {
+			certs = append(certs, cert)
+		}
+	}
+
+	httpClient, err := NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
+	if err != nil {
+		return nil, err
+	}
+	httpClient.Transport = &VersionedTransport{
+		Version: config.VersionString,
+		RoundTripper: &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cfg.Token, TokenType: "Bearer"}),
+			Base:   httpClient.Transport,
+		},
+	}
+	return &CatalogSecretVariablesClient{httpClient: httpClient}, nil
+}
+
 // GetCatalogSecretVariables returns the catalog secret variables of the
 // development environment the action runs for: the values of the ones that
 // can be resolved, and the ones that can't. The endpoint only answers requests
 // that come from BuildKit
-func (c *userClient) GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error) {
+func (c *CatalogSecretVariablesClient) GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error) {
 	if c.httpClient == nil {
 		return types.CatalogSecretVariables{}, fmt.Errorf("catalog secret variables client not configured")
 	}

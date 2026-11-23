@@ -183,6 +183,10 @@ const (
 	// Okteto API. It's empty when the installation doesn't publish that IP
 	OktetoInternalAPIHostnameEnvVar = "OKTETO_INTERNAL_API_HOSTNAME"
 
+	// OktetoInternalAPIIPEnvVar Env variable defining the internal IP of the Okteto API that remote builds reach its
+	// internal routes through. It's empty when the installation doesn't publish a valid one
+	OktetoInternalAPIIPEnvVar = "OKTETO_INTERNAL_API_IP"
+
 	// OktetoSharedEnvironmentEnvVar Env variable containing the namespace of the shared environment in divert
 	OktetoSharedEnvironmentEnvVar = "OKTETO_SHARED_ENVIRONMENT"
 

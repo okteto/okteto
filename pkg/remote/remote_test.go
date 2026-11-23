@@ -222,6 +222,105 @@ func TestExtraHosts(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// runWithClusterMetadata runs a remote build against an installation with the
+// metadata, and returns the options it builds with and its Dockerfile
+func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) (*types.BuildOptions, string) {
+	t.Helper()
+	originalStore := okteto.CurrentStore
+	t.Cleanup(func() { okteto.CurrentStore = originalStore })
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {Namespace: "namespace"},
+		},
+	}
+	fs := afero.NewMemMapFs()
+	usersClient := client.NewFakeUsersClient(&types.User{})
+	usersClient.ClusterMetadata = metadata
+	var got *types.BuildOptions
+	var dockerfile []byte
+	rdc := Runner{
+		builder: fakeBuilder{
+			assertOptions: func(o *types.BuildOptions) {
+				got = o
+				var err error
+				dockerfile, err = afero.ReadFile(fs, o.File)
+				require.NoError(t, err)
+			},
+		},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		oktetoClientProvider: client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{Users: usersClient}),
+		ioCtrl:               io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		generateSocketName: fakeNameGenerator{name: "test"}.GenerateName,
+	}
+
+	err := rdc.Run(context.Background(), &Params{
+		Manifest: &model.Manifest{Deploy: &model.DeployInfo{Image: "test-image"}},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	return got, string(dockerfile)
+}
+
+func TestRunPassesTheInternalAPIIPWithoutMappingAHostname(t *testing.T) {
+	got, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIIP: "10.20.30.40"})
+
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_IP="10.20.30.40"`)
+	require.Empty(t, got.ExtraHosts)
+}
+
+func TestRunDoesNotPassAnInvalidInternalAPIIP(t *testing.T) {
+	got, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIIP: "10.20.30.40\nRUN id"})
+
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_IP=""`)
+	require.Empty(t, got.ExtraHosts)
+}
+
+func TestInternalAPIIP(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+		metadata types.ClusterMetadata
+	}{
+		{
+			name:     "IPv4",
+			metadata: types.ClusterMetadata{InternalAPIIP: "10.20.30.40"},
+			expected: "10.20.30.40",
+		},
+		{
+			name:     "IPv6",
+			metadata: types.ClusterMetadata{InternalAPIIP: "fd00:0::1"},
+			expected: "fd00::1",
+		},
+		{
+			name:     "without IP",
+			metadata: types.ClusterMetadata{},
+			expected: "",
+		},
+		{
+			name:     "IPv6 in brackets",
+			metadata: types.ClusterMetadata{InternalAPIIP: "[fd00::1]"},
+			expected: "",
+		},
+		{
+			name:     "not an IP",
+			metadata: types.ClusterMetadata{InternalAPIIP: "okteto-api.okteto"},
+			expected: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, internalAPIIP(tt.metadata))
+		})
+	}
+}
+
 var testFileSecret = FileSecret{ID: "catalog-secret-variables-token", Path: "/run/secrets/catalog-secret-variables/token"}
 
 func TestRunPassesTheSecretsToBuildKitAsTheyAre(t *testing.T) {
@@ -395,6 +494,7 @@ func TestCreateDockerfile(t *testing.T) {
 					SSHAgentHostname:       "ssh-agent.default.svc.cluster.local",
 					SSHAgentPort:           "3000",
 					CommandFlags:           []string{"--name \"test\""},
+					InternalAPIIP:          "10.20.30.40",
 				},
 			},
 			expected: expected{
@@ -442,6 +542,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
+ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -549,6 +650,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
+ENV OKTETO_INTERNAL_API_IP=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -637,6 +739,7 @@ WORKDIR /okteto/src
 
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
+ENV OKTETO_INTERNAL_API_IP=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH

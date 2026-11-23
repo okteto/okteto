@@ -24,6 +24,7 @@ type ClusterMetadata struct {
 	SSHAgentInternalIP  string
 	SSHAgentHostname    string
 	SSHAgentPort        string
+	InternalAPIIP       string
 	CliMinVersion       string
 	CliClusterVersion   string
 	Certificate         []byte
