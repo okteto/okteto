@@ -14,11 +14,14 @@
 package analytics
 
 import (
+	"net/http"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -132,4 +135,13 @@ func Test_disabledInOktetoCluster(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The proxy env vars are read once per process, so the test checks the function
+// the transport uses instead of setting HTTPS_PROXY.
+func TestNewMixpanelHTTPClient_UsesProxyFromEnvironment(t *testing.T) {
+	transport, ok := newMixpanelHTTPClient().Transport.(*http.Transport)
+	require.True(t, ok)
+	require.NotNil(t, transport.Proxy)
+	require.Equal(t, reflect.ValueOf(http.ProxyFromEnvironment).Pointer(), reflect.ValueOf(transport.Proxy).Pointer())
 }
