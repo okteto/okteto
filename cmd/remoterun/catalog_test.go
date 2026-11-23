@@ -19,6 +19,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
@@ -83,15 +87,41 @@ func warnings(lines []oktetoLog.JSONLogFormat) []oktetoLog.JSONLogFormat {
 	return result
 }
 
-const testCatalogSecretVariablesEndpoint = "https://okteto.example/internal/catalog/secret-variables"
+const (
+	testCatalogSecretVariablesEndpoint = "https://okteto.example/internal/catalog/secret-variables"
+	testCatalogSecretVariablesToken    = "projected-token"
+)
 
-func newTestCatalogSecretVariables(c catalogSecretVariablesGetter, phase catalog.Phase) catalogSecretVariables {
+// writeTestToken writes content to a token file in a temporary folder, and
+// returns its path
+func writeTestToken(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "token")
+	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
+	return path
+}
+
+func newTestCatalogSecretVariables(t *testing.T, c catalogSecretVariablesGetter, phase catalog.Phase) catalogSecretVariables {
+	t.Helper()
 	return catalogSecretVariables{
-		client:   c,
-		action:   "action-name",
-		endpoint: testCatalogSecretVariablesEndpoint,
-		phase:    phase,
+		newClient: func(string) (catalogSecretVariablesGetter, error) { return c, nil },
+		tokenFile: writeTestToken(t, testCatalogSecretVariablesToken),
+		action:    "action-name",
+		endpoint:  testCatalogSecretVariablesEndpoint,
+		phase:     phase,
 	}
+}
+
+// recordingCatalogSecretVariablesClientFactory records the tokens it creates
+// clients with, and returns client
+type recordingCatalogSecretVariablesClientFactory struct {
+	client catalogSecretVariablesGetter
+	tokens []string
+}
+
+func (r *recordingCatalogSecretVariablesClientFactory) newClient(token string) (catalogSecretVariablesGetter, error) {
+	r.tokens = append(r.tokens, token)
+	return r.client, nil
 }
 
 // recordingCatalogSecretVariablesGetter records the endpoint and the action it
@@ -133,7 +163,8 @@ func TestNewCatalogSecretVariablesWithoutAction(t *testing.T) {
 	got, err := newCatalogSecretVariables("", "http://endpoint", catalog.DeployPhase)
 
 	require.NoError(t, err)
-	require.Nil(t, got.client)
+	require.Nil(t, got.newClient)
+	require.Empty(t, got.tokenFile)
 }
 
 func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
@@ -143,12 +174,11 @@ func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
 }
 
 func TestNewCatalogSecretVariablesForTheAction(t *testing.T) {
-	setTestOktetoContext(t)
-
 	got, err := newCatalogSecretVariables("action-name", testCatalogSecretVariablesEndpoint, catalog.DestroyPhase)
 
 	require.NoError(t, err)
-	require.NotNil(t, got.client)
+	require.NotNil(t, got.newClient)
+	require.Equal(t, "/run/secrets/catalog-secret-variables-token", got.tokenFile)
 	require.Equal(t, "action-name", got.action)
 	require.Equal(t, testCatalogSecretVariablesEndpoint, got.endpoint)
 	require.Equal(t, catalog.DestroyPhase, got.phase)
@@ -156,7 +186,7 @@ func TestNewCatalogSecretVariablesForTheAction(t *testing.T) {
 
 func TestCatalogSecretVariablesGetsThemForTheActionFromTheEndpoint(t *testing.T) {
 	getter := &recordingCatalogSecretVariablesGetter{}
-	c := newTestCatalogSecretVariables(getter, catalog.DeployPhase)
+	c := newTestCatalogSecretVariables(t, getter, catalog.DeployPhase)
 
 	_, err := c.get(context.Background())
 
@@ -164,8 +194,158 @@ func TestCatalogSecretVariablesGetsThemForTheActionFromTheEndpoint(t *testing.T)
 	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: testCatalogSecretVariablesEndpoint, action: "action-name"}, getter)
 }
 
+func TestNewCatalogSecretVariablesClientSendsTheTokenAsTheBearer(t *testing.T) {
+	setTestOktetoContext(t)
+	var authorization, action string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authorization = r.Header.Get("Authorization")
+		action = r.URL.Query().Get("action")
+		_, _ = w.Write([]byte(`{"variables":[{"name":"PIN","value":"1"}]}`))
+	}))
+	t.Cleanup(server.Close)
+
+	c, err := newCatalogSecretVariablesClient(testCatalogSecretVariablesToken)
+	require.NoError(t, err)
+	got, err := c.GetCatalogSecretVariables(context.Background(), server.URL, "action-name")
+
+	require.NoError(t, err)
+	require.Equal(t, "Bearer projected-token", authorization)
+	require.Equal(t, "action-name", action)
+	require.Equal(t, []types.CatalogSecretVariable{{Name: "PIN", Value: "1"}}, got.Variables)
+}
+
+func TestNewCatalogSecretVariablesClientSendsTheUserTokenWithoutAToken(t *testing.T) {
+	setTestOktetoContext(t)
+	var authorization string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authorization = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(server.Close)
+
+	c, err := newCatalogSecretVariablesClient("")
+	require.NoError(t, err)
+	_, err = c.GetCatalogSecretVariables(context.Background(), server.URL, "action-name")
+
+	require.NoError(t, err)
+	require.Equal(t, "Bearer token", authorization)
+}
+
+func TestCatalogSecretVariablesGetsThemWithTheTokenInTheFile(t *testing.T) {
+	factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
+	c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
+	c.newClient = factory.newClient
+	c.tokenFile = writeTestToken(t, "  projected-token\n")
+
+	_, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Equal(t, []string{testCatalogSecretVariablesToken}, factory.tokens)
+}
+
+// Older installations don't provide the token, and their endpoint takes the user's
+func TestCatalogSecretVariablesGetsThemWithTheUserTokenWithoutTheTokenFile(t *testing.T) {
+	factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{
+		CatalogSecretVariables: types.CatalogSecretVariables{Variables: []types.CatalogSecretVariable{{Name: "PIN", Value: "1"}}},
+	}}
+	c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
+	c.newClient = factory.newClient
+	c.tokenFile = filepath.Join(t.TempDir(), "missing")
+
+	got, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"PIN=1"}, got)
+	require.Equal(t, []string{""}, factory.tokens)
+}
+
+func TestCatalogSecretVariablesFailsWhenTheTokenFileCannotBeRead(t *testing.T) {
+	out := captureJSONLogs(t)
+	factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
+	c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
+	c.newClient = factory.newClient
+	// a folder can't be read as a file
+	c.tokenFile = t.TempDir()
+
+	got, err := c.get(context.Background())
+
+	require.ErrorContains(t, err, "could not read the token to get the catalog secret variables: read "+c.tokenFile)
+	require.Nil(t, got)
+	require.Empty(t, factory.tokens)
+	require.Equal(t, []oktetoLog.JSONLogFormat{catalogLog(oktetoLog.ErrorLevel, err.Error())}, jsonLogs(t, out))
+}
+
+func TestCatalogSecretVariablesFailsWithAnEmptyTokenFile(t *testing.T) {
+	factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
+	c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
+	c.newClient = factory.newClient
+	c.tokenFile = writeTestToken(t, "\n")
+
+	got, err := c.get(context.Background())
+
+	require.EqualError(t, err, "could not read the token to get the catalog secret variables: "+c.tokenFile+" is empty")
+	require.Nil(t, got)
+	require.Empty(t, factory.tokens)
+}
+
+func TestCatalogSecretVariablesSkipsThemWithAnEmptyTokenFileOnForceDestroy(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{}, catalog.DestroyPhase)
+	c.forceDestroy = true
+	c.tokenFile = writeTestToken(t, "")
+
+	got, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Nil(t, got)
+	logged := warnings(jsonLogs(t, out))
+	require.Len(t, logged, 1)
+	require.Contains(t, logged[0].Message, "Running the destroy commands without the catalog secret variables: could not read the token to get the catalog secret variables")
+}
+
+func TestCatalogSecretVariablesNeverLogsTheToken(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
+		ErrCatalogSecretVariables: errors.New("catalog secret variables request failed: 401 Unauthorized"),
+	}, catalog.DeployPhase)
+
+	_, err := c.get(context.Background())
+
+	require.Error(t, err)
+	require.NotContains(t, out.String(), testCatalogSecretVariablesToken)
+}
+
+// The commands run in the same RUN and can read the mounted token
+func TestCatalogSecretVariablesMasksTheTokenInTheCommandsOutput(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{}, catalog.DeployPhase)
+
+	_, err := c.get(context.Background())
+	oktetoLog.EnableMasking()
+	oktetoLog.SetStage("Deploy")
+	oktetoLog.Println("the command printed " + testCatalogSecretVariablesToken)
+
+	require.NoError(t, err)
+	require.NotContains(t, out.String(), testCatalogSecretVariablesToken)
+	require.Contains(t, out.String(), "the command printed ***")
+}
+
+// On an installation whose endpoint only takes the installer's token, the error says why it got the user's
+func TestCatalogSecretVariablesSaysTheUserTokenWasUsedWhenTheRequestFails(t *testing.T) {
+	out := captureJSONLogs(t)
+	requestErr := errors.New("catalog secret variables request failed: 401 Unauthorized")
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{ErrCatalogSecretVariables: requestErr}, catalog.DeployPhase)
+	c.tokenFile = filepath.Join(t.TempDir(), "missing")
+
+	_, err := c.get(context.Background())
+
+	require.ErrorIs(t, err, requestErr)
+	require.EqualError(t, err, "catalog secret variables request failed: 401 Unauthorized ("+c.tokenFile+" isn't mounted, so the request used the user's token)")
+	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.ErrorLevel, err.Error()))
+}
+
 func TestCatalogSecretVariablesReturnsTheVariables(t *testing.T) {
-	c := newTestCatalogSecretVariables(&client.FakeUserClient{
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 		CatalogSecretVariables: types.CatalogSecretVariables{
 			Variables: []types.CatalogSecretVariable{
 				{Name: "API_TOKEN", Value: "abc=def"},
@@ -182,7 +362,7 @@ func TestCatalogSecretVariablesReturnsTheVariables(t *testing.T) {
 
 func TestCatalogSecretVariablesFailsWithUnresolvedVariablesOnDeploy(t *testing.T) {
 	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(withUnresolvedCatalogSecretVariables(), catalog.DeployPhase)
+	c := newTestCatalogSecretVariables(t, withUnresolvedCatalogSecretVariables(), catalog.DeployPhase)
 
 	got, err := c.get(context.Background())
 
@@ -199,7 +379,7 @@ func TestCatalogSecretVariablesFailsWithUnresolvedVariablesOnDeploy(t *testing.T
 
 func TestCatalogSecretVariablesEndsTheHintWithTheDestroyRetry(t *testing.T) {
 	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(&client.FakeUserClient{
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 		CatalogSecretVariables: types.CatalogSecretVariables{
 			Variables: []types.CatalogSecretVariable{{Name: "OKTETO_TOKEN", Value: "value"}},
 		},
@@ -213,7 +393,7 @@ func TestCatalogSecretVariablesEndsTheHintWithTheDestroyRetry(t *testing.T) {
 
 func TestCatalogSecretVariablesSkipsUnresolvedVariablesOnDestroyWithAWarningEach(t *testing.T) {
 	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(withUnresolvedCatalogSecretVariables(), catalog.DestroyPhase)
+	c := newTestCatalogSecretVariables(t, withUnresolvedCatalogSecretVariables(), catalog.DestroyPhase)
 
 	got, err := c.get(context.Background())
 
@@ -228,7 +408,7 @@ func TestCatalogSecretVariablesSkipsUnresolvedVariablesOnDestroyWithAWarningEach
 
 func TestCatalogSecretVariablesLogsUnknownReasons(t *testing.T) {
 	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(&client.FakeUserClient{
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 		CatalogSecretVariables: types.CatalogSecretVariables{
 			Unresolved: []types.UnresolvedCatalogSecretVariable{{Variable: "API_TOKEN", Reason: "other_reason"}},
 		},
@@ -252,7 +432,7 @@ func TestCatalogSecretVariablesLogsOtherErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out := captureJSONLogs(t)
-			c := newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: tt.err}, catalog.DeployPhase)
+			c := newTestCatalogSecretVariables(t, &client.FakeUserClient{ErrCatalogSecretVariables: tt.err}, catalog.DeployPhase)
 
 			_, err := c.get(context.Background())
 
@@ -264,7 +444,7 @@ func TestCatalogSecretVariablesLogsOtherErrors(t *testing.T) {
 
 func TestCatalogSecretVariablesSkipsThemAllWithInvalidNamesOnForceDestroy(t *testing.T) {
 	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(&client.FakeUserClient{
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 		CatalogSecretVariables: types.CatalogSecretVariables{
 			Variables: []types.CatalogSecretVariable{
 				{Name: "VALID", Value: "value"},
@@ -298,7 +478,7 @@ func TestCatalogSecretVariablesRejectsInvalidNames(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out := captureJSONLogs(t)
-			c := newTestCatalogSecretVariables(&client.FakeUserClient{
+			c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 				CatalogSecretVariables: types.CatalogSecretVariables{
 					Variables: []types.CatalogSecretVariable{
 						{Name: "VALID", Value: "value"},
@@ -322,7 +502,7 @@ func TestCatalogSecretVariablesRejectsInvalidNames(t *testing.T) {
 
 func TestCatalogSecretVariablesNeverLogsTheValues(t *testing.T) {
 	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(&client.FakeUserClient{
+	c := newTestCatalogSecretVariables(t, &client.FakeUserClient{
 		CatalogSecretVariables: types.CatalogSecretVariables{
 			Variables: []types.CatalogSecretVariable{
 				{Name: "API_TOKEN", Value: "secret-value"},

@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"regexp"
 	"strings"
 
@@ -54,13 +56,22 @@ type catalogSecretVariablesGetter interface {
 	GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error)
 }
 
+// catalogSecretVariablesClientFactory returns the client that gets the
+// catalog secret variables with the token, or with the user's token when it's
+// empty
+type catalogSecretVariablesClientFactory func(token string) (catalogSecretVariablesGetter, error)
+
 // catalogSecretVariables gets the catalog secret variables of the development
 // environment being deployed or destroyed, to inject them into the env of the
 // commands
 type catalogSecretVariables struct {
-	client   catalogSecretVariablesGetter
-	action   string
-	endpoint string
+	newClient catalogSecretVariablesClientFactory
+	// tokenFile is the file with the token of the installer running the
+	// action, which the endpoint authenticates. The remote-run RUN mounts it as
+	// a build secret. Older installations don't provide it
+	tokenFile string
+	action    string
+	endpoint  string
 	// phase is the operation whose commands get the variables
 	phase catalog.Phase
 	// forceDestroy runs the destroy commands without the variables when they
@@ -109,12 +120,26 @@ func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (ca
 	if endpoint == "" {
 		return c, fmt.Errorf("--%s is required with --%s", catalog.SecretVariablesEndpointFlag, catalog.ActionFlag)
 	}
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return c, err
-	}
-	c.client = oktetoClient.User()
+	c.tokenFile = catalog.SecretVariablesTokenPath
+	c.newClient = newCatalogSecretVariablesClient
 	return c, nil
+}
+
+// newCatalogSecretVariablesClient returns the client that gets the catalog
+// secret variables with the token as the bearer, instead of the user's token.
+// Without a token it uses the user's, which the endpoint of older
+// installations takes. It reaches the endpoint directly, ignoring the proxy
+// env vars, with the TLS settings of the context
+func newCatalogSecretVariablesClient(token string) (catalogSecretVariablesGetter, error) {
+	opts := []okteto.Option{okteto.WithoutProxy()}
+	if token != "" {
+		opts = append(opts, okteto.WithToken(token))
+	}
+	oktetoClient, err := okteto.NewOktetoClient(opts...)
+	if err != nil {
+		return nil, err
+	}
+	return oktetoClient.User(), nil
 }
 
 // get returns the catalog secret variables as "key=value" vars. Any error, and
@@ -126,7 +151,7 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 		return nil, nil
 	}
 
-	variables, err := c.client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	variables, err := c.fetch(ctx)
 	if err == nil && len(variables.Unresolved) > 0 && !c.skipsUnresolved() {
 		err = unresolvedCatalogSecretVariablesError{variables: variables.Unresolved}
 	}
@@ -156,6 +181,47 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 		vars = append(vars, fmt.Sprintf("%s=%s", v.Name, v.Value))
 	}
 	return vars, nil
+}
+
+// fetch gets the catalog secret variables from the endpoint. The token is the
+// copy of the installer's file that BuildKit mounted when the RUN started, so
+// it's fresh. It is never logged nor set in the env of the commands, but the
+// secret is mounted for the whole RUN and they can read the file, so it's
+// masked in their output like the user's token
+func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretVariables, error) {
+	token, err := c.readToken()
+	if err != nil {
+		return types.CatalogSecretVariables{}, err
+	}
+	oktetoLog.AddMaskedWord(token)
+	client, err := c.newClient(token)
+	if err != nil {
+		return types.CatalogSecretVariables{}, err
+	}
+	variables, err := client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	if err != nil && token == "" {
+		return types.CatalogSecretVariables{}, fmt.Errorf("%w (%s isn't mounted, so the request used the user's token)", err, c.tokenFile)
+	}
+	return variables, err
+}
+
+// readToken reads the token the endpoint authenticates the installer with. It
+// returns none when the file isn't mounted: older installations don't provide
+// it, and their endpoint takes the user's token
+func (c catalogSecretVariables) readToken() (string, error) {
+	content, err := os.ReadFile(c.tokenFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		oktetoLog.Infof("%s is not mounted: getting the catalog secret variables with the user's token", c.tokenFile)
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("could not read the token to get the catalog secret variables: %w", err)
+	}
+	token := strings.TrimSpace(string(content))
+	if token == "" {
+		return "", fmt.Errorf("could not read the token to get the catalog secret variables: %s is empty", c.tokenFile)
+	}
+	return token, nil
 }
 
 // skipsUnresolved is true when the commands run without the variables that
