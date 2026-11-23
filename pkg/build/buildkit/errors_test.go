@@ -21,6 +21,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var errUnparseableRegistryURL = errors.New("failed to solve: unexpected status from GET request to https://registry.example.com/%zz: 502 Bad Gateway")
@@ -603,4 +604,36 @@ func TestIsBuildStepFailure(t *testing.T) {
 			assert.Equal(t, tt.expected, IsBuildStepFailure(tt.err))
 		})
 	}
+}
+
+func TestCommandErrIsErrCommandFailed(t *testing.T) {
+	tests := []struct {
+		err  error
+		name string
+	}{
+		{
+			name: "remote command",
+			err:  CommandErr{Stage: "make test", Err: errors.New("exit code 2")},
+		},
+		{
+			name: "test container",
+			err:  CommandErr{Stage: "unit", Err: errors.New("exit code 1"), Output: "test"},
+		},
+		{
+			name: "wrapped",
+			err:  fmt.Errorf("deploy failed: %w", CommandErr{Stage: "make deploy", Err: errors.New("exit code 1")}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorIs(t, tt.err, oktetoErrors.ErrCommandFailed)
+		})
+	}
+}
+
+func TestCommandErrIsNotOtherErrors(t *testing.T) {
+	err := CommandErr{Stage: "make test", Err: oktetoErrors.ErrTimeout}
+
+	require.NotErrorIs(t, err, oktetoErrors.ErrTimeout)
+	require.NotErrorIs(t, err, ErrBuildConnecionFailed)
 }

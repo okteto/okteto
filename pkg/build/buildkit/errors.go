@@ -49,6 +49,13 @@ func (e CommandErr) Error() string {
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
+// Is reports a CommandErr as an oktetoErrors.ErrCommandFailed: a command of a
+// remote deploy, destroy or test container that failed. Packages that can't
+// import buildkit (e.g. analytics) can recognize it that way.
+func (CommandErr) Is(target error) bool {
+	return target == oktetoErrors.ErrCommandFailed
+}
+
 var (
 	oktetoRemoteCLIRepository      = "okteto/okteto"
 	oktetoPipelineRunnerRepository = "okteto/pipeline-runner"
