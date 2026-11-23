@@ -28,8 +28,6 @@ const (
 )
 
 type configRepositoryInterface interface {
-	GetSHA() (string, error)
-	IsClean() (bool, error)
 	GetAnonymizedRepo() string
 	GetLatestDirSHA(string) (string, error)
 }
@@ -42,7 +40,6 @@ type oktetoBuilderConfig struct {
 	repository          configRepositoryInterface
 	fs                  afero.Fs
 	hasGlobalAccess     bool
-	isCleanProject      bool
 	isOkteto            bool
 	isSmartBuildsEnable bool
 }
@@ -57,15 +54,9 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		l.Infof("error trying to access globalPushAccess: %s", err)
 	}
 
-	isClean, err := gitRepo.IsClean()
-	if err != nil {
-		l.Infof("error checking if the repository is clean: %s", err)
-	}
-
 	return oktetoBuilderConfig{
 		repository:          gitRepo,
 		hasGlobalAccess:     hasAccess,
-		isCleanProject:      isClean,
 		fs:                  afero.NewOsFs(),
 		isOkteto:            okteto.IsOkteto(),
 		isSmartBuildsEnable: getIsSmartBuildEnabled(),
@@ -78,15 +69,9 @@ func getConfigStateless(registry configRegistryInterface, gitRepo configReposito
 		l.Infof("error trying to access globalPushAccess: %s", err)
 	}
 
-	isClean, err := gitRepo.IsClean()
-	if err != nil {
-		l.Infof("error checking if the repository is clean: %s", err)
-	}
-
 	return oktetoBuilderConfig{
 		repository:          gitRepo,
 		hasGlobalAccess:     hasAccess,
-		isCleanProject:      isClean,
 		fs:                  afero.NewOsFs(),
 		isOkteto:            isOkteto,
 		isSmartBuildsEnable: getIsSmartBuildEnabled(),
@@ -117,20 +102,6 @@ func (oc oktetoBuilderConfig) IsOkteto() bool {
 // HasGlobalAccess checks if the user has access to global registry
 func (oc oktetoBuilderConfig) HasGlobalAccess() bool {
 	return oc.hasGlobalAccess
-}
-
-// IsCleanProject checks if the repository is clean(no changes over the last commit)
-func (oc oktetoBuilderConfig) IsCleanProject() bool {
-	return oc.isCleanProject
-}
-
-// GetGitCommit returns the commit sha of the repository
-func (oc oktetoBuilderConfig) GetGitCommit() string {
-	commitSHA, err := oc.repository.GetSHA()
-	if err != nil {
-		oktetoLog.Infof("could not get repository sha: %s", err)
-	}
-	return commitSHA
 }
 
 // GetAnonymizedRepo returns the repository url without credentials
