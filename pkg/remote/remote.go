@@ -234,7 +234,9 @@ type dockerfileTemplateProperties struct {
 	// GitCredentialsEndpointArgName is the URL the Git credential helper gets the credentials from.
 	// Git starts the helper from the commands that remote-run runs, so it reaches it as an env var
 	GitCredentialsEndpointArgName string
-	// InstallGitCredentialHelper is false when OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns the helper off
+	// InstallGitCredentialHelper is true when Okteto gives the helper its endpoint, unless
+	// OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns it off. Without the endpoint the helper gives nothing,
+	// but installing it would still change how Git looks up github.com credentials
 	InstallGitCredentialHelper bool
 }
 
@@ -520,7 +522,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoPrefixEnvVars:           getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars:  params.OktetoCommandSpecificEnvVars,
 		GitCredentialsEndpointArgName: constants.OktetoGitCredentialsEndpointEnvVar,
-		InstallGitCredentialHelper:    !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar),
+		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(),
 		Command:                       params.Command,
 		Caches:                        params.Caches,
 		TestName:                      params.TestName,
@@ -554,6 +556,14 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		return "", err
 	}
 	return dockerfile.Name(), nil
+}
+
+// shouldInstallGitCredentialHelper returns true when Okteto gives the Git credential helper its
+// endpoint and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off. Okteto only sets the
+// endpoint where it serves the credentials, so older Okteto versions don't get the helper
+func shouldInstallGitCredentialHelper() bool {
+	return os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar) != "" &&
+		!env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
 }
 
 func (r *Runner) getContextPath(cwd, manifestPath string) string {

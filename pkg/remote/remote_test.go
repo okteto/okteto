@@ -222,6 +222,7 @@ func TestExtraHosts(t *testing.T) {
 }
 
 func TestCreateDockerfile(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials")
 	originalStore := okteto.CurrentStore
 	defer func() { okteto.CurrentStore = originalStore }()
 
@@ -664,7 +665,29 @@ func TestRunPassesTheGitCredentialsEndpoint(t *testing.T) {
 }
 
 func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials")
 	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
+
+	d := createDeployDockerfile(t)
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN okteto registrytoken install --force --log-output=json")
+}
+
+func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "")
+
+	d := createDeployDockerfile(t)
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN okteto registrytoken install --force --log-output=json")
+}
+
+// createDeployDockerfile returns the Dockerfile that a remote deploy generates
+func createDeployDockerfile(t *testing.T) string {
+	t.Helper()
 	fs := afero.NewMemMapFs()
 	rdc := Runner{
 		fs:                   fs,
@@ -685,9 +708,7 @@ func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 	require.NoError(t, err)
 	d, err := afero.ReadFile(fs, dockerfileName)
 	require.NoError(t, err)
-	require.NotContains(t, string(d), "git-credential")
-	require.NotContains(t, string(d), constants.OktetoGitCredentialsEndpointEnvVar)
-	require.Contains(t, string(d), "RUN okteto registrytoken install --force --log-output=json")
+	return string(d)
 }
 
 // envFromDockerfile returns the value BuildKit gives to each ENV instruction of the Dockerfile
