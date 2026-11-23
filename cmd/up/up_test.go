@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/build"
 	buildCmd "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
@@ -652,24 +653,67 @@ func (*fakeBuilder) GetConnector() buildCmd.BuildkitConnector {
 	return nil
 }
 
-func TestValidateAutocreateImageFailsWithoutImage(t *testing.T) {
+func TestResolveAutocreateImageFailsWithoutImageAndSameNameBuild(t *testing.T) {
 	dev := &model.Dev{Name: "api", Autocreate: true}
+	manifest := &model.Manifest{
+		Build: build.ManifestBuild{
+			"other": {Context: "."},
+		},
+		Dev: model.ManifestDevs{"api": dev},
+	}
 
-	err := validateAutocreateImage(dev)
+	err := resolveAutocreateImage(manifest, "api")
 
 	var userErr oktetoErrors.UserError
 	require.ErrorAs(t, err, &userErr)
-	assert.Contains(t, userErr.E.Error(), "'image' is required for development container 'api'")
+	require.Contains(t, userErr.E.Error(), "'image' is required for development container 'api'")
+	require.Contains(t, userErr.Hint, "define a 'build' entry with the same name as the development container")
+	require.Contains(t, userErr.Hint, "https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional")
+	require.Empty(t, dev.Image)
 }
 
-func TestValidateAutocreateImageSucceedsWithImage(t *testing.T) {
+func TestResolveAutocreateImageUsesSameNameBuild(t *testing.T) {
+	dev := &model.Dev{Name: "my-api", Autocreate: true}
+	manifest := &model.Manifest{
+		Build: build.ManifestBuild{
+			"my-api": {Context: "."},
+		},
+		Dev: model.ManifestDevs{"my-api": dev},
+	}
+
+	require.NoError(t, resolveAutocreateImage(manifest, "my-api"))
+	require.Equal(t, "${OKTETO_BUILD_MY_API_IMAGE}", dev.Image)
+}
+
+func TestResolveAutocreateImageKeepsExplicitImage(t *testing.T) {
 	dev := &model.Dev{Name: "api", Autocreate: true, Image: "python:alpine"}
+	manifest := &model.Manifest{
+		Dev: model.ManifestDevs{"api": dev},
+	}
 
-	assert.NoError(t, validateAutocreateImage(dev))
+	require.NoError(t, resolveAutocreateImage(manifest, "api"))
+	require.Equal(t, "python:alpine", dev.Image)
 }
 
-func TestValidateAutocreateImageSucceedsWithoutAutocreate(t *testing.T) {
+func TestResolveAutocreateImageSucceedsWithoutAutocreate(t *testing.T) {
 	dev := &model.Dev{Name: "api"}
+	manifest := &model.Manifest{
+		Dev: model.ManifestDevs{"api": dev},
+	}
 
-	assert.NoError(t, validateAutocreateImage(dev))
+	require.NoError(t, resolveAutocreateImage(manifest, "api"))
+	require.Empty(t, dev.Image)
+}
+
+func TestResolveAutocreateImageUsesManifestKeyWhenDevNameDiffers(t *testing.T) {
+	dev := &model.Dev{Name: "backend", Autocreate: true}
+	manifest := &model.Manifest{
+		Build: build.ManifestBuild{
+			"api": {Context: "."},
+		},
+		Dev: model.ManifestDevs{"api": dev},
+	}
+
+	require.NoError(t, resolveAutocreateImage(manifest, "api"))
+	require.Equal(t, "${OKTETO_BUILD_API_IMAGE}", dev.Image)
 }

@@ -298,7 +298,7 @@ okteto up api -- echo this is a test
 				return fmt.Errorf("error in 'dev' section of your manifest: %w", err)
 			}
 
-			if err := validateAutocreateImage(dev); err != nil {
+			if err := resolveAutocreateImage(oktetoManifest, argsparserResult.DevName); err != nil {
 				return err
 			}
 
@@ -394,15 +394,19 @@ okteto up api -- echo this is a test
 	return cmd
 }
 
-// validateAutocreateImage returns an error if 'autocreate' is enabled but no image is defined.
+// resolveAutocreateImage makes sure an 'autocreate' development container has an image.
+// If it doesn't define one, it uses the image of the 'build' entry with the same manifest key, which the upBuilder
+// resolves, and builds if needed, later on. Otherwise it returns an error:
 // Okteto never deploys a default image the user hasn't explicitly configured.
-func validateAutocreateImage(dev *model.Dev) error {
-	if !dev.Autocreate || dev.Image != "" {
+func resolveAutocreateImage(manifest *model.Manifest, devName string) error {
+	manifest.InferAutocreateImageFromBuild(devName)
+	dev, ok := manifest.Dev[devName]
+	if !ok || !dev.Autocreate || dev.Image != "" {
 		return nil
 	}
 	return oktetoErrors.UserError{
 		E:    fmt.Errorf("'image' is required for development container '%s' when 'autocreate' is enabled", dev.Name),
-		Hint: "Set the 'image' field of your development container in your Okteto manifest.\n    More information is available here: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional",
+		Hint: "Set the 'image' field of your development container in your Okteto manifest, or define a 'build' entry with the same name as the development container.\n    More information is available here: https://www.okteto.com/docs/reference/okteto-manifest/#image-string-optional",
 	}
 }
 

@@ -767,9 +767,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	for devName, devInfo := range manifest.Dev {
-		if _, ok := manifest.Build[devName]; ok && devInfo.Image == "" && devInfo.Autocreate {
-			devInfo.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
-		}
+		manifest.InferAutocreateImageFromBuild(devName)
 		if devInfo.Image != "" {
 			devInfo.Image, err = env.ExpandEnvIfNotEmpty(devInfo.Image)
 			if err != nil {
@@ -785,6 +783,19 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	return nil
+}
+
+// InferAutocreateImageFromBuild sets the image of an 'autocreate' development container that doesn't define one
+// to the image built by the 'build' entry with the same name, referenced as ${OKTETO_BUILD_<NAME>_IMAGE}
+func (manifest *Manifest) InferAutocreateImageFromBuild(devName string) {
+	dev, ok := manifest.Dev[devName]
+	if !ok || !dev.Autocreate || dev.Image != "" {
+		return
+	}
+	if _, ok := manifest.Build[devName]; !ok {
+		return
+	}
+	dev.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
 }
 
 // InferFromStack infers data, mainly dev services and build information from services defined in the stackfile

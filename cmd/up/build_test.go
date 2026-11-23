@@ -152,6 +152,35 @@ func TestUpBuilder_Build(t *testing.T) {
 	}
 }
 
+// regexBuilder resolves the build service with the real builder, so the tests cover the syntax of the inferred image
+type regexBuilder struct {
+	*fakeBuilder
+}
+
+func (regexBuilder) GetSvcToBuildFromRegex(manifest *model.Manifest, imgFinder model.ImageFromManifest) (string, error) {
+	return (&buildv2.OktetoBuilder{}).GetSvcToBuildFromRegex(manifest, imgFinder)
+}
+
+func TestUpBuilder_BuildsSameNameBuildForAutocreateWithoutImage(t *testing.T) {
+	dev := &model.Dev{Name: "my-api", Autocreate: true}
+	manifest := &model.Manifest{
+		Build: build.ManifestBuild{
+			"my-api": {Context: "."},
+		},
+		Dev: map[string]*model.Dev{
+			"my-api": dev,
+		},
+	}
+	builder := &fakeBuilder{services: []string{"my-api"}}
+	ub := newUpBuilder(manifest, "my-api", regexBuilder{builder}, &fakeRegistry{}, analytics.NewUpMetricsMetadata())
+
+	require.NoError(t, resolveAutocreateImage(manifest, "my-api"))
+	require.NoError(t, ub.build(context.Background()))
+
+	require.NotNil(t, builder.usedBuildOptions)
+	require.Equal(t, []string{"my-api"}, builder.usedBuildOptions.CommandArgs)
+}
+
 func TestGetBuildServiceFromImage(t *testing.T) {
 	tests := []struct {
 		name        string
