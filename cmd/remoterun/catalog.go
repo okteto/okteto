@@ -18,11 +18,14 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/catalog"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -57,9 +60,9 @@ type catalogSecretVariablesGetter interface {
 }
 
 // catalogSecretVariablesClientFactory returns the client that gets the
-// catalog secret variables with the token, or with the user's token when it's
-// empty
-type catalogSecretVariablesClientFactory func(token string) (catalogSecretVariablesGetter, error)
+// catalog secret variables from the endpoint through the internal IP of the
+// Okteto API, with the token, or with the user's token when it's empty
+type catalogSecretVariablesClientFactory func(endpoint, internalAPIIP, token string) (catalogSecretVariablesGetter, error)
 
 // catalogSecretVariables gets the catalog secret variables of the development
 // environment being deployed or destroyed, to inject them into the env of the
@@ -72,6 +75,9 @@ type catalogSecretVariables struct {
 	tokenFile string
 	action    string
 	endpoint  string
+	// internalAPIIP is the internal IP of the Okteto API that the CLI starting
+	// the remote build passes on, empty when the installation doesn't publish it
+	internalAPIIP string
 	// phase is the operation whose commands get the variables
 	phase catalog.Phase
 	// forceDestroy runs the destroy commands without the variables when they
@@ -101,6 +107,23 @@ func (invalidCatalogSecretVariableNamesError) Error() string {
 	return "the catalog secret variables have invalid names"
 }
 
+// errCatalogSecretVariablesEndpointNotHTTPS is returned when the endpoint
+// isn't https, so the request isn't sent. Only the first installations with
+// catalog secret variables give an http endpoint, which remote builds can't
+// reach
+var errCatalogSecretVariablesEndpointNotHTTPS = errors.New("the catalog secret variables can't be fetched: the Okteto installation gives an endpoint that isn't https")
+
+// internalAPIIPMissingError is returned when the remote build doesn't get a
+// valid internal IP of the Okteto API to reach the endpoint through, so the
+// request isn't sent
+type internalAPIIPMissingError struct {
+	hostname string
+}
+
+func (e internalAPIIPMissingError) Error() string {
+	return fmt.Sprintf("the catalog secret variables can't be fetched: the remote build doesn't get the internal IP of the Okteto API to reach %s", e.hostname)
+}
+
 // addCatalogSecretVariablesFlags adds the flags to get the catalog secret
 // variables. They are only read from these flags, so a variable can't change
 // them
@@ -121,6 +144,7 @@ func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (ca
 		return c, fmt.Errorf("--%s is required with --%s", catalog.SecretVariablesEndpointFlag, catalog.ActionFlag)
 	}
 	c.tokenFile = catalog.SecretVariablesTokenPath
+	c.internalAPIIP = os.Getenv(constants.OktetoInternalAPIIPEnvVar)
 	c.newClient = newCatalogSecretVariablesClient
 	return c, nil
 }
@@ -128,18 +152,14 @@ func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (ca
 // newCatalogSecretVariablesClient returns the client that gets the catalog
 // secret variables with the token as the bearer, instead of the user's token.
 // Without a token it uses the user's, which the endpoint of older
-// installations takes. It reaches the endpoint directly, ignoring the proxy
-// env vars, with the TLS settings of the context
-func newCatalogSecretVariablesClient(token string) (catalogSecretVariablesGetter, error) {
-	opts := []okteto.Option{okteto.WithoutProxy()}
+// installations takes. It connects to the internal IP of the Okteto API, never
+// through a proxy, and doesn't follow redirects
+func newCatalogSecretVariablesClient(endpoint, internalAPIIP, token string) (catalogSecretVariablesGetter, error) {
+	var opts []okteto.Option
 	if token != "" {
 		opts = append(opts, okteto.WithToken(token))
 	}
-	oktetoClient, err := okteto.NewOktetoClient(opts...)
-	if err != nil {
-		return nil, err
-	}
-	return oktetoClient.User(), nil
+	return okteto.NewCatalogSecretVariablesClient(endpoint, internalAPIIP, opts...)
 }
 
 // get returns the catalog secret variables as "key=value" vars. Any error, and
@@ -183,18 +203,33 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
-// fetch gets the catalog secret variables from the endpoint. The token is the
-// copy of the installer's file that BuildKit mounted when the RUN started, so
-// it's fresh. It is never logged nor set in the env of the commands, but the
-// secret is mounted for the whole RUN and they can read the file, so it's
-// masked in their output like the user's token
+// fetch gets the catalog secret variables from the endpoint, an https URL
+// that the client reaches through the internal IP of the Okteto API instead of
+// resolving its hostname: the wildcard DNS record resolves it to the ingress,
+// which doesn't serve it, so the request would only time out. Without an https
+// endpoint and a valid IP, the token isn't read and no request is sent.
+//
+// The token is the copy of the installer's file that BuildKit mounted when the
+// RUN started, so it's fresh. It is never logged nor set in the env of the
+// commands, but the secret is mounted for the whole RUN and they can read the
+// file, so it's masked in their output like the user's token
 func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretVariables, error) {
+	u, err := url.Parse(c.endpoint)
+	if err != nil {
+		return types.CatalogSecretVariables{}, fmt.Errorf("invalid catalog secret variables endpoint: %w", err)
+	}
+	if u.Scheme != "https" {
+		return types.CatalogSecretVariables{}, errCatalogSecretVariablesEndpointNotHTTPS
+	}
+	if net.ParseIP(c.internalAPIIP) == nil {
+		return types.CatalogSecretVariables{}, internalAPIIPMissingError{hostname: u.Hostname()}
+	}
 	token, err := c.readToken()
 	if err != nil {
 		return types.CatalogSecretVariables{}, err
 	}
 	oktetoLog.AddMaskedWord(token)
-	client, err := c.newClient(token)
+	client, err := c.newClient(c.endpoint, c.internalAPIIP, token)
 	if err != nil {
 		return types.CatalogSecretVariables{}, err
 	}
@@ -243,6 +278,7 @@ func (c catalogSecretVariables) logError(err error) {
 	oktetoLog.SetStage(catalogSecretVariablesStage)
 	var unresolved unresolvedCatalogSecretVariablesError
 	var invalidNames invalidCatalogSecretVariableNamesError
+	var ipMissing internalAPIIPMissingError
 	switch {
 	case errors.As(err, &unresolved):
 		for _, v := range unresolved.variables {
@@ -254,6 +290,10 @@ func (c catalogSecretVariables) logError(err error) {
 			oktetoLog.Println(line)
 		}
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint()))
+	case errors.As(err, &ipMissing):
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, %s", c.retryHint()))
+	case errors.Is(err, errCatalogSecretVariablesEndpointNotHTTPS):
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to upgrade the Okteto installation, %s", c.retryHint()))
 	}
 	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", err.Error())
 }
