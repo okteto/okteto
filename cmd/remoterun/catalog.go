@@ -107,9 +107,15 @@ func (invalidCatalogSecretVariableNamesError) Error() string {
 	return "the catalog secret variables have invalid names"
 }
 
-// internalAPIIPMissingError is returned when the endpoint is https and the
-// remote build doesn't get a valid internal IP of the Okteto API to reach it
-// through, so the request isn't sent
+// errCatalogSecretVariablesEndpointNotHTTPS is returned when the endpoint
+// isn't https, so the request isn't sent. Only the first installations with
+// catalog secret variables give an http endpoint, which remote builds can't
+// reach
+var errCatalogSecretVariablesEndpointNotHTTPS = errors.New("the catalog secret variables can't be fetched: the Okteto installation gives an endpoint that isn't https")
+
+// internalAPIIPMissingError is returned when the remote build doesn't get a
+// valid internal IP of the Okteto API to reach the endpoint through, so the
+// request isn't sent
 type internalAPIIPMissingError struct {
 	hostname string
 }
@@ -146,8 +152,8 @@ func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (ca
 // newCatalogSecretVariablesClient returns the client that gets the catalog
 // secret variables with the token as the bearer, instead of the user's token.
 // Without a token it uses the user's, which the endpoint of older
-// installations takes. An https endpoint is reached through the internal IP of
-// the Okteto API, never through a proxy, and without following redirects
+// installations takes. It connects to the internal IP of the Okteto API, never
+// through a proxy, and doesn't follow redirects
 func newCatalogSecretVariablesClient(endpoint, internalAPIIP, token string) (catalogSecretVariablesGetter, error) {
 	var opts []okteto.Option
 	if token != "" {
@@ -197,13 +203,11 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 	return vars, nil
 }
 
-// fetch gets the catalog secret variables from the endpoint. An https endpoint
-// is only called with a valid internal IP of the Okteto API, which the client
-// connects to instead of resolving the hostname: the wildcard DNS record
-// resolves it to the ingress, which doesn't serve it, so the request would only
-// time out. Without that IP, the token isn't read and no request is sent. Older
-// installations give an http endpoint on the API service, which is called as
-// before.
+// fetch gets the catalog secret variables from the endpoint, an https URL
+// that the client reaches through the internal IP of the Okteto API instead of
+// resolving its hostname: the wildcard DNS record resolves it to the ingress,
+// which doesn't serve it, so the request would only time out. Without an https
+// endpoint and a valid IP, the token isn't read and no request is sent.
 //
 // The token is the copy of the installer's file that BuildKit mounted when the
 // RUN started, so it's fresh. It is never logged nor set in the env of the
@@ -214,7 +218,10 @@ func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretV
 	if err != nil {
 		return types.CatalogSecretVariables{}, fmt.Errorf("invalid catalog secret variables endpoint: %w", err)
 	}
-	if u.Scheme == "https" && net.ParseIP(c.internalAPIIP) == nil {
+	if u.Scheme != "https" {
+		return types.CatalogSecretVariables{}, errCatalogSecretVariablesEndpointNotHTTPS
+	}
+	if net.ParseIP(c.internalAPIIP) == nil {
 		return types.CatalogSecretVariables{}, internalAPIIPMissingError{hostname: u.Hostname()}
 	}
 	token, err := c.readToken()
@@ -285,6 +292,8 @@ func (c catalogSecretVariables) logError(err error) {
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint()))
 	case errors.As(err, &ipMissing):
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, %s", c.retryHint()))
+	case errors.Is(err, errCatalogSecretVariablesEndpointNotHTTPS):
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to upgrade the Okteto installation, %s", c.retryHint()))
 	}
 	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "%s", err.Error())
 }

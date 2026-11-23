@@ -24,7 +24,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"golang.org/x/oauth2"
@@ -53,11 +52,10 @@ type CatalogSecretVariablesClient struct {
 }
 
 // NewCatalogSecretVariablesClient returns the client that gets the catalog
-// secret variables from endpoint with the token of the current context, or the
-// one of the options. An https endpoint is reached through internalAPIIP, as
-// NewInternalAPIHTTPClient does, and fails without a valid one. Older
-// installations give an http endpoint on the API service, which is resolved as
-// before
+// secret variables from endpoint, an https URL it reaches through
+// internalAPIIP, as NewInternalAPIHTTPClient does. It fails without both. It
+// sends the token of the current context, or the one of the options, and
+// trusts the certificate of the current context
 func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Option) (*CatalogSecretVariablesClient, error) {
 	cfg := defaultOktetoClientCfg()
 	for _, opt := range opts {
@@ -77,7 +75,7 @@ func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Opt
 		}
 	}
 
-	httpClient, err := catalogSecretVariablesHTTPClient(endpoint, internalAPIIP, certs)
+	httpClient, err := NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +87,6 @@ func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Opt
 		},
 	}
 	return &CatalogSecretVariablesClient{httpClient: httpClient}, nil
-}
-
-func catalogSecretVariablesHTTPClient(endpoint, internalAPIIP string, certs []*x509.Certificate) (*http.Client, error) {
-	if u, err := url.Parse(endpoint); err == nil && u.Scheme == "http" {
-		return oktetoHttp.StrictSSLHTTPClient(&oktetoHttp.SSLTransportOption{Certs: certs}), nil
-	}
-	return NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
 }
 
 // GetCatalogSecretVariables returns the catalog secret variables of the

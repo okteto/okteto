@@ -17,8 +17,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -201,7 +205,7 @@ func TestNewCatalogSecretVariablesForTheAction(t *testing.T) {
 
 // Neither the token is read nor the client built: a folder can't be read as a
 // token file, and the factory records every client it creates
-func TestCatalogSecretVariablesDoNotCallAnHTTPSEndpointWithoutAValidInternalAPIIP(t *testing.T) {
+func TestCatalogSecretVariablesDoNotCallTheEndpointWithoutAValidInternalAPIIP(t *testing.T) {
 	tests := []struct {
 		name          string
 		internalAPIIP string
@@ -232,20 +236,58 @@ func TestCatalogSecretVariablesDoNotCallAnHTTPSEndpointWithoutAValidInternalAPII
 	}
 }
 
-func TestCatalogSecretVariablesCallsAnHTTPEndpointWithoutTheInternalAPIIP(t *testing.T) {
-	const endpoint = "http://okteto-api.okteto:8080/internal/catalog/secret-variables"
-	getter := &recordingCatalogSecretVariablesGetter{}
-	c := newTestCatalogSecretVariables(t, getter, catalog.DeployPhase)
-	c.endpoint = endpoint
-	c.internalAPIIP = ""
+// Only the first installations with catalog secret variables give an http
+// endpoint, which remote builds can't reach. Neither the token is read nor the
+// client built
+func TestCatalogSecretVariablesDoNotCallAnEndpointThatIsNotHTTPS(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint string
+	}{
+		{name: "http", endpoint: "http://okteto-api.okteto:8080/internal/catalog/secret-variables"},
+		{name: "without scheme", endpoint: "okteto-api.okteto/internal/catalog/secret-variables"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := captureJSONLogs(t)
+			factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
+			c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
+			c.newClient = factory.newClient
+			c.tokenFile = t.TempDir()
+			c.endpoint = tt.endpoint
 
-	_, err := c.get(context.Background())
+			got, err := c.get(context.Background())
 
-	require.NoError(t, err)
-	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: endpoint, action: "action-name"}, getter)
+			require.ErrorIs(t, err, errCatalogSecretVariablesEndpointNotHTTPS)
+			require.Nil(t, got)
+			require.Empty(t, factory.tokens)
+			require.Equal(t, []oktetoLog.JSONLogFormat{
+				catalogLog(oktetoLog.InfoLevel, "Ask an Okteto admin to upgrade the Okteto installation, then deploy again."),
+				catalogLog(oktetoLog.ErrorLevel, "the catalog secret variables can't be fetched: the Okteto installation gives an endpoint that isn't https"),
+			}, jsonLogs(t, out))
+		})
+	}
 }
 
-func TestCatalogSecretVariablesCallsAnHTTPSEndpointWithAnIPv6InternalAPIIP(t *testing.T) {
+func TestCatalogSecretVariablesSkipsThemWithAnHTTPEndpointOnForceDestroy(t *testing.T) {
+	out := captureJSONLogs(t)
+	factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
+	c := newTestCatalogSecretVariables(t, nil, catalog.DestroyPhase)
+	c.newClient = factory.newClient
+	c.endpoint = "http://okteto-api.okteto:8080/internal/catalog/secret-variables"
+	c.forceDestroy = true
+
+	got, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Nil(t, got)
+	require.Empty(t, factory.tokens)
+	require.Equal(t, []oktetoLog.JSONLogFormat{
+		catalogWarning("Running the destroy commands without the catalog secret variables: the catalog secret variables can't be fetched: the Okteto installation gives an endpoint that isn't https"),
+	}, warnings(jsonLogs(t, out)))
+}
+
+func TestCatalogSecretVariablesCallsTheEndpointWithAnIPv6InternalAPIIP(t *testing.T) {
 	getter := &recordingCatalogSecretVariablesGetter{}
 	c := newTestCatalogSecretVariables(t, getter, catalog.DeployPhase)
 	c.internalAPIIP = "fd00::1"
@@ -330,19 +372,32 @@ func TestCatalogSecretVariablesGetsThemForTheActionFromTheEndpoint(t *testing.T)
 	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: testCatalogSecretVariablesEndpoint, action: "action-name"}, getter)
 }
 
-func TestNewCatalogSecretVariablesClientSendsTheTokenAsTheBearer(t *testing.T) {
+// startTestInternalAPI starts the internal API with TLS, sets a current
+// context with the user's token that trusts its certificate, and returns its
+// endpoint, with a hostname the certificate is valid for, and its IP
+func startTestInternalAPI(t *testing.T, handler http.HandlerFunc) (string, string) {
+	t.Helper()
+	server := httptest.NewTLSServer(handler)
+	t.Cleanup(server.Close)
 	setTestOktetoContext(t)
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+	okteto.CurrentStore.Contexts["test"].Certificate = base64.StdEncoding.EncodeToString(certPEM)
+	ip, port, err := net.SplitHostPort(server.Listener.Addr().String())
+	require.NoError(t, err)
+	return fmt.Sprintf("https://%s/internal/catalog/secret-variables", net.JoinHostPort("example.com", port)), ip
+}
+
+func TestNewCatalogSecretVariablesClientSendsTheTokenAsTheBearer(t *testing.T) {
 	var authorization, action string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	endpoint, ip := startTestInternalAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		authorization = r.Header.Get("Authorization")
 		action = r.URL.Query().Get("action")
 		_, _ = w.Write([]byte(`{"variables":[{"name":"PIN","value":"1"}]}`))
-	}))
-	t.Cleanup(server.Close)
+	})
 
-	c, err := newCatalogSecretVariablesClient(server.URL, "", testCatalogSecretVariablesToken)
+	c, err := newCatalogSecretVariablesClient(endpoint, ip, testCatalogSecretVariablesToken)
 	require.NoError(t, err)
-	got, err := c.GetCatalogSecretVariables(context.Background(), server.URL, "action-name")
+	got, err := c.GetCatalogSecretVariables(context.Background(), endpoint, "action-name")
 
 	require.NoError(t, err)
 	require.Equal(t, "Bearer projected-token", authorization)
@@ -351,17 +406,15 @@ func TestNewCatalogSecretVariablesClientSendsTheTokenAsTheBearer(t *testing.T) {
 }
 
 func TestNewCatalogSecretVariablesClientSendsTheUserTokenWithoutAToken(t *testing.T) {
-	setTestOktetoContext(t)
 	var authorization string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	endpoint, ip := startTestInternalAPI(t, func(w http.ResponseWriter, r *http.Request) {
 		authorization = r.Header.Get("Authorization")
 		_, _ = w.Write([]byte(`{}`))
-	}))
-	t.Cleanup(server.Close)
+	})
 
-	c, err := newCatalogSecretVariablesClient(server.URL, "", "")
+	c, err := newCatalogSecretVariablesClient(endpoint, ip, "")
 	require.NoError(t, err)
-	_, err = c.GetCatalogSecretVariables(context.Background(), server.URL, "action-name")
+	_, err = c.GetCatalogSecretVariables(context.Background(), endpoint, "action-name")
 
 	require.NoError(t, err)
 	require.Equal(t, "Bearer token", authorization)
