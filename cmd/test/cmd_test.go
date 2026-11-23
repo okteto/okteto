@@ -81,6 +81,60 @@ func TestCommandRejectsInvalidOverride(t *testing.T) {
 	}
 }
 
+// TestCommandRejectsInvalidGroup checks that the cobra command validates the --group flag.
+// These errors are returned before connecting to any cluster
+func TestCommandRejectsInvalidGroup(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		expectedErr error
+	}{
+		{
+			name:        "empty group flag",
+			args:        []string{"--group", ""},
+			expectedErr: errEmptyGroupFlag,
+		},
+		{
+			name:        "blank group flag",
+			args:        []string{"--group", " "},
+			expectedErr: errEmptyGroupFlag,
+		},
+		{
+			name:        "group flag with dash override",
+			args:        []string{"unit", "--group", "pre-commit", "--", "go", "test"},
+			expectedErr: errGroupWithCommandOverride,
+		},
+		{
+			name:        "group flag with command flag",
+			args:        []string{"unit", "--group", "pre-commit", "--command", "go test ./..."},
+			expectedErr: errGroupWithCommandOverride,
+		},
+		{
+			name:        "group flag with dash override and no test name",
+			args:        []string{"--group", "pre-commit", "--", "go", "test"},
+			expectedErr: errGroupWithCommandOverride,
+		},
+		{
+			name:        "group flag with command flag and no test name",
+			args:        []string{"--group", "pre-commit", "--command", "go test ./..."},
+			expectedErr: errGroupWithCommandOverride,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := Test(context.Background(), io.NewIOController(), nil, nil, nil)
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+
+			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
 type fakeSvcFromRegex struct {
 	err error
 	svc string

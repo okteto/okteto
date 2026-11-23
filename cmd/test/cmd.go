@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -64,9 +65,11 @@ type Options struct {
 	Variables        []string
 	// Commands are the values of the --command flag, which replace the commands of the selected test container
 	Commands []string
-	Timeout  time.Duration
-	Deploy   bool
-	NoCache  bool
+	// Groups are the values of the --group flag, which select the test containers that belong to any of them
+	Groups  []string
+	Timeout time.Duration
+	Deploy  bool
+	NoCache bool
 	// override is the command override resolved from the '--' arguments or the --command flag
 	override commandOverride
 }
@@ -90,6 +93,9 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		Example: `# Run the test containers defined in the Okteto Manifest
 okteto test
 
+# Run the test containers that belong to the 'pre-commit' group
+okteto test --group pre-commit
+
 # Run the 'unit' test container replacing its commands with a single one
 okteto test unit -- go test ./pkg/api -run TestLogin
 
@@ -98,6 +104,13 @@ okteto test unit --command "go mod download" --command "go test ./pkg/api -run T
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
+				return err
+			}
+
+			// The --group flag is validated before the override, so using both reports the conflict
+			// instead of the missing test container name required by the override
+			overrideRequested := cmd.ArgsLenAtDash() >= 0 || len(options.Commands) > 0
+			if err := validateGroupFlags(options.Groups, overrideRequested); err != nil {
 				return err
 			}
 
@@ -117,6 +130,7 @@ okteto test unit --command "go mod download" --command "go test ./pkg/api -run T
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				metadata.CommandOverride = override.isSet()
+				metadata.GroupSelected = len(options.Groups) > 0
 				at.TrackTest(metadata)
 				exit <- err
 			}()
@@ -140,6 +154,7 @@ okteto test unit --command "go mod download" --command "go test ./pkg/api -run T
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable to be injected in the test commands (can be set more than once)")
 	cmd.Flags().StringArrayVar(&options.Commands, "command", []string{}, "replace the commands of the test container, which must be the only one named (can be set more than once, run in order)")
+	cmd.Flags().StringArrayVar(&options.Groups, "group", []string{}, "run the test containers that belong to the group, along with the ones they depend on (can be set more than once)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the Test Container to run. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
 	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Force execution of the commands in the 'deploy' section")
@@ -231,6 +246,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 
+	servicesToTest, err = selectTests(manifest.Test, servicesToTest, options.Groups)
+	if err != nil {
+		return analytics.TestMetadata{}, err
+	}
+
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
 	pc, err := pipelineCMD.NewCommand(connTracker)
@@ -265,6 +285,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 
 	testServices := tree.Ordered()
+	if len(options.Groups) > 0 {
+		ioCtrl.Out().Infof("Test containers to run: %s", strings.Join(testServices, ", "))
+	}
 
 	wasBuilt, err := doBuild(ctx, manifest, testServices, builder, ioCtrl)
 	if err != nil {

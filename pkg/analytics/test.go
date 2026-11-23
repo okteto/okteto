@@ -44,6 +44,9 @@ type TestMetadata struct {
 	// CommandOverride is whether the commands of the selected test container were replaced
 	// from the command line ('--' or --command) instead of using the ones in the manifest
 	CommandOverride bool
+
+	// GroupSelected is whether the test containers to run were selected by group (--group)
+	GroupSelected bool
 }
 
 // SingleTestMetadata contains the metadata of a single test execution
@@ -76,6 +79,7 @@ func (a *Tracker) TrackTest(metadata TestMetadata) {
 		"success":         metadata.Success,
 		"stagesCount":     metadata.StagesCount,
 		"commandOverride": metadata.CommandOverride,
+		"groupSelected":   metadata.GroupSelected,
 	}
 	if metadata.Err != nil {
 		props["error"] = metadata.Err.Error()

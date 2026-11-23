@@ -38,7 +38,9 @@ type TestOptions struct {
 	Commands []string
 	// CommandArgs are passed after '--', replacing the commands of the test container
 	CommandArgs []string
-	NoCache     bool
+	// Groups are passed as --group flags, selecting the test containers that belong to them
+	Groups  []string
+	NoCache bool
 }
 
 // RunOktetoTestAndGetOutput runs an okteto test command and returns the output
@@ -88,6 +90,9 @@ func getTestCmd(oktetoPath string, testOptions *TestOptions) *exec.Cmd {
 	}
 	for _, command := range testOptions.Commands {
 		cmd.Args = append(cmd.Args, "--command", command)
+	}
+	for _, group := range testOptions.Groups {
+		cmd.Args = append(cmd.Args, "--group", group)
 	}
 	// '--' must be the last argument, as everything after it is the command to run
 	if len(testOptions.CommandArgs) > 0 {

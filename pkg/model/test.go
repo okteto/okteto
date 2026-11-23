@@ -25,6 +25,7 @@ type Test struct {
 	Context             string        `yaml:"context,omitempty"`
 	Commands            []TestCommand `yaml:"commands,omitempty"`
 	DependsOn           []string      `yaml:"depends_on,omitempty"`
+	Groups              []string      `yaml:"groups,omitempty"`
 	Caches              []string      `yaml:"caches,omitempty"`
 	Artifacts           []Artifact    `yaml:"artifacts,omitempty"`
 	Hosts               []Host        `yaml:"hosts,omitempty"`
@@ -56,6 +57,11 @@ func (test ManifestTests) Validate() error {
 	for k, t := range test {
 		if t == nil || len(t.Commands) == 0 {
 			return fmt.Errorf("test '%s' is invalid: no commands defined", k)
+		}
+		for _, group := range t.Groups {
+			if group == "" || strings.TrimSpace(group) != group {
+				return fmt.Errorf("test '%s' is invalid: group names cannot be empty or start or end with spaces", k)
+			}
 		}
 	}
 	return nil

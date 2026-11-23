@@ -83,6 +83,16 @@ func (test) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
+	testProps.Set("groups", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"array"}},
+		Title:       "groups",
+		Description: "A list of groups the Test Container belongs to. Run all the Test Containers of a group with 'okteto test --group <name>'. The Test Containers they depend on are executed too, even if they don't belong to the group.",
+		Items: &jsonschema.Schema{
+			Type:    &jsonschema.Type{Types: []string{"string"}},
+			Pattern: `^\S(.*\S)?$`, // group names cannot be empty or start or end with spaces
+		},
+	})
+
 	hostsItemProps := jsonschema.NewProperties()
 	hostsItemProps.Set("hostname", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"string"}},

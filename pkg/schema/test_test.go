@@ -86,6 +86,50 @@ test:
         ip: 10.0.0.1`,
 		},
 		{
+			name: "valid groups",
+			manifest: `
+test:
+  unit:
+    groups: [pre-commit, release, a, long running]
+    commands: [echo test]`,
+		},
+		{
+			name: "invalid - groups is not a list",
+			manifest: `
+test:
+  unit:
+    groups: pre-commit
+    commands: [echo test]`,
+			expectErr: true,
+		},
+		{
+			name: "invalid - empty group",
+			manifest: `
+test:
+  unit:
+    groups: [""]
+    commands: [echo test]`,
+			expectErr: true,
+		},
+		{
+			name: "invalid - blank group",
+			manifest: `
+test:
+  unit:
+    groups: ["  "]
+    commands: [echo test]`,
+			expectErr: true,
+		},
+		{
+			name: "invalid - group with leading space",
+			manifest: `
+test:
+  unit:
+    groups: [" pre-commit"]
+    commands: [echo test]`,
+			expectErr: true,
+		},
+		{
 			name: "invalid - missing commands",
 			manifest: `
 test:

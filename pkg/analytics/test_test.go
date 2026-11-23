@@ -30,6 +30,7 @@ func TestTrackTest(t *testing.T) {
 	var stagesCount int
 	var errStr string
 	var commandOverride bool
+	var groupSelected bool
 	tracker := Tracker{
 		trackFn: func(ev string, ok bool, props map[string]any) {
 			event = ev
@@ -40,10 +41,12 @@ func TestTrackTest(t *testing.T) {
 			stagesCount = props["stagesCount"].(int)
 			errStr = props["error"].(string)
 			commandOverride = props["commandOverride"].(bool)
+			groupSelected = props["groupSelected"].(bool)
 		},
 	}
 
 	tracker.TrackTest(TestMetadata{
+		GroupSelected:   true,
 		Deployed:        true,
 		WasBuilt:        true,
 		Success:         false,
@@ -56,6 +59,7 @@ func TestTrackTest(t *testing.T) {
 	require.True(t, deployed)
 	require.True(t, wasBuilt)
 	require.True(t, commandOverride)
+	require.True(t, groupSelected)
 	require.False(t, success)
 	require.Equal(t, errStr, "my-error")
 	require.Equal(t, "Test", event)
@@ -74,4 +78,17 @@ func TestTrackTestWithoutCommandOverride(t *testing.T) {
 	tracker.TrackTest(TestMetadata{Success: true})
 
 	require.False(t, commandOverride)
+}
+
+func TestTrackTestWithoutGroupSelected(t *testing.T) {
+	var groupSelected bool
+	tracker := Tracker{
+		trackFn: func(_ string, _ bool, props map[string]any) {
+			groupSelected = props["groupSelected"].(bool)
+		},
+	}
+
+	tracker.TrackTest(TestMetadata{Success: true})
+
+	require.False(t, groupSelected)
 }

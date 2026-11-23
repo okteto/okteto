@@ -55,6 +55,53 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "one test with groups",
+			tests: ManifestTests{
+				"one": &Test{
+					Commands: []TestCommand{
+						{Command: "echo 'hello'"},
+					},
+					Groups: []string{"pre-commit", "release"},
+				},
+			},
+		},
+		{
+			name: "one test with an empty group",
+			tests: ManifestTests{
+				"one": &Test{
+					Commands: []TestCommand{
+						{Command: "echo 'hello'"},
+					},
+					Groups: []string{"pre-commit", ""},
+				},
+			},
+			expectAnError: true,
+		},
+		{
+			name: "one test with a blank group",
+			tests: ManifestTests{
+				"one": &Test{
+					Commands: []TestCommand{
+						{Command: "echo 'hello'"},
+					},
+					Groups: []string{"  "},
+				},
+			},
+			expectAnError: true,
+		},
+		{
+			name: "one test with a group that ends with a space",
+			tests: ManifestTests{
+				"one": &Test{
+					Commands: []TestCommand{
+						{Command: "echo 'hello'"},
+					},
+					Groups: []string{"pre-commit "},
+				},
+			},
+			expectAnError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -70,6 +117,22 @@ func TestValidate(t *testing.T) {
 		})
 	}
 
+}
+
+func TestReadTestGroups(t *testing.T) {
+	manifest := []byte(`
+test:
+  unit:
+    groups: [pre-commit, release]
+    commands: ["go test ./..."]
+  e2e:
+    commands: ["make e2e"]`)
+
+	m, err := Read(manifest)
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"pre-commit", "release"}, m.Test["unit"].Groups)
+	require.Empty(t, m.Test["e2e"].Groups)
 }
 
 func TestHostUnmarshalYAML(t *testing.T) {
