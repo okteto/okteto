@@ -47,6 +47,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
+	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
 	"github.com/spf13/afero"
@@ -110,6 +111,9 @@ type Options struct {
 	// catalogSecretVariablesToForward are the catalog secret variables remote-run gets the values of. They are empty
 	// when the destroy commands need none
 	catalogSecretVariablesToForward catalog.SecretVariables
+	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from that Okteto sets on its
+	// installer. It is read from the env before any variable is loaded
+	GitCredentialsEndpoint string
 }
 
 type destroyInterface interface {
@@ -162,6 +166,7 @@ If you need to destroy external resources (like s3 buckets or other Cloud resour
 		Args: utils.NoArgsAccepted("https://okteto.com/docs/reference/okteto-cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			readCatalogSecretVariables(options)
+			options.GitCredentialsEndpoint = remote.GitCredentialsEndpointFromEnv()
 
 			options.RunInRemoteSet = cmd.Flags().Changed("remote")
 

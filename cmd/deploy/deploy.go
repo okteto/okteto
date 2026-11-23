@@ -53,6 +53,7 @@ import (
 	modelutils "github.com/okteto/okteto/pkg/model/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
+	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/okteto/okteto/pkg/validator"
@@ -104,6 +105,9 @@ type Options struct {
 	// catalogSecretVariablesToForward are the catalog secret variables remote-run gets the values of. They are empty
 	// when the deploy commands need none
 	catalogSecretVariablesToForward catalog.SecretVariables
+	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from that Okteto sets on its
+	// installer. It is read from the env before any variable is loaded
+	GitCredentialsEndpoint string
 }
 
 type builderInterface interface {
@@ -223,6 +227,7 @@ $ okteto deploy --no-build=true`,
 				return fmt.Errorf("'dependencies' is only supported in contexts that have Okteto installed")
 			}
 
+			options.GitCredentialsEndpoint = remote.GitCredentialsEndpointFromEnv()
 			if err := readCatalogSecretVariablesAndSetVariables(options, os.Setenv); err != nil {
 				return err
 			}

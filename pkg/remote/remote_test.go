@@ -741,23 +741,35 @@ func TestDockerfileWithCache(t *testing.T) {
 const testGitCredentialsEndpoint = "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials"
 
 func TestRunPassesTheGitCredentialsEndpointOfTheInstaller(t *testing.T) {
-	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, testGitCredentialsEndpoint)
-
-	buildArgs := runRemoteDeploy(t, types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"})
+	buildArgs := runRemoteDeploy(t, testGitCredentialsEndpoint, types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"})
 
 	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
 }
 
 func TestRunPassesTheGitCredentialsEndpointOfTheClusterMetadata(t *testing.T) {
-	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "")
-
-	buildArgs := runRemoteDeploy(t, types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
+	buildArgs := runRemoteDeploy(t, "", types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
 
 	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
 }
 
-// runRemoteDeploy runs a remote deploy on an installation with the given metadata and returns the build args it sends
-func runRemoteDeploy(t *testing.T, metadata types.ClusterMetadata) []string {
+func TestRunIgnoresAGitCredentialsEndpointSetAfterTheCommandReadIt(t *testing.T) {
+	// a --var, a .env file or an Okteto Variable sets it when the command loads them
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "https://var.example.com/internal/git/credentials")
+
+	buildArgs := runRemoteDeploy(t, "", types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
+
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+func TestGitCredentialsEndpointFromEnv(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, testGitCredentialsEndpoint)
+
+	require.Equal(t, testGitCredentialsEndpoint, GitCredentialsEndpointFromEnv())
+}
+
+// runRemoteDeploy runs a remote deploy with the installer's Git credentials endpoint on an installation with the given
+// metadata, and returns the build args it sends
+func runRemoteDeploy(t *testing.T, installerEndpoint string, metadata types.ClusterMetadata) []string {
 	t.Helper()
 	originalStore := okteto.CurrentStore
 	t.Cleanup(func() { okteto.CurrentStore = originalStore })
@@ -791,7 +803,8 @@ func runRemoteDeploy(t *testing.T, metadata types.ClusterMetadata) []string {
 	}
 
 	err := rdc.Run(context.Background(), &Params{
-		Manifest: &model.Manifest{Deploy: &model.DeployInfo{Image: "test-image"}},
+		Manifest:               &model.Manifest{Deploy: &model.DeployInfo{Image: "test-image"}},
+		GitCredentialsEndpoint: installerEndpoint,
 	})
 
 	require.NoError(t, err)
@@ -800,16 +813,16 @@ func runRemoteDeploy(t *testing.T, metadata types.ClusterMetadata) []string {
 
 func TestGitCredentialsEndpoint(t *testing.T) {
 	tests := []struct {
-		name     string
-		env      string
-		metadata types.ClusterMetadata
-		expected string
+		name              string
+		installerEndpoint string
+		metadata          types.ClusterMetadata
+		expected          string
 	}{
 		{
-			name:     "the installer's endpoint wins",
-			env:      testGitCredentialsEndpoint,
-			metadata: types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"},
-			expected: testGitCredentialsEndpoint,
+			name:              "the installer's endpoint wins",
+			installerEndpoint: testGitCredentialsEndpoint,
+			metadata:          types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"},
+			expected:          testGitCredentialsEndpoint,
 		},
 		{
 			name:     "the cluster metadata's endpoint for runs started outside the installer",
@@ -822,9 +835,7 @@ func TestGitCredentialsEndpoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, tt.env)
-
-			require.Equal(t, tt.expected, gitCredentialsEndpoint(tt.metadata))
+			require.Equal(t, tt.expected, gitCredentialsEndpoint(tt.installerEndpoint, tt.metadata))
 		})
 	}
 }

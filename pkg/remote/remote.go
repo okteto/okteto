@@ -208,8 +208,8 @@ type Params struct {
 	// Secrets are the files the remote-run RUN mounts as build secrets
 	Secrets []FileSecret
 
-	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from, empty
-	// when the run gets none. Run sets it
+	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from that Okteto sets on its
+	// installer, read with GitCredentialsEndpointFromEnv. When it's empty, Run takes the one in the cluster metadata
 	GitCredentialsEndpoint string
 }
 
@@ -301,7 +301,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	params.SSHAgentHostname = sc.SSHAgentHostname
 	params.SSHAgentPort = sc.SSHAgentPort
-	params.GitCredentialsEndpoint = gitCredentialsEndpoint(*sc)
+	params.GitCredentialsEndpoint = gitCredentialsEndpoint(params.GitCredentialsEndpoint, *sc)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -581,13 +581,20 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 	return dockerfile.Name(), nil
 }
 
+// GitCredentialsEndpointFromEnv returns the URL the Git credential helper gets the credentials from that Okteto sets
+// on its installer. Commands read it before they set the --var variables and load the context, which sets .env files
+// and Okteto Variables as env vars, so none of them can replace it
+func GitCredentialsEndpointFromEnv() string {
+	return os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar)
+}
+
 // gitCredentialsEndpoint returns the URL the Git credential helper gets the credentials from: the one
 // Okteto sets on its installer, or else the one in the cluster metadata, for remote runs started from
 // a laptop or CI. It's empty when the installation doesn't give GitHub credentials, as on older
 // Okteto versions
-func gitCredentialsEndpoint(sc types.ClusterMetadata) string {
-	if endpoint := os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar); endpoint != "" {
-		return endpoint
+func gitCredentialsEndpoint(installerEndpoint string, sc types.ClusterMetadata) string {
+	if installerEndpoint != "" {
+		return installerEndpoint
 	}
 	return sc.GitCredentialsEndpoint
 }

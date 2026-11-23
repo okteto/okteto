@@ -69,6 +69,9 @@ type Options struct {
 	NoCache  bool
 	// override is the command override resolved from the '--' arguments or the --command flag
 	override commandOverride
+	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from that Okteto sets on its
+	// installer. It is read from the env before any variable is loaded
+	GitCredentialsEndpoint string
 }
 
 type builder interface {
@@ -96,6 +99,7 @@ okteto test unit -- go test ./pkg/api -run TestLogin
 # Run the 'unit' test container replacing its commands with several ones, run in order
 okteto test unit --command "go mod download" --command "go test ./pkg/api -run TestLogin"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			options.GitCredentialsEndpoint = remote.GitCredentialsEndpointFromEnv()
 
 			if err := validator.CheckReservedVariablesNameOption(options.Variables); err != nil {
 				return err
@@ -409,6 +413,7 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 			IgnoreRules:                 testIgnoreRules,
 			Artifacts:                   test.Artifacts,
 			Hosts:                       test.Hosts,
+			GitCredentialsEndpoint:      options.GitCredentialsEndpoint,
 		}
 		for k, v := range deployable.GetGatewayEnvironment() {
 			params.OktetoCommandSpecificEnvVars[k] = v
