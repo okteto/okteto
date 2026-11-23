@@ -235,7 +235,6 @@ func commonProductEventProperties() map[string]any {
 	props := map[string]any{
 		"customerName":   ctx.CompanyName,
 		"clusterID":      ctx.ClusterID,
-		"clusterURL":     okteto.NormalizeClusterURL(ctx.Name),
 		"clusterVersion": ctx.ClusterVersion,
 		"userID":         ctx.UserID,
 

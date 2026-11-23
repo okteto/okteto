@@ -202,7 +202,7 @@ func TestProductEventClient_Track_SendsCommonAndEventProperties(t *testing.T) {
 	require.Equal(t, "val", ev.props["key"])
 	require.Equal(t, "ACME Corp", ev.props["customerName"])
 	require.Equal(t, "cluster-uuid-1234", ev.props["clusterID"])
-	require.Equal(t, "https://okteto.example.com", ev.props["clusterURL"])
+	require.NotContains(t, ev.props, "clusterURL", "the cluster host is never sent")
 	require.Equal(t, "1.2.3", ev.props["clusterVersion"])
 	require.Equal(t, "user-123", ev.props["userID"])
 	require.Equal(t, "test-version", ev.props["cliVersion"])
@@ -286,7 +286,7 @@ func TestProductEventClient_TrackWithProductProperties_FallsBackToMachineID(t *t
 }
 
 // Contexts added from a kubeconfig send these events as they did before: no
-// product properties (e.g. their kubeconfig context name as clusterURL) and no
+// product properties (e.g. clusterID or customerName) and no
 // namespace lookup against their cluster.
 func TestProductEventClient_TrackWithProductProperties_KubernetesContext(t *testing.T) {
 	setupKubernetesAnalyticsContext(t)
@@ -304,7 +304,7 @@ func TestProductEventClient_TrackWithProductProperties_KubernetesContext(t *test
 	require.Equal(t, "val", ev.props["key"])
 	require.Equal(t, true, ev.props["success"])
 	require.Equal(t, KubernetesContext, ev.props["contextType"])
-	for _, key := range []string{"clusterURL", "clusterID", "userID", "customerName", "namespace"} {
+	for _, key := range []string{"clusterID", "userID", "customerName", "namespace"} {
 		require.NotContains(t, ev.props, key)
 	}
 	require.Zero(t, resolver.calls.Load(), "no namespace lookup against a non-Okteto cluster")
