@@ -85,18 +85,21 @@ func warnings(lines []oktetoLog.JSONLogFormat) []oktetoLog.JSONLogFormat {
 }
 
 const (
-	testInternalAPIHostname             = "okteto-internal-api.okteto.example"
-	testCatalogSecretVariablesEndpoint  = "https://okteto-internal-api.okteto.example:8443/internal/catalog/secret-variables"
-	unmappedCatalogSecretVariablesError = "the catalog secret variables can't be fetched: the Okteto installation doesn't publish the internal IP of okteto-internal-api.okteto.example"
+	testInternalAPIIP                       = "10.20.30.40"
+	testCatalogSecretVariablesEndpoint      = "https://okteto-internal-api.okteto.example:8443/internal/catalog/secret-variables"
+	internalAPIIPMissingCatalogSecretsError = "the catalog secret variables can't be fetched: the remote build doesn't get the internal IP of the Okteto API to reach okteto-internal-api.okteto.example"
+	internalAPIIPMissingHint                = "Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, "
 )
 
 func newTestCatalogSecretVariables(c catalogSecretVariablesGetter, phase catalog.Phase) catalogSecretVariables {
 	return catalogSecretVariables{
-		client:              c,
-		action:              "action-name",
-		endpoint:            testCatalogSecretVariablesEndpoint,
-		internalAPIHostname: testInternalAPIHostname,
-		phase:               phase,
+		newClient: func(string, string) (catalogSecretVariablesGetter, error) {
+			return c, nil
+		},
+		action:        "action-name",
+		endpoint:      testCatalogSecretVariablesEndpoint,
+		internalAPIIP: testInternalAPIIP,
+		phase:         phase,
 	}
 }
 
@@ -136,10 +139,13 @@ func TestCatalogSecretVariablesWithoutAction(t *testing.T) {
 }
 
 func TestNewCatalogSecretVariablesWithoutAction(t *testing.T) {
-	got, err := newCatalogSecretVariables("", "http://endpoint", catalog.DeployPhase)
+	c, err := newCatalogSecretVariables("", "", catalog.DeployPhase)
+	require.NoError(t, err)
+
+	got, err := c.get(context.Background())
 
 	require.NoError(t, err)
-	require.Nil(t, got.client)
+	require.Nil(t, got)
 }
 
 func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
@@ -150,64 +156,103 @@ func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
 
 func TestNewCatalogSecretVariablesForTheAction(t *testing.T) {
 	setTestOktetoContext(t)
-	t.Setenv(constants.OktetoInternalAPIHostnameEnvVar, testInternalAPIHostname)
+	t.Setenv(constants.OktetoInternalAPIIPEnvVar, testInternalAPIIP)
 
 	got, err := newCatalogSecretVariables("action-name", testCatalogSecretVariablesEndpoint, catalog.DestroyPhase)
 
 	require.NoError(t, err)
-	require.NotNil(t, got.client)
+	require.NotNil(t, got.newClient)
 	require.Equal(t, "action-name", got.action)
 	require.Equal(t, testCatalogSecretVariablesEndpoint, got.endpoint)
-	require.Equal(t, testInternalAPIHostname, got.internalAPIHostname)
+	require.Equal(t, testInternalAPIIP, got.internalAPIIP)
 	require.Equal(t, catalog.DestroyPhase, got.phase)
 }
 
-func TestCatalogSecretVariablesDoNotCallTheEndpointWhenItsHostnameIsNotMapped(t *testing.T) {
+func TestCatalogSecretVariablesDoNotCallAnHTTPSEndpointWithoutAValidInternalAPIIP(t *testing.T) {
 	tests := []struct {
-		name                string
-		internalAPIHostname string
+		name          string
+		internalAPIIP string
 	}{
-		{name: "without internal API hostname", internalAPIHostname: ""},
-		{name: "with another internal API hostname", internalAPIHostname: "okteto-internal-api.other.example"},
+		{name: "without internal API IP", internalAPIIP: ""},
+		{name: "with an invalid internal API IP", internalAPIIP: "okteto-api.okteto"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out := captureJSONLogs(t)
 			getter := &recordingCatalogSecretVariablesGetter{}
 			c := newTestCatalogSecretVariables(getter, catalog.DeployPhase)
-			c.internalAPIHostname = tt.internalAPIHostname
+			c.internalAPIIP = tt.internalAPIIP
 
 			got, err := c.get(context.Background())
 
-			require.ErrorAs(t, err, &internalAPINotMappedError{})
-			require.EqualError(t, err, unmappedCatalogSecretVariablesError)
+			require.ErrorAs(t, err, &internalAPIIPMissingError{})
+			require.EqualError(t, err, internalAPIIPMissingCatalogSecretsError)
 			require.Nil(t, got)
 			require.Equal(t, &recordingCatalogSecretVariablesGetter{}, getter)
 			require.Equal(t, []oktetoLog.JSONLogFormat{
-				catalogLog(oktetoLog.InfoLevel, "Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, then deploy again."),
-				catalogLog(oktetoLog.ErrorLevel, unmappedCatalogSecretVariablesError),
+				catalogLog(oktetoLog.InfoLevel, internalAPIIPMissingHint+"then deploy again."),
+				catalogLog(oktetoLog.ErrorLevel, internalAPIIPMissingCatalogSecretsError),
 			}, jsonLogs(t, out))
 		})
 	}
 }
 
-func TestCatalogSecretVariablesPointsToForceDestroyWhenTheEndpointIsNotMappedOnDestroy(t *testing.T) {
-	out := captureJSONLogs(t)
-	c := newTestCatalogSecretVariables(&recordingCatalogSecretVariablesGetter{}, catalog.DestroyPhase)
-	c.internalAPIHostname = ""
+func TestCatalogSecretVariablesCallsAnHTTPSEndpointWithAnIPv6InternalAPIIP(t *testing.T) {
+	getter := &recordingCatalogSecretVariablesGetter{}
+	c := newTestCatalogSecretVariables(getter, catalog.DeployPhase)
+	c.internalAPIIP = "fd00::1"
 
 	_, err := c.get(context.Background())
 
-	require.ErrorAs(t, err, &internalAPINotMappedError{})
-	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.InfoLevel, "Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, then destroy again, or use force destroy to remove the environment even if the destroy commands can't run."))
+	require.NoError(t, err)
+	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: testCatalogSecretVariablesEndpoint, action: "action-name"}, getter)
 }
 
-func TestCatalogSecretVariablesCallsAnHTTPEndpointWithoutTheInternalAPIHostname(t *testing.T) {
+func TestCatalogSecretVariablesBuildsTheClientForTheEndpointAndTheInternalAPIIP(t *testing.T) {
+	var endpoint, ip string
+	c := newTestCatalogSecretVariables(&recordingCatalogSecretVariablesGetter{}, catalog.DeployPhase)
+	c.newClient = func(e, i string) (catalogSecretVariablesGetter, error) {
+		endpoint, ip = e, i
+		return &recordingCatalogSecretVariablesGetter{}, nil
+	}
+
+	_, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Equal(t, testCatalogSecretVariablesEndpoint, endpoint)
+	require.Equal(t, testInternalAPIIP, ip)
+}
+
+func TestCatalogSecretVariablesLogsTheClientError(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(&recordingCatalogSecretVariablesGetter{}, catalog.DeployPhase)
+	c.newClient = func(string, string) (catalogSecretVariablesGetter, error) {
+		return nil, errors.New("not logged in")
+	}
+
+	_, err := c.get(context.Background())
+
+	require.EqualError(t, err, "not logged in")
+	require.Equal(t, []oktetoLog.JSONLogFormat{catalogLog(oktetoLog.ErrorLevel, "not logged in")}, jsonLogs(t, out))
+}
+
+func TestCatalogSecretVariablesPointsToForceDestroyWithoutTheInternalAPIIPOnDestroy(t *testing.T) {
+	out := captureJSONLogs(t)
+	c := newTestCatalogSecretVariables(&recordingCatalogSecretVariablesGetter{}, catalog.DestroyPhase)
+	c.internalAPIIP = ""
+
+	_, err := c.get(context.Background())
+
+	require.ErrorAs(t, err, &internalAPIIPMissingError{})
+	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.InfoLevel, internalAPIIPMissingHint+"then destroy again, or use force destroy to remove the environment even if the destroy commands can't run."))
+}
+
+func TestCatalogSecretVariablesCallsAnHTTPEndpointWithoutTheInternalAPIIP(t *testing.T) {
 	const endpoint = "http://okteto-api.okteto:8080/internal/catalog/secret-variables"
 	getter := &recordingCatalogSecretVariablesGetter{}
 	c := newTestCatalogSecretVariables(getter, catalog.DeployPhase)
 	c.endpoint = endpoint
-	c.internalAPIHostname = ""
+	c.internalAPIIP = ""
 
 	_, err := c.get(context.Background())
 
@@ -215,11 +260,11 @@ func TestCatalogSecretVariablesCallsAnHTTPEndpointWithoutTheInternalAPIHostname(
 	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: endpoint, action: "action-name"}, getter)
 }
 
-func TestCatalogSecretVariablesSkipsThemWhenTheEndpointIsNotMappedOnForceDestroy(t *testing.T) {
+func TestCatalogSecretVariablesSkipsThemWithoutTheInternalAPIIPOnForceDestroy(t *testing.T) {
 	out := captureJSONLogs(t)
 	getter := &recordingCatalogSecretVariablesGetter{}
 	c := newTestCatalogSecretVariables(getter, catalog.DestroyPhase)
-	c.internalAPIHostname = ""
+	c.internalAPIIP = ""
 	c.forceDestroy = true
 
 	got, err := c.get(context.Background())
@@ -228,7 +273,7 @@ func TestCatalogSecretVariablesSkipsThemWhenTheEndpointIsNotMappedOnForceDestroy
 	require.Nil(t, got)
 	require.Equal(t, &recordingCatalogSecretVariablesGetter{}, getter)
 	require.Equal(t, []oktetoLog.JSONLogFormat{
-		catalogWarning("Running the destroy commands without the catalog secret variables: " + unmappedCatalogSecretVariablesError),
+		catalogWarning("Running the destroy commands without the catalog secret variables: " + internalAPIIPMissingCatalogSecretsError),
 	}, warnings(jsonLogs(t, out)))
 }
 

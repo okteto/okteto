@@ -15,14 +15,19 @@ package okteto
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -41,11 +46,53 @@ type catalogSecretVariablesErrorResponse struct {
 	Reason string `json:"reason"`
 }
 
+// CatalogSecretVariablesClient gets the catalog secret variables from the
+// internal API of Okteto
+type CatalogSecretVariablesClient struct {
+	httpClient *http.Client
+}
+
+// NewCatalogSecretVariablesClient returns the client that gets the catalog
+// secret variables from endpoint with the token of the current context. An
+// https endpoint is reached through internalAPIIP, as NewInternalAPIHTTPClient
+// does, and fails without a valid one. Older installations give an http
+// endpoint on the API service, which is resolved as before
+func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string) (*CatalogSecretVariablesClient, error) {
+	cfg := defaultOktetoClientCfg()
+	if cfg.Token == "" {
+		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, cfg.CtxName)
+	}
+	var certs []*x509.Certificate
+	if cert, err := GetContextCertificate(); err == nil {
+		certs = append(certs, cert)
+	}
+
+	httpClient, err := catalogSecretVariablesHTTPClient(endpoint, internalAPIIP, certs)
+	if err != nil {
+		return nil, err
+	}
+	httpClient.Transport = &VersionedTransport{
+		Version: config.VersionString,
+		RoundTripper: &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cfg.Token, TokenType: "Bearer"}),
+			Base:   httpClient.Transport,
+		},
+	}
+	return &CatalogSecretVariablesClient{httpClient: httpClient}, nil
+}
+
+func catalogSecretVariablesHTTPClient(endpoint, internalAPIIP string, certs []*x509.Certificate) (*http.Client, error) {
+	if u, err := url.Parse(endpoint); err == nil && u.Scheme == "http" {
+		return oktetoHttp.StrictSSLHTTPClient(&oktetoHttp.SSLTransportOption{Certs: certs}), nil
+	}
+	return NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
+}
+
 // GetCatalogSecretVariables returns the catalog secret variables of the
 // development environment the action runs for: the values of the ones that
 // can be resolved, and the ones that can't. The endpoint only answers requests
 // that come from BuildKit
-func (c *userClient) GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error) {
+func (c *CatalogSecretVariablesClient) GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error) {
 	if c.httpClient == nil {
 		return types.CatalogSecretVariables{}, fmt.Errorf("catalog secret variables client not configured")
 	}

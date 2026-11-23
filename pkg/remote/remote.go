@@ -93,7 +93,7 @@ ENV {{$key}}={{$val}}
 
 ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
 ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
-ENV {{ .InternalAPIHostnameArgName }}="{{ .InternalAPIHostname }}"
+ENV {{ .InternalAPIIPArgName }}="{{ .InternalAPIIP }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -193,8 +193,9 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
-	// InternalAPIHostname is the hostname the build maps to the internal IP of the Okteto API, empty when there is no IP
-	InternalAPIHostname string
+	// InternalAPIIP is the internal IP of the Okteto API remote-run reaches its internal routes through, empty when the
+	// installation doesn't publish a valid one
+	InternalAPIIP string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -226,8 +227,8 @@ type dockerfileTemplateProperties struct {
 	SSHAgentPortArgName          string
 	SSHAgentPort                 string
 	SSHAgentSocketArgName        string
-	InternalAPIHostnameArgName   string
-	InternalAPIHostname          string
+	InternalAPIIPArgName         string
+	InternalAPIIP                string
 	Caches                       []string
 	TestName                     string
 	ManifestName                 string
@@ -279,7 +280,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	params.SSHAgentHostname = sc.SSHAgentHostname
 	params.SSHAgentPort = sc.SSHAgentPort
-	params.InternalAPIHostname = internalAPIHostname(*sc)
+	params.InternalAPIIP = internalAPIIP(*sc)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -374,10 +375,6 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		// Set the envvar to be able to load the ssh-agent socket for a build secret
 		os.Setenv(constants.OktetoSshAgentSocketEnvVar, r.generateSocketName())
 		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=%s", constants.OktetoSshAgentSocketEnvVar))
-	}
-
-	if params.InternalAPIHostname != "" {
-		buildOptions.ExtraHosts = append(buildOptions.ExtraHosts, types.HostMap{Hostname: params.InternalAPIHostname, IP: sc.InternalAPIIP})
 	}
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
@@ -531,8 +528,8 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		SSHAgentPort:                 params.SSHAgentPort,
 		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
 		SSHAgentSocketArgName:        constants.OktetoSshAgentSocketEnvVar,
-		InternalAPIHostname:          params.InternalAPIHostname,
-		InternalAPIHostnameArgName:   constants.OktetoInternalAPIHostnameEnvVar,
+		InternalAPIIP:                params.InternalAPIIP,
+		InternalAPIIPArgName:         constants.OktetoInternalAPIIPEnvVar,
 	}
 
 	dockerfileSyntax.prepareEnvVars()
@@ -655,14 +652,16 @@ func getExtraHosts(registryURL, subdomain, ip string, metadata types.ClusterMeta
 	return extraHosts
 }
 
-// internalAPIHostname returns the hostname remote-run reaches the internal routes of the Okteto API through, or empty
-// when the installation doesn't publish the IP to map it to: the wildcard DNS record resolves it to the ingress, which
-// doesn't serve them
-func internalAPIHostname(sc types.ClusterMetadata) string {
-	if sc.InternalAPIIP == "" {
+// internalAPIIP returns the internal IP of the Okteto API that remote-run connects to for its internal routes, instead
+// of resolving their hostname: the wildcard DNS record resolves it to the ingress, which doesn't serve them. It's empty
+// when the installation doesn't publish a valid IP, and it's only passed when it parses as one, as it goes into the
+// Dockerfile
+func internalAPIIP(sc types.ClusterMetadata) string {
+	ip := net.ParseIP(sc.InternalAPIIP)
+	if ip == nil {
 		return ""
 	}
-	return sc.InternalAPIHostname
+	return ip.String()
 }
 
 func addDefinedHosts(extraHosts []types.HostMap, definedHosts []model.Host) []types.HostMap {

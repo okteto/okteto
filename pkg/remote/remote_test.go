@@ -222,8 +222,8 @@ func TestExtraHosts(t *testing.T) {
 }
 
 // runWithClusterMetadata runs a remote build against an installation with the
-// metadata, and returns the options it builds with
-func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) *types.BuildOptions {
+// metadata, and returns the options it builds with and its Dockerfile
+func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) (*types.BuildOptions, string) {
 	t.Helper()
 	originalStore := okteto.CurrentStore
 	t.Cleanup(func() { okteto.CurrentStore = originalStore })
@@ -237,10 +237,14 @@ func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) *types
 	usersClient := client.NewFakeUsersClient(&types.User{})
 	usersClient.ClusterMetadata = metadata
 	var got *types.BuildOptions
+	var dockerfile []byte
 	rdc := Runner{
 		builder: fakeBuilder{
 			assertOptions: func(o *types.BuildOptions) {
 				got = o
+				var err error
+				dockerfile, err = afero.ReadFile(fs, o.File)
+				require.NoError(t, err)
 			},
 		},
 		fs:                   fs,
@@ -260,51 +264,58 @@ func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) *types
 
 	require.NoError(t, err)
 	require.NotNil(t, got)
-	return got
+	return got, string(dockerfile)
 }
 
-func TestRunMapsTheInternalAPIHostnameToItsIP(t *testing.T) {
-	got := runWithClusterMetadata(t, types.ClusterMetadata{
-		InternalAPIIP:       "10.20.30.40",
-		InternalAPIHostname: "okteto-internal-api.test.dev.okteto.net",
-	})
+func TestRunPassesTheInternalAPIIPWithoutMappingAHostname(t *testing.T) {
+	got, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIIP: "10.20.30.40"})
 
-	require.Equal(t, []types.HostMap{{Hostname: "okteto-internal-api.test.dev.okteto.net", IP: "10.20.30.40"}}, got.ExtraHosts)
-}
-
-func TestRunDoesNotMapTheInternalAPIHostnameWithoutItsIP(t *testing.T) {
-	got := runWithClusterMetadata(t, types.ClusterMetadata{
-		InternalAPIHostname: "okteto-internal-api.test.dev.okteto.net",
-	})
-
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_IP="10.20.30.40"`)
 	require.Empty(t, got.ExtraHosts)
 }
 
-func TestInternalAPIHostname(t *testing.T) {
+func TestRunDoesNotPassAnInvalidInternalAPIIP(t *testing.T) {
+	got, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIIP: "10.20.30.40\nRUN id"})
+
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_IP=""`)
+	require.Empty(t, got.ExtraHosts)
+}
+
+func TestInternalAPIIP(t *testing.T) {
 	tests := []struct {
 		name     string
 		expected string
 		metadata types.ClusterMetadata
 	}{
 		{
-			name:     "with hostname and IP",
-			metadata: types.ClusterMetadata{InternalAPIIP: "10.20.30.40", InternalAPIHostname: "okteto-internal-api.test.dev.okteto.net"},
-			expected: "okteto-internal-api.test.dev.okteto.net",
+			name:     "IPv4",
+			metadata: types.ClusterMetadata{InternalAPIIP: "10.20.30.40"},
+			expected: "10.20.30.40",
+		},
+		{
+			name:     "IPv6",
+			metadata: types.ClusterMetadata{InternalAPIIP: "fd00:0::1"},
+			expected: "fd00::1",
 		},
 		{
 			name:     "without IP",
-			metadata: types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.test.dev.okteto.net"},
+			metadata: types.ClusterMetadata{},
 			expected: "",
 		},
 		{
-			name:     "without hostname",
-			metadata: types.ClusterMetadata{InternalAPIIP: "10.20.30.40"},
+			name:     "IPv6 in brackets",
+			metadata: types.ClusterMetadata{InternalAPIIP: "[fd00::1]"},
+			expected: "",
+		},
+		{
+			name:     "not an IP",
+			metadata: types.ClusterMetadata{InternalAPIIP: "okteto-api.okteto"},
 			expected: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, internalAPIHostname(tt.metadata))
+			require.Equal(t, tt.expected, internalAPIIP(tt.metadata))
 		})
 	}
 }
@@ -369,12 +380,12 @@ func TestCreateDockerfile(t *testing.T) {
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.OktetoIsPreviewEnvVar: "true",
 					},
-					DockerfileName:      "Dockerfile.deploy",
-					Command:             "deploy",
-					SSHAgentHostname:    "ssh-agent.default.svc.cluster.local",
-					SSHAgentPort:        "3000",
-					InternalAPIHostname: "okteto-internal-api.test.okteto.net",
-					CommandFlags:        []string{"--name \"test\""},
+					DockerfileName:   "Dockerfile.deploy",
+					Command:          "deploy",
+					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:     "3000",
+					InternalAPIIP:    "10.20.30.40",
+					CommandFlags:     []string{"--name \"test\""},
 				},
 			},
 			expected: expected{
@@ -422,7 +433,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
-ENV OKTETO_INTERNAL_API_HOSTNAME="okteto-internal-api.test.okteto.net"
+ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -527,7 +538,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
-ENV OKTETO_INTERNAL_API_HOSTNAME=""
+ENV OKTETO_INTERNAL_API_IP=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -613,7 +624,7 @@ WORKDIR /okteto/src
 
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
-ENV OKTETO_INTERNAL_API_HOSTNAME=""
+ENV OKTETO_INTERNAL_API_IP=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
