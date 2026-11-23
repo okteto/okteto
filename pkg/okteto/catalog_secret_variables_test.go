@@ -22,6 +22,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
@@ -127,6 +128,18 @@ func TestGetCatalogSecretVariablesThroughTheInternalAPIIP(t *testing.T) {
 	require.Equal(t, []types.CatalogSecretVariable{{Name: "PIN", Value: "1"}}, got.Variables)
 	require.Equal(t, "Bearer okteto-token", authorization)
 	require.Equal(t, "example.com", server.sni)
+}
+
+// GetContext exits without a current context, so the certificate is only read with one
+func TestNewCatalogSecretVariablesClientWithATokenAndWithoutAContext(t *testing.T) {
+	original := CurrentStore
+	t.Cleanup(func() { CurrentStore = original })
+	CurrentStore = nil
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "10.20.30.40", WithToken("projected-token"))
+
+	require.NoError(t, err)
 }
 
 func TestNewCatalogSecretVariablesClientFailsForAnHTTPSEndpointWithoutTheInternalAPIIP(t *testing.T) {

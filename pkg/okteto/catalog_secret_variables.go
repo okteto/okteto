@@ -66,9 +66,15 @@ func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Opt
 	if cfg.Token == "" {
 		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, cfg.CtxName)
 	}
+
+	// The certificate comes from the context already resolved, which doesn't
+	// need the context file on disk. Without a current context there's none,
+	// and GetContext would exit
 	var certs []*x509.Certificate
-	if cert, err := GetContextCertificate(); err == nil {
-		certs = append(certs, cert)
+	if cfg.CtxName != "" {
+		if cert, err := GetContextCertificateStateless(GetContext().Certificate); err == nil {
+			certs = append(certs, cert)
+		}
 	}
 
 	httpClient, err := catalogSecretVariablesHTTPClient(endpoint, internalAPIIP, certs)
