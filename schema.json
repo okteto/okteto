@@ -221,12 +221,12 @@
         }
       ],
       "title": "deploy",
-      "description": "A list of commands to deploy your development environment. It's usually a combination of helm, kubectl, and okteto commands.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#deploy-string-optional"
+      "description": "A list of commands to deploy your development environment. It's usually a combination of helm, kubectl, and okteto commands.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#deploy"
     },
     "icon": {
       "type": "string",
       "title": "icon",
-      "description": "The icon associated to your development environment in the Okteto UI.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon-string-optional-1"
+      "description": "The icon associated to your development environment in the Okteto UI.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#icon"
     },
     "dependencies": {
       "oneOf": [
@@ -303,7 +303,7 @@
         }
       ],
       "title": "dependencies",
-      "description": "A list of repositories you want to deploy as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies-string-optional"
+      "description": "A list of repositories you want to deploy as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies"
     },
     "dev": {
       "patternProperties": {
@@ -933,13 +933,13 @@
           },
           "additionalProperties": false,
           "type": "object",
-          "description": "The name of each development container must match the name of the Kubernetes Deployment or Statefulset that you want to put on development mode. If the name of your Deployment or Statefulset is dynamically generated, use the selector field to match the Deployment or Statefulset by labels.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"
+          "description": "The name of each development container must match the name of the Kubernetes Deployment or Statefulset that you want to put on development mode. If the name of your Deployment or Statefulset is dynamically generated, use the selector field to match the Deployment or Statefulset by labels.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "title": "dev",
-      "description": "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev-object-optional"
+      "description": "A list of development containers to define the behavior of okteto up and synchronize your code in your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
     },
     "forward": {
       "items": {
@@ -1028,7 +1028,7 @@
       },
       "type": "array",
       "title": "forward",
-      "description": "Global port forwards to handle port collisions automatically between multiple okteto up sessions.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward-string-optional-1"
+      "description": "Global port forwards to handle port collisions automatically between multiple okteto up sessions.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#forward"
     },
     "external": {
       "patternProperties": {
@@ -1157,13 +1157,13 @@
           },
           "additionalProperties": false,
           "type": "object",
-          "description": "An image to build as part of your development environment.\n\n\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
+          "description": "An image to build as part of your development environment.\n\n\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "title": "build",
-      "description": "A list of images to build as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional"
+      "description": "A list of images to build as part of your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#build"
     },
     "test": {
       "patternProperties": {
@@ -1279,7 +1279,7 @@
       },
       "type": "object",
       "title": "test",
-      "description": "A dictionary of Test Containers to run tests using Remote Execution.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#test-object-optional"
+      "description": "A dictionary of Test Containers to run tests using Remote Execution.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#test"
     },
     "destroy": {
       "oneOf": [
@@ -1358,12 +1358,12 @@
         }
       ],
       "title": "destroy",
-      "description": "A list of commands to destroy external resources created by your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#destroy-string-optional"
+      "description": "A list of commands to destroy external resources created by your development environment.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#destroy"
     },
     "name": {
       "type": "string",
       "title": "name",
-      "description": "The name of your development environment. It defaults to the name of your git repository.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#name-string-optional"
+      "description": "The name of your development environment. It defaults to the name of your git repository.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#name"
     }
   },
   "additionalProperties": false,

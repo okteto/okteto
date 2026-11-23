@@ -206,7 +206,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions, okCtx *okteto.Context
 			return nil, oktetoErrors.UserError{
 				E: fmt.Errorf("specified Okteto Manifest doesn't contain a build section"),
 				Hint: `Add a build section to your Okteto Manifest to build your images.
-    See more at: https://www.okteto.com/docs/reference/okteto-manifest/#build-object-optional`,
+    See more at: https://www.okteto.com/docs/reference/okteto-manifest/#build`,
 			}
 		}
 	}

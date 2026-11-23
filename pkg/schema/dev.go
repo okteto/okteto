@@ -659,7 +659,7 @@ func (dev) JSONSchema() *jsonschema.Schema {
 		AdditionalProperties: jsonschema.FalseSchema,
 		PatternProperties: map[string]*jsonschema.Schema{
 			".*": {
-				Description:          withManifestRefDocLink("The name of each development container must match the name of the Kubernetes Deployment or Statefulset that you want to put on development mode. If the name of your Deployment or Statefulset is dynamically generated, use the selector field to match the Deployment or Statefulset by labels.", "dev-object-optional"),
+				Description:          withManifestRefDocLink("The name of each development container must match the name of the Kubernetes Deployment or Statefulset that you want to put on development mode. If the name of your Deployment or Statefulset is dynamically generated, use the selector field to match the Deployment or Statefulset by labels.", "dev"),
 				Type:                 &jsonschema.Type{Types: []string{"object"}},
 				Properties:           devProps,
 				AdditionalProperties: jsonschema.FalseSchema,
