@@ -69,7 +69,7 @@ func TestTracker_NilEventsClient(t *testing.T) {
 func TestTracker_TrackImageBuild(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-xyz"})
+	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 	meta := &ImageBuildMetadata{
 		Name:                     "api",
 		Namespace:                "my-ns",
@@ -88,14 +88,14 @@ func TestTracker_TrackImageBuild(t *testing.T) {
 	require.Equal(t, "user-123", ev.distinctID)
 	requireContainsProps(t, meta.toProps(), ev.props)
 	require.Equal(t, true, ev.props["success"])
-	require.Equal(t, "ns-uid-xyz", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	require.Equal(t, "ACME Corp", ev.props["customerName"])
 }
 
 func TestTracker_TrackDeployPipelineTriggered(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-xyz"})
+	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 
 	tracker.TrackDeployPipelineTriggered(context.Background(), DeployPipelineTriggeredMetadata{
 		WorkflowID:       "wf-abc-123",
@@ -117,7 +117,7 @@ func TestTracker_TrackDeployPipelineTriggered(t *testing.T) {
 	require.Equal(t, "git_url", ev.props["deploySource"])
 	require.Equal(t, true, ev.props["isPreview"])
 	require.Equal(t, false, ev.props["isRedeploy"])
-	require.Equal(t, "ns-uid-xyz", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	require.NotContains(t, ev.props, "deployType", "Deploy.deployType holds other values")
 	require.NotContains(t, ev.props, "success")
 	require.NotContains(t, ev.props, "uiElement", "the CLI never sent ui_element to PostHog")
@@ -138,7 +138,7 @@ func TestTracker_TrackDeployPipelineTriggered_OmitsEmptyOptionalFields(t *testin
 func TestTracker_TrackDeployPreviewTriggered(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, _ := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "preview-uid-xyz"})
+	tracker, _ := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testPreviewUID})
 
 	tracker.TrackDeployPreviewTriggered(context.Background(), DeployPreviewTriggeredMetadata{
 		WorkflowID:       "wf-preview-456",
@@ -155,7 +155,7 @@ func TestTracker_TrackDeployPreviewTriggered(t *testing.T) {
 	require.Equal(t, "wf-parent-2", ev.props["parentWorkflowID"])
 	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
 	require.Equal(t, true, ev.props["isRedeploy"])
-	require.Equal(t, "preview-uid-xyz", ev.props["preview"], "the preview UID is sent, never its name")
+	require.Equal(t, testPreviewUID, ev.props["preview"], "the preview UID is sent, never its name")
 	require.NotContains(t, ev.props, "namespace")
 	require.NotContains(t, ev.props, "uiElement", "the CLI never sent ui_element to PostHog")
 }
@@ -176,13 +176,13 @@ func TestTracker_TrackDeployPreviewTriggered_OmitsEmptyOptionalFields(t *testing
 func TestTracker_TrackWakeTriggered(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, _ := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-wake"})
+	tracker, _ := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 
 	tracker.TrackWakeTriggered(context.Background(), WakeTriggeredMetadata{Namespace: "dev-ns", IsPreview: true})
 	ev := sendOne(t, tracker, fake)
 
 	require.Equal(t, productWakeTriggeredEvent, ev.event)
-	require.Equal(t, "ns-uid-wake", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	require.Equal(t, true, ev.props["isPreview"])
 	require.NotContains(t, ev.props, "workflowID")
 }
@@ -190,7 +190,7 @@ func TestTracker_TrackWakeTriggered(t *testing.T) {
 func TestTracker_TrackUpStarted(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-456"})
+	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 
 	tracker.TrackUpStarted("api", "dev-ns", "https://github.com/org/repo", "wf-abc-123")
 	ev := sendOne(t, tracker, fake)
@@ -198,7 +198,7 @@ func TestTracker_TrackUpStarted(t *testing.T) {
 	require.Empty(t, *tracked)
 	require.Equal(t, productUpStartedEvent, ev.event)
 	require.Equal(t, hashString("api"), ev.props["service"], "service names are never sent raw")
-	require.Equal(t, "ns-uid-456", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
 	require.Equal(t, "wf-abc-123", ev.props["workflowID"])
 }
@@ -220,7 +220,7 @@ func TestTracker_TrackUpStarted_EmptyFieldsSentAsEmpty(t *testing.T) {
 func TestTracker_TrackUp(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-789"})
+	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 	meta := &UpMetricsMetadata{
 		workflowID:      "wf-up-1",
 		success:         true,
@@ -244,13 +244,13 @@ func TestTracker_TrackUp(t *testing.T) {
 	requireContainsProps(t, meta.productProps(), ev.props)
 	require.Equal(t, true, ev.props["success"])
 	require.Equal(t, "wf-up-1", ev.props["workflowID"])
-	require.Equal(t, "ns-uid-789", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 }
 
 func TestTracker_TrackDeployStarted(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-654"})
+	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 
 	tracker.TrackDeployStarted(DeployStartedMetadata{
 		Namespace:  "dev-ns",
@@ -263,7 +263,7 @@ func TestTracker_TrackDeployStarted(t *testing.T) {
 
 	require.Empty(t, *tracked)
 	require.Equal(t, productDeployStartedEvent, ev.event)
-	require.Equal(t, "ns-uid-654", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	require.Equal(t, hashedTestRepoURL, ev.props["repoURL"])
 	require.Equal(t, "wf-deploy-1", ev.props["workflowID"])
 	require.Equal(t, true, ev.props["isPreview"])
@@ -275,7 +275,7 @@ func TestTracker_TrackDeployStarted(t *testing.T) {
 func TestTracker_TrackDeploy(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: "ns-uid-789"})
+	tracker, tracked := newTestTracker(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 	meta := DeployMetadata{
 		Success:                true,
 		PipelineType:           model.OktetoManifestType,
@@ -295,7 +295,7 @@ func TestTracker_TrackDeploy(t *testing.T) {
 	requireContainsProps(t, meta.toProps(), ev.props)
 	require.Equal(t, true, ev.props["success"])
 	require.Equal(t, "wf-deploy-1", ev.props["workflowID"])
-	require.Equal(t, "ns-uid-789", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	require.NotContains(t, ev.props, "error")
 }
 

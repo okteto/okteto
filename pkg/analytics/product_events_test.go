@@ -29,6 +29,12 @@ import (
 
 var fixedEventTime = time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)
 
+// Namespace UIDs have the UUID shape dropUnsafeProperties requires.
+const (
+	testNamespaceUID = "0b8f3c1e-5d2a-4f6b-9c7d-1e2f3a4b5c6d"
+	testPreviewUID   = "7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c5d"
+)
+
 type sentEvent struct {
 	timestamp  *time.Time
 	props      map[string]any
@@ -244,7 +250,7 @@ func TestProductEventClient_Track_EventPropertiesOverrideCommon(t *testing.T) {
 func TestProductEventClient_TrackWithProductProperties_SendsTrackAndProductProperties(t *testing.T) {
 	setupAnalyticsContext(t, true)
 	fake := &fakeEventTracker{}
-	c := newTestEventClient(fake, &mockNamespaceUIDResolver{uid: "ns-uid"})
+	c := newTestEventClient(fake, &mockNamespaceUIDResolver{uid: testNamespaceUID})
 
 	c.trackWithProductProperties(context.Background(), "Merged", true, map[string]any{"key": "val"}, c.withNamespace("dev-ns"))
 	c.Close()
@@ -257,7 +263,7 @@ func TestProductEventClient_TrackWithProductProperties_SendsTrackAndProductPrope
 	require.Nil(t, ev.timestamp, "Mixpanel sets the time, as for the other track() events")
 	require.Empty(t, ev.ip, "the Mixpanel events keep being geolocated")
 	require.Equal(t, "val", ev.props["key"])
-	require.Equal(t, "ns-uid", ev.props["namespace"])
+	require.Equal(t, testNamespaceUID, ev.props["namespace"])
 	// properties track() adds
 	require.Equal(t, true, ev.props["success"])
 	require.Equal(t, "test-version", ev.props["version"])
@@ -291,7 +297,7 @@ func TestProductEventClient_TrackWithProductProperties_FallsBackToMachineID(t *t
 func TestProductEventClient_TrackWithProductProperties_KubernetesContext(t *testing.T) {
 	setupKubernetesAnalyticsContext(t)
 	fake := &fakeEventTracker{}
-	resolver := &mockNamespaceUIDResolver{uid: "ns-uid"}
+	resolver := &mockNamespaceUIDResolver{uid: testNamespaceUID}
 	c := newTestEventClient(fake, resolver)
 
 	c.trackWithProductProperties(context.Background(), "Merged", true, map[string]any{"key": "val"}, c.withNamespace("dev-ns"))

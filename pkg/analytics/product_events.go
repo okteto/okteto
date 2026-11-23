@@ -143,7 +143,8 @@ func (c *productEventClient) trackWithProductProperties(ctx context.Context, eve
 	c.send(ctx, getTrackID(), event, "", nil, props, enrichers)
 }
 
-// send runs the enrichers and sends the event in its own goroutine. An empty ip
+// send runs the enrichers, drops unsafe property values (dropUnsafeProperties)
+// and sends the event in its own goroutine. An empty ip
 // lets Mixpanel geolocate the event from the request IP, and a nil ts lets
 // Mixpanel use the time it receives the event.
 func (c *productEventClient) send(ctx context.Context, distinctID, event, ip string, ts *time.Time, props map[string]any, enrichers []enricherFn) {
@@ -162,6 +163,7 @@ func (c *productEventClient) send(ctx context.Context, distinctID, event, ip str
 		for _, enrich := range enrichers {
 			enrich(ctx, props)
 		}
+		dropUnsafeProperties(event, props)
 		if err := c.client.Track(distinctID, event, &mixpanel.Event{IP: ip, Timestamp: ts, Properties: props}); err != nil {
 			oktetoLog.Infof("failed to send %s analytics event: %s", event, err)
 		}
