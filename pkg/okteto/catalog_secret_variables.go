@@ -53,12 +53,16 @@ type CatalogSecretVariablesClient struct {
 }
 
 // NewCatalogSecretVariablesClient returns the client that gets the catalog
-// secret variables from endpoint with the token of the current context. An
-// https endpoint is reached through internalAPIIP, as NewInternalAPIHTTPClient
-// does, and fails without a valid one. Older installations give an http
-// endpoint on the API service, which is resolved as before
-func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string) (*CatalogSecretVariablesClient, error) {
+// secret variables from endpoint with the token of the current context, or the
+// one of the options. An https endpoint is reached through internalAPIIP, as
+// NewInternalAPIHTTPClient does, and fails without a valid one. Older
+// installations give an http endpoint on the API service, which is resolved as
+// before
+func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Option) (*CatalogSecretVariablesClient, error) {
 	cfg := defaultOktetoClientCfg()
+	for _, opt := range opts {
+		opt(cfg)
+	}
 	if cfg.Token == "" {
 		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, cfg.CtxName)
 	}
@@ -110,7 +114,13 @@ func (c *CatalogSecretVariablesClient) GetCatalogSecretVariables(ctx context.Con
 		return types.CatalogSecretVariables{}, err
 	}
 
-	resp, err := c.httpClient.Do(req)
+	// The token is only for the endpoint, so a redirect isn't followed: the
+	// oauth2 transport would send it to the next host too
+	httpClient := *c.httpClient
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return types.CatalogSecretVariables{}, fmt.Errorf("could not reach the catalog secret variables endpoint: %w", err)
 	}

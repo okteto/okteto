@@ -18,6 +18,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/remote"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +26,7 @@ var testSecretVariables = SecretVariables{
 	References: `[{"name":"API_TOKEN","secretKeyRef":{"name":"creds","key":"token"}}]`,
 	Action:     "action-name",
 	Endpoint:   "https://okteto.example/internal/catalog/secret-variables",
+	TokenFile:  "/run/secrets/catalog-secret-variables/token",
 }
 
 // fakeRemote reports whether runsInRemote was called, and returns inRemote
@@ -42,6 +44,7 @@ func TestSecretVariablesFromEnv(t *testing.T) {
 	t.Setenv(SecretVariablesEnvVar, testSecretVariables.References)
 	t.Setenv(model.OktetoActionNameEnvVar, testSecretVariables.Action)
 	t.Setenv(SecretVariablesEndpointEnvVar, testSecretVariables.Endpoint)
+	t.Setenv(SecretVariablesTokenFileEnvVar, testSecretVariables.TokenFile)
 
 	require.Equal(t, testSecretVariables, SecretVariablesFromEnv())
 }
@@ -50,6 +53,7 @@ func TestSecretVariablesFromEnvWithoutVariables(t *testing.T) {
 	t.Setenv(SecretVariablesEnvVar, "")
 	t.Setenv(model.OktetoActionNameEnvVar, "")
 	t.Setenv(SecretVariablesEndpointEnvVar, "")
+	t.Setenv(SecretVariablesTokenFileEnvVar, "")
 
 	require.Equal(t, SecretVariables{}, SecretVariablesFromEnv())
 }
@@ -78,6 +82,38 @@ func TestRemoteRunFlagsQuotesTheValuesForTheShell(t *testing.T) {
 
 func TestRemoteRunFlagsWithoutAction(t *testing.T) {
 	require.Empty(t, SecretVariables{}.RemoteRunFlags())
+}
+
+func TestRemoteRunSecrets(t *testing.T) {
+	expected := []remote.FileSecret{
+		{ID: "catalog-secret-variables-token", Path: "/run/secrets/catalog-secret-variables/token"},
+	}
+
+	require.Equal(t, expected, testSecretVariables.RemoteRunSecrets())
+}
+
+func TestRemoteRunSecretsWithoutAction(t *testing.T) {
+	require.Empty(t, SecretVariables{TokenFile: "/run/secrets/catalog-secret-variables/token"}.RemoteRunSecrets())
+}
+
+// Older installations don't set the token file, and their endpoint takes the user's token
+func TestRemoteRunSecretsWithoutTokenFile(t *testing.T) {
+	s := testSecretVariables
+	s.TokenFile = ""
+
+	require.Empty(t, s.RemoteRunSecrets())
+}
+
+// Without references nothing is fetched, so the token file isn't forwarded even when it's set
+func TestCheckSecretVariablesWithoutReferencesForwardsNoToken(t *testing.T) {
+	s := testSecretVariables
+	s.References = ""
+
+	got, err := CheckSecretVariables(s, DeployPhase, (&fakeRemote{inRemote: true}).runsInRemote)
+
+	require.NoError(t, err)
+	require.Empty(t, got.RemoteRunSecrets())
+	require.Empty(t, got.RemoteRunFlags())
 }
 
 func TestCheckSecretVariablesWithoutReferences(t *testing.T) {
@@ -142,6 +178,19 @@ func TestCheckSecretVariablesFailsWithoutEndpoint(t *testing.T) {
 
 	require.ErrorIs(t, err, errSecretVariablesEndpointNotSet)
 	require.Equal(t, SecretVariables{}, got)
+}
+
+// Older installations don't set the token file: remote-run still gets the variables, with the user's token
+func TestCheckSecretVariablesWithoutTokenFileForwardsThemWithoutTheToken(t *testing.T) {
+	s := testSecretVariables
+	s.TokenFile = ""
+
+	got, err := CheckSecretVariables(s, DeployPhase, (&fakeRemote{inRemote: true}).runsInRemote)
+
+	require.NoError(t, err)
+	require.Equal(t, s, got)
+	require.NotEmpty(t, got.RemoteRunFlags())
+	require.Empty(t, got.RemoteRunSecrets())
 }
 
 func TestCheckSecretVariablesFailsWithoutAction(t *testing.T) {

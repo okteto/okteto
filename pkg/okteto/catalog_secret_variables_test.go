@@ -91,6 +91,24 @@ func TestGetCatalogSecretVariablesSendsTheToken(t *testing.T) {
 	require.Equal(t, "Bearer okteto-token", authorization)
 }
 
+func TestGetCatalogSecretVariablesSendsTheTokenOfTheOptions(t *testing.T) {
+	var authorization string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authorization = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte(`{"variables":[]}`))
+	}))
+	t.Cleanup(server.Close)
+	setTestContextToken(t, "okteto-token")
+	endpoint := server.URL + "/internal/catalog/secret-variables"
+	c, err := NewCatalogSecretVariablesClient(endpoint, "", WithToken("projected-token"))
+	require.NoError(t, err)
+
+	_, err = c.GetCatalogSecretVariables(context.Background(), endpoint, "action")
+
+	require.NoError(t, err)
+	require.Equal(t, "Bearer projected-token", authorization)
+}
+
 func TestGetCatalogSecretVariablesThroughTheInternalAPIIP(t *testing.T) {
 	var authorization string
 	server := startInternalAPITestServer(t, "127.0.0.1", func(w http.ResponseWriter, r *http.Request) {
@@ -125,6 +143,25 @@ func TestNewCatalogSecretVariablesClientRequiresAToken(t *testing.T) {
 	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "10.20.30.40")
 
 	require.Error(t, err)
+}
+
+// The token is only for the endpoint, so it must not reach the host of a redirect
+func TestGetCatalogSecretVariablesDoesNotFollowRedirects(t *testing.T) {
+	var redirected bool
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirected = true
+		_, _ = w.Write([]byte(`{"variables":[]}`))
+	}))
+	t.Cleanup(target.Close)
+	server := httptest.NewServer(http.RedirectHandler(target.URL, http.StatusFound))
+	t.Cleanup(server.Close)
+	c := &CatalogSecretVariablesClient{httpClient: server.Client()}
+
+	got, err := c.GetCatalogSecretVariables(context.Background(), server.URL+"/internal/catalog/secret-variables", "action")
+
+	require.EqualError(t, err, "catalog secret variables request failed: 302 Found")
+	require.Empty(t, got)
+	require.False(t, redirected)
 }
 
 func TestGetCatalogSecretVariablesReturnsTheValues(t *testing.T) {

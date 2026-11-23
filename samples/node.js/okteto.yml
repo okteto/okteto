@@ -1,8 +1,0 @@
-dev:
-  hello-world:
-    command: bash
-    sync:
-      - .:/usr/src/app
-    forward:
-      - 3000:3000
-      - 9229:9229

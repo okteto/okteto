@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	dockerConfig "github.com/docker/cli/cli/config"
@@ -260,13 +261,11 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		attachable = append(attachable, ssh)
 	}
 
-	if len(buildOptions.Secrets) > 0 {
-		secretProvider, err := buildctl.ParseSecret(buildOptions.Secrets)
-		if err != nil {
-			return nil, err
-		}
-		attachable = append(attachable, secretProvider)
+	secretProviders, err := newSecretProviders(buildOptions)
+	if err != nil {
+		return nil, err
 	}
+	attachable = append(attachable, secretProviders...)
 	localMounts := make(map[string]fsutil.FS, len(localDirs))
 	for name, dir := range localDirs {
 		mount, err := fsutil.NewFS(dir)
@@ -405,6 +404,20 @@ func (b *SolveOptBuilder) extendRegistries(image string) string {
 		image = b.imageCtrl.ExpandOktetoGlobalRegistry(image)
 	}
 	return image
+}
+
+// newSecretProviders returns the provider of the build secrets, if there are any. BuildKit reads the file of a secret
+// when a RUN mounts it: the expanded copy for Secrets, and the file itself for RawSecrets
+func newSecretProviders(buildOptions *types.BuildOptions) ([]session.Attachable, error) {
+	buildSecrets := append(slices.Clone(buildOptions.Secrets), buildOptions.RawSecrets...)
+	if len(buildSecrets) == 0 {
+		return nil, nil
+	}
+	provider, err := buildctl.ParseSecret(buildSecrets)
+	if err != nil {
+		return nil, err
+	}
+	return []session.Attachable{provider}, nil
 }
 
 // replaceSecretsSourceEnvWithTempFile reads the content of the src of a secret and replaces the envs to mount into dockerfile

@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/url"
 	"os"
@@ -58,12 +59,20 @@ type catalogSecretVariablesGetter interface {
 	GetCatalogSecretVariables(ctx context.Context, endpoint, action string) (types.CatalogSecretVariables, error)
 }
 
+// catalogSecretVariablesClientFactory returns the client that gets the
+// catalog secret variables from the endpoint through the internal IP of the
+// Okteto API, with the token, or with the user's token when it's empty
+type catalogSecretVariablesClientFactory func(endpoint, internalAPIIP, token string) (catalogSecretVariablesGetter, error)
+
 // catalogSecretVariables gets the catalog secret variables of the development
 // environment being deployed or destroyed, to inject them into the env of the
 // commands
 type catalogSecretVariables struct {
-	// newClient returns the client that gets the variables from the endpoint
-	newClient func(endpoint, internalAPIIP string) (catalogSecretVariablesGetter, error)
+	newClient catalogSecretVariablesClientFactory
+	// tokenFile is the file with the token of the installer running the
+	// action, which the endpoint authenticates. The remote-run RUN mounts it as
+	// a build secret. Older installations don't provide it
+	tokenFile string
 	action    string
 	endpoint  string
 	// internalAPIIP is the internal IP of the Okteto API that the CLI starting
@@ -121,24 +130,30 @@ func addCatalogSecretVariablesFlags(cmd *cobra.Command, action, endpoint *string
 // of the action, for the commands of the phase. Without an action, nothing is
 // fetched
 func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (catalogSecretVariables, error) {
-	c := catalogSecretVariables{
-		action:        action,
-		endpoint:      endpoint,
-		phase:         phase,
-		internalAPIIP: os.Getenv(constants.OktetoInternalAPIIPEnvVar),
-		newClient:     newCatalogSecretVariablesClient,
-	}
+	c := catalogSecretVariables{action: action, endpoint: endpoint, phase: phase}
 	if action == "" {
 		return c, nil
 	}
 	if endpoint == "" {
 		return c, fmt.Errorf("--%s is required with --%s", catalog.SecretVariablesEndpointFlag, catalog.ActionFlag)
 	}
+	c.tokenFile = catalog.SecretVariablesTokenPath
+	c.internalAPIIP = os.Getenv(constants.OktetoInternalAPIIPEnvVar)
+	c.newClient = newCatalogSecretVariablesClient
 	return c, nil
 }
 
-func newCatalogSecretVariablesClient(endpoint, internalAPIIP string) (catalogSecretVariablesGetter, error) {
-	return okteto.NewCatalogSecretVariablesClient(endpoint, internalAPIIP)
+// newCatalogSecretVariablesClient returns the client that gets the catalog
+// secret variables with the token as the bearer, instead of the user's token.
+// Without a token it uses the user's, which the endpoint of older
+// installations takes. An https endpoint is reached through the internal IP of
+// the Okteto API, never through a proxy, and without following redirects
+func newCatalogSecretVariablesClient(endpoint, internalAPIIP, token string) (catalogSecretVariablesGetter, error) {
+	var opts []okteto.Option
+	if token != "" {
+		opts = append(opts, okteto.WithToken(token))
+	}
+	return okteto.NewCatalogSecretVariablesClient(endpoint, internalAPIIP, opts...)
 }
 
 // get returns the catalog secret variables as "key=value" vars. Any error, and
@@ -186,8 +201,14 @@ func (c catalogSecretVariables) get(ctx context.Context) ([]string, error) {
 // is only called with a valid internal IP of the Okteto API, which the client
 // connects to instead of resolving the hostname: the wildcard DNS record
 // resolves it to the ingress, which doesn't serve it, so the request would only
-// time out. Older installations give an http endpoint on the API service, which
-// is called as before
+// time out. Without that IP, the token isn't read and no request is sent. Older
+// installations give an http endpoint on the API service, which is called as
+// before.
+//
+// The token is the copy of the installer's file that BuildKit mounted when the
+// RUN started, so it's fresh. It is never logged nor set in the env of the
+// commands, but the secret is mounted for the whole RUN and they can read the
+// file, so it's masked in their output like the user's token
 func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretVariables, error) {
 	u, err := url.Parse(c.endpoint)
 	if err != nil {
@@ -196,11 +217,39 @@ func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretV
 	if u.Scheme == "https" && net.ParseIP(c.internalAPIIP) == nil {
 		return types.CatalogSecretVariables{}, internalAPIIPMissingError{hostname: u.Hostname()}
 	}
-	client, err := c.newClient(c.endpoint, c.internalAPIIP)
+	token, err := c.readToken()
 	if err != nil {
 		return types.CatalogSecretVariables{}, err
 	}
-	return client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	oktetoLog.AddMaskedWord(token)
+	client, err := c.newClient(c.endpoint, c.internalAPIIP, token)
+	if err != nil {
+		return types.CatalogSecretVariables{}, err
+	}
+	variables, err := client.GetCatalogSecretVariables(ctx, c.endpoint, c.action)
+	if err != nil && token == "" {
+		return types.CatalogSecretVariables{}, fmt.Errorf("%w (%s isn't mounted, so the request used the user's token)", err, c.tokenFile)
+	}
+	return variables, err
+}
+
+// readToken reads the token the endpoint authenticates the installer with. It
+// returns none when the file isn't mounted: older installations don't provide
+// it, and their endpoint takes the user's token
+func (c catalogSecretVariables) readToken() (string, error) {
+	content, err := os.ReadFile(c.tokenFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		oktetoLog.Infof("%s is not mounted: getting the catalog secret variables with the user's token", c.tokenFile)
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("could not read the token to get the catalog secret variables: %w", err)
+	}
+	token := strings.TrimSpace(string(content))
+	if token == "" {
+		return "", fmt.Errorf("could not read the token to get the catalog secret variables: %s is empty", c.tokenFile)
+	}
+	return token, nil
 }
 
 // skipsUnresolved is true when the commands run without the variables that
