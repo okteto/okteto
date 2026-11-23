@@ -248,7 +248,7 @@ func (dev) JSONSchema() *jsonschema.Schema {
 	devProps.Set("mode", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"string"}},
 		Title:       "mode",
-		Description: withManifestRefDocLink("Development mode (sync, hybrid)", "mode-string-optional"),
+		Description: withManifestRefDocLink("Development mode (sync, hybrid)", "dev"),
 		Enum:        []any{"sync", "hybrid"},
 		Default:     "sync",
 	})

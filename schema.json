@@ -539,7 +539,7 @@
                 "hybrid"
               ],
               "title": "mode",
-              "description": "Development mode (sync, hybrid)\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#mode-string-optional",
+              "description": "Development mode (sync, hybrid)\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#dev",
               "default": "sync"
             },
             "nodeSelector": {
