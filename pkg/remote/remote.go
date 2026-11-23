@@ -100,8 +100,8 @@ ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
-{{ if .InstallGitCredentialHelper }}RUN okteto git-credential install --system --log-output=plain || true
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+{{ if .InstallGitCredentialHelper }}RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
 ARG {{ .GitCredentialsEndpointArgName }}{{ end }}
 
 RUN \

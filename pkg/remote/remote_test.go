@@ -340,8 +340,8 @@ ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
-RUN okteto git-credential install --system --log-output=plain || true
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
 ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
@@ -446,8 +446,8 @@ ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
-RUN okteto git-credential install --system --log-output=plain || true
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
 ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
@@ -533,8 +533,8 @@ ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
-RUN okteto git-credential install --system --log-output=plain || true
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
 ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
@@ -672,7 +672,7 @@ func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
-	require.Contains(t, d, "RUN okteto registrytoken install --force --log-output=json")
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
 }
 
 func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
@@ -682,7 +682,7 @@ func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
-	require.Contains(t, d, "RUN okteto registrytoken install --force --log-output=json")
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
 }
 
 // createDeployDockerfile returns the Dockerfile that a remote deploy generates
