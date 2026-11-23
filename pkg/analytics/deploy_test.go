@@ -53,7 +53,6 @@ func TestDeployMetadata_ToProps(t *testing.T) {
 		"hasDependenciesSection": true,
 		"hasBuildSection":        true,
 		"isRemote":               true,
-		"result":                 true,
 		"isRedeploy":             true,
 		"namespaceType":          "preview",
 		"repoURL":                hashedTestRepoURL,
@@ -76,7 +75,6 @@ func TestDeployMetadata_ToProps_DefaultsAndOmittedFields(t *testing.T) {
 		"hasDependenciesSection": false,
 		"hasBuildSection":        false,
 		"isRemote":               false,
-		"result":                 true,
 		"isRedeploy":             false,
 		"namespaceType":          "regular",
 	}, props)

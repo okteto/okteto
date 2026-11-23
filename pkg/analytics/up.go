@@ -261,7 +261,6 @@ func (u *UpMetricsMetadata) productProps() map[string]any {
 		repoURL = hashString(normalizeRepoURL(u.repoURL))
 	}
 	props := map[string]any{
-		"result":          u.success,
 		"isBuildExecuted": u.isBuildExecuted,
 		"reconnectCount":  u.reconnectCount,
 		"workflowID":      u.workflowID,

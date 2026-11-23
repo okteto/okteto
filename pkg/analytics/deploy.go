@@ -81,7 +81,6 @@ func (d *DeployMetadata) toProps() map[string]any {
 		"hasBuildSection":        d.HasBuildSection,
 		"isRemote":               d.IsRemote,
 
-		"result":        d.Success,
 		"isRedeploy":    d.IsRedeploy,
 		"namespaceType": d.namespaceType(),
 	}

@@ -49,7 +49,6 @@ func Test_ImageBuildMetadata_toProps(t *testing.T) {
 		"buildContextHash":                "contextHash",
 		"buildContextHashDurationSeconds": float64(5),
 		"initiator":                       "me",
-		"result":                          true,
 		"buildkitDurationSeconds":         25,
 		"buildContextDurationMs":          int64(3000),
 		"buildContextSizeBytes":           int64(20_000_000),
@@ -77,7 +76,7 @@ func Test_ImageBuildMetadata_toProps_omitsZeroPortedFields(t *testing.T) {
 func Test_ImageBuildMetadata_toProps_withError(t *testing.T) {
 	props := (&ImageBuildMetadata{Success: false, ErrorReason: "image_not_found"}).toProps()
 
-	require.Equal(t, false, props["result"])
+	require.NotContains(t, props, "result", "imageBuild already has success")
 	require.Equal(t, "image_not_found", props["errorReason"])
 }
 

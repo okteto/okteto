@@ -297,7 +297,6 @@ func Test_UpMetricsMetadata_ErrorReason(t *testing.T) {
 func Test_UpMetricsMetadata_ProductProps(t *testing.T) {
 	baseProps := func(overrides map[string]any) map[string]any {
 		base := map[string]any{
-			"result":          false,
 			"isBuildExecuted": false,
 			"reconnectCount":  0,
 			"workflowID":      "",
@@ -316,13 +315,12 @@ func Test_UpMetricsMetadata_ProductProps(t *testing.T) {
 		{
 			name:     "minimal, all fields present with zero values",
 			meta:     UpMetricsMetadata{success: true},
-			expected: baseProps(map[string]any{"result": true}),
+			expected: baseProps(nil),
 		},
 		{
 			name: "service, workflow and repo URL set; namespace excluded (resolved via withNamespace enricher)",
 			meta: UpMetricsMetadata{success: true, workflowID: "wf-1", service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
 			expected: baseProps(map[string]any{
-				"result":     true,
 				"workflowID": "wf-1",
 				"service":    hashString("api"),
 				"repoURL":    hashedTestRepoURL,
@@ -336,13 +334,12 @@ func Test_UpMetricsMetadata_ProductProps(t *testing.T) {
 		{
 			name:     "errorReason omitted on success",
 			meta:     UpMetricsMetadata{success: true, failActivate: true},
-			expected: baseProps(map[string]any{"result": true}),
+			expected: baseProps(nil),
 		},
 		{
 			name: "build executed and reconnects",
 			meta: UpMetricsMetadata{success: true, isBuildExecuted: true, isReconnect: true, reconnectCount: 2},
 			expected: baseProps(map[string]any{
-				"result":          true,
 				"isBuildExecuted": true,
 				"reconnectCount":  2,
 			}),
