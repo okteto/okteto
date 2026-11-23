@@ -125,8 +125,9 @@ func (c *productEventClient) track(ctx context.Context, event string, eventProps
 // when there is none), geolocation, and no client timestamp (Mixpanel uses the
 // time it receives the event, so a machine with a wrong clock doesn't lose it).
 // The common product properties and the enrichers only apply to Okteto contexts,
-// as PostHog only received these events from them: other contexts send what
-// they sent before, without their kubeconfig context name or a namespace lookup.
+// as PostHog only received these events from them: other contexts send the
+// properties track() adds and the event's own properties, without the common
+// product properties or a namespace lookup against their cluster.
 // Events are dropped when analytics is disabled and after Close.
 func (c *productEventClient) trackWithProductProperties(ctx context.Context, event string, success bool, eventProps map[string]any, enrichers ...enricherFn) {
 	if c == nil || c.client == nil || !analyticsEnabled() {
