@@ -588,6 +588,7 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 					GitCredentialsEndpoint: testGitCredentialsEndpoint,
 					SSHAgentHostname:       "ssh-agent.default.svc.cluster.local",
 					SSHAgentPort:           "3000",
+					InternalAPIIP:          "10.20.30.40",
 					CommandFlags:           []string{"--name \"test\""},
 					Artifacts: []model.Artifact{
 						{
@@ -650,7 +651,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
-ENV OKTETO_INTERNAL_API_IP=""
+ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -701,6 +702,7 @@ COPY --from=runner /okteto/artifacts/ /
 					DockerfileName:               "Dockerfile.deploy",
 					Command:                      "deploy",
 					GitCredentialsEndpoint:       testGitCredentialsEndpoint,
+					InternalAPIIP:                "10.20.30.40",
 					CommandFlags:                 []string{"--name \"test\""},
 				},
 			},
@@ -739,7 +741,7 @@ WORKDIR /okteto/src
 
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
-ENV OKTETO_INTERNAL_API_IP=""
+ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -946,7 +948,7 @@ func TestGitCredentialsEndpoint(t *testing.T) {
 func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
 
-	d := createDeployDockerfile(t, testGitCredentialsEndpoint)
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, "10.20.30.40")
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
@@ -954,15 +956,24 @@ func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 }
 
 func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
-	d := createDeployDockerfile(t, "")
+	d := createDeployDockerfile(t, "", "10.20.30.40")
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
 	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
 }
 
-// createDeployDockerfile returns the Dockerfile that a remote deploy generates with the given Git credentials endpoint
-func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint string) string {
+func TestDockerfileWithoutInternalAPIIP(t *testing.T) {
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, "")
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
+}
+
+// createDeployDockerfile returns the Dockerfile that a remote deploy generates with the given Git credentials
+// endpoint and internal IP of the API
+func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint, internalAPIIP string) string {
 	t.Helper()
 	fs := afero.NewMemMapFs()
 	rdc := Runner{
@@ -980,6 +991,7 @@ func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint string) string 
 		Command:                "deploy",
 		Manifest:               &model.Manifest{Name: "test-manifest"},
 		GitCredentialsEndpoint: gitCredentialsEndpoint,
+		InternalAPIIP:          internalAPIIP,
 	})
 
 	require.NoError(t, err)

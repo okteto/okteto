@@ -257,9 +257,9 @@ type dockerfileTemplateProperties struct {
 	// GitCredentialsEndpointArgName is the URL the Git credential helper gets the credentials from.
 	// Git starts the helper from the commands that remote-run runs, so it reaches it as an env var
 	GitCredentialsEndpointArgName string
-	// InstallGitCredentialHelper is true when Okteto gives the helper its endpoint, unless
-	// OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns it off. Without the endpoint the helper gives nothing,
-	// but installing it would still change how Git looks up github.com credentials
+	// InstallGitCredentialHelper is true when Okteto gives the helper its endpoint and the internal IP of
+	// the API, unless OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns it off. Without them the helper gives
+	// nothing, but installing it would still change how Git looks up github.com credentials
 	InstallGitCredentialHelper bool
 }
 
@@ -551,7 +551,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoPrefixEnvVars:           getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars:  params.OktetoCommandSpecificEnvVars,
 		GitCredentialsEndpointArgName: constants.OktetoGitCredentialsEndpointEnvVar,
-		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(params.GitCredentialsEndpoint),
+		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(params.GitCredentialsEndpoint, params.InternalAPIIP),
 		Command:                       params.Command,
 		Caches:                        params.Caches,
 		TestName:                      params.TestName,
@@ -608,10 +608,11 @@ func gitCredentialsEndpoint(installerEndpoint string, sc types.ClusterMetadata) 
 	return sc.GitCredentialsEndpoint
 }
 
-// shouldInstallGitCredentialHelper returns true when the run has an endpoint to give the Git
-// credential helper and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off
-func shouldInstallGitCredentialHelper(endpoint string) bool {
-	return endpoint != "" && !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
+// shouldInstallGitCredentialHelper returns true when the run has an endpoint and the internal IP of the API
+// to give the Git credential helper, and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off. The helper
+// only sends the token to that IP, so without it, it would only print an error on every GitHub request
+func shouldInstallGitCredentialHelper(endpoint, internalAPIIP string) bool {
+	return endpoint != "" && internalAPIIP != "" && !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
 }
 
 func (r *Runner) getContextPath(cwd, manifestPath string) string {
