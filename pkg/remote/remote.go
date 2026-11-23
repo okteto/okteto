@@ -195,6 +195,10 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
+
+	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from, empty
+	// when the run gets none. Run sets it
+	GitCredentialsEndpoint string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -284,6 +288,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	params.SSHAgentHostname = sc.SSHAgentHostname
 	params.SSHAgentPort = sc.SSHAgentPort
+	params.GitCredentialsEndpoint = gitCredentialsEndpoint(*sc)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -356,7 +361,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
-		fmt.Sprintf("%s=%s", constants.OktetoGitCredentialsEndpointEnvVar, os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitCredentialsEndpointEnvVar, params.GitCredentialsEndpoint),
 	)
 
 	buildOptions.BuildArgs = append(
@@ -522,7 +527,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoPrefixEnvVars:           getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars:  params.OktetoCommandSpecificEnvVars,
 		GitCredentialsEndpointArgName: constants.OktetoGitCredentialsEndpointEnvVar,
-		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(),
+		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(params.GitCredentialsEndpoint),
 		Command:                       params.Command,
 		Caches:                        params.Caches,
 		TestName:                      params.TestName,
@@ -558,12 +563,21 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 	return dockerfile.Name(), nil
 }
 
-// shouldInstallGitCredentialHelper returns true when Okteto gives the Git credential helper its
-// endpoint and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off. Okteto only sets the
-// endpoint where it serves the credentials, so older Okteto versions don't get the helper
-func shouldInstallGitCredentialHelper() bool {
-	return os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar) != "" &&
-		!env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
+// gitCredentialsEndpoint returns the URL the Git credential helper gets the credentials from: the one
+// Okteto sets on its installer, or else the one in the cluster metadata, for remote runs started from
+// a laptop or CI. It's empty when the installation doesn't give GitHub credentials, as on older
+// Okteto versions
+func gitCredentialsEndpoint(sc types.ClusterMetadata) string {
+	if endpoint := os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar); endpoint != "" {
+		return endpoint
+	}
+	return sc.GitCredentialsEndpoint
+}
+
+// shouldInstallGitCredentialHelper returns true when the run has an endpoint to give the Git
+// credential helper and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off
+func shouldInstallGitCredentialHelper(endpoint string) bool {
+	return endpoint != "" && !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
 }
 
 func (r *Runner) getContextPath(cwd, manifestPath string) string {

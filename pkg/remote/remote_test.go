@@ -222,7 +222,6 @@ func TestExtraHosts(t *testing.T) {
 }
 
 func TestCreateDockerfile(t *testing.T) {
-	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials")
 	originalStore := okteto.CurrentStore
 	defer func() { okteto.CurrentStore = originalStore }()
 
@@ -282,11 +281,12 @@ func TestCreateDockerfile(t *testing.T) {
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.OktetoIsPreviewEnvVar: "true",
 					},
-					DockerfileName:   "Dockerfile.deploy",
-					Command:          "deploy",
-					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
-					SSHAgentPort:     "3000",
-					CommandFlags:     []string{"--name \"test\""},
+					DockerfileName:         "Dockerfile.deploy",
+					Command:                "deploy",
+					GitCredentialsEndpoint: testGitCredentialsEndpoint,
+					SSHAgentHostname:       "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:           "3000",
+					CommandFlags:           []string{"--name \"test\""},
 				},
 			},
 			expected: expected{
@@ -374,11 +374,12 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 						model.OktetoDevGatewayNameEnvVar:      "dev-gateway",
 						model.OktetoDevGatewayNamespaceEnvVar: "gateway-ns",
 					},
-					DockerfileName:   "Dockerfile.test",
-					Command:          "test",
-					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
-					SSHAgentPort:     "3000",
-					CommandFlags:     []string{"--name \"test\""},
+					DockerfileName:         "Dockerfile.test",
+					Command:                "test",
+					GitCredentialsEndpoint: testGitCredentialsEndpoint,
+					SSHAgentHostname:       "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:           "3000",
+					CommandFlags:           []string{"--name \"test\""},
 					Artifacts: []model.Artifact{
 						{
 							Path:        "coverage.txt",
@@ -489,6 +490,7 @@ COPY --from=runner /okteto/artifacts/ /
 					OktetoCommandSpecificEnvVars: map[string]string{},
 					DockerfileName:               "Dockerfile.deploy",
 					Command:                      "deploy",
+					GitCredentialsEndpoint:       testGitCredentialsEndpoint,
 					CommandFlags:                 []string{"--name \"test\""},
 				},
 			},
@@ -627,8 +629,30 @@ func TestDockerfileWithCache(t *testing.T) {
 	}
 }
 
-func TestRunPassesTheGitCredentialsEndpoint(t *testing.T) {
-	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "http://okteto-api.okteto:8080/internal/git/credentials")
+// testGitCredentialsEndpoint is the URL Okteto gives the Git credential helper in these tests
+const testGitCredentialsEndpoint = "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials"
+
+func TestRunPassesTheGitCredentialsEndpointOfTheInstaller(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, testGitCredentialsEndpoint)
+
+	buildArgs := runRemoteDeploy(t, types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"})
+
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+func TestRunPassesTheGitCredentialsEndpointOfTheClusterMetadata(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "")
+
+	buildArgs := runRemoteDeploy(t, types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
+
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+// runRemoteDeploy runs a remote deploy on an installation with the given metadata and returns the build args it sends
+func runRemoteDeploy(t *testing.T, metadata types.ClusterMetadata) []string {
+	t.Helper()
+	originalStore := okteto.CurrentStore
+	t.Cleanup(func() { okteto.CurrentStore = originalStore })
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
 		Contexts: map[string]*okteto.Context{
@@ -637,6 +661,8 @@ func TestRunPassesTheGitCredentialsEndpoint(t *testing.T) {
 			},
 		},
 	}
+	users := client.NewFakeUsersClient(&types.User{})
+	users.ClusterMetadata = metadata
 	fs := afero.NewMemMapFs()
 	var buildArgs []string
 	rdc := Runner{
@@ -647,7 +673,7 @@ func TestRunPassesTheGitCredentialsEndpoint(t *testing.T) {
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		oktetoClientProvider: client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
-			Users: client.NewFakeUsersClient(&types.User{}),
+			Users: users,
 		}),
 		ioCtrl: io.NewIOController(),
 		getEnviron: func() []string {
@@ -661,14 +687,44 @@ func TestRunPassesTheGitCredentialsEndpoint(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT=http://okteto-api.okteto:8080/internal/git/credentials")
+	return buildArgs
+}
+
+func TestGitCredentialsEndpoint(t *testing.T) {
+	tests := []struct {
+		name     string
+		env      string
+		metadata types.ClusterMetadata
+		expected string
+	}{
+		{
+			name:     "the installer's endpoint wins",
+			env:      testGitCredentialsEndpoint,
+			metadata: types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"},
+			expected: testGitCredentialsEndpoint,
+		},
+		{
+			name:     "the cluster metadata's endpoint for runs started outside the installer",
+			metadata: types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint},
+			expected: testGitCredentialsEndpoint,
+		},
+		{
+			name: "no endpoint when the installation gives none",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, tt.env)
+
+			require.Equal(t, tt.expected, gitCredentialsEndpoint(tt.metadata))
+		})
+	}
 }
 
 func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
-	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials")
 	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
 
-	d := createDeployDockerfile(t)
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint)
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
@@ -676,17 +732,15 @@ func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 }
 
 func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
-	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "")
-
-	d := createDeployDockerfile(t)
+	d := createDeployDockerfile(t, "")
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
 	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
 }
 
-// createDeployDockerfile returns the Dockerfile that a remote deploy generates
-func createDeployDockerfile(t *testing.T) string {
+// createDeployDockerfile returns the Dockerfile that a remote deploy generates with the given Git credentials endpoint
+func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint string) string {
 	t.Helper()
 	fs := afero.NewMemMapFs()
 	rdc := Runner{
@@ -700,9 +754,10 @@ func createDeployDockerfile(t *testing.T) string {
 	}
 
 	dockerfileName, err := rdc.createDockerfile("/test", &Params{
-		DockerfileName: "Dockerfile.deploy",
-		Command:        "deploy",
-		Manifest:       &model.Manifest{Name: "test-manifest"},
+		DockerfileName:         "Dockerfile.deploy",
+		Command:                "deploy",
+		Manifest:               &model.Manifest{Name: "test-manifest"},
+		GitCredentialsEndpoint: gitCredentialsEndpoint,
 	})
 
 	require.NoError(t, err)
