@@ -101,6 +101,7 @@ type SolveOptBuilder struct {
 	clientFactory clientFactory
 	fs            afero.Fs
 	secretMgr     secretBuildManager
+	buildContext  buildContextStrategy
 }
 
 // OktetoContextInterface is an interface to interact with the okteto context
@@ -140,6 +141,7 @@ func NewSolveOptBuilder(cf clientFactory, reg IsInOktetoRegistryChecker, okCtx O
 		secretMgr:     secretMgr,
 		clientFactory: cf,
 		okCtx:         okCtx,
+		buildContext:  newBuildContextStrategy(fs, logger),
 	}, nil
 }
 
@@ -288,6 +290,7 @@ func (b *SolveOptBuilder) Build(ctx context.Context, buildOptions *types.BuildOp
 		// API, we should remove this flag.
 		Internal: env.LoadBoolean("OKTETO_BUILDKIT_INTERNAL_MODE"),
 	}
+	b.buildContext.configure(opt, buildOptions)
 
 	if buildOptions.Tag != "" {
 		opt.Exports = []client.ExportEntry{
