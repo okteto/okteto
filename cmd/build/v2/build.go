@@ -57,8 +57,6 @@ type oktetoRegistryInterface interface {
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
-	IsCleanProject() bool
-	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
 }

@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/build/buildkit"
+	"github.com/okteto/okteto/pkg/catalog"
 	"github.com/okteto/okteto/pkg/deployable"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
@@ -319,6 +320,39 @@ func TestDestroyRemote(t *testing.T) {
 	err := rd.Destroy(context.Background(), opts)
 	require.NoError(t, err)
 	runner.AssertExpectations(t)
+}
+
+func TestDestroyRemoteForwardsTheCatalogSecretVariablesToRemoteRun(t *testing.T) {
+	manifest := &model.Manifest{
+		Destroy: &model.DestroyInfo{
+			Commands: []model.DeployCommand{{Name: "command 1", Command: "test-command"}},
+		},
+	}
+	var params *remote.Params
+	runner := &fakeRemoteRunner{}
+	runner.On("Run", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		params = args.Get(1).(*remote.Params)
+	}).Return(nil)
+	rd := &remoteDestroyCommand{
+		runner:      runner,
+		workdirCtrl: fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest"),
+	}
+	opts := &Options{
+		Name:                            "test",
+		Manifest:                        manifest,
+		catalogSecretVariablesToForward: testCatalogSecretVariables,
+	}
+
+	err := rd.Destroy(context.Background(), opts)
+
+	require.NoError(t, err)
+	expected := []string{
+		`--name test`,
+		`--catalog-action action-name`,
+		`--catalog-secret-variables-endpoint https://okteto.example/internal/catalog/secret-variables`,
+	}
+	require.Equal(t, expected, params.CommandFlags)
+	require.Equal(t, []remote.FileSecret{{ID: catalog.SecretVariablesTokenSecretID, Path: "/run/secrets/catalog-secret-variables/token"}}, params.Secrets)
 }
 
 func TestDestroyRemoteWithError(t *testing.T) {

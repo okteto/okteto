@@ -9,7 +9,6 @@ okteto/
 ├── tools/            # Internal tools (remote, supervisor, clean) — bundled in Docker image
 ├── internal/         # Internal code (test utilities)
 ├── integration/      # Integration tests requiring Kubernetes cluster
-├── samples/          # Example projects for different languages
 ├── main.go           # Entry point — wires up all commands
 ├── Dockerfile        # Container image definition (includes tools build)
 └── Makefile          # Build, test, lint automation

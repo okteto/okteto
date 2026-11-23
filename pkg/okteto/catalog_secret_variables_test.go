@@ -65,6 +65,26 @@ func TestGetCatalogSecretVariablesSendsTheToken(t *testing.T) {
 	require.Equal(t, "Bearer okteto-token", authorization)
 }
 
+// The token is only for the endpoint, so it must not reach the host of a redirect
+func TestGetCatalogSecretVariablesDoesNotFollowRedirects(t *testing.T) {
+	var redirected bool
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirected = true
+		_, _ = w.Write([]byte(`{"variables":[]}`))
+	}))
+	t.Cleanup(target.Close)
+	server := httptest.NewServer(http.RedirectHandler(target.URL, http.StatusFound))
+	t.Cleanup(server.Close)
+	c, err := NewOktetoClientFromUrlAndToken(server.URL, "okteto-token")
+	require.NoError(t, err)
+
+	got, err := c.User().GetCatalogSecretVariables(context.Background(), server.URL+"/internal/catalog/secret-variables", "action")
+
+	require.EqualError(t, err, "catalog secret variables request failed: 302 Found")
+	require.Empty(t, got)
+	require.False(t, redirected)
+}
+
 func TestGetCatalogSecretVariablesReturnsTheValues(t *testing.T) {
 	handler := respondWith(http.StatusOK, `{"variables":[{"name":"API_TOKEN","value":"abc"},{"name":"PIN","value":"1"}],"unresolved":[]}`)
 

@@ -108,6 +108,9 @@ RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,id={{cacheID $.RepositoryURL $.ManifestName $.TestName $path}},target={{$path}},sharing=private {{end}}\
   --mount=type=secret,id=known_hosts \
   --mount=type=secret,id={{ .SSHAgentSocketArgName }},env=SSH_AUTH_SOCK \
+{{- range .Secrets }}
+  --mount=type=secret,id={{ .ID }} \
+{{- end }}
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts $HOME/.ssh/known_hosts" >> $HOME/.ssh/config && \
   /okteto/bin/okteto remote-run {{ .Command }} --log-output=json --server-name="${{ .InternalServerName }}" {{ .CommandFlags }}{{ if eq .Command "test" }} || true{{ end }}
 
@@ -141,6 +144,13 @@ type Builder interface {
 }
 
 type socketNameGenerator func() string
+
+// FileSecret is a file the remote-run RUN mounts as a build secret, at /run/secrets/<ID>. Only its ID reaches the
+// Dockerfile. BuildKit reads the file when the RUN mounts it, so a file that changes during the build is read fresh
+type FileSecret struct {
+	ID   string
+	Path string
+}
 
 // Runner struct in charge of creating the Dockerfile for remote execution
 // of commands like deploy and destroy and running the build
@@ -195,6 +205,8 @@ type Params struct {
 	// UseOktetoDeployIgnoreFile if enabled loads the docker ignore file from an
 	// .oktetodeployignore file. Disabled by default
 	UseOktetoDeployIgnoreFile bool
+	// Secrets are the files the remote-run RUN mounts as build secrets
+	Secrets []FileSecret
 
 	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from, empty
 	// when the run gets none. Run sets it
@@ -235,6 +247,7 @@ type dockerfileTemplateProperties struct {
 	ManifestName                 string
 	RepositoryURL                string
 	Artifacts                    []model.Artifact
+	Secrets                      []FileSecret
 	// GitCredentialsEndpointArgName is the URL the Git credential helper gets the credentials from.
 	// Git starts the helper from the commands that remote-run runs, so it reaches it as an env var
 	GitCredentialsEndpointArgName string
@@ -388,6 +401,10 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	buildOptions.ExtraHosts = addDefinedHosts(buildOptions.ExtraHosts, params.Hosts)
 
+	for _, s := range params.Secrets {
+		buildOptions.RawSecrets = append(buildOptions.RawSecrets, fmt.Sprintf("id=%s,src=%s", s.ID, s.Path))
+	}
+
 	knownHostEnabled := false
 	knownHostsContent := ""
 	// Try to get known hosts from API first
@@ -539,6 +556,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		SSHAgentPort:                  params.SSHAgentPort,
 		SSHAgentPortArgName:           constants.OktetoSshAgentPortEnvVar,
 		SSHAgentSocketArgName:         constants.OktetoSshAgentSocketEnvVar,
+		Secrets:                       params.Secrets,
 	}
 
 	dockerfileSyntax.prepareEnvVars()

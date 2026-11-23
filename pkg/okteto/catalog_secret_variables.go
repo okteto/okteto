@@ -63,7 +63,13 @@ func (c *userClient) GetCatalogSecretVariables(ctx context.Context, endpoint, ac
 		return types.CatalogSecretVariables{}, err
 	}
 
-	resp, err := c.httpClient.Do(req)
+	// The token is only for the endpoint, so a redirect isn't followed: the
+	// oauth2 transport would send it to the next host too
+	httpClient := *c.httpClient
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return types.CatalogSecretVariables{}, fmt.Errorf("could not reach the catalog secret variables endpoint: %w", err)
 	}

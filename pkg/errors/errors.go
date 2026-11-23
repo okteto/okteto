@@ -170,7 +170,7 @@ var (
 	// ErrManifestNoDevSection is raised when the manifest doesn't have a dev section and the user tries to access it
 	ErrManifestNoDevSection = UserError{
 		E:    fmt.Errorf("your Okteto Manifest doesn't have a 'dev' section"),
-		Hint: "To learn more visit: https://www.okteto.com/docs/get-started/deploy-your-app",
+		Hint: "To learn more visit: https://www.okteto.com/docs/get-started/quickstart/",
 	}
 
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section

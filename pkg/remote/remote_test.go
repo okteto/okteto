@@ -20,6 +20,7 @@ import (
 	"maps"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -219,6 +220,113 @@ func TestExtraHosts(t *testing.T) {
 		Manifest: fakeManifest,
 	})
 	require.NoError(t, err)
+}
+
+var testFileSecret = FileSecret{ID: "catalog-secret-variables-token", Path: "/run/secrets/catalog-secret-variables/token"}
+
+func TestRunPassesTheSecretsToBuildKitAsTheyAre(t *testing.T) {
+	originalStore := okteto.CurrentStore
+	t.Cleanup(func() { okteto.CurrentStore = originalStore })
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts:       map[string]*okteto.Context{"test": {Namespace: "namespace"}},
+	}
+	fs := afero.NewMemMapFs()
+	var opts *types.BuildOptions
+	rdc := Runner{
+		builder:              fakeBuilder{assertOptions: func(o *types.BuildOptions) { opts = o }},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		oktetoClientProvider: client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{Users: client.NewFakeUsersClient(&types.User{})}),
+		ioCtrl:               io.NewIOController(),
+		getEnviron:           func() []string { return []string{} },
+		generateSocketName:   fakeNameGenerator{name: "test"}.GenerateName,
+	}
+
+	err := rdc.Run(context.Background(), &Params{
+		Manifest: &model.Manifest{Deploy: &model.DeployInfo{}},
+		Secrets:  []FileSecret{testFileSecret},
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"id=catalog-secret-variables-token,src=/run/secrets/catalog-secret-variables/token"}, opts.RawSecrets)
+	require.NotContains(t, strings.Join(opts.Secrets, " "), testFileSecret.ID)
+}
+
+// remoteRunSecretMounts returns the ids and targets of the secrets the RUN that runs remote-run mounts
+func remoteRunSecretMounts(t *testing.T, dockerfile []byte) map[string]string {
+	t.Helper()
+	result, err := parser.Parse(bytes.NewReader(dockerfile))
+	require.NoError(t, err)
+	stages, _, err := instructions.Parse(result.AST, nil)
+	require.NoError(t, err)
+
+	var runs []*instructions.RunCommand
+	for _, stage := range stages {
+		for _, cmd := range stage.Commands {
+			run, ok := cmd.(*instructions.RunCommand)
+			if ok && strings.Contains(strings.Join(run.CmdLine, " "), "okteto remote-run") {
+				runs = append(runs, run)
+			}
+		}
+	}
+	require.Len(t, runs, 1)
+	// BuildKit reads the mount options when it expands the RUN
+	require.NoError(t, runs[0].Expand(func(word string) (string, error) { return word, nil }))
+
+	mounts := map[string]string{}
+	for _, m := range instructions.GetMounts(runs[0]) {
+		if m.Type == instructions.MountTypeSecret {
+			mounts[m.CacheID] = m.Target
+		}
+	}
+	return mounts
+}
+
+func createTestDockerfile(t *testing.T, secrets []FileSecret) []byte {
+	t.Helper()
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		getEnviron:           func() []string { return []string{} },
+		ioCtrl:               io.NewIOController(),
+		generateSocketName:   fakeNameGenerator{name: "okteto-socket.sock"}.GenerateName,
+	}
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		BaseImage:      "alpine",
+		DockerfileName: "Dockerfile",
+		Command:        DeployCommand,
+		Manifest:       &model.Manifest{Name: "test"},
+		Secrets:        secrets,
+	})
+	require.NoError(t, err)
+	dockerfile, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+	return dockerfile
+}
+
+func TestCreateDockerfileMountsTheSecretsOnTheRemoteRunRun(t *testing.T) {
+	dockerfile := createTestDockerfile(t, []FileSecret{testFileSecret})
+
+	expected := map[string]string{
+		"known_hosts":                        "",
+		constants.OktetoSshAgentSocketEnvVar: "",
+		"catalog-secret-variables-token":     "",
+	}
+	require.Equal(t, expected, remoteRunSecretMounts(t, dockerfile))
+	require.NotContains(t, string(dockerfile), testFileSecret.Path)
+}
+
+func TestCreateDockerfileWithoutSecretsMountsOnlyTheSSHOnes(t *testing.T) {
+	dockerfile := createTestDockerfile(t, nil)
+
+	expected := map[string]string{
+		"known_hosts":                        "",
+		constants.OktetoSshAgentSocketEnvVar: "",
+	}
+	require.Equal(t, expected, remoteRunSecretMounts(t, dockerfile))
 }
 
 func TestCreateDockerfile(t *testing.T) {

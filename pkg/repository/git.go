@@ -115,15 +115,31 @@ func (r gitRepoController) getRepoURL() (string, error) {
 		return r.sanitiseURL(url.String()), nil
 	}
 
-	repo, err := r.repoGetter.get(r.path)
+	repo, err := FindTopLevelGitRepoFromPath(r.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
-	remoteURL, err := repo.RemoteURL()
+	origin, err := repo.Remote("origin")
 	if err != nil {
-		return "", err
+		if err != git.ErrRemoteNotFound {
+			return "", fmt.Errorf("failed to get the git repo's remote configuration: %w", err)
+		}
 	}
-	return r.sanitiseURL(remoteURL), nil
+
+	if origin != nil {
+		return r.sanitiseURL(origin.Config().URLs[0]), nil
+	}
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git repo's remote information: %w", err)
+	}
+
+	if len(remotes) == 0 {
+		return "", fmt.Errorf("git repo doesn't have any remote")
+	}
+
+	return r.sanitiseURL(remotes[0].Config().URLs[0]), nil
 }
 
 func (r gitRepoController) sanitiseURL(u string) string {
@@ -393,16 +409,7 @@ type repositoryGetterInterface interface {
 
 type gitRepositoryGetter struct{}
 
-// get opens the repository that contains path. It reads it with the git binary when git is installed and finds the
-// repository, and falls back on go-git otherwise: when git is missing, or when it refuses the repository, as with a
-// repository owned by another user
 func (gitRepositoryGetter) get(path string) (gitRepositoryInterface, error) {
-	binaryRepo, err := newGitBinaryRepository(&LocalExec{}, path)
-	if err == nil {
-		return binaryRepo, nil
-	}
-	oktetoLog.Debugf("could not read the git repository with the git binary, falling back on go-git: %s", err)
-
 	repo, err := FindTopLevelGitRepoFromPath(path)
 	if err != nil {
 		return nil, err
@@ -423,7 +430,7 @@ func (ogr oktetoGitRepository) Worktree() (gitWorktreeInterface, error) {
 	if err != nil {
 		return nil, err
 	}
-	return oktetoGitWorktree{worktree: worktree, path: ogr.root}, nil
+	return oktetoGitWorktree{worktree: worktree}, nil
 }
 
 func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
@@ -432,31 +439,6 @@ func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
 
 func (ogr oktetoGitRepository) Log(o *git.LogOptions) (object.CommitIter, error) {
 	return ogr.repo.Log(o)
-}
-
-// RemoteURL returns the first URL of the origin remote, or of any remote when there is no origin
-func (ogr oktetoGitRepository) RemoteURL() (string, error) {
-	origin, err := ogr.repo.Remote("origin")
-	if err != nil {
-		if err != git.ErrRemoteNotFound {
-			return "", fmt.Errorf("failed to get the git repo's remote configuration: %w", err)
-		}
-	}
-
-	if origin != nil {
-		return origin.Config().URLs[0], nil
-	}
-
-	remotes, err := ogr.repo.Remotes()
-	if err != nil {
-		return "", fmt.Errorf("failed to get git repo's remote information: %w", err)
-	}
-
-	if len(remotes) == 0 {
-		return "", errNoRemote
-	}
-
-	return remotes[0].Config().URLs[0], nil
 }
 
 func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error) {
@@ -470,22 +452,10 @@ func (ogr oktetoGitRepository) calculateUntrackedFiles(ctx context.Context, cont
 
 type oktetoGitWorktree struct {
 	worktree *git.Worktree
-	// path is the path the repository was opened from
-	path string
 }
 
-// GetRoot returns the root of the worktree in the form of the path the repository was opened from, as the git binary
-// repository does. go-git v5 returns it with the symlinks resolved
 func (ogr oktetoGitWorktree) GetRoot() string {
-	root := ogr.worktree.Filesystem.Root()
-	if ogr.path == "" {
-		return root
-	}
-	inPathForm, err := rootInPathForm(ogr.path, root)
-	if err != nil {
-		return root
-	}
-	return inPathForm
+	return ogr.worktree.Filesystem.Root()
 }
 
 type oktetoGitStatus struct {
@@ -499,7 +469,7 @@ func (ogs oktetoGitStatus) IsClean() bool {
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
 	Head() (*plumbing.Reference, error)
-	RemoteURL() (string, error)
+	Log(o *git.LogOptions) (object.CommitIter, error)
 	GetLatestSHA(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error)
 	GetDiff(ctx context.Context, dirpath string, localGit LocalGitInterface) (string, error)
 	calculateUntrackedFiles(ctx context.Context, contextDir string) ([]string, error)
@@ -624,7 +594,7 @@ func FindTopLevelGitDir(workingDir string) (string, error) {
 		return "", fmt.Errorf("%w: invalid working dir: %w", errFindingRepo, err)
 	}
 
-	repo, err := gitRepositoryGetter{}.get(dir)
+	repo, err := FindTopLevelGitRepoFromPath(dir)
 	if err != nil {
 		return "", fmt.Errorf("%w: failed to find top level git repo: %w", errFindingRepo, err)
 	}
@@ -634,42 +604,10 @@ func FindTopLevelGitDir(workingDir string) (string, error) {
 		return "", fmt.Errorf("%w: failed to find top level git repo: %w", errFindingRepo, err)
 	}
 
-	return worktree.GetRoot(), nil
+	return worktree.Filesystem.Root(), nil
 }
 
-// GetBranch returns the branch checked out in the repository that contains path. Unlike
-// Repository.GetCurrentBranch, it fails when HEAD is detached
-func GetBranch(path string) (string, error) {
-	repo, err := gitRepositoryGetter{}.get(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	branch := head.Name()
-	if !branch.IsBranch() {
-		return "", fmt.Errorf("git repo is not on a valid branch")
-	}
-
-	return strings.TrimPrefix(branch.String(), "refs/heads/"), nil
-}
-
-// GetRemoteURL returns the URL of the origin remote of the repository that contains path, or the URL of another
-// remote when it has no origin
-func GetRemoteURL(path string) (string, error) {
-	repo, err := gitRepositoryGetter{}.get(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-	return repo.RemoteURL()
-}
-
-// FindTopLevelGitRepoFromPath opens with go-git the git repository for the given absolute path taking into account
-// parent folders. It is the fallback for when the git binary is not available
+// FindTopLevelGitRepoFromPath returns the git repository for the given absolute path taking into account parent folders
 func FindTopLevelGitRepoFromPath(path string) (*git.Repository, error) {
 	opts := &git.PlainOpenOptions{
 		DetectDotGit: true,
