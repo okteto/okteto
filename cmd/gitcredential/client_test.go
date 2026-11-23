@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	credentialsResponseBody = `{"username":"x-access-token","password":"token","expiresAt":"2026-11-13T10:00:00Z"}`
+	credentialsResponseBody = `{"username":"x-access-token","password":"token","expiresAt":"2099-01-01T00:00:00Z"}`
 
 	internalAPIHostname = "okteto-internal-api.example.com"
 	internalAPIEndpoint = "https://okteto-internal-api.example.com:8443/internal/git/credentials"
@@ -189,7 +189,7 @@ func TestGetGitCredentials_ReadsTheCredentials(t *testing.T) {
 			expected: gitCredentials{
 				Username:  "x-access-token",
 				Password:  "token",
-				ExpiresAt: time.Date(2026, 11, 13, 10, 0, 0, 0, time.UTC),
+				ExpiresAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 		},
 		{
@@ -279,7 +279,7 @@ func TestGet_FromTheEndpoint(t *testing.T) {
 
 	stdout, stderr := runGet(githubRequest, provider)
 
-	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=1794564000\n", stdout)
+	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
 	require.Empty(t, stderr)
 }
 

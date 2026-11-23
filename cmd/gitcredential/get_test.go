@@ -67,9 +67,19 @@ func TestGet(t *testing.T) {
 			creds: gitCredentials{
 				Username:  "x-access-token",
 				Password:  "token",
-				ExpiresAt: time.Date(2026, 11, 13, 10, 0, 0, 0, time.UTC),
+				ExpiresAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
-			expectedStdout: "username=x-access-token\npassword=token\npassword_expiry_utc=1794564000\n",
+			expectedStdout: "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n",
+		},
+		{
+			name:  "expired token",
+			input: githubRequest,
+			creds: gitCredentials{
+				Username:  "x-access-token",
+				Password:  "token",
+				ExpiresAt: time.Now().Add(-time.Minute),
+			},
+			expectedStderr: "okteto: no GitHub credentials for acme/infra: the Okteto API returned an expired token\n",
 		},
 		{
 			name:           "token without an expiry",

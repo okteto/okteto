@@ -31,6 +31,7 @@ const (
 var (
 	errNoCredentials      = errors.New("the Okteto API returned no token")
 	errInvalidCredentials = errors.New("the Okteto API returned a credential with a newline or NUL character")
+	errExpiredCredentials = errors.New("the Okteto API returned an expired token")
 )
 
 // credentialsGetter asks the Okteto API for the credentials of a repository
@@ -105,6 +106,10 @@ func fetch(ctx context.Context, provider getterProvider, repository string) (git
 	}
 	if creds.Password == "" {
 		return gitCredentials{}, noCredentialsError{reason: creds.Reason}
+	}
+	// Git 2.41+ drops an expired password without saying why, so the helper says it instead
+	if !creds.ExpiresAt.IsZero() && !time.Now().Before(creds.ExpiresAt) {
+		return gitCredentials{}, errExpiredCredentials
 	}
 	if creds.Username == "" {
 		creds.Username = defaultUsername
