@@ -249,39 +249,6 @@ func TestGetIsSmartBuildEnabled(t *testing.T) {
 	}
 }
 
-func TestGetGitCommit(t *testing.T) {
-	tt := []struct {
-		name     string
-		expected string
-		input    fakeConfigRepo
-	}{
-		{
-			name: "valid commit",
-			input: fakeConfigRepo{
-				sha: "1234567890",
-				err: nil,
-			},
-			expected: "1234567890",
-		},
-		{
-			name: "invalid commit",
-			input: fakeConfigRepo{
-				sha: "",
-				err: assert.AnError,
-			},
-			expected: "",
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := oktetoBuilderConfig{
-				repository: tc.input,
-			}
-			assert.Equal(t, tc.expected, cfg.GetGitCommit())
-		})
-	}
-}
-
 func Test_GetAnonymizedRepo(t *testing.T) {
 	cfg := oktetoBuilderConfig{
 		repository: fakeConfigRepo{

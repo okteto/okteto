@@ -28,7 +28,6 @@ const (
 )
 
 type configRepositoryInterface interface {
-	GetSHA() (string, error)
 	GetAnonymizedRepo() string
 	GetLatestDirSHA(string) (string, error)
 }
@@ -103,15 +102,6 @@ func (oc oktetoBuilderConfig) IsOkteto() bool {
 // HasGlobalAccess checks if the user has access to global registry
 func (oc oktetoBuilderConfig) HasGlobalAccess() bool {
 	return oc.hasGlobalAccess
-}
-
-// GetGitCommit returns the commit sha of the repository
-func (oc oktetoBuilderConfig) GetGitCommit() string {
-	commitSHA, err := oc.repository.GetSHA()
-	if err != nil {
-		oktetoLog.Infof("could not get repository sha: %s", err)
-	}
-	return commitSHA
 }
 
 // GetAnonymizedRepo returns the repository url without credentials
