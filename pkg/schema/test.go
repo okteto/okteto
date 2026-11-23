@@ -83,13 +83,13 @@ func (test) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
-	testProps.Set("groups", &jsonschema.Schema{
+	testProps.Set("profiles", &jsonschema.Schema{
 		Type:        &jsonschema.Type{Types: []string{"array"}},
-		Title:       "groups",
-		Description: "A list of groups the Test Container belongs to. Run all the Test Containers of a group with 'okteto test --group <name>'. The Test Containers they depend on are executed too, even if they don't belong to the group.",
+		Title:       "profiles",
+		Description: "A list of profiles the Test Container belongs to. Unless Test Containers are named in the command, 'okteto test' only runs the ones without profiles. Enable a profile with 'okteto test --profile <name>' or the OKTETO_PROFILES environment variable to run its Test Containers too. Their dependencies must have no profiles or an enabled profile.",
 		Items: &jsonschema.Schema{
 			Type:    &jsonschema.Type{Types: []string{"string"}},
-			Pattern: `^\S(.*\S)?$`, // group names cannot be empty or start or end with spaces
+			Pattern: `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`, // the same format as Docker Compose, also allowing single-character names
 		},
 	})
 

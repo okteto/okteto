@@ -1230,14 +1230,14 @@
               "title": "depends_on",
               "description": "A list of Test Containers this test depends on. When a Test Container is executed, all its dependencies are executed first. The Test Containers defined in depends_on must exist in the current Okteto Manifest.\nDocumentation: https://www.okteto.com/docs/reference/okteto-manifest/#depends_on-string-optional"
             },
-            "groups": {
+            "profiles": {
               "items": {
                 "type": "string",
-                "pattern": "^\\S(.*\\S)?$"
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
               },
               "type": "array",
-              "title": "groups",
-              "description": "A list of groups the Test Container belongs to. Run all the Test Containers of a group with 'okteto test --group \u003cname\u003e'. The Test Containers they depend on are executed too, even if they don't belong to the group."
+              "title": "profiles",
+              "description": "A list of profiles the Test Container belongs to. Unless Test Containers are named in the command, 'okteto test' only runs the ones without profiles. Enable a profile with 'okteto test --profile \u003cname\u003e' or the OKTETO_PROFILES environment variable to run its Test Containers too. Their dependencies must have no profiles or an enabled profile."
             },
             "hosts": {
               "items": {

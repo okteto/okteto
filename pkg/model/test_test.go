@@ -14,6 +14,7 @@
 package model
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,53 +56,6 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "one test with groups",
-			tests: ManifestTests{
-				"one": &Test{
-					Commands: []TestCommand{
-						{Command: "echo 'hello'"},
-					},
-					Groups: []string{"pre-commit", "release"},
-				},
-			},
-		},
-		{
-			name: "one test with an empty group",
-			tests: ManifestTests{
-				"one": &Test{
-					Commands: []TestCommand{
-						{Command: "echo 'hello'"},
-					},
-					Groups: []string{"pre-commit", ""},
-				},
-			},
-			expectAnError: true,
-		},
-		{
-			name: "one test with a blank group",
-			tests: ManifestTests{
-				"one": &Test{
-					Commands: []TestCommand{
-						{Command: "echo 'hello'"},
-					},
-					Groups: []string{"  "},
-				},
-			},
-			expectAnError: true,
-		},
-		{
-			name: "one test with a group that ends with a space",
-			tests: ManifestTests{
-				"one": &Test{
-					Commands: []TestCommand{
-						{Command: "echo 'hello'"},
-					},
-					Groups: []string{"pre-commit "},
-				},
-			},
-			expectAnError: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -119,11 +73,94 @@ func TestValidate(t *testing.T) {
 
 }
 
-func TestReadTestGroups(t *testing.T) {
+func newTestWithProfiles(profiles ...string) ManifestTests {
+	return ManifestTests{
+		"one": &Test{
+			Commands: []TestCommand{{Command: "echo 'hello'"}},
+			Profiles: profiles,
+		},
+	}
+}
+
+func TestValidateProfiles(t *testing.T) {
+	tests := []struct {
+		name     string
+		profiles []string
+	}{
+		{
+			name:     "lowercase names with separators",
+			profiles: []string{"pre-commit", "e2e_v1.2"},
+		},
+		{
+			name:     "single character",
+			profiles: []string{"a"},
+		},
+		{
+			name:     "uppercase letters and numbers",
+			profiles: []string{"Pre-Commit", "2026"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, newTestWithProfiles(tt.profiles...).Validate())
+		})
+	}
+}
+
+func TestValidateRejectsInvalidProfiles(t *testing.T) {
+	tests := []struct {
+		name     string
+		profiles []string
+	}{
+		{
+			name:     "empty",
+			profiles: []string{"pre-commit", ""},
+		},
+		{
+			name:     "blank",
+			profiles: []string{"  "},
+		},
+		{
+			name:     "ends with a space",
+			profiles: []string{"pre-commit "},
+		},
+		{
+			name:     "comma",
+			profiles: []string{"pre-commit,release"},
+		},
+		{
+			name:     "starts with a dash",
+			profiles: []string{"-release"},
+		},
+		{
+			name:     "starts with an underscore",
+			profiles: []string{"_release"},
+		},
+		{
+			name:     "starts with a dot",
+			profiles: []string{".release"},
+		},
+		{
+			name:     "non-ASCII letter",
+			profiles: []string{"pré"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := newTestWithProfiles(tt.profiles...).Validate()
+
+			require.EqualError(t, err, fmt.Sprintf("test 'one' is invalid: profile '%s' must start with a letter or a number and only contain letters, numbers, '_', '.' or '-'", tt.profiles[len(tt.profiles)-1]))
+		})
+	}
+}
+
+func TestReadTestProfiles(t *testing.T) {
 	manifest := []byte(`
 test:
   unit:
-    groups: [pre-commit, release]
+    profiles: [pre-commit, release]
     commands: ["go test ./..."]
   e2e:
     commands: ["make e2e"]`)
@@ -131,8 +168,8 @@ test:
 	m, err := Read(manifest)
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"pre-commit", "release"}, m.Test["unit"].Groups)
-	require.Empty(t, m.Test["e2e"].Groups)
+	require.Equal(t, []string{"pre-commit", "release"}, m.Test["unit"].Profiles)
+	require.Empty(t, m.Test["e2e"].Profiles)
 }
 
 func TestHostUnmarshalYAML(t *testing.T) {

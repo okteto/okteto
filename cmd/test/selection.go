@@ -19,104 +19,200 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
-	groupFlagHint = `Name the group of test containers to run, for example:
-    okteto test --group pre-commit`
+	profileFlagSource = "'--profile'"
+	profileEnvSource  = "'" + constants.OktetoProfilesEnvVar + "'"
 
-	noGroupsDefinedHint = `None of the test containers in your Okteto Manifest belongs to a group.
+	profileFlagHint = `Name the profile of the test containers to run, for example:
+    okteto test --profile pre-commit`
+
+	profileWithTestNamesHint = `Run the test containers either by name or by profile, for example:
+    okteto test unit lint
+    okteto test --profile pre-commit`
+
+	profileEnvConflictHint = `Unset the OKTETO_PROFILES environment variable to run test containers by name or replace their commands`
+
+	noProfilesDefinedHint = `None of the test containers in your Okteto Manifest has a profile.
     For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test`
+
+	dependencyProfilesHint = `A test container can only depend on test containers without profiles or with an enabled profile.
+    Enable one of the profiles of the dependency too, or update the profiles in your Okteto Manifest`
 )
 
 var (
-	errEmptyGroupFlag           = errors.New("'--group' cannot be empty")
-	errGroupWithCommandOverride = errors.New("'--group' cannot be used when overriding the commands of a test container")
-	errGroupNotFound            = errors.New("no test container belongs to the group")
+	errEmptyProfileFlag             = errors.New("'--profile' cannot be empty")
+	errProfileWithCommandOverride   = errors.New("cannot be used when overriding the commands of a test container")
+	errProfileWithTestNames         = errors.New("cannot be used when naming the test containers to run")
+	errProfileNotFound              = errors.New("no test container has the profile")
+	errNoTestsWithoutProfiles       = errors.New("all the test containers have profiles, so none runs without enabling a profile")
+	errDependencyProfilesNotEnabled = errors.New("none of its profiles is enabled")
 )
 
-// validateGroupFlags checks the values of the --group flag. They cannot be blank, and they cannot be
-// combined with a command override ('--' or --command), which applies to exactly one test container
-func validateGroupFlags(groups []string, overrideRequested bool) error {
-	for _, group := range groups {
-		if strings.TrimSpace(group) == "" {
-			return oktetoErrors.UserError{
-				E:    errEmptyGroupFlag,
-				Hint: groupFlagHint,
+// profileSelection holds the enabled profiles and the option that sets them
+type profileSelection struct {
+	profiles []string
+	// source is the option that sets the profiles: the --profile flag or the OKTETO_PROFILES environment variable
+	source string
+}
+
+// resolveProfiles returns the enabled profiles. The OKTETO_PROFILES environment variable, a
+// comma-separated list of profiles, overrides the values of the --profile flag. The variable is
+// ignored when it has no profiles, so an empty value doesn't override the flag
+func resolveProfiles(flagProfiles []string, envValue string) (profileSelection, error) {
+	if envProfiles := parseProfilesEnv(envValue); len(envProfiles) > 0 {
+		return profileSelection{profiles: envProfiles, source: profileEnvSource}, nil
+	}
+
+	for _, profile := range flagProfiles {
+		if strings.TrimSpace(profile) == "" {
+			return profileSelection{}, oktetoErrors.UserError{
+				E:    errEmptyProfileFlag,
+				Hint: profileFlagHint,
 			}
 		}
 	}
-
-	if overrideRequested && len(groups) > 0 {
-		return newCommandOverrideError(errGroupWithCommandOverride)
-	}
-	return nil
+	return profileSelection{profiles: flagProfiles, source: profileFlagSource}, nil
 }
 
-// selectTests returns the names of the test containers to run: the ones named in the command
-// line plus the ones that belong to any of the given groups, without duplicates. The test
-// containers they depend on are added later when resolving the dependency tree. When there are
-// no groups, it returns the names unchanged, so no names and no groups run all the test containers.
-// With groups, the result is never empty, as every group must have at least one test container:
-// an empty result would run all the test containers instead of the ones of the groups.
-// The tests must be validated first, so none of them is nil
-func selectTests(tests model.ManifestTests, names, groups []string) ([]string, error) {
-	if len(groups) == 0 {
+// parseProfilesEnv splits the value of the OKTETO_PROFILES environment variable into profiles,
+// trimming the spaces around them and ignoring the empty ones
+func parseProfilesEnv(value string) []string {
+	profiles := make([]string, 0)
+	for _, profile := range strings.Split(value, ",") {
+		if profile = strings.TrimSpace(profile); profile != "" {
+			profiles = append(profiles, profile)
+		}
+	}
+	return profiles
+}
+
+func (s profileSelection) isSet() bool {
+	return len(s.profiles) > 0
+}
+
+func (s profileSelection) fromEnv() bool {
+	return s.source == profileEnvSource
+}
+
+// checkCommandOverride returns an error when profiles are enabled and the commands of a test
+// container are replaced ('--' or --command), as that applies to exactly one named test container
+func (s profileSelection) checkCommandOverride(overrideRequested bool) error {
+	if !s.isSet() || !overrideRequested {
+		return nil
+	}
+	err := fmt.Errorf("%s %w", s.source, errProfileWithCommandOverride)
+	if s.fromEnv() {
+		return oktetoErrors.UserError{E: err, Hint: profileEnvConflictHint}
+	}
+	return newCommandOverrideError(err)
+}
+
+// checkTestNames returns an error when profiles are enabled and test containers are named,
+// as the test containers to run are selected either by name or by profile
+func (s profileSelection) checkTestNames(names []string) error {
+	if !s.isSet() || len(names) == 0 {
+		return nil
+	}
+	hint := profileWithTestNamesHint
+	if s.fromEnv() {
+		hint = profileEnvConflictHint
+	}
+	return oktetoErrors.UserError{
+		E:    fmt.Errorf("%s %w", s.source, errProfileWithTestNames),
+		Hint: hint,
+	}
+}
+
+// selectTests returns the names of the test containers to run. Named test containers run whatever
+// their profiles, so the names are returned unchanged. Otherwise, as in Docker Compose, the test
+// containers without profiles run along with the ones that have any of the enabled profiles. The test
+// containers they depend on must run too, so depending on one whose profiles are not enabled is an
+// error instead of running it. Without names, the result is never empty, as an empty selection would
+// run all the test containers. Names and profiles are never combined (see checkTestNames), and the
+// tests must be validated first, so none of them is nil
+func selectTests(tests model.ManifestTests, names, profiles []string) ([]string, error) {
+	if len(names) > 0 {
 		return names, nil
 	}
 
-	selected := make([]string, 0, len(names))
-	for _, name := range names {
-		if !slices.Contains(selected, name) {
-			selected = append(selected, name)
+	defined := definedProfiles(tests)
+	for _, profile := range profiles {
+		if !slices.Contains(defined, profile) {
+			return nil, newProfileNotFoundError(defined, profile)
 		}
 	}
 
-	for _, group := range groups {
-		members := testsInGroup(tests, group)
-		if len(members) == 0 {
-			return nil, newGroupNotFoundError(tests, group)
+	selected := make([]string, 0, len(tests))
+	for name, test := range tests {
+		if isEnabled(test, profiles) {
+			selected = append(selected, name)
 		}
-		for _, name := range members {
-			if !slices.Contains(selected, name) {
-				selected = append(selected, name)
+	}
+	if len(selected) == 0 {
+		return nil, newNoTestsWithoutProfilesError(defined)
+	}
+	slices.Sort(selected)
+
+	for _, name := range selected {
+		for _, dependency := range tests[name].DependsOn {
+			// Unknown dependencies are reported when building the dependency tree
+			if test, ok := tests[dependency]; ok && !isEnabled(test, profiles) {
+				return nil, newDependencyNotEnabledError(name, dependency, test.Profiles)
 			}
 		}
 	}
 	return selected, nil
 }
 
-// testsInGroup returns the sorted names of the test containers that belong to the group
-func testsInGroup(tests model.ManifestTests, group string) []string {
-	members := make([]string, 0)
-	for name, test := range tests {
-		if slices.Contains(test.Groups, group) {
-			members = append(members, name)
-		}
+// isEnabled returns true when the test container has no profiles or any of them is enabled
+func isEnabled(test *model.Test, profiles []string) bool {
+	if len(test.Profiles) == 0 {
+		return true
 	}
-	slices.Sort(members)
-	return members
+	return slices.ContainsFunc(test.Profiles, func(profile string) bool {
+		return slices.Contains(profiles, profile)
+	})
 }
 
-// definedGroups returns the sorted groups defined in the test containers, without duplicates
-func definedGroups(tests model.ManifestTests) []string {
-	groups := make([]string, 0)
+// definedProfiles returns the sorted profiles defined in the test containers, without duplicates
+func definedProfiles(tests model.ManifestTests) []string {
+	profiles := make([]string, 0)
 	for _, test := range tests {
-		groups = append(groups, test.Groups...)
+		profiles = append(profiles, test.Profiles...)
 	}
-	slices.Sort(groups)
-	return slices.Compact(groups)
+	slices.Sort(profiles)
+	return slices.Compact(profiles)
 }
 
-func newGroupNotFoundError(tests model.ManifestTests, group string) error {
-	hint := noGroupsDefinedHint
-	if groups := definedGroups(tests); len(groups) > 0 {
-		hint = fmt.Sprintf("The groups defined in your Okteto Manifest are: %s", strings.Join(groups, ", "))
+func newProfileNotFoundError(defined []string, profile string) error {
+	hint := noProfilesDefinedHint
+	if len(defined) > 0 {
+		hint = fmt.Sprintf("The profiles defined in your Okteto Manifest are: %s", strings.Join(defined, ", "))
 	}
 	return oktetoErrors.UserError{
-		E:    fmt.Errorf("%w '%s'", errGroupNotFound, group),
+		E:    fmt.Errorf("%w '%s'", errProfileNotFound, profile),
 		Hint: hint,
+	}
+}
+
+// newNoTestsWithoutProfilesError returns the error when every test container has a profile and none is enabled
+func newNoTestsWithoutProfilesError(defined []string) error {
+	return oktetoErrors.UserError{
+		E: errNoTestsWithoutProfiles,
+		Hint: fmt.Sprintf(`Enable a profile with '--profile' or the OKTETO_PROFILES environment variable, for example:
+    okteto test --profile <name>
+    The profiles defined in your Okteto Manifest are: %s`, strings.Join(defined, ", ")),
+	}
+}
+
+func newDependencyNotEnabledError(name, dependency string, dependencyProfiles []string) error {
+	return oktetoErrors.UserError{
+		E:    fmt.Errorf("test container '%s' depends on '%s', but %w: %s", name, dependency, errDependencyProfilesNotEnabled, strings.Join(dependencyProfiles, ", ")),
+		Hint: dependencyProfilesHint,
 	}
 }

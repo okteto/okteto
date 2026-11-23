@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/env"
@@ -25,7 +26,7 @@ type Test struct {
 	Context             string        `yaml:"context,omitempty"`
 	Commands            []TestCommand `yaml:"commands,omitempty"`
 	DependsOn           []string      `yaml:"depends_on,omitempty"`
-	Groups              []string      `yaml:"groups,omitempty"`
+	Profiles            []string      `yaml:"profiles,omitempty"`
 	Caches              []string      `yaml:"caches,omitempty"`
 	Artifacts           []Artifact    `yaml:"artifacts,omitempty"`
 	Hosts               []Host        `yaml:"hosts,omitempty"`
@@ -43,6 +44,11 @@ var (
 	ErrHostMalformed   = fmt.Errorf("host is malformed")
 	ErrInvalidHostName = fmt.Errorf("invalid hostname")
 	ErrInvalidIp       = fmt.Errorf("invalid ip")
+
+	// profileNameRegex is the format of the profile names, the same as in Docker Compose
+	// but also allowing single-character names. It keeps commas out of the names, as the
+	// OKTETO_PROFILES environment variable is a comma-separated list of profiles
+	profileNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
 )
 
 func (test ManifestTests) Validate() error {
@@ -58,9 +64,9 @@ func (test ManifestTests) Validate() error {
 		if t == nil || len(t.Commands) == 0 {
 			return fmt.Errorf("test '%s' is invalid: no commands defined", k)
 		}
-		for _, group := range t.Groups {
-			if group == "" || strings.TrimSpace(group) != group {
-				return fmt.Errorf("test '%s' is invalid: group names cannot be empty or start or end with spaces", k)
+		for _, profile := range t.Profiles {
+			if !profileNameRegex.MatchString(profile) {
+				return fmt.Errorf("test '%s' is invalid: profile '%s' must start with a letter or a number and only contain letters, numbers, '_', '.' or '-'", k, profile)
 			}
 		}
 	}

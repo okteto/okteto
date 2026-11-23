@@ -221,7 +221,7 @@ func Test_getStructKeys(t *testing.T) {
 				"model.StorageResource":             {"size", "class"},
 				"model.Sync":                        {"folders", "rescanInterval", "compression", "verbose"},
 				"model.SyncFolder":                  {"localPath", "remotePath"},
-				"model.Test":                        {"image", "context", "commands", "depends_on", "groups", "caches", "artifacts", "hosts", "skipIfNoFileChanges"},
+				"model.Test":                        {"image", "context", "commands", "depends_on", "profiles", "caches", "artifacts", "hosts", "skipIfNoFileChanges"},
 				"model.TestCommand":                 {"name", "command"},
 				"model.Timeout":                     {"default", "resources"},
 				"model.VolumeSpec":                  {"labels", "annotations", "size", "class"},
