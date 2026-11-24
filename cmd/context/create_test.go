@@ -931,6 +931,22 @@ func Test_loadDotEnv(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "empty local vars are not overridden",
+			mockEnv: func(t *testing.T) {
+				t.Setenv("VAR5", "")
+			},
+			mockfs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = afero.WriteFile(fs, ".env", []byte("VAR5=.env"), 0644)
+				return fs
+			},
+			expected: expected{
+				vars: map[string]string{
+					"VAR5": "",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

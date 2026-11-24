@@ -35,10 +35,12 @@ const (
     okteto test unit lint
     okteto test --profile pre-commit`
 
-	profileEnvConflictHint = `Unset the OKTETO_PROFILES environment variable to run test containers by name or replace their commands`
+	profileEnvConflictHint = `OKTETO_PROFILES can be set in your shell, the .env file or as an Okteto Variable.
+    Set it to an empty value to run test containers by name or replace their commands, for example:
+    OKTETO_PROFILES= okteto test unit`
 
 	noProfilesDefinedHint = `None of the test containers in your Okteto Manifest has a profile.
-    For more information, check the documentation: https://okteto.com/docs/core/okteto-manifest/#test`
+    For more information, check the documentation: https://www.okteto.com/docs/reference/okteto-manifest/#test`
 
 	dependencyProfilesHint = `A test container can only depend on test containers without profiles or with an enabled profile.
     Enable one of the profiles of the dependency too, or update the profiles in your Okteto Manifest`

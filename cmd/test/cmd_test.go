@@ -264,6 +264,38 @@ func TestResolveEnabledProfilesRejectsConflicts(t *testing.T) {
 	}
 }
 
+// TestResolveEnabledProfilesWithEmptyEnvAllowsNamesAndOverrides checks the escape that the hint of
+// the conflicts suggests: an empty OKTETO_PROFILES, which the .env file and the Okteto Variables
+// don't replace, lets the test containers run by name or with their commands replaced
+func TestResolveEnabledProfilesWithEmptyEnvAllowsNamesAndOverrides(t *testing.T) {
+	tests := []struct {
+		name    string
+		options *Options
+	}{
+		{
+			name:    "test names",
+			options: &Options{},
+		},
+		{
+			name: "command override",
+			options: &Options{
+				override: commandOverride{testName: "unit", commands: []model.TestCommand{{Command: "go test"}}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoProfilesEnvVar, "")
+
+			err := resolveEnabledProfiles([]string{"unit"}, tt.options, io.NewIOController())
+
+			require.NoError(t, err)
+			require.Nil(t, tt.options.enabledProfiles)
+		})
+	}
+}
+
 type fakeSvcFromRegex struct {
 	err error
 	svc string
