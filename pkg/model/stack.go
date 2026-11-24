@@ -128,6 +128,8 @@ type Service struct {
 	Public bool `yaml:"public,omitempty"` // For okteto stack only
 
 	EndpointMode EndpointMode `yaml:"endpoint_mode,omitempty"` // For compose services.deploy.endpoint_mode
+
+	optionalEnvFiles map[string]bool
 }
 
 // minIdentityTokenExpirationSeconds is the minimum expiration (in seconds) the kubelet accepts for a projected service account token
@@ -972,6 +974,10 @@ func loadEnvFiles(svc *Service, svcName string) error {
 	for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 		envFilepath := svc.EnvFiles[i]
 		if err := setEnvironmentFromFile(svc, envFilepath); err != nil {
+			if svc.optionalEnvFiles[envFilepath] && errors.Is(err, os.ErrNotExist) {
+				oktetoLog.Debugf("Skipping optional env_file '%s' from %s service: not found", envFilepath, svcName)
+				continue
+			}
 			if filepath.Base(envFilepath) == ".env" {
 				oktetoLog.Warning("Skipping '.env' file from %s service", svcName)
 				continue
