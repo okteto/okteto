@@ -14,7 +14,6 @@
 package model
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -36,7 +35,6 @@ import (
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
-	yaml3 "gopkg.in/yaml.v3"
 )
 
 // Archetype represents the type of manifest
@@ -53,42 +51,7 @@ var (
 	PipelineType Archetype = "pipeline"
 )
 
-const (
-	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#build"
-	buildExample     = `build:
-  my-service:
-    context: .`
-	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_SHA: image tag sha256"
-	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#deploy"
-	deployExample     = `deploy:
-  commands:
-  - name: Deploy
-    command: echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'`
-	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dev"
-	devExample     = `dev:
-  sample:
-    image: okteto/dev:latest
-    command: bash
-    workdir: /usr/src/app
-    sync:
-      - .:/usr/src/app
-    environment:
-      - name=$USER
-    forward:
-      - 8080:80`
-	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/okteto-manifest/#dependencies"
-	dependenciesExample     = `dependencies:
-  - https://github.com/okteto/sample`
-
-	// FakeCommand prints into terminal a fake command
-	FakeCommand = "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'"
-)
-
-var (
-	priorityOrder = []string{"dev", "dependencies", "deploy", "build", "name"}
-
-	legacyNginxDriverWarningOnce = sync.Once{}
-)
+var legacyNginxDriverWarningOnce = sync.Once{}
 
 // Manifest represents an okteto manifest
 type Manifest struct {
@@ -804,9 +767,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	for devName, devInfo := range manifest.Dev {
-		if _, ok := manifest.Build[devName]; ok && devInfo.Image == "" && devInfo.Autocreate {
-			devInfo.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
-		}
+		manifest.InferAutocreateImageFromBuild(devName)
 		if devInfo.Image != "" {
 			devInfo.Image, err = env.ExpandEnvIfNotEmpty(devInfo.Image)
 			if err != nil {
@@ -822,6 +783,19 @@ func (manifest *Manifest) ExpandEnvVars() error {
 	}
 
 	return nil
+}
+
+// InferAutocreateImageFromBuild sets the image of an 'autocreate' development container that doesn't define one
+// to the image built by the 'build' entry with the same name, referenced as ${OKTETO_BUILD_<NAME>_IMAGE}
+func (manifest *Manifest) InferAutocreateImageFromBuild(devName string) {
+	dev, ok := manifest.Dev[devName]
+	if !ok || !dev.Autocreate || dev.Image != "" {
+		return
+	}
+	if _, ok := manifest.Build[devName]; !ok {
+		return
+	}
+	dev.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_")))
 }
 
 // InferFromStack infers data, mainly dev services and build information from services defined in the stackfile
@@ -919,224 +893,6 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 		oktetoLog.Infof("failed to set defaults: %s", err)
 	}
 	return m, nil
-}
-
-// WriteToFile writes a manifest to a file with comments to make it easier to understand
-func (m *Manifest) WriteToFile(filePath string) error {
-	if m.Deploy != nil {
-		if len(m.Deploy.Commands) == 0 && m.Deploy.ComposeSection == nil {
-			m.Deploy.Commands = []DeployCommand{
-				{
-					Name:    FakeCommand,
-					Command: FakeCommand,
-				},
-			}
-		}
-	}
-	for dName, d := range m.Dev {
-		d.Name = ""
-		if d.Image == "" {
-			if v, ok := m.Build[dName]; ok {
-				if v.Image != "" {
-					d.Image = v.Image
-				} else {
-					d.Image = ""
-				}
-			} else {
-				d.Image = ""
-			}
-		}
-	}
-	// Marshal with yaml v2 because we have the marshal with yaml v2
-	b, err := yaml.Marshal(m)
-	if err != nil {
-		return err
-	}
-	doc := yaml3.Node{}
-	if err := yaml3.Unmarshal(b, &doc); err != nil {
-		return err
-	}
-	doc = *doc.Content[0]
-	currentSection := ""
-	for idx, section := range doc.Content {
-		switch section.Value {
-		case "build":
-			currentSection = "build"
-			section.HeadComment = buildHeadComment
-		case "deploy":
-			currentSection = "deploy"
-			section.HeadComment = deployHeadComment
-		case "dev":
-			currentSection = "dev"
-			section.HeadComment = devHeadComment
-		}
-		if idx%2 == 0 {
-			continue
-		}
-		if currentSection == "build" {
-			for _, subsection := range section.Content {
-				if subsection.Kind != yaml3.ScalarNode {
-					continue
-				}
-				serviceName := strings.ToUpper(strings.ReplaceAll(subsection.Value, "-", "_"))
-				subsection.HeadComment = fmt.Sprintf(buildSvcEnvVars, serviceName, serviceName, serviceName, serviceName)
-			}
-		}
-	}
-
-	m.reorderDocFields(&doc)
-
-	buffer := bytes.NewBuffer(nil)
-	encoder := yaml3.NewEncoder(buffer)
-	encoder.SetIndent(2)
-
-	err = encoder.Encode(doc)
-	if err != nil {
-		return err
-	}
-	out := addEmptyLineBetweenSections(buffer.Bytes())
-	if err := os.WriteFile(filePath, out, 0600); err != nil {
-		oktetoLog.Infof("failed to write okteto manifest: %s", err)
-		return err
-	}
-	return nil
-}
-
-// reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
-func (*Manifest) reorderDocFields(doc *yaml3.Node) {
-	contentCopy := []*yaml3.Node{}
-	nodes := []int{}
-	nameDefinitionIdx := getDocIdx(doc.Content, "name")
-	if nameDefinitionIdx != -1 {
-		contentCopy = append(contentCopy, doc.Content[nameDefinitionIdx], doc.Content[nameDefinitionIdx+1])
-		nodes = append(nodes, nameDefinitionIdx, nameDefinitionIdx+1)
-	}
-
-	buildDefinitionIdx := getDocIdx(doc.Content, "build")
-	if buildDefinitionIdx != -1 {
-		contentCopy = append(contentCopy, doc.Content[buildDefinitionIdx], doc.Content[buildDefinitionIdx+1])
-		nodes = append(nodes, buildDefinitionIdx, buildDefinitionIdx+1)
-	} else {
-		whereToInject := getDocIdxWithPrior(contentCopy, "name")
-		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", buildHeadComment, buildExample)
-	}
-
-	deployDefinitionIdx := getDocIdx(doc.Content, "deploy")
-	if deployDefinitionIdx != -1 {
-		contentCopy = append(contentCopy, doc.Content[deployDefinitionIdx], doc.Content[deployDefinitionIdx+1])
-		nodes = append(nodes, deployDefinitionIdx, deployDefinitionIdx+1)
-	} else {
-		whereToInject := getDocIdxWithPrior(contentCopy, "build")
-		footComment := fmt.Sprintf("%s\n%s", deployHeadComment, deployExample)
-		if buildDefinitionIdx == -1 {
-			footComment = "\n" + footComment
-		}
-		if contentCopy[whereToInject].FootComment == "" {
-			contentCopy[whereToInject].FootComment = footComment
-		} else {
-			contentCopy[whereToInject].FootComment += footComment
-		}
-	}
-
-	dependenciesDefinitionIdx := getDocIdx(doc.Content, "dependencies")
-	if dependenciesDefinitionIdx != -1 {
-		contentCopy = append(contentCopy, doc.Content[dependenciesDefinitionIdx], doc.Content[dependenciesDefinitionIdx+1])
-		nodes = append(nodes, dependenciesDefinitionIdx, dependenciesDefinitionIdx+1)
-	} else {
-		whereToInject := getDocIdxWithPrior(contentCopy, "deploy")
-		footComment := fmt.Sprintf("%s\n%s", dependenciesHeadComment, dependenciesExample)
-		if deployDefinitionIdx == -1 {
-			footComment = "\n\n" + footComment
-		}
-		if contentCopy[whereToInject].FootComment == "" {
-			contentCopy[whereToInject].FootComment = footComment
-		} else {
-			contentCopy[whereToInject].FootComment += footComment
-		}
-	}
-
-	devDefinitionIdx := getDocIdx(doc.Content, "dev")
-	if devDefinitionIdx != -1 {
-		contentCopy = append(contentCopy, doc.Content[devDefinitionIdx], doc.Content[devDefinitionIdx+1])
-		nodes = append(nodes, devDefinitionIdx, devDefinitionIdx+1)
-	} else {
-		whereToInject := getDocIdxWithPrior(contentCopy, "dependencies")
-		footComment := fmt.Sprintf("%s\n%s", devHeadComment, devExample)
-		if dependenciesDefinitionIdx == -1 {
-			footComment = "\n" + footComment
-		}
-		if contentCopy[whereToInject].FootComment == "" {
-			contentCopy[whereToInject].FootComment = footComment
-		} else {
-			contentCopy[whereToInject].FootComment += footComment
-		}
-	}
-
-	// We need to inject all the other fields remaining
-	if len(doc.Content) != len(contentCopy) {
-		for idx := range doc.Content {
-			found := false
-			for _, copyIdx := range nodes {
-				if copyIdx == idx {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-			contentCopy = append(contentCopy, doc.Content[idx])
-		}
-	}
-	doc.Content = contentCopy
-}
-
-func getDocIdxWithPrior(contents []*yaml3.Node, value string) int {
-	for idx, node := range contents {
-		if node.Value == value {
-			return idx
-		}
-	}
-	for idx, val := range priorityOrder {
-		if val == value {
-			return getDocIdx(contents, priorityOrder[idx+1])
-		}
-	}
-	return -1
-}
-
-func getDocIdx(contents []*yaml3.Node, value string) int {
-	for idx, node := range contents {
-		if node.Value == value {
-			return idx
-		}
-	}
-	return -1
-}
-
-func addEmptyLineBetweenSections(out []byte) []byte {
-	prevLineCommented := false
-	newYaml := ""
-	for _, line := range strings.Split(string(out), "\n") {
-		isLineCommented := strings.HasPrefix(strings.TrimSpace(line), "#")
-		if !prevLineCommented && isLineCommented {
-			newYaml += "\n"
-		}
-		newYaml += line + "\n"
-		prevLineCommented = isLineCommented
-	}
-	return []byte(newYaml)
-}
-
-// IsDeployDefault returns true if the command is empty or if it has the default one
-func (m *Manifest) IsDeployDefault() bool {
-	if m.Deploy == nil {
-		return true
-	}
-	if len(m.Deploy.Commands) == 1 && m.Deploy.Commands[0].Command == FakeCommand {
-		return true
-	}
-	return false
 }
 
 // HasDependencies returns true if the manifest has dependencies
