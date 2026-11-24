@@ -83,7 +83,7 @@ func (a *Tracker) TrackTest(metadata TestMetadata) {
 		"profileSelected": metadata.ProfileSelected,
 	}
 	if metadata.Err != nil {
-		props["error"] = metadata.Err.Error()
+		props["error"] = errorCategory(metadata.Err)
 	}
 	a.trackFn(testEvent, metadata.Success, props)
 }

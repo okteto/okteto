@@ -57,8 +57,6 @@ type oktetoRegistryInterface interface {
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
-	IsCleanProject() bool
-	GetGitCommit() string
 	IsOkteto() bool
 	GetAnonymizedRepo() string
 }
@@ -312,7 +310,7 @@ func (ob *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		svcToBuild.Metadata().ContextTransferDuration = contextTransferDuration
 
 		if err != nil {
-			svcToBuild.Metadata().ErrorReason = err.Error()
+			svcToBuild.Metadata().ErrorReason = imageBuildErrorReason(err)
 			return fmt.Errorf("error building service '%s': %w", svcToBuild, err)
 		}
 

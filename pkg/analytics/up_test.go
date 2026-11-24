@@ -14,6 +14,7 @@
 package analytics
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/deps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_UpMetricsMetadata_ManifestProps(t *testing.T) {
@@ -294,29 +294,16 @@ func Test_UpMetricsMetadata_ErrorReason(t *testing.T) {
 	}
 }
 
-func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
+func Test_UpMetricsMetadata_ProductProps(t *testing.T) {
 	baseProps := func(overrides map[string]any) map[string]any {
 		base := map[string]any{
-			"result":                        false,
-			"manifest_type":                 "",
-			"is_interactive":                false,
-			"is_build_executed":             false,
-			"is_deploy_executed":            false,
-			"has_build_section":             false,
-			"has_deploy_section":            false,
-			"is_reconnect":                  false,
-			"reconnect_count":               0,
-			"is_auto_down":                  false,
-			"workflow_id":                   "",
-			"service":                       "",
-			"repo_url":                      "",
-			"duration_seconds":              0,
-			"initial_sync_duration_seconds": 0,
-			"dev_container_creation_duration_seconds": 0,
+			"isBuildExecuted": false,
+			"reconnectCount":  0,
+			"workflowID":      "",
+			"service":         "",
+			"repoURL":         "",
 		}
-		for k, v := range overrides {
-			base[k] = v
-		}
+		maps.Copy(base, overrides)
 		return base
 	}
 
@@ -326,115 +313,46 @@ func Test_UpMetricsMetadata_ToPostHogProps(t *testing.T) {
 		expected map[string]any
 	}{
 		{
-			name:     "minimal — all fields present with zero values",
+			name:     "minimal, all fields present with zero values",
 			meta:     UpMetricsMetadata{success: true},
-			expected: baseProps(map[string]any{"result": true}),
+			expected: baseProps(nil),
 		},
 		{
-			name: "service and repo_url set; namespace excluded (resolved via withNamespace enricher)",
-			meta: UpMetricsMetadata{success: true, service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
+			name: "service, workflow and repo URL set; namespace excluded (resolved via withNamespace enricher)",
+			meta: UpMetricsMetadata{success: true, workflowID: "wf-1", service: "api", namespace: "dev-ns", repoURL: "https://github.com/org/repo"},
 			expected: baseProps(map[string]any{
-				"result":   true,
-				"service":  "api",
-				"repo_url": "bdb72e6e68b80f9ed3bbdb0ad1d2f8b4fac8ade379eb82182de40a3357a2d3b3",
+				"workflowID": "wf-1",
+				"service":    hashString("api"),
+				"repoURL":    hashedTestRepoURL,
 			}),
 		},
 		{
-			name:     "failure sets error_reason",
+			name:     "failure sets errorReason",
 			meta:     UpMetricsMetadata{success: false, failActivate: true},
-			expected: baseProps(map[string]any{"error_reason": "fail_activate"}),
+			expected: baseProps(map[string]any{"errorReason": "fail_activate"}),
 		},
 		{
-			name:     "error_reason empty on success",
+			name:     "errorReason omitted on success",
 			meta:     UpMetricsMetadata{success: true, failActivate: true},
-			expected: baseProps(map[string]any{"result": true}),
+			expected: baseProps(nil),
 		},
 		{
-			name: "reconnect_cause populated when is_reconnect",
-			meta: UpMetricsMetadata{
-				success:        true,
-				isReconnect:    true,
-				reconnectCount: 1,
-				reconnectCause: reconnectCauseDevPodRecreated,
-			},
+			name: "build executed and reconnects",
+			meta: UpMetricsMetadata{success: true, isBuildExecuted: true, isReconnect: true, reconnectCount: 2},
 			expected: baseProps(map[string]any{
-				"result":          true,
-				"is_reconnect":    true,
-				"reconnect_count": 1,
-				"reconnect_cause": "dev-pod-recreated",
-			}),
-		},
-		{
-			name: "durations always included",
-			meta: UpMetricsMetadata{
-				success:                      true,
-				execDuration:                 60 * time.Second,
-				initialSyncDuration:          10 * time.Second,
-				devContainerCreationDuration: 5 * time.Second,
-			},
-			expected: baseProps(map[string]any{
-				"result":                        true,
-				"duration_seconds":              60,
-				"initial_sync_duration_seconds": 10,
-				"dev_container_creation_duration_seconds": 5,
-			}),
-		},
-		{
-			name: "is_build_executed and has_build/deploy_section flags",
-			meta: UpMetricsMetadata{
-				success:          true,
-				isBuildExecuted:  true,
-				hasBuildSection:  true,
-				hasDeploySection: true,
-			},
-			expected: baseProps(map[string]any{
-				"result":             true,
-				"is_build_executed":  true,
-				"has_build_section":  true,
-				"has_deploy_section": true,
-			}),
-		},
-		{
-			name: "all flags",
-			meta: UpMetricsMetadata{
-				success:           true,
-				manifestType:      model.OktetoManifestType,
-				isInteractive:     true,
-				isBuildExecuted:   true,
-				hasRunDeploy:      true,
-				hasBuildSection:   true,
-				hasDeploySection:  true,
-				isReconnect:       true,
-				reconnectCount:    2,
-				reconnectCause:    reconnectCauseDefault,
-				isAutoDownEnabled: true,
-				service:           "api",
-				namespace:         "my-ns",
-			},
-			expected: baseProps(map[string]any{
-				"result":             true,
-				"manifest_type":      "manifest",
-				"is_interactive":     true,
-				"is_build_executed":  true,
-				"is_deploy_executed": true,
-				"has_build_section":  true,
-				"has_deploy_section": true,
-				"is_reconnect":       true,
-				"reconnect_count":    2,
-				"is_auto_down":       true,
-				"reconnect_cause":    "unrecognised",
-				"service":            "api",
+				"isBuildExecuted": true,
+				"reconnectCount":  2,
 			}),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.meta.toPostHogProps())
+			assert.Equal(t, tt.expected, tt.meta.productProps())
 		})
 	}
 }
 
-func Test_UpTracker(t *testing.T) {
+func Test_UpMetricsMetadata_toProps(t *testing.T) {
 	tests := []struct {
 		expected mockEvent
 		name     string
@@ -666,107 +584,8 @@ func Test_UpTracker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			eventMeta := &mockEvent{}
-			tracker := Tracker{
-				trackFn: func(event string, success bool, props map[string]any) {
-					eventMeta = &mockEvent{
-						event:   event,
-						success: success,
-						props:   props,
-					}
-				},
-			}
-
-			tracker.TrackUp(&tt.meta)
-			assert.Equal(t, tt.expected.event, eventMeta.event)
-			assert.Equal(t, tt.expected.success, eventMeta.success)
-			assert.Equal(t, tt.expected.props, eventMeta.props)
+			assert.Equal(t, tt.expected.props, tt.meta.toProps())
 		})
 
-	}
-}
-
-func TestAnalyticsTracker_TrackUpStarted(t *testing.T) {
-	tests := []struct {
-		name       string
-		service    string
-		namespace  string
-		repoURL    string
-		workflowID string
-	}{
-		{
-			name:       "all fields dispatched to backend",
-			service:    "api",
-			namespace:  "dev-ns",
-			repoURL:    "https://github.com/org/repo",
-			workflowID: "abc-123",
-		},
-		{
-			name:       "empty fields dispatched to backend",
-			service:    "",
-			namespace:  "",
-			repoURL:    "",
-			workflowID: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var capturedService, capturedNamespace, capturedRepoURL, capturedWorkflowID string
-			mock := &mockAnalyticsBackend{
-				trackUpStartedFn: func(service, namespace, repoURL, workflowID string) {
-					capturedService = service
-					capturedNamespace = namespace
-					capturedRepoURL = repoURL
-					capturedWorkflowID = workflowID
-				},
-			}
-			tracker := &Tracker{
-				trackFn:  func(_ string, _ bool, _ map[string]any) {},
-				backends: []analyticsBackend{mock},
-			}
-			tracker.TrackUpStarted(tt.service, tt.namespace, tt.repoURL, tt.workflowID)
-
-			require.Equal(t, tt.service, capturedService)
-			require.Equal(t, tt.namespace, capturedNamespace)
-			require.Equal(t, tt.repoURL, capturedRepoURL)
-			require.Equal(t, tt.workflowID, capturedWorkflowID)
-		})
-	}
-}
-
-func TestAnalyticsTracker_TrackUp(t *testing.T) {
-	tests := []struct {
-		input           *UpMetricsMetadata
-		expectedSuccess bool
-		name            string
-	}{
-		{
-			name:            "success event dispatched to backend",
-			input:           &UpMetricsMetadata{success: true},
-			expectedSuccess: true,
-		},
-		{
-			name:            "failure event dispatched to backend",
-			input:           &UpMetricsMetadata{success: false},
-			expectedSuccess: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var capturedMeta *UpMetricsMetadata
-			mock := &mockAnalyticsBackend{
-				trackUpFn: func(m *UpMetricsMetadata) {
-					capturedMeta = m
-				},
-			}
-			tracker := &Tracker{
-				trackFn:  func(_ string, _ bool, _ map[string]any) {},
-				backends: []analyticsBackend{mock},
-			}
-			tracker.TrackUp(tt.input)
-
-			require.NotNil(t, capturedMeta)
-			require.Equal(t, tt.expectedSuccess, capturedMeta.success)
-		})
 	}
 }

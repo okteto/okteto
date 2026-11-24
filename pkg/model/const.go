@@ -144,9 +144,6 @@ const (
 	// OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
 
-	// DefaultImage default image for sandboxes
-	DefaultImage = "okteto/dev:latest"
-
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 

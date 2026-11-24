@@ -14,9 +14,13 @@
 package buildkit
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/moby/buildkit/session/secrets"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
@@ -120,6 +124,51 @@ func Test_replaceSecretsSourceEnvWithTempFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewSecretProvidersWithoutSecrets(t *testing.T) {
+	providers, err := newSecretProviders(&types.BuildOptions{})
+
+	require.NoError(t, err)
+	require.Empty(t, providers)
+}
+
+// A raw secret's file can change while the build runs, like a token the kubelet refreshes
+func TestNewSecretProvidersReadsTheRawSecretsWhenTheyAreMounted(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "token")
+	require.NoError(t, os.WriteFile(path, []byte("first"), 0600))
+	providers, err := newSecretProviders(&types.BuildOptions{RawSecrets: []string{fmt.Sprintf("id=token,src=%s", path)}})
+	require.NoError(t, err)
+	require.Len(t, providers, 1)
+	require.NoError(t, os.WriteFile(path, []byte("refreshed"), 0600))
+
+	got, err := providers[0].(secrets.SecretsServer).GetSecret(context.Background(), &secrets.GetSecretRequest{ID: "token"})
+
+	require.NoError(t, err)
+	require.Equal(t, "refreshed", string(got.Data))
+}
+
+func TestNewSecretProvidersServesSecretsAndRawSecrets(t *testing.T) {
+	dir := t.TempDir()
+	secretPath := filepath.Join(dir, "secret")
+	rawPath := filepath.Join(dir, "raw")
+	require.NoError(t, os.WriteFile(secretPath, []byte("secret"), 0600))
+	require.NoError(t, os.WriteFile(rawPath, []byte("raw"), 0600))
+	providers, err := newSecretProviders(&types.BuildOptions{
+		Secrets:    []string{fmt.Sprintf("id=secret,src=%s", secretPath)},
+		RawSecrets: []string{fmt.Sprintf("id=raw,src=%s", rawPath)},
+	})
+	require.NoError(t, err)
+	require.Len(t, providers, 1)
+	server := providers[0].(secrets.SecretsServer)
+
+	secret, err := server.GetSecret(context.Background(), &secrets.GetSecretRequest{ID: "secret"})
+	require.NoError(t, err)
+	raw, err := server.GetSecret(context.Background(), &secrets.GetSecretRequest{ID: "raw"})
+	require.NoError(t, err)
+
+	require.Equal(t, "secret", string(secret.Data))
+	require.Equal(t, "raw", string(raw.Data))
 }
 
 // compressionEnvVarNames are all the env vars read by imageExportAttrs, cleared before each test case

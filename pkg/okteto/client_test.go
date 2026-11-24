@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
 
@@ -225,4 +226,40 @@ func TestBackgroundContextWithHttpClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newTestOktetoHttpClientTransport returns the transport under the oauth2 and
+// version layers of a client built for a context without a certificate
+func newTestOktetoHttpClientTransport(t *testing.T, noProxy bool) *http.Transport {
+	t.Helper()
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+	httpClient, _, err := newOktetoHttpClient("https://okteto.example", "token", "graphql", noProxy)
+	require.NoError(t, err)
+	versioned, ok := httpClient.Transport.(*VersionedTransport)
+	require.True(t, ok)
+	oauth2Transport, ok := versioned.RoundTripper.(*oauth2.Transport)
+	require.True(t, ok)
+	transport, ok := oauth2Transport.Base.(*http.Transport)
+	require.True(t, ok)
+	return transport
+}
+
+func TestNewOktetoHttpClientUsesTheProxyEnvVars(t *testing.T) {
+	transport := newTestOktetoHttpClientTransport(t, false)
+
+	require.NotNil(t, transport.Proxy)
+}
+
+func TestNewOktetoHttpClientWithoutProxyIgnoresTheProxyEnvVars(t *testing.T) {
+	transport := newTestOktetoHttpClientTransport(t, true)
+
+	require.Nil(t, transport.Proxy)
+}
+
+func TestWithoutProxy(t *testing.T) {
+	cfg := &ClientCfg{}
+
+	WithoutProxy()(cfg)
+
+	require.True(t, cfg.NoProxy)
 }

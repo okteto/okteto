@@ -15,16 +15,41 @@ package okteto
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
 )
 
 const testCatalogSecretVariablesEndpoint = "https://okteto.example/internal/catalog/secret-variables"
+
+// newTestCatalogSecretVariablesClient returns a client whose requests the
+// handler answers
+func newTestCatalogSecretVariablesClient(handler http.Handler) *CatalogSecretVariablesClient {
+	return &CatalogSecretVariablesClient{httpClient: newTestUserClient(handler).httpClient}
+}
+
+// setTestContextToken sets a current context with the token
+func setTestContextToken(t *testing.T, token string) {
+	t.Helper()
+	setTestContext(t, &Context{Name: "test", Token: token})
+}
+
+func setTestContext(t *testing.T, okCtx *Context) {
+	t.Helper()
+	original := CurrentStore
+	t.Cleanup(func() { CurrentStore = original })
+	CurrentStore = &ContextStore{
+		CurrentContext: "test",
+		Contexts:       map[string]*Context{"test": okCtx},
+	}
+}
 
 func respondWith(status int, body string) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
@@ -40,7 +65,7 @@ func TestGetCatalogSecretVariablesSendsTheAction(t *testing.T) {
 		_, _ = w.Write([]byte(`{"variables":[]}`))
 	})
 
-	_, err := newTestUserClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "deploy 1")
+	_, err := newTestCatalogSecretVariablesClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "deploy 1")
 
 	require.NoError(t, err)
 	require.Equal(t, http.MethodGet, got.Method)
@@ -49,26 +74,108 @@ func TestGetCatalogSecretVariablesSendsTheAction(t *testing.T) {
 	require.Equal(t, "action=deploy+1", got.URL.RawQuery)
 }
 
-func TestGetCatalogSecretVariablesSendsTheToken(t *testing.T) {
+// startTestInternalAPI starts the internal API on 127.0.0.1, sets a current
+// context with the token whose certificate is the one of the server, and
+// returns the server and its endpoint
+func startTestInternalAPI(t *testing.T, token string, handler http.HandlerFunc) (*internalAPITestServer, string) {
+	t.Helper()
+	server := startInternalAPITestServer(t, "127.0.0.1", handler)
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+	setTestContext(t, &Context{Name: "test", Token: token, Certificate: base64.StdEncoding.EncodeToString(certPEM)})
+	return server, server.endpoint(t, "example.com")
+}
+
+func TestGetCatalogSecretVariablesThroughTheInternalAPIIP(t *testing.T) {
 	var authorization string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server, endpoint := startTestInternalAPI(t, "okteto-token", func(w http.ResponseWriter, r *http.Request) {
+		authorization = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte(`{"variables":[{"name":"PIN","value":"1"}]}`))
+	})
+	c, err := NewCatalogSecretVariablesClient(endpoint, "127.0.0.1")
+	require.NoError(t, err)
+
+	got, err := c.GetCatalogSecretVariables(context.Background(), endpoint, "action")
+
+	require.NoError(t, err)
+	require.Equal(t, []types.CatalogSecretVariable{{Name: "PIN", Value: "1"}}, got.Variables)
+	require.Equal(t, "Bearer okteto-token", authorization)
+	require.Equal(t, "example.com", server.sni)
+}
+
+func TestGetCatalogSecretVariablesSendsTheTokenOfTheOptions(t *testing.T) {
+	var authorization string
+	_, endpoint := startTestInternalAPI(t, "okteto-token", func(w http.ResponseWriter, r *http.Request) {
 		authorization = r.Header.Get("Authorization")
 		_, _ = w.Write([]byte(`{"variables":[]}`))
+	})
+	c, err := NewCatalogSecretVariablesClient(endpoint, "127.0.0.1", WithToken("projected-token"))
+	require.NoError(t, err)
+
+	_, err = c.GetCatalogSecretVariables(context.Background(), endpoint, "action")
+
+	require.NoError(t, err)
+	require.Equal(t, "Bearer projected-token", authorization)
+}
+
+// GetContext exits without a current context, so the certificate is only read with one
+func TestNewCatalogSecretVariablesClientWithATokenAndWithoutAContext(t *testing.T) {
+	original := CurrentStore
+	t.Cleanup(func() { CurrentStore = original })
+	CurrentStore = nil
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "10.20.30.40", WithToken("projected-token"))
+
+	require.NoError(t, err)
+}
+
+func TestNewCatalogSecretVariablesClientFailsForAnHTTPEndpoint(t *testing.T) {
+	setTestContextToken(t, "okteto-token")
+
+	_, err := NewCatalogSecretVariablesClient("http://okteto-api.okteto:8080/internal/catalog/secret-variables", "10.20.30.40")
+
+	require.ErrorIs(t, err, ErrInvalidInternalAPIEndpoint)
+}
+
+func TestNewCatalogSecretVariablesClientFailsWithoutTheInternalAPIIP(t *testing.T) {
+	setTestContextToken(t, "okteto-token")
+
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "")
+
+	require.ErrorIs(t, err, ErrInvalidInternalAPIIP)
+}
+
+func TestNewCatalogSecretVariablesClientRequiresAToken(t *testing.T) {
+	setTestContextToken(t, "")
+
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "10.20.30.40")
+
+	require.Error(t, err)
+}
+
+// The token is only for the endpoint, so it must not reach the host of a redirect
+func TestGetCatalogSecretVariablesDoesNotFollowRedirects(t *testing.T) {
+	var redirected bool
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirected = true
+		_, _ = w.Write([]byte(`{"variables":[]}`))
 	}))
+	t.Cleanup(target.Close)
+	server := httptest.NewServer(http.RedirectHandler(target.URL, http.StatusFound))
 	t.Cleanup(server.Close)
-	c, err := NewOktetoClientFromUrlAndToken(server.URL, "okteto-token")
-	require.NoError(t, err)
+	c := &CatalogSecretVariablesClient{httpClient: server.Client()}
 
-	_, err = c.User().GetCatalogSecretVariables(context.Background(), server.URL+"/internal/catalog/secret-variables", "action")
+	got, err := c.GetCatalogSecretVariables(context.Background(), server.URL+"/internal/catalog/secret-variables", "action")
 
-	require.NoError(t, err)
-	require.Equal(t, "Bearer okteto-token", authorization)
+	require.EqualError(t, err, "catalog secret variables request failed: 302 Found")
+	require.Empty(t, got)
+	require.False(t, redirected)
 }
 
 func TestGetCatalogSecretVariablesReturnsTheValues(t *testing.T) {
 	handler := respondWith(http.StatusOK, `{"variables":[{"name":"API_TOKEN","value":"abc"},{"name":"PIN","value":"1"}],"unresolved":[]}`)
 
-	got, err := newTestUserClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
+	got, err := newTestCatalogSecretVariablesClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
 
 	require.NoError(t, err)
 	require.Equal(t, []types.CatalogSecretVariable{
@@ -81,7 +188,7 @@ func TestGetCatalogSecretVariablesReturnsTheValues(t *testing.T) {
 func TestGetCatalogSecretVariablesWithoutVariables(t *testing.T) {
 	handler := respondWith(http.StatusOK, `{"variables":[],"unresolved":[]}`)
 
-	got, err := newTestUserClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
+	got, err := newTestCatalogSecretVariablesClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
 
 	require.NoError(t, err)
 	require.Empty(t, got.Variables)
@@ -95,7 +202,7 @@ func TestGetCatalogSecretVariablesReturnsTheUnresolvedVariables(t *testing.T) {
 		{"variable":"NPM_TOKEN","secretKeyRef":{"name":"npm","key":"token"},"reason":"secret_not_labeled"}
 	]}`)
 
-	got, err := newTestUserClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
+	got, err := newTestCatalogSecretVariablesClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
 
 	require.NoError(t, err)
 	require.Equal(t, []types.CatalogSecretVariable{{Name: "PIN", Value: "1"}}, got.Variables)
@@ -109,7 +216,7 @@ func TestGetCatalogSecretVariablesReturnsTheUnresolvedVariables(t *testing.T) {
 func TestGetCatalogSecretVariablesWithFeatureDisabled(t *testing.T) {
 	handler := respondWith(http.StatusUnprocessableEntity, `{"reason":"feature_disabled"}`)
 
-	_, err := newTestUserClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
+	_, err := newTestCatalogSecretVariablesClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
 
 	require.ErrorIs(t, err, ErrCatalogSecretVariablesDisabled)
 }
@@ -133,7 +240,7 @@ func TestGetCatalogSecretVariablesFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := respondWith(tt.status, tt.body)
 
-			got, err := newTestUserClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
+			got, err := newTestCatalogSecretVariablesClient(handler).GetCatalogSecretVariables(context.Background(), testCatalogSecretVariablesEndpoint, "action")
 
 			require.ErrorContains(t, err, tt.expected)
 			require.Empty(t, got)
@@ -142,7 +249,7 @@ func TestGetCatalogSecretVariablesFailures(t *testing.T) {
 }
 
 func TestGetCatalogSecretVariablesUnreachable(t *testing.T) {
-	c := &userClient{
+	c := &CatalogSecretVariablesClient{
 		httpClient: &http.Client{
 			Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
 				return nil, errors.New("connection refused")
@@ -157,7 +264,7 @@ func TestGetCatalogSecretVariablesUnreachable(t *testing.T) {
 }
 
 func TestGetCatalogSecretVariablesWithInvalidEndpoint(t *testing.T) {
-	_, err := newTestUserClient(respondWith(http.StatusOK, "")).GetCatalogSecretVariables(context.Background(), "http://[::1", "action")
+	_, err := newTestCatalogSecretVariablesClient(respondWith(http.StatusOK, "")).GetCatalogSecretVariables(context.Background(), "http://[::1", "action")
 
 	require.ErrorContains(t, err, "invalid catalog secret variables endpoint")
 }

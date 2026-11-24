@@ -89,7 +89,7 @@ func TestRunDeploysWithTheCatalogSecretVariables(t *testing.T) {
 	runner := &fakeDeployRunner{}
 	c := &DeployCommand{
 		runner: runner,
-		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{
+		catalogSecretVariables: newTestCatalogSecretVariables(t, &client.FakeUserClient{
 			CatalogSecretVariables: types.CatalogSecretVariables{
 				Variables: []types.CatalogSecretVariable{{Name: "API_TOKEN", Value: "abc"}},
 			},
@@ -114,7 +114,7 @@ func TestRunDoesNotDeployWhenCatalogSecretVariablesFail(t *testing.T) {
 	runner := &fakeDeployRunner{}
 	c := &DeployCommand{
 		runner:                 runner,
-		catalogSecretVariables: newTestCatalogSecretVariables(&client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DeployPhase),
+		catalogSecretVariables: newTestCatalogSecretVariables(t, &client.FakeUserClient{ErrCatalogSecretVariables: okteto.ErrCatalogSecretVariablesDisabled}, catalog.DeployPhase),
 	}
 
 	err := c.Run(context.Background(), deployable.DeployParameters{Name: "test"})

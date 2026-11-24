@@ -81,6 +81,8 @@ type ClientCfg struct {
 	CtxName string
 	Token   string
 	Cert    string
+	// NoProxy makes the client reach the API directly, ignoring the proxy env vars
+	NoProxy bool
 }
 
 func WithCtxName(ctxName string) Option {
@@ -92,6 +94,13 @@ func WithCtxName(ctxName string) Option {
 func WithToken(token string) Option {
 	return func(cfg *ClientCfg) {
 		cfg.Token = token
+	}
+}
+
+// WithoutProxy makes the client reach the API directly, ignoring the proxy env vars
+func WithoutProxy() Option {
+	return func(cfg *ClientCfg) {
+		cfg.NoProxy = true
 	}
 }
 
@@ -126,7 +135,7 @@ func NewOktetoClient(opts ...Option) (*Client, error) {
 		cfg.Token = okCtx.Token
 	}
 
-	httpClient, u, err := newOktetoHttpClient(cfg.CtxName, cfg.Token, "graphql")
+	httpClient, u, err := newOktetoHttpClient(cfg.CtxName, cfg.Token, "graphql", cfg.NoProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +157,7 @@ func NewOktetoClientStateless(ocfg *ClientCfg, opts ...Option) (*Client, error) 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client, string, error) {
+func newOktetoHttpClient(contextName, token, oktetoUrlPath string, noProxy bool) (*http.Client, string, error) {
 	if token == "" {
 		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
 	}
@@ -176,6 +185,10 @@ func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 	} else if cert, err := GetContextCertificate(); err == nil {
 		sslTransportOption.Certs = []*x509.Certificate{cert}
 		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
+	}
+
+	if transport, ok := ctxHttpClient.Transport.(*http.Transport); ok && noProxy {
+		transport.Proxy = nil
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)

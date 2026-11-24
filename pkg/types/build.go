@@ -49,7 +49,11 @@ type BuildOptions struct {
 	K8sContext         string
 	BuildArgs          []string
 	Secrets            []string
-	ExportCache        []string
+	// RawSecrets have the format of Secrets, but they reach BuildKit as they are: their files aren't copied and their
+	// content isn't expanded, so BuildKit reads each file when a RUN mounts it. They are for files that change while
+	// the build runs, like a short-lived token
+	RawSecrets  []string
+	ExportCache []string
 	// CommandArgs comes from the user input on the command
 	CommandArgs  []string
 	SshSessions  []BuildSshSession

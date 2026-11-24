@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +53,7 @@ func TestTrackTest(t *testing.T) {
 		Success:         false,
 		Duration:        time.Second * 5,
 		StagesCount:     3,
-		Err:             fmt.Errorf("my-error"),
+		Err:             fmt.Errorf("error executing command './test.sh --token=secret': %w", oktetoErrors.ErrCommandFailed),
 		CommandOverride: true,
 	})
 
@@ -61,7 +62,7 @@ func TestTrackTest(t *testing.T) {
 	require.True(t, commandOverride)
 	require.True(t, profileSelected)
 	require.False(t, success)
-	require.Equal(t, errStr, "my-error")
+	require.Equal(t, "command_failed", errStr, "the raw error is never sent")
 	require.Equal(t, "Test", event)
 	require.Equal(t, float64(5), duration)
 	require.Equal(t, 3, stagesCount)
