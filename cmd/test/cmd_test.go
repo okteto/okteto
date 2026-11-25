@@ -20,6 +20,7 @@ import (
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/build"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
@@ -30,6 +31,7 @@ import (
 // TestCommandRejectsInvalidOverride checks that the cobra command passes the arguments after '--'
 // and the --command flag to parseTestArgs. These errors are returned before connecting to any cluster
 func TestCommandRejectsInvalidOverride(t *testing.T) {
+	t.Setenv(constants.OktetoProfilesEnvVar, "")
 	tests := []struct {
 		name        string
 		args        []string
@@ -77,6 +79,219 @@ func TestCommandRejectsInvalidOverride(t *testing.T) {
 			err := cmd.Execute()
 
 			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+// TestCommandRejectsInvalidProfile checks that the cobra command validates the --profile flag.
+// These errors are returned before connecting to any cluster
+func TestCommandRejectsInvalidProfile(t *testing.T) {
+	t.Setenv(constants.OktetoProfilesEnvVar, "")
+	tests := []struct {
+		name        string
+		args        []string
+		expectedErr error
+	}{
+		{
+			name:        "empty profile flag",
+			args:        []string{"--profile", ""},
+			expectedErr: errEmptyProfileFlag,
+		},
+		{
+			name:        "blank profile flag",
+			args:        []string{"--profile", " "},
+			expectedErr: errEmptyProfileFlag,
+		},
+		{
+			name:        "profile flag with test names",
+			args:        []string{"unit", "lint", "--profile", "pre-commit"},
+			expectedErr: errProfileWithTestNames,
+		},
+		{
+			name:        "profile flag with dash override",
+			args:        []string{"unit", "--profile", "pre-commit", "--", "go", "test"},
+			expectedErr: errProfileWithCommandOverride,
+		},
+		{
+			name:        "profile flag with command flag",
+			args:        []string{"unit", "--profile", "pre-commit", "--command", "go test ./..."},
+			expectedErr: errProfileWithCommandOverride,
+		},
+		{
+			name:        "profile flag with dash override and no test name",
+			args:        []string{"--profile", "pre-commit", "--", "go", "test"},
+			expectedErr: errProfileWithCommandOverride,
+		},
+		{
+			name:        "profile flag with command flag and no test name",
+			args:        []string{"--profile", "pre-commit", "--command", "go test ./..."},
+			expectedErr: errProfileWithCommandOverride,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := Test(context.Background(), io.NewIOController(), nil, nil, nil)
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+
+			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+// TestCommandRejectsProfilesFromEnvWithTestNames checks that the profiles of the OKTETO_PROFILES
+// environment variable cannot be combined with test container names, even when the --profile flag is
+// not used. The variable overrides the flag, so an empty flag value is not validated
+func TestCommandRejectsProfilesFromEnvWithTestNames(t *testing.T) {
+	t.Setenv(constants.OktetoProfilesEnvVar, "ci")
+	tests := []struct {
+		name        string
+		args        []string
+		expectedErr string
+	}{
+		{
+			name:        "test names",
+			args:        []string{"unit"},
+			expectedErr: "'OKTETO_PROFILES' cannot be used when naming the test containers to run",
+		},
+		{
+			name:        "test names and an empty profile flag",
+			args:        []string{"unit", "--profile", ""},
+			expectedErr: "'OKTETO_PROFILES' cannot be used when naming the test containers to run",
+		},
+		{
+			name:        "dash override",
+			args:        []string{"unit", "--", "go", "test"},
+			expectedErr: "'OKTETO_PROFILES' cannot be used when overriding the commands of a test container",
+		},
+		{
+			name:        "command flag",
+			args:        []string{"unit", "--command", "go test ./..."},
+			expectedErr: "'OKTETO_PROFILES' cannot be used when overriding the commands of a test container",
+		},
+		{
+			name:        "dash override and no test name",
+			args:        []string{"--", "go", "test"},
+			expectedErr: "'OKTETO_PROFILES' cannot be used when overriding the commands of a test container",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := Test(context.Background(), io.NewIOController(), nil, nil, nil)
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+
+			require.EqualError(t, err, tt.expectedErr)
+		})
+	}
+}
+
+// TestResolveEnabledProfiles checks the profiles resolved once the context loads the .env file and
+// the Okteto Variables into the environment, which can set OKTETO_PROFILES
+func TestResolveEnabledProfiles(t *testing.T) {
+	tests := []struct {
+		name         string
+		envValue     string
+		flagProfiles []string
+		expected     []string
+	}{
+		{
+			name: "no profiles",
+		},
+		{
+			name:         "profiles from the flag",
+			flagProfiles: []string{"pre-commit"},
+			expected:     []string{"pre-commit"},
+		},
+		{
+			name:         "the environment variable overrides the flag",
+			envValue:     "ci, release",
+			flagProfiles: []string{"pre-commit"},
+			expected:     []string{"ci", "release"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoProfilesEnvVar, tt.envValue)
+			options := &Options{Profiles: tt.flagProfiles}
+
+			err := resolveEnabledProfiles(nil, options, io.NewIOController())
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, options.enabledProfiles)
+		})
+	}
+}
+
+func TestResolveEnabledProfilesRejectsConflicts(t *testing.T) {
+	tests := []struct {
+		name        string
+		options     *Options
+		expectedErr error
+	}{
+		{
+			name:        "test names",
+			options:     &Options{},
+			expectedErr: errProfileWithTestNames,
+		},
+		{
+			name: "command override",
+			options: &Options{
+				override: commandOverride{testName: "unit", commands: []model.TestCommand{{Command: "go test"}}},
+			},
+			expectedErr: errProfileWithCommandOverride,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoProfilesEnvVar, "ci")
+
+			err := resolveEnabledProfiles([]string{"unit"}, tt.options, io.NewIOController())
+
+			require.ErrorIs(t, err, tt.expectedErr)
+			require.Nil(t, tt.options.enabledProfiles)
+		})
+	}
+}
+
+// TestResolveEnabledProfilesWithEmptyEnvAllowsNamesAndOverrides checks the escape that the hint of
+// the conflicts suggests: an empty OKTETO_PROFILES, which the .env file and the Okteto Variables
+// don't replace, lets the test containers run by name or with their commands replaced
+func TestResolveEnabledProfilesWithEmptyEnvAllowsNamesAndOverrides(t *testing.T) {
+	tests := []struct {
+		name    string
+		options *Options
+	}{
+		{
+			name:    "test names",
+			options: &Options{},
+		},
+		{
+			name: "command override",
+			options: &Options{
+				override: commandOverride{testName: "unit", commands: []model.TestCommand{{Command: "go test"}}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(constants.OktetoProfilesEnvVar, "")
+
+			err := resolveEnabledProfiles([]string{"unit"}, tt.options, io.NewIOController())
+
+			require.NoError(t, err)
+			require.Nil(t, tt.options.enabledProfiles)
 		})
 	}
 }

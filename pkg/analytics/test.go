@@ -44,6 +44,10 @@ type TestMetadata struct {
 	// CommandOverride is whether the commands of the selected test container were replaced
 	// from the command line ('--' or --command) instead of using the ones in the manifest
 	CommandOverride bool
+
+	// ProfileSelected is whether profiles were enabled to select the test containers to run
+	// (--profile or the OKTETO_PROFILES environment variable)
+	ProfileSelected bool
 }
 
 // SingleTestMetadata contains the metadata of a single test execution
@@ -76,6 +80,7 @@ func (a *Tracker) TrackTest(metadata TestMetadata) {
 		"success":         metadata.Success,
 		"stagesCount":     metadata.StagesCount,
 		"commandOverride": metadata.CommandOverride,
+		"profileSelected": metadata.ProfileSelected,
 	}
 	if metadata.Err != nil {
 		props["error"] = errorCategory(metadata.Err)

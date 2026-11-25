@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -64,11 +65,15 @@ type Options struct {
 	Variables        []string
 	// Commands are the values of the --command flag, which replace the commands of the selected test container
 	Commands []string
+	// Profiles are the values of the --profile flag, which enable the test containers that have any of them
+	Profiles []string
 	Timeout  time.Duration
 	Deploy   bool
 	NoCache  bool
 	// override is the command override resolved from the '--' arguments or the --command flag
 	override commandOverride
+	// enabledProfiles are the profiles resolved from the --profile flag or the OKTETO_PROFILES environment variable
+	enabledProfiles []string
 }
 
 type builder interface {
@@ -87,8 +92,11 @@ func Test(ctx context.Context, ioCtrl *io.Controller, k8sLogger *io.K8sLogger, a
 		Use:                   "test [testName...] [flags] [-- COMMAND [args...]]",
 		DisableFlagsInUseLine: true,
 		Short:                 "Run tests using Remote Execution",
-		Example: `# Run the test containers defined in the Okteto Manifest
+		Example: `# Run the test containers without profiles defined in the Okteto Manifest
 okteto test
+
+# Run the test containers without profiles and the ones with the 'pre-commit' profile
+okteto test --profile pre-commit
 
 # Run the 'unit' test container replacing its commands with a single one
 okteto test unit -- go test ./pkg/api -run TestLogin
@@ -101,8 +109,25 @@ okteto test unit --command "go mod download" --command "go test ./pkg/api -run T
 				return err
 			}
 
+			// The profiles are checked before connecting to the cluster with the environment of the process.
+			// They are resolved again once the context loads the .env file and the Okteto Variables
+			profiles, err := resolveProfiles(options.Profiles, os.Getenv(constants.OktetoProfilesEnvVar))
+			if err != nil {
+				return err
+			}
+
+			// The profiles are checked before the override, so using both reports the conflict
+			// instead of the missing test container name required by the override
+			overrideRequested := cmd.ArgsLenAtDash() >= 0 || len(options.Commands) > 0
+			if err := profiles.checkCommandOverride(overrideRequested); err != nil {
+				return err
+			}
+
 			testContainers, override, err := parseTestArgs(args, cmd.ArgsLenAtDash(), options.Commands)
 			if err != nil {
+				return err
+			}
+			if err := profiles.checkTestNames(testContainers); err != nil {
 				return err
 			}
 			options.override = override
@@ -117,6 +142,7 @@ okteto test unit --command "go mod download" --command "go test ./pkg/api -run T
 				metadata.Err = err
 				metadata.Duration = time.Since(startTime)
 				metadata.CommandOverride = override.isSet()
+				metadata.ProfileSelected = len(options.enabledProfiles) > 0
 				at.TrackTest(metadata)
 				exit <- err
 			}()
@@ -140,6 +166,7 @@ okteto test unit --command "go mod download" --command "go test ./pkg/api -run T
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "overwrite the current Okteto Context")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable to be injected in the test commands (can be set more than once)")
 	cmd.Flags().StringArrayVar(&options.Commands, "command", []string{}, "replace the commands of the test container, which must be the only one named (can be set more than once, run in order)")
+	cmd.Flags().StringArrayVar(&options.Profiles, "profile", []string{}, "enable a profile to run its test containers along with the ones without profiles (can be set more than once). The OKTETO_PROFILES environment variable overrides it")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the duration to wait for the Test Container to run. Any value should contain a corresponding time unit e.g. 1s, 2m, 3h")
 	cmd.Flags().StringVar(&options.Name, "name", "", "the name of the Development Environment")
 	cmd.Flags().BoolVar(&options.Deploy, "deploy", false, "Force execution of the commands in the 'deploy' section")
@@ -162,6 +189,11 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 
 	if !okteto.IsOkteto() {
 		return analytics.TestMetadata{}, oktetoErrors.ErrContextIsNotOktetoCluster
+	}
+
+	// The context loads the .env file and the Okteto Variables into the environment, so they can set OKTETO_PROFILES
+	if err := resolveEnabledProfiles(servicesToTest, options, ioCtrl); err != nil {
+		return analytics.TestMetadata{}, err
 	}
 
 	create, err := utils.ShouldCreateNamespace(ctx, okteto.GetContext().Namespace)
@@ -231,6 +263,13 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 		return analytics.TestMetadata{}, err
 	}
 
+	// The test containers to run are shown when they are selected by profile, as some of them may not run
+	showSelection := len(servicesToTest) == 0 && len(definedProfiles(manifest.Test)) > 0
+	servicesToTest, err = selectTests(manifest.Test, servicesToTest, options.enabledProfiles)
+	if err != nil {
+		return analytics.TestMetadata{}, err
+	}
+
 	k8sClientProvider := okteto.NewK8sClientProviderWithLogger(k8sLogger)
 
 	pc, err := pipelineCMD.NewCommand(connTracker)
@@ -265,6 +304,9 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 
 	testServices := tree.Ordered()
+	if showSelection {
+		ioCtrl.Out().Infof("Test containers to run: %s", strings.Join(testServices, ", "))
+	}
 
 	wasBuilt, err := doBuild(ctx, manifest, testServices, builder, ioCtrl)
 	if err != nil {
@@ -465,6 +507,30 @@ func doRun(ctx context.Context, servicesToTest []string, options *Options, ioCtr
 	}
 	metadata.Success = true
 	return metadata, nil
+}
+
+// resolveEnabledProfiles sets the enabled profiles from the --profile flag or the OKTETO_PROFILES environment
+// variable, checking that they are not combined with test container names or a command override
+func resolveEnabledProfiles(names []string, options *Options, ioCtrl *io.Controller) error {
+	profiles, err := resolveProfiles(options.Profiles, os.Getenv(constants.OktetoProfilesEnvVar))
+	if err != nil {
+		return err
+	}
+	if err := profiles.checkCommandOverride(options.override.isSet()); err != nil {
+		return err
+	}
+	if err := profiles.checkTestNames(names); err != nil {
+		return err
+	}
+
+	if profiles.fromEnv() {
+		ioCtrl.Out().Infof("Using the profiles from %s: %s", constants.OktetoProfilesEnvVar, strings.Join(profiles.profiles, ", "))
+		if len(options.Profiles) > 0 {
+			ioCtrl.Out().Warning("%s overrides the values of '--profile'", constants.OktetoProfilesEnvVar)
+		}
+	}
+	options.enabledProfiles = profiles.profiles
+	return nil
 }
 
 func doBuild(ctx context.Context, manifest *model.Manifest, svcs []string, builder builder, ioCtrl *io.Controller) (bool, error) {

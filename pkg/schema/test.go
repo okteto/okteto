@@ -83,6 +83,16 @@ func (test) JSONSchema() *jsonschema.Schema {
 		},
 	})
 
+	testProps.Set("profiles", &jsonschema.Schema{
+		Type:        &jsonschema.Type{Types: []string{"array"}},
+		Title:       "profiles",
+		Description: "A list of profiles the Test Container belongs to. Unless Test Containers are named in the command, 'okteto test' only runs the ones without profiles. Enable a profile with 'okteto test --profile <name>' or the OKTETO_PROFILES environment variable to run its Test Containers too. Their dependencies must have no profiles or an enabled profile.",
+		Items: &jsonschema.Schema{
+			Type:    &jsonschema.Type{Types: []string{"string"}},
+			Pattern: `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`, // the same format as Docker Compose, also allowing single-character names
+		},
+	})
+
 	hostsItemProps := jsonschema.NewProperties()
 	hostsItemProps.Set("hostname", &jsonschema.Schema{
 		Type: &jsonschema.Type{Types: []string{"string"}},
