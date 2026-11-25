@@ -374,3 +374,34 @@ func TestTranslate(t *testing.T) {
 
 	require.Equal(t, expected, result)
 }
+
+func TestDeployRedeployUpdatesSpec(t *testing.T) {
+	ctx := context.Background()
+	ns := "testns"
+	client := fake.NewFakeExternalResourceV1(fake.PossibleERErrors{})
+	ctrl := K8sControl{
+		ClientProvider: func(_ *rest.Config) (k8s.ExternalResourceV1Interface, error) {
+			return client, nil
+		},
+	}
+
+	require.NoError(t, ctrl.Deploy(ctx, "db", ns, &ExternalResource{
+		Icon:      "default",
+		Notes:     &Notes{Path: "a.md", Markdown: "old"},
+		Endpoints: []*ExternalEndpoint{{Name: "old", Url: "https://old.com"}},
+	}))
+	require.NoError(t, ctrl.Deploy(ctx, "db", ns, &ExternalResource{
+		Icon:      "database",
+		Notes:     &Notes{Path: "b.md", Markdown: "new"},
+		Endpoints: []*ExternalEndpoint{{Name: "new", Url: "https://new.com"}},
+	}))
+
+	got, err := client.ExternalResources(ns).Get(ctx, "db", v1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, k8s.ExternalResourceSpec{
+		Name:      "db",
+		Icon:      "database",
+		Notes:     &k8s.Notes{Path: "b.md", Markdown: "new"},
+		Endpoints: []k8s.Endpoint{{Name: "new", Url: "https://new.com"}},
+	}, got.Spec)
+}
