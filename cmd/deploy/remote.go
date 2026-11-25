@@ -157,6 +157,7 @@ func (rd *remoteDeployer) Deploy(ctx context.Context, deployOptions *Options) er
 		UseOktetoDeployIgnoreFile:   true,
 		ContextAbsolutePathOverride: ctxPath,
 		Secrets:                     deployOptions.catalogSecretVariablesToForward.RemoteRunSecrets(),
+		GitCredentialsEndpoint:      deployOptions.GitCredentialsEndpoint,
 	}
 	for k, v := range deployable.GetGatewayEnvironment() {
 		runParams.OktetoCommandSpecificEnvVars[k] = v

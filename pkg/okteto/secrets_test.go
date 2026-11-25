@@ -382,6 +382,10 @@ func TestGetClusterMetadata(t *testing.T) {
 								Value: "true",
 							},
 							{
+								Name:  "gitCredentialsEndpoint",
+								Value: "https://okteto-internal-api.test.okteto.com:8443/internal/git/credentials",
+							},
+							{
 								Name:  "internalAPIIP",
 								Value: "10.20.30.40",
 							},
@@ -395,13 +399,14 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 			expected: expected{
 				metadata: types.ClusterMetadata{
-					Certificate:         []byte("cert"),
-					ServerName:          "1.1.1.1",
-					PipelineRunnerImage: "installer-runner-image",
-					BuildKitInternalIP:  "10.10.10.10",
-					PublicDomain:        "test.okteto.com",
-					DivertCRDSEnabled:   true,
-					InternalAPIIP:       "10.20.30.40",
+					Certificate:            []byte("cert"),
+					ServerName:             "1.1.1.1",
+					PipelineRunnerImage:    "installer-runner-image",
+					BuildKitInternalIP:     "10.10.10.10",
+					PublicDomain:           "test.okteto.com",
+					DivertCRDSEnabled:      true,
+					GitCredentialsEndpoint: "https://okteto-internal-api.test.okteto.com:8443/internal/git/credentials",
+					InternalAPIIP:          "10.20.30.40",
 				},
 			},
 		},

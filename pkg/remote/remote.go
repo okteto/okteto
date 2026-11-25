@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/deployable"
+	"github.com/okteto/okteto/pkg/env"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/log/io"
@@ -100,7 +101,9 @@ ARG {{ .GitBranchArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN echo "${{ .InvalidateCacheArgName }}" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+{{ if .InstallGitCredentialHelper }}RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
+ARG {{ .GitCredentialsEndpointArgName }}{{ end }}
 
 RUN \
   {{range $key, $path := .Caches }}--mount=type=cache,id={{cacheID $.RepositoryURL $.ManifestName $.TestName $path}},target={{$path}},sharing=private {{end}}\
@@ -208,6 +211,10 @@ type Params struct {
 	InternalAPIIP string
 	// Secrets are the files the remote-run RUN mounts as build secrets
 	Secrets []FileSecret
+
+	// GitCredentialsEndpoint is the URL the Git credential helper gets the credentials from that Okteto sets on its
+	// installer, read with GitCredentialsEndpointFromEnv. When it's empty, Run takes the one in the cluster metadata
+	GitCredentialsEndpoint string
 }
 
 // dockerfileTemplateProperties internal struct with the information needed by the Dockerfile template
@@ -247,6 +254,13 @@ type dockerfileTemplateProperties struct {
 	RepositoryURL                string
 	Artifacts                    []model.Artifact
 	Secrets                      []FileSecret
+	// GitCredentialsEndpointArgName is the URL the Git credential helper gets the credentials from.
+	// Git starts the helper from the commands that remote-run runs, so it reaches it as an env var
+	GitCredentialsEndpointArgName string
+	// InstallGitCredentialHelper is true when Okteto gives the helper its endpoint and the internal IP of
+	// the API, unless OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns it off. Without them the helper gives
+	// nothing, but installing it would still change how Git looks up github.com credentials
+	InstallGitCredentialHelper bool
 }
 
 // NewRunner creates a new Runner for remote
@@ -293,6 +307,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 
 	params.SSHAgentHostname = sc.SSHAgentHostname
 	params.SSHAgentPort = sc.SSHAgentPort
+	params.GitCredentialsEndpoint = gitCredentialsEndpoint(params.GitCredentialsEndpoint, *sc)
 	params.InternalAPIIP = internalAPIIP(*sc)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
@@ -366,6 +381,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 		fmt.Sprintf("%s=%s", model.GithubRepositoryEnvVar, os.Getenv(model.GithubRepositoryEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoRegistryURLEnvVar, os.Getenv(model.OktetoRegistryURLEnvVar)),
 		fmt.Sprintf("%s=%s", model.OktetoBuildkitHostURLEnvVar, os.Getenv(model.OktetoBuildkitHostURLEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitCredentialsEndpointEnvVar, params.GitCredentialsEndpoint),
 	)
 
 	buildOptions.BuildArgs = append(
@@ -513,41 +529,43 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:               config.NewImageConfig(r.ioCtrl).GetCliImage(),
-		UserRunnerImage:              params.BaseImage,
-		RemoteDeployEnvVar:           constants.OktetoDeployRemote,
-		ContextArgName:               model.OktetoContextEnvVar,
-		OktetoBuildEnvVars:           params.BuildEnvVars,
-		NamespaceArgName:             model.OktetoNamespaceEnvVar,
-		TlsCertBase64ArgName:         constants.OktetoTlsCertBase64EnvVar,
-		InternalServerName:           constants.OktetoInternalServerNameEnvVar,
-		TokenArgName:                 model.OktetoTokenEnvVar,
-		ActionNameArgName:            model.OktetoActionNameEnvVar,
-		GitCommitArgName:             constants.OktetoGitCommitEnvVar,
-		GitBranchArgName:             constants.OktetoGitBranchEnvVar,
-		InvalidateCacheArgName:       constants.OktetoInvalidateCacheEnvVar,
-		CommandFlags:                 strings.Join(params.CommandFlags, " "),
-		OktetoDeployable:             constants.OktetoDeployableEnvVar,
-		GitHubRepositoryArgName:      model.GithubRepositoryEnvVar,
-		BuildKitHostArgName:          model.OktetoBuildkitHostURLEnvVar,
-		OktetoRegistryURLArgName:     model.OktetoRegistryURLEnvVar,
-		OktetoDependencyEnvVars:      params.DependenciesEnvVars,
-		OktetoPrefixEnvVars:          getOktetoPrefixEnvVars(r.getEnviron()),
-		OktetoCommandSpecificEnvVars: params.OktetoCommandSpecificEnvVars,
-		Command:                      params.Command,
-		Caches:                       params.Caches,
-		TestName:                     params.TestName,
-		ManifestName:                 params.Manifest.Name,
-		RepositoryURL:                repoURL,
-		Artifacts:                    params.Artifacts,
-		SSHAgentHostname:             params.SSHAgentHostname,
-		SSHAgentHostnameArgName:      constants.OktetoSshAgentHostnameEnvVar,
-		SSHAgentPort:                 params.SSHAgentPort,
-		SSHAgentPortArgName:          constants.OktetoSshAgentPortEnvVar,
-		SSHAgentSocketArgName:        constants.OktetoSshAgentSocketEnvVar,
-		InternalAPIIP:                params.InternalAPIIP,
-		InternalAPIIPArgName:         constants.OktetoInternalAPIIPEnvVar,
-		Secrets:                      params.Secrets,
+		OktetoCLIImage:                config.NewImageConfig(r.ioCtrl).GetCliImage(),
+		UserRunnerImage:               params.BaseImage,
+		RemoteDeployEnvVar:            constants.OktetoDeployRemote,
+		ContextArgName:                model.OktetoContextEnvVar,
+		OktetoBuildEnvVars:            params.BuildEnvVars,
+		NamespaceArgName:              model.OktetoNamespaceEnvVar,
+		TlsCertBase64ArgName:          constants.OktetoTlsCertBase64EnvVar,
+		InternalServerName:            constants.OktetoInternalServerNameEnvVar,
+		TokenArgName:                  model.OktetoTokenEnvVar,
+		ActionNameArgName:             model.OktetoActionNameEnvVar,
+		GitCommitArgName:              constants.OktetoGitCommitEnvVar,
+		GitBranchArgName:              constants.OktetoGitBranchEnvVar,
+		InvalidateCacheArgName:        constants.OktetoInvalidateCacheEnvVar,
+		CommandFlags:                  strings.Join(params.CommandFlags, " "),
+		OktetoDeployable:              constants.OktetoDeployableEnvVar,
+		GitHubRepositoryArgName:       model.GithubRepositoryEnvVar,
+		BuildKitHostArgName:           model.OktetoBuildkitHostURLEnvVar,
+		OktetoRegistryURLArgName:      model.OktetoRegistryURLEnvVar,
+		OktetoDependencyEnvVars:       params.DependenciesEnvVars,
+		OktetoPrefixEnvVars:           getOktetoPrefixEnvVars(r.getEnviron()),
+		OktetoCommandSpecificEnvVars:  params.OktetoCommandSpecificEnvVars,
+		GitCredentialsEndpointArgName: constants.OktetoGitCredentialsEndpointEnvVar,
+		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(params.GitCredentialsEndpoint, params.InternalAPIIP),
+		Command:                       params.Command,
+		Caches:                        params.Caches,
+		TestName:                      params.TestName,
+		ManifestName:                  params.Manifest.Name,
+		RepositoryURL:                 repoURL,
+		Artifacts:                     params.Artifacts,
+		SSHAgentHostname:              params.SSHAgentHostname,
+		SSHAgentHostnameArgName:       constants.OktetoSshAgentHostnameEnvVar,
+		SSHAgentPort:                  params.SSHAgentPort,
+		SSHAgentPortArgName:           constants.OktetoSshAgentPortEnvVar,
+		SSHAgentSocketArgName:         constants.OktetoSshAgentSocketEnvVar,
+		Secrets:                       params.Secrets,
+		InternalAPIIP:                 params.InternalAPIIP,
+		InternalAPIIPArgName:          constants.OktetoInternalAPIIPEnvVar,
 	}
 
 	dockerfileSyntax.prepareEnvVars()
@@ -570,6 +588,31 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		return "", err
 	}
 	return dockerfile.Name(), nil
+}
+
+// GitCredentialsEndpointFromEnv returns the URL the Git credential helper gets the credentials from that Okteto sets
+// on its installer. Commands read it before they set the --var variables and load the context, which sets .env files
+// and Okteto Variables as env vars, so none of them can replace it
+func GitCredentialsEndpointFromEnv() string {
+	return os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar)
+}
+
+// gitCredentialsEndpoint returns the URL the Git credential helper gets the credentials from: the one
+// Okteto sets on its installer, or else the one in the cluster metadata, for remote runs started from
+// a laptop or CI. It's empty when the installation doesn't give GitHub credentials, as on older
+// Okteto versions
+func gitCredentialsEndpoint(installerEndpoint string, sc types.ClusterMetadata) string {
+	if installerEndpoint != "" {
+		return installerEndpoint
+	}
+	return sc.GitCredentialsEndpoint
+}
+
+// shouldInstallGitCredentialHelper returns true when the run has an endpoint and the internal IP of the API
+// to give the Git credential helper, and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off. The helper
+// only sends the token to that IP, so without it, it would only print an error on every GitHub request
+func shouldInstallGitCredentialHelper(endpoint, internalAPIIP string) bool {
+	return endpoint != "" && internalAPIIP != "" && !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
 }
 
 func (r *Runner) getContextPath(cwd, manifestPath string) string {

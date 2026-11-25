@@ -151,6 +151,7 @@ func (rd *remoteDestroyCommand) Destroy(ctx context.Context, opts *Options) erro
 		UseOktetoDeployIgnoreFile:   true,
 		ContextAbsolutePathOverride: ctxPath,
 		Secrets:                     opts.catalogSecretVariablesToForward.RemoteRunSecrets(),
+		GitCredentialsEndpoint:      opts.GitCredentialsEndpoint,
 	}
 	for k, v := range deployable.GetGatewayEnvironment() {
 		runParams.OktetoCommandSpecificEnvVars[k] = v

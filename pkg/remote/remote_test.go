@@ -488,12 +488,13 @@ func TestCreateDockerfile(t *testing.T) {
 					OktetoCommandSpecificEnvVars: map[string]string{
 						constants.OktetoIsPreviewEnvVar: "true",
 					},
-					DockerfileName:   "Dockerfile.deploy",
-					Command:          "deploy",
-					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
-					SSHAgentPort:     "3000",
-					InternalAPIIP:    "10.20.30.40",
-					CommandFlags:     []string{"--name \"test\""},
+					DockerfileName:         "Dockerfile.deploy",
+					Command:                "deploy",
+					GitCredentialsEndpoint: testGitCredentialsEndpoint,
+					SSHAgentHostname:       "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:           "3000",
+					CommandFlags:           []string{"--name \"test\""},
+					InternalAPIIP:          "10.20.30.40",
 				},
 			},
 			expected: expected{
@@ -548,7 +549,9 @@ ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
+ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
   \
@@ -580,11 +583,13 @@ COPY --from=runner /etc/.oktetocachekey .oktetocachekey
 						model.OktetoDevGatewayNameEnvVar:      "dev-gateway",
 						model.OktetoDevGatewayNamespaceEnvVar: "gateway-ns",
 					},
-					DockerfileName:   "Dockerfile.test",
-					Command:          "test",
-					SSHAgentHostname: "ssh-agent.default.svc.cluster.local",
-					SSHAgentPort:     "3000",
-					CommandFlags:     []string{"--name \"test\""},
+					DockerfileName:         "Dockerfile.test",
+					Command:                "test",
+					GitCredentialsEndpoint: testGitCredentialsEndpoint,
+					SSHAgentHostname:       "ssh-agent.default.svc.cluster.local",
+					SSHAgentPort:           "3000",
+					InternalAPIIP:          "10.20.30.40",
+					CommandFlags:           []string{"--name \"test\""},
 					Artifacts: []model.Artifact{
 						{
 							Path:        "coverage.txt",
@@ -646,14 +651,16 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
-ENV OKTETO_INTERNAL_API_IP=""
+ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
+ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
   \
@@ -694,6 +701,8 @@ COPY --from=runner /okteto/artifacts/ /
 					OktetoCommandSpecificEnvVars: map[string]string{},
 					DockerfileName:               "Dockerfile.deploy",
 					Command:                      "deploy",
+					GitCredentialsEndpoint:       testGitCredentialsEndpoint,
+					InternalAPIIP:                "10.20.30.40",
 					CommandFlags:                 []string{"--name \"test\""},
 				},
 			},
@@ -732,14 +741,16 @@ WORKDIR /okteto/src
 
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
-ENV OKTETO_INTERNAL_API_IP=""
+ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
 ARG OKTETO_INVALIDATE_CACHE
 
 RUN echo "$OKTETO_INVALIDATE_CACHE" > /etc/.oktetocachekey
-RUN okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto registrytoken install --force --log-output=json
+RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true
+ARG OKTETO_GIT_CREDENTIALS_ENDPOINT
 
 RUN \
   \
@@ -829,6 +840,164 @@ func TestDockerfileWithCache(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok, "Expected cache mount pattern not found: %s", pattern)
 	}
+}
+
+// testGitCredentialsEndpoint is the URL Okteto gives the Git credential helper in these tests
+const testGitCredentialsEndpoint = "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials"
+
+func TestRunPassesTheGitCredentialsEndpointOfTheInstaller(t *testing.T) {
+	buildArgs := runRemoteDeploy(t, testGitCredentialsEndpoint, types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"})
+
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+func TestRunPassesTheGitCredentialsEndpointOfTheClusterMetadata(t *testing.T) {
+	buildArgs := runRemoteDeploy(t, "", types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
+
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+func TestRunIgnoresAGitCredentialsEndpointSetAfterTheCommandReadIt(t *testing.T) {
+	// a --var, a .env file or an Okteto Variable sets it when the command loads them
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, "https://var.example.com/internal/git/credentials")
+
+	buildArgs := runRemoteDeploy(t, "", types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
+
+	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+func TestGitCredentialsEndpointFromEnv(t *testing.T) {
+	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, testGitCredentialsEndpoint)
+
+	require.Equal(t, testGitCredentialsEndpoint, GitCredentialsEndpointFromEnv())
+}
+
+// runRemoteDeploy runs a remote deploy with the installer's Git credentials endpoint on an installation with the given
+// metadata, and returns the build args it sends
+func runRemoteDeploy(t *testing.T, installerEndpoint string, metadata types.ClusterMetadata) []string {
+	t.Helper()
+	originalStore := okteto.CurrentStore
+	t.Cleanup(func() { okteto.CurrentStore = originalStore })
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.Context{
+			"test": {
+				Namespace: "namespace",
+			},
+		},
+	}
+	users := client.NewFakeUsersClient(&types.User{})
+	users.ClusterMetadata = metadata
+	fs := afero.NewMemMapFs()
+	var buildArgs []string
+	rdc := Runner{
+		builder: fakeBuilder{assertOptions: func(o *types.BuildOptions) {
+			buildArgs = o.BuildArgs
+		}},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		oktetoClientProvider: client.NewFakeOktetoClientProvider(&client.FakeOktetoClient{
+			Users: users,
+		}),
+		ioCtrl: io.NewIOController(),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		generateSocketName: fakeNameGenerator{name: "test"}.GenerateName,
+	}
+
+	err := rdc.Run(context.Background(), &Params{
+		Manifest:               &model.Manifest{Deploy: &model.DeployInfo{Image: "test-image"}},
+		GitCredentialsEndpoint: installerEndpoint,
+	})
+
+	require.NoError(t, err)
+	return buildArgs
+}
+
+func TestGitCredentialsEndpoint(t *testing.T) {
+	tests := []struct {
+		name              string
+		installerEndpoint string
+		metadata          types.ClusterMetadata
+		expected          string
+	}{
+		{
+			name:              "the installer's endpoint wins",
+			installerEndpoint: testGitCredentialsEndpoint,
+			metadata:          types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"},
+			expected:          testGitCredentialsEndpoint,
+		},
+		{
+			name:     "the cluster metadata's endpoint for runs started outside the installer",
+			metadata: types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint},
+			expected: testGitCredentialsEndpoint,
+		},
+		{
+			name: "no endpoint when the installation gives none",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, gitCredentialsEndpoint(tt.installerEndpoint, tt.metadata))
+		})
+	}
+}
+
+func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
+	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
+
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, "10.20.30.40")
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
+}
+
+func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
+	d := createDeployDockerfile(t, "", "10.20.30.40")
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
+}
+
+func TestDockerfileWithoutInternalAPIIP(t *testing.T) {
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, "")
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
+}
+
+// createDeployDockerfile returns the Dockerfile that a remote deploy generates with the given Git credentials
+// endpoint and internal IP of the API
+func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint, internalAPIIP string) string {
+	t.Helper()
+	fs := afero.NewMemMapFs()
+	rdc := Runner{
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		getEnviron: func() []string {
+			return []string{}
+		},
+		ioCtrl:             io.NewIOController(),
+		generateSocketName: fakeNameGenerator{name: "okteto-socket.sock"}.GenerateName,
+	}
+
+	dockerfileName, err := rdc.createDockerfile("/test", &Params{
+		DockerfileName:         "Dockerfile.deploy",
+		Command:                "deploy",
+		Manifest:               &model.Manifest{Name: "test-manifest"},
+		GitCredentialsEndpoint: gitCredentialsEndpoint,
+		InternalAPIIP:          internalAPIIP,
+	})
+
+	require.NoError(t, err)
+	d, err := afero.ReadFile(fs, dockerfileName)
+	require.NoError(t, err)
+	return string(d)
 }
 
 // envFromDockerfile returns the value BuildKit gives to each ENV instruction of the Dockerfile

@@ -355,6 +355,33 @@ func TestDestroyRemoteForwardsTheCatalogSecretVariablesToRemoteRun(t *testing.T)
 	require.Equal(t, []remote.FileSecret{{ID: catalog.SecretVariablesTokenSecretID, Path: "/run/secrets/catalog-secret-variables/token"}}, params.Secrets)
 }
 
+func TestDestroyRemoteForwardsTheGitCredentialsEndpointToRemoteRun(t *testing.T) {
+	manifest := &model.Manifest{
+		Destroy: &model.DestroyInfo{
+			Commands: []model.DeployCommand{{Name: "command 1", Command: "test-command"}},
+		},
+	}
+	var params *remote.Params
+	runner := &fakeRemoteRunner{}
+	runner.On("Run", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		params = args.Get(1).(*remote.Params)
+	}).Return(nil)
+	rd := &remoteDestroyCommand{
+		runner:      runner,
+		workdirCtrl: fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest"),
+	}
+	opts := &Options{
+		Name:                   "test",
+		Manifest:               manifest,
+		GitCredentialsEndpoint: "https://okteto-internal-api.okteto.example:8443/internal/git/credentials",
+	}
+
+	err := rd.Destroy(context.Background(), opts)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://okteto-internal-api.okteto.example:8443/internal/git/credentials", params.GitCredentialsEndpoint)
+}
+
 func TestDestroyRemoteWithError(t *testing.T) {
 	workdirCtrl := fakefs.NewFakeWorkingDirectoryCtrl("/path/to/manifest")
 	manifest := &model.Manifest{

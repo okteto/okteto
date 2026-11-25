@@ -33,6 +33,15 @@ const (
 	// with the okteto credentials
 	OktetoSkipConfigCredentialsUpdate = "OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE"
 
+	// OktetoDisableGitCredentialHelperEnvVar turns off Okteto's Git credential helper for GitHub:
+	// remote runs don't install it, "okteto git-credential install" skips it and "get" gives nothing
+	OktetoDisableGitCredentialHelperEnvVar = "OKTETO_DISABLE_GIT_CREDENTIAL_HELPER"
+
+	// OktetoGitCredentialsEndpointEnvVar is the URL Okteto's Git credential helper gets the credentials from.
+	// The backend sets it on the installer job. Remote runs get it as a build argument, from there or, when they
+	// start from a laptop or CI, from the cluster metadata
+	OktetoGitCredentialsEndpointEnvVar = "OKTETO_GIT_CREDENTIALS_ENDPOINT"
+
 	// OktetoHomeEnvVar defines the path of okteto folder
 	OktetoHomeEnvVar = "OKTETO_HOME"
 

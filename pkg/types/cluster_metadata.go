@@ -32,4 +32,8 @@ type ClusterMetadata struct {
 	DivertCRDSEnabled   bool
 	GatewayName         string
 	GatewayNamespace    string
+
+	// GitCredentialsEndpoint is the URL Okteto's Git credential helper gets the credentials from,
+	// empty when the installation doesn't give GitHub credentials to remote runs
+	GitCredentialsEndpoint string
 }
