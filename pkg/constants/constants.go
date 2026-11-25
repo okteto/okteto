@@ -98,6 +98,10 @@ const (
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
 
+	// OktetoProfilesEnvVar is a comma-separated list of the test container profiles to run with
+	// 'okteto test'. It overrides the values of the --profile flag
+	OktetoProfilesEnvVar = "OKTETO_PROFILES"
+
 	// NamespaceStatusLabel label added to namespaces to indicate its status
 	NamespaceStatusLabel = "space.okteto.com/status"
 

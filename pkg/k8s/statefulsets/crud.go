@@ -39,10 +39,6 @@ type patchAnnotations struct {
 
 // Sandbox returns a default statefulset for a given dev
 func Sandbox(dev *model.Dev, namespace string) *appsv1.StatefulSet {
-	image := dev.Image
-	if image == "" {
-		image = model.DefaultImage
-	}
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        dev.Name,
@@ -74,7 +70,7 @@ func Sandbox(dev *model.Dev, namespace string) *appsv1.StatefulSet {
 					Containers: []apiv1.Container{
 						{
 							Name:            "dev",
-							Image:           image,
+							Image:           dev.Image,
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},

@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/env"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_setSecrets(t *testing.T) {
@@ -62,4 +63,14 @@ func Test_setSecrets(t *testing.T) {
 			assert.Equal(t, expectedValue, os.Getenv(key))
 		})
 	}
+}
+
+func Test_exportPlatformVariablesToEnvKeepsEmptyLocalVar(t *testing.T) {
+	t.Setenv("key", "")
+
+	exportPlatformVariablesToEnv([]env.Var{{Name: "key", Value: "value"}})
+
+	value, exists := os.LookupEnv("key")
+	require.True(t, exists)
+	require.Empty(t, value)
 }

@@ -19,6 +19,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
@@ -38,6 +40,10 @@ type TestOptions struct {
 	Commands []string
 	// CommandArgs are passed after '--', replacing the commands of the test container
 	CommandArgs []string
+	// Profiles are passed as --profile flags, enabling the test containers that have them
+	Profiles []string
+	// ProfilesEnv is the value of the OKTETO_PROFILES environment variable, which overrides the --profile flags
+	ProfilesEnv string
 	NoCache     bool
 }
 
@@ -63,7 +69,10 @@ func getTestCmd(oktetoPath string, testOptions *TestOptions) *exec.Cmd {
 	if testOptions.NoCache {
 		cmd.Args = append(cmd.Args, "--no-cache")
 	}
-	cmd.Env = os.Environ()
+	// OKTETO_PROFILES is only set from ProfilesEnv, so the one of the host doesn't change the test containers to run
+	cmd.Env = slices.DeleteFunc(os.Environ(), func(env string) bool {
+		return strings.HasPrefix(env, constants.OktetoProfilesEnvVar+"=")
+	})
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
@@ -88,6 +97,12 @@ func getTestCmd(oktetoPath string, testOptions *TestOptions) *exec.Cmd {
 	}
 	for _, command := range testOptions.Commands {
 		cmd.Args = append(cmd.Args, "--command", command)
+	}
+	for _, profile := range testOptions.Profiles {
+		cmd.Args = append(cmd.Args, "--profile", profile)
+	}
+	if testOptions.ProfilesEnv != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoProfilesEnvVar, testOptions.ProfilesEnv))
 	}
 	// '--' must be the last argument, as everything after it is the command to run
 	if len(testOptions.CommandArgs) > 0 {

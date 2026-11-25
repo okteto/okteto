@@ -49,6 +49,13 @@ func (e CommandErr) Error() string {
 	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
+// Is reports a CommandErr as an oktetoErrors.ErrCommandFailed: a command of a
+// remote deploy, destroy or test container that failed. Packages that can't
+// import buildkit (e.g. analytics) can recognize it that way.
+func (CommandErr) Is(target error) bool {
+	return target == oktetoErrors.ErrCommandFailed
+}
+
 var (
 	oktetoRemoteCLIRepository      = "okteto/okteto"
 	oktetoPipelineRunnerRepository = "okteto/pipeline-runner"
@@ -62,6 +69,24 @@ func hasOktetoRegistryImage(err error) bool {
 
 func hasOktetoForkImage(err error) bool {
 	return strings.Contains(err.Error(), oktetoRemoteCLIRepository) || strings.Contains(err.Error(), oktetoPipelineRunnerRepository)
+}
+
+// Messages of BuildKit's errors for a failed Dockerfile step: a RUN that exits with an error and a
+// Dockerfile syntax error. A COPY or ADD of a missing file is matched by isFailedChecksum.
+const (
+	runStepFailedMsg   = "did not complete successfully"
+	dockerfileParseMsg = "dockerfile parse error"
+)
+
+// IsBuildStepFailure returns true when err is BuildKit's error for a failed Dockerfile step: a RUN that
+// exits with an error, a COPY or ADD of a missing file, or a Dockerfile syntax error. Their message holds
+// the user's command or Dockerfile line, so it must not be matched against registry or connection errors.
+func IsBuildStepFailure(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, runStepFailedMsg) || isFailedChecksum(err) || strings.Contains(msg, dockerfileParseMsg)
 }
 
 func isImageIsNotAccessibleErr(err error) bool {
@@ -87,6 +112,11 @@ func GetSolveErrorMessage(err error) error {
 	registryImage, registryStatus, isRegistryServerErr := getRegistryServerError(err)
 
 	switch {
+	// A failed Dockerfile step is not rewritten: its message holds the user's command, which can contain
+	// any of the texts matched below
+	case IsBuildStepFailure(err):
+		return unrecognizedSolveError(err)
+
 	// A registry answering with a 5xx status during a pull or a push is a registry error, not a BuildKit one
 	case isRegistryServerErr:
 		err = oktetoErrors.UserError{
@@ -131,15 +161,20 @@ func GetSolveErrorMessage(err error) error {
 		}
 
 	default:
-		var cmdErr CommandErr
-		if errors.As(err, &cmdErr) {
-			return cmdErr
-		}
-		err = oktetoErrors.UserError{
-			E: err,
-		}
+		return unrecognizedSolveError(err)
 	}
 	return err
+}
+
+// unrecognizedSolveError returns a CommandErr as it is, and any other error as a UserError with its own message
+func unrecognizedSolveError(err error) error {
+	var cmdErr CommandErr
+	if errors.As(err, &cmdErr) {
+		return cmdErr
+	}
+	return oktetoErrors.UserError{
+		E: err,
+	}
 }
 
 var (

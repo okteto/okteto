@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -130,4 +131,68 @@ func TestPreviewResolver_ConcurrentCallsCollapse(t *testing.T) {
 		require.False(t, <-results)
 	}
 	require.Equal(t, int32(1), atomic.LoadInt32(&calls))
+}
+
+func TestIsWithinPreview_TrueWhenEnvSet(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "true")
+	require.True(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_FalseWhenEnvEmpty(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	require.False(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_FalseWhenEnvOtherValue(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "false")
+	require.False(t, IsWithinPreview(context.Background(), nil))
+}
+
+func TestIsWithinPreview_TrueWhenPreviewGetSucceeds(t *testing.T) {
+	resetPreviewResolver(t)
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://okteto.example.com",
+		Contexts: map[string]*okteto.Context{
+			"https://okteto.example.com": {Namespace: "my-preview-ns"},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	checker := func(_ context.Context, _ string) error { return nil }
+	require.True(t, IsWithinPreview(context.Background(), checker))
+}
+
+func TestIsWithinPreview_FalseWhenPreviewGetFails(t *testing.T) {
+	resetPreviewResolver(t)
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://okteto.example.com",
+		Contexts: map[string]*okteto.Context{
+			"https://okteto.example.com": {Namespace: "regular-ns"},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	checker := func(_ context.Context, _ string) error { return errors.New("not found") }
+	require.False(t, IsWithinPreview(context.Background(), checker))
+}
+
+func TestIsWithinPreview_FalseWhenNamespaceEmpty(t *testing.T) {
+	t.Setenv("OKTETO_IS_PREVIEW_ENVIRONMENT", "")
+	prevStore := okteto.CurrentStore
+	okteto.CurrentStore = &okteto.ContextStore{
+		CurrentContext: "https://okteto.example.com",
+		Contexts: map[string]*okteto.Context{
+			"https://okteto.example.com": {Namespace: ""},
+		},
+	}
+	defer func() { okteto.CurrentStore = prevStore }()
+
+	called := false
+	checker := func(_ context.Context, _ string) error { called = true; return nil }
+	require.False(t, IsWithinPreview(context.Background(), checker))
+	require.False(t, called, "checker must not be called when namespace is empty")
 }

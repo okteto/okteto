@@ -152,7 +152,7 @@ type Command struct {
 	// isWithinPreview reports whether the deploy runs inside a preview environment. It is true when the
 	// preview platform env var is set or when the active namespace is a preview (e.g. after `okteto ns use`).
 	isWithinPreview bool
-	// workflowID correlates the deploy_started and deploy_completed events of this deploy. It is the
+	// workflowID correlates the deploy_started and Deploy events of this deploy. It is the
 	// backend-injected OKTETO_WORKFLOW_ID when present, or a generated UUID otherwise.
 	workflowID string
 	// onCleanUp is a list of functions to be executed when the execution is interrupted. This is a hack

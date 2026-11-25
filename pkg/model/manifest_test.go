@@ -40,6 +40,78 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+func TestInferAutocreateImageFromBuildSetsBuildImageReference(t *testing.T) {
+	manifest := &Manifest{
+		Build: build.ManifestBuild{
+			"my-api": &build.Info{},
+		},
+		Dev: ManifestDevs{
+			"my-api": &Dev{Autocreate: true},
+		},
+	}
+
+	manifest.InferAutocreateImageFromBuild("my-api")
+
+	require.Equal(t, "${OKTETO_BUILD_MY_API_IMAGE}", manifest.Dev["my-api"].Image)
+}
+
+func TestInferAutocreateImageFromBuildKeepsExplicitImage(t *testing.T) {
+	manifest := &Manifest{
+		Build: build.ManifestBuild{
+			"api": &build.Info{},
+		},
+		Dev: ManifestDevs{
+			"api": &Dev{Autocreate: true, Image: "python:alpine"},
+		},
+	}
+
+	manifest.InferAutocreateImageFromBuild("api")
+
+	require.Equal(t, "python:alpine", manifest.Dev["api"].Image)
+}
+
+func TestInferAutocreateImageFromBuildSkipsDevWithoutSameNameBuild(t *testing.T) {
+	manifest := &Manifest{
+		Build: build.ManifestBuild{
+			"other": &build.Info{},
+		},
+		Dev: ManifestDevs{
+			"api": &Dev{Autocreate: true},
+		},
+	}
+
+	manifest.InferAutocreateImageFromBuild("api")
+
+	require.Empty(t, manifest.Dev["api"].Image)
+}
+
+func TestInferAutocreateImageFromBuildSkipsDevWithoutAutocreate(t *testing.T) {
+	manifest := &Manifest{
+		Build: build.ManifestBuild{
+			"api": &build.Info{},
+		},
+		Dev: ManifestDevs{
+			"api": &Dev{},
+		},
+	}
+
+	manifest.InferAutocreateImageFromBuild("api")
+
+	require.Empty(t, manifest.Dev["api"].Image)
+}
+
+func TestInferAutocreateImageFromBuildIgnoresUnknownDev(t *testing.T) {
+	manifest := &Manifest{
+		Build: build.ManifestBuild{
+			"api": &build.Info{},
+		},
+	}
+
+	manifest.InferAutocreateImageFromBuild("api")
+
+	require.Empty(t, manifest.Dev)
+}
+
 func TestManifestExpandDevEnvs(t *testing.T) {
 	tests := []struct {
 		manifest         *Manifest

@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,6 +31,7 @@ func TestTrackTest(t *testing.T) {
 	var stagesCount int
 	var errStr string
 	var commandOverride bool
+	var profileSelected bool
 	tracker := Tracker{
 		trackFn: func(ev string, ok bool, props map[string]any) {
 			event = ev
@@ -40,24 +42,27 @@ func TestTrackTest(t *testing.T) {
 			stagesCount = props["stagesCount"].(int)
 			errStr = props["error"].(string)
 			commandOverride = props["commandOverride"].(bool)
+			profileSelected = props["profileSelected"].(bool)
 		},
 	}
 
 	tracker.TrackTest(TestMetadata{
+		ProfileSelected: true,
 		Deployed:        true,
 		WasBuilt:        true,
 		Success:         false,
 		Duration:        time.Second * 5,
 		StagesCount:     3,
-		Err:             fmt.Errorf("my-error"),
+		Err:             fmt.Errorf("error executing command './test.sh --token=secret': %w", oktetoErrors.ErrCommandFailed),
 		CommandOverride: true,
 	})
 
 	require.True(t, deployed)
 	require.True(t, wasBuilt)
 	require.True(t, commandOverride)
+	require.True(t, profileSelected)
 	require.False(t, success)
-	require.Equal(t, errStr, "my-error")
+	require.Equal(t, "command_failed", errStr, "the raw error is never sent")
 	require.Equal(t, "Test", event)
 	require.Equal(t, float64(5), duration)
 	require.Equal(t, 3, stagesCount)
@@ -74,4 +79,17 @@ func TestTrackTestWithoutCommandOverride(t *testing.T) {
 	tracker.TrackTest(TestMetadata{Success: true})
 
 	require.False(t, commandOverride)
+}
+
+func TestTrackTestWithoutProfileSelected(t *testing.T) {
+	var profileSelected bool
+	tracker := Tracker{
+		trackFn: func(_ string, _ bool, props map[string]any) {
+			profileSelected = props["profileSelected"].(bool)
+		},
+	}
+
+	tracker.TrackTest(TestMetadata{Success: true})
+
+	require.False(t, profileSelected)
 }

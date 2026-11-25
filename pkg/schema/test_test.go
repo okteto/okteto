@@ -15,10 +15,12 @@ package schema
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Test(t *testing.T) {
@@ -122,6 +124,60 @@ test:
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+func manifestWithProfiles(profiles string) string {
+	return fmt.Sprintf(`
+test:
+  unit:
+    profiles: %s
+    commands: [echo test]`, profiles)
+}
+
+func Test_TestProfiles(t *testing.T) {
+	require.NoError(t, validateOktetoManifest(manifestWithProfiles("[pre-commit, release, a, Pre-Commit, e2e_v1.2]")))
+}
+
+func Test_TestRejectsInvalidProfiles(t *testing.T) {
+	tests := []struct {
+		name     string
+		profiles string
+	}{
+		{
+			name:     "not a list",
+			profiles: "pre-commit",
+		},
+		{
+			name:     "empty",
+			profiles: `[""]`,
+		},
+		{
+			name:     "blank",
+			profiles: `["  "]`,
+		},
+		{
+			name:     "leading space",
+			profiles: `[" pre-commit"]`,
+		},
+		{
+			name:     "comma",
+			profiles: `["pre-commit,release"]`,
+		},
+		{
+			name:     "space",
+			profiles: `["long running"]`,
+		},
+		{
+			name:     "starts with a dash",
+			profiles: `["-release"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Error(t, validateOktetoManifest(manifestWithProfiles(tt.profiles)))
 		})
 	}
 }
