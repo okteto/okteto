@@ -1019,6 +1019,47 @@ func TestInferFromStackWithVolumeMounts(t *testing.T) {
 	require.Equal(t, expected, string(dockerfileContent))
 }
 
+func TestInferFromStackKeepsManifestDevWithVolumeMounts(t *testing.T) {
+	dirtest := t.TempDir()
+	manifestDev := &Dev{
+		Name:    "test",
+		Image:   "okteto/dev:latest",
+		Command: Command{Values: []string{"bash"}},
+	}
+	currentManifest := &Manifest{
+		Fs:    afero.NewMemMapFs(),
+		Dev:   ManifestDevs{"test": manifestDev},
+		Build: build.ManifestBuild{},
+		Deploy: &DeployInfo{
+			Image: constants.OktetoPipelineRunnerImage,
+			ComposeSection: &ComposeSectionInfo{
+				Stack: &Stack{
+					Services: map[string]*Service{
+						"test": {
+							Build:   &build.Info{Context: dirtest, Dockerfile: "Dockerfile"},
+							Command: Command{Values: []string{"npm", "start"}},
+							VolumeMounts: []build.VolumeMounts{
+								{
+									LocalPath:  dirtest,
+									RemotePath: "/app",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result, err := currentManifest.InferFromStack(dirtest)
+	require.NoError(t, err)
+
+	// the dev section from the okteto manifest wins over the one inferred from compose
+	require.Same(t, manifestDev, result.Dev["test"])
+	require.Equal(t, "okteto/dev:latest", result.Dev["test"].Image)
+	require.Equal(t, []string{"bash"}, result.Dev["test"].Command.Values)
+}
+
 func TestSetBuildDefaults(t *testing.T) {
 	tests := []struct {
 		name         string
