@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -686,11 +687,20 @@ func validateHealthcheck(healthcheck *HealthCheck) error {
 	return nil
 }
 
+// withoutShellPrefix returns the command a shell healthcheck wraps, so the translation below
+// still recognises `curl … || exit 1` written for `sh -c`.
+func withoutShellPrefix(test HealtcheckTest) HealtcheckTest {
+	if len(test) == len(shellTestPrefix)+1 && slices.Equal(test[:len(shellTestPrefix)], shellTestPrefix) {
+		return test[len(shellTestPrefix):]
+	}
+	return test
+}
+
 func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 	// Join and then split the strings by space to ensure that
 	// each element in the string slice is a contiguous string with
 	// no spaces.
-	s := strings.Join(healthcheck.Test, " ")
+	s := strings.Join(withoutShellPrefix(healthcheck.Test), " ")
 	testStrings := strings.Split(s, " ")
 
 	minTestStrings := 2
@@ -1375,7 +1385,7 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 			if len(rawList) != healthCheckLength {
 				return fmt.Errorf("'CMD-SHELL' healthcheck.test must have exactly 2 elements")
 			}
-			*healthcheckTest, err = shellquote.Split(rawList[1])
+			*healthcheckTest, err = splitShellTest(rawList[1])
 			if err != nil {
 				return err
 			}
@@ -1390,11 +1400,31 @@ func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{})
 	if err != nil {
 		return err
 	}
-	*healthcheckTest, err = shellquote.Split(rawString)
+	*healthcheckTest, err = splitShellTest(rawString)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// shellMetacharacters mark a healthcheck command that only behaves as written when a shell
+// interprets it, like the `||` in `pg_isready -U postgres || exit 1`.
+const shellMetacharacters = "|&;<>$`"
+
+// shellTestPrefix runs a healthcheck command through the container shell, the way Compose
+// defines the CMD-SHELL form and the string form of `test`.
+var shellTestPrefix = []string{"sh", "-c"}
+
+// splitShellTest turns a shell healthcheck command into the command to run. Commands that use
+// shell syntax keep their shell, so the probe runs exactly what was written; commands without
+// it are split into an exec form, as before.
+func splitShellTest(command string) (HealtcheckTest, error) {
+	if strings.ContainsAny(command, shellMetacharacters) {
+		test := make(HealtcheckTest, 0, len(shellTestPrefix)+1)
+		test = append(test, shellTestPrefix...)
+		return append(test, command), nil
+	}
+	return shellquote.Split(command)
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {
