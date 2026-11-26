@@ -14,9 +14,11 @@
 package up
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -26,10 +28,12 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/env"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -455,6 +459,57 @@ func TestSetSyncDefaultsByDevModeError(t *testing.T) {
 	err := setSyncDefaultsByDevMode(dev, getSyncTempDirFake)
 	require.Error(t, err)
 	require.Equal(t, *dev, expectedDev)
+}
+
+// captureHybridModeWarning resets the hybrid mode warning so each test starts a new command, and returns the plain logs
+func captureHybridModeWarning(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	hybridModeDeprecationWarningOnce = sync.Once{}
+	out := &bytes.Buffer{}
+	oktetoLog.Init(logrus.WarnLevel)
+	oktetoLog.SetOutputFormat(oktetoLog.PlainFormat)
+	oktetoLog.SetOutput(out)
+	t.Cleanup(func() {
+		hybridModeDeprecationWarningOnce = sync.Once{}
+		oktetoLog.Init(logrus.WarnLevel)
+	})
+	return out
+}
+
+func TestWarnIfHybridModeWarnsInHybridMode(t *testing.T) {
+	out := captureHybridModeWarning(t)
+
+	warnIfHybridMode(&model.Dev{Mode: constants.OktetoHybridModeFieldValue})
+
+	require.Equal(t, "WARNING: "+hybridModeDeprecatedWarning+"\n", out.String())
+}
+
+func TestWarnIfHybridModeWarnsOnceWhenCalledSeveralTimes(t *testing.T) {
+	out := captureHybridModeWarning(t)
+	dev := &model.Dev{Mode: constants.OktetoHybridModeFieldValue}
+
+	warnIfHybridMode(dev)
+	warnIfHybridMode(dev)
+	warnIfHybridMode(dev)
+
+	require.Equal(t, "WARNING: "+hybridModeDeprecatedWarning+"\n", out.String())
+}
+
+func TestWarnIfHybridModeDoesNotWarnInSyncMode(t *testing.T) {
+	out := captureHybridModeWarning(t)
+
+	warnIfHybridMode(&model.Dev{Mode: constants.OktetoSyncModeFieldValue})
+
+	require.Empty(t, out.String())
+}
+
+func TestWarnIfHybridModeKeepsWarningAfterASyncModeDev(t *testing.T) {
+	out := captureHybridModeWarning(t)
+
+	warnIfHybridMode(&model.Dev{Mode: constants.OktetoSyncModeFieldValue})
+	warnIfHybridMode(&model.Dev{Mode: constants.OktetoHybridModeFieldValue})
+
+	require.Equal(t, "WARNING: "+hybridModeDeprecatedWarning+"\n", out.String())
 }
 
 func TestUpdateKubetoken(t *testing.T) {
