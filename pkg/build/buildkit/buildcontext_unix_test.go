@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -104,4 +105,15 @@ func TestUploadedFolderResolvesSymlinksBeforeParentFolders(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, expected, folder)
+}
+
+func TestHomeSourceIDCanOnlyBeReadByItsOwner(t *testing.T) {
+	home := t.TempDir()
+
+	_, err := homeSourceID(afero.NewOsFs(), home)
+	require.NoError(t, err)
+
+	info, err := os.Stat(filepath.Join(home, sourceIDFile))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(sourceIDFilePermission), info.Mode().Perm())
 }

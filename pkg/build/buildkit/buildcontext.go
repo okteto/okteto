@@ -19,13 +19,14 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
-	"github.com/denisbrodbeck/machineid"
 	"github.com/moby/buildkit/client"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -63,9 +64,19 @@ const (
 	// dockerfileContentPrefix marks a Dockerfile that the shared key identifies by its content
 	dockerfileContentPrefix = "content:"
 
+	// sourceIDFile is the file of the Okteto home with the random value that identifies the home in the source of
+	// the files. The first build that needs it creates it.
+	sourceIDFile           = ".build-source-id"
+	sourceIDFilePermission = 0600
+
 	buildContextIDLength = 32
 	randomSourceBytes    = 16
 )
+
+// sourceIDMu makes the builds that run at the same time in the process read or create the file one after the other
+var sourceIDMu sync.Mutex
+
+var errEmptySourceID = errors.New("the file with the ID of the okteto home is empty")
 
 // buildContextStrategy sets how BuildKit reuses the build context that it saved in previous builds
 type buildContextStrategy interface {
@@ -77,12 +88,14 @@ func newBuildContextStrategy(fs afero.Fs, logger *io.Controller) buildContextStr
 	if !env.LoadBoolean(SmartBuildContextEnabledEnvVar) {
 		return noopBuildContext{}
 	}
+	// the Okteto home exists when a build starts: the Okteto context was read from it
+	homeID := func() (string, error) { return homeSourceID(fs, config.GetOktetoHomeWithFilesystem(fs)) }
 	return &smartBuildContext{
 		fs:          fs,
 		logger:      logger,
 		repoURL:     func(dir string) string { return repository.NewRepository(dir).GetAnonymizedRepo() },
 		repoRoot:    repository.FindTopLevelGitDir,
-		machineID:   machineid.ID,
+		homeID:      homeID,
 		inInstaller: config.RunningInInstaller,
 		inCI:        runningInCI,
 		randomID:    randomSource,
@@ -113,7 +126,7 @@ type smartBuildContext struct {
 	logger      *io.Controller
 	repoURL     func(dir string) string
 	repoRoot    func(dir string) (string, error)
-	machineID   func() (string, error)
+	homeID      func() (string, error)
 	inInstaller func() bool
 	inCI        func() bool
 	randomID    func() string
@@ -320,25 +333,65 @@ func ignorePatterns(content []byte) []string {
 }
 
 // source identifies the directory that the files are sent from (contextPath, without symbolic links). Modification
-// times are only comparable between builds of the same directory. In the installer and in CI, where a job usually is a new clone in the same path,
-// and where there is no stable machine ID (a container), the source is new on every build, so BuildKit compares
-// the files by content.
+// times are only comparable between builds of the same directory. It is made of the ID of the Okteto home and the
+// path: two machines, two users and two containers created from the same image have different sources as long as
+// each one has its own home. In the installer and in CI, where a job usually is a new clone in the same path, and
+// when the ID of the home can not be read or saved, the source is new on every build, so BuildKit compares the
+// files by content.
 func (s *smartBuildContext) source(contextPath string) string {
 	if s.inInstaller() || s.inCI() {
 		return s.randomID()
 	}
-	machineID, err := s.machineID()
-	if err != nil || !isStableMachineID(machineID) {
+	homeID, err := s.homeID()
+	if err != nil {
+		s.logger.Infof("smart build context: the ID of the okteto home is not available, using a new source for this build: %s", err)
 		return s.randomID()
 	}
-	return hashID(machineID, contextPath)
+	return hashID(homeID, contextPath)
 }
 
-// isStableMachineID reports whether a machine ID identifies one machine. Container and cloud images are built with
-// an empty or not initialized machine ID, which is then the same in every container that has no init system.
-func isStableMachineID(machineID string) bool {
-	machineID = strings.TrimSpace(machineID)
-	return machineID != "" && machineID != "uninitialized"
+// homeSourceID returns the random value that identifies an Okteto home in the source of the files. The first call
+// saves it in the home, so a home that is new gets a new one, whatever the machine or the image that it runs on.
+func homeSourceID(fs afero.Fs, oktetoHome string) (string, error) {
+	sourceIDMu.Lock()
+	defer sourceIDMu.Unlock()
+
+	idPath := filepath.Join(oktetoHome, sourceIDFile)
+	if id, err := readSourceID(fs, idPath); err == nil {
+		return id, nil
+	}
+	if err := saveSourceID(fs, idPath, randomSource()); err != nil {
+		return "", err
+	}
+	// processes that create the file at the same time save one value each and the last one stays. A build that used
+	// another one is compared by content the next time, which is slower and gives the same result.
+	return readSourceID(fs, idPath)
+}
+
+func readSourceID(fs afero.Fs, idPath string) (string, error) {
+	content, err := afero.ReadFile(fs, idPath)
+	if err != nil {
+		return "", err
+	}
+	id := strings.TrimSpace(string(content))
+	if id == "" {
+		return "", errEmptySourceID
+	}
+	return id, nil
+}
+
+// saveSourceID writes the value to another file first and renames it, so a build that reads the file at the same
+// time gets a whole value or none
+func saveSourceID(fs afero.Fs, idPath, id string) error {
+	tmpPath := idPath + "." + id
+	err := afero.WriteFile(fs, tmpPath, []byte(id), sourceIDFilePermission)
+	if err == nil {
+		err = fs.Rename(tmpPath, idPath)
+	}
+	if err != nil {
+		_ = fs.Remove(tmpPath)
+	}
+	return err
 }
 
 // hashID returns an identifier that does not reveal the values that it is made of

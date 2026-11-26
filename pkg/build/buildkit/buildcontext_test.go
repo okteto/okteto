@@ -19,11 +19,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/moby/buildkit/client"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/log/io"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
@@ -36,7 +38,7 @@ const (
 	testRepoID         = "github.com/okteto/movies"
 	testContextFolder  = "services/api"
 	testDockerfile     = "services/api/Dockerfile"
-	testMachineID      = "machine"
+	testHomeID         = "home"
 	testRandomSource   = "random"
 	testSourceOpt      = "okteto-local-source:context"
 	testFilePermission = 0600
@@ -71,7 +73,7 @@ func newTestBuildContext(t *testing.T) *testBuildContext {
 			logger:      io.NewIOController(),
 			repoURL:     func(string) string { return testRepoURL },
 			repoRoot:    func(string) (string, error) { return root, nil },
-			machineID:   func() (string, error) { return testMachineID, nil },
+			homeID:      func() (string, error) { return testHomeID, nil },
 			inInstaller: func() bool { return false },
 			inCI:        func() bool { return false },
 			randomID:    func() string { return testRandomSource },
@@ -108,7 +110,7 @@ func (c *testBuildContext) expectedSource(t *testing.T) string {
 	require.NoError(t, err)
 	resolved, err := filepath.EvalSymlinks(absPath)
 	require.NoError(t, err)
-	return hashID(testMachineID, resolved)
+	return hashID(testHomeID, resolved)
 }
 
 // testKey returns the shared key of a build of the test repository
@@ -152,7 +154,7 @@ func TestNewBuildContextStrategyHasEveryDependency(t *testing.T) {
 	require.Same(t, logger, strategy.logger)
 	require.NotNil(t, strategy.repoURL)
 	require.NotNil(t, strategy.repoRoot)
-	require.NotNil(t, strategy.machineID)
+	require.NotNil(t, strategy.homeID)
 	require.NotNil(t, strategy.inInstaller)
 	require.NotNil(t, strategy.inCI)
 	require.NotNil(t, strategy.randomID)
@@ -469,7 +471,7 @@ func TestSmartBuildContextKeyIgnoresCommentsOfTheIgnoreFile(t *testing.T) {
 
 func TestSmartBuildContextSourceIsNewOnEveryBuild(t *testing.T) {
 	tests := []struct {
-		machineID   func() (string, error)
+		homeID      func() (string, error)
 		name        string
 		inInstaller bool
 		inCI        bool
@@ -477,24 +479,16 @@ func TestSmartBuildContextSourceIsNewOnEveryBuild(t *testing.T) {
 		{
 			name:        "in the installer",
 			inInstaller: true,
-			machineID:   func() (string, error) { return testMachineID, nil },
+			homeID:      func() (string, error) { return testHomeID, nil },
 		},
 		{
-			name:      "in CI",
-			inCI:      true,
-			machineID: func() (string, error) { return testMachineID, nil },
+			name:   "in CI",
+			inCI:   true,
+			homeID: func() (string, error) { return testHomeID, nil },
 		},
 		{
-			name:      "machine id not available",
-			machineID: func() (string, error) { return "", errors.New("not found") },
-		},
-		{
-			name:      "empty machine id",
-			machineID: func() (string, error) { return "", nil },
-		},
-		{
-			name:      "machine id not initialized",
-			machineID: func() (string, error) { return "uninitialized\n", nil },
+			name:   "ID of the home not available",
+			homeID: func() (string, error) { return "", errors.New("read-only file system") },
 		},
 	}
 	for _, tt := range tests {
@@ -502,7 +496,7 @@ func TestSmartBuildContextSourceIsNewOnEveryBuild(t *testing.T) {
 			c := newTestBuildContext(t)
 			c.strategy.inInstaller = func() bool { return tt.inInstaller }
 			c.strategy.inCI = func() bool { return tt.inCI }
-			c.strategy.machineID = tt.machineID
+			c.strategy.homeID = tt.homeID
 			builds := 0
 			c.strategy.randomID = func() string {
 				builds++
@@ -518,6 +512,45 @@ func TestSmartBuildContextSourceIsNewOnEveryBuild(t *testing.T) {
 			require.Equal(t, "random-2", second.FrontendAttrs[testSourceOpt])
 		})
 	}
+}
+
+func TestSmartBuildContextDoesNotReadTheIDOfTheHomeInTheInstallerAndInCI(t *testing.T) {
+	tests := []struct {
+		name        string
+		inInstaller bool
+		inCI        bool
+	}{
+		{name: "in the installer", inInstaller: true},
+		{name: "in CI", inCI: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newTestBuildContext(t)
+			c.strategy.inInstaller = func() bool { return tt.inInstaller }
+			c.strategy.inCI = func() bool { return tt.inCI }
+			reads := 0
+			c.strategy.homeID = func() (string, error) {
+				reads++
+				return testHomeID, nil
+			}
+
+			opt := c.configure(t)
+
+			require.Equal(t, testRandomSource, opt.FrontendAttrs[testSourceOpt])
+			require.Zero(t, reads)
+		})
+	}
+}
+
+func TestSmartBuildContextSourceChangesWithTheHome(t *testing.T) {
+	c := newTestBuildContext(t)
+	first := c.configure(t)
+
+	c.strategy.homeID = func() (string, error) { return "another home", nil }
+	second := c.configure(t)
+
+	require.Equal(t, first.SharedKey, second.SharedKey)
+	require.NotEqual(t, first.FrontendAttrs[testSourceOpt], second.FrontendAttrs[testSourceOpt])
 }
 
 func TestSmartBuildContextKeepsTheRequest(t *testing.T) {
@@ -592,8 +625,25 @@ func newTestGitRepository(t *testing.T, remote string) string {
 // configureRealBuildContext runs the strategy that the CLI uses, with its real lookups, as an installer job
 func configureRealBuildContext(t *testing.T, contextPath string) *client.SolveOpt {
 	t.Helper()
-	t.Setenv(SmartBuildContextEnabledEnvVar, "true")
 	t.Setenv("OKTETO_IN_INSTALLER", "true")
+	// an installer job does not use the Okteto home: this one keeps the test away from the home of the developer
+	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
+	return runRealBuildContext(t, contextPath)
+}
+
+// configureRealBuildContextOfAUser runs the strategy that the CLI uses, with its real lookups, as a user with the
+// given Okteto home
+func configureRealBuildContextOfAUser(t *testing.T, contextPath, oktetoHome string) *client.SolveOpt {
+	t.Helper()
+	t.Setenv("OKTETO_IN_INSTALLER", "")
+	t.Setenv("CI", "")
+	t.Setenv(constants.OktetoFolderEnvVar, oktetoHome)
+	return runRealBuildContext(t, contextPath)
+}
+
+func runRealBuildContext(t *testing.T, contextPath string) *client.SolveOpt {
+	t.Helper()
+	t.Setenv(SmartBuildContextEnabledEnvVar, "true")
 	mount, err := fsutil.NewFS(contextPath)
 	require.NoError(t, err)
 	opt := &client.SolveOpt{
@@ -636,19 +686,183 @@ func TestSmartBuildContextIsNotUsedWithALocalRemote(t *testing.T) {
 }
 
 func TestSmartBuildContextSourceInCI(t *testing.T) {
+	home := t.TempDir()
 	t.Setenv(SmartBuildContextEnabledEnvVar, "true")
 	t.Setenv("OKTETO_IN_INSTALLER", "")
 	t.Setenv("CI", "true")
+	t.Setenv(constants.OktetoFolderEnvVar, home)
 	c := newTestBuildContext(t)
 	strategy, ok := newBuildContextStrategy(afero.NewOsFs(), io.NewIOController()).(*smartBuildContext)
 	require.True(t, ok)
-	strategy.machineID = func() (string, error) { return testMachineID, nil }
 
 	first := strategy.source(c.contextPath)
 	second := strategy.source(c.contextPath)
 
 	require.Len(t, first, 32)
 	require.NotEqual(t, first, second)
+	require.NoFileExists(t, filepath.Join(home, sourceIDFile))
+}
+
+func TestSmartBuildContextSourceOfAUser(t *testing.T) {
+	root := newTestGitRepository(t, "git@github.com:okteto/movies.git")
+	contextPath := filepath.Join(root, "services", "api")
+	home := t.TempDir()
+
+	first := configureRealBuildContextOfAUser(t, contextPath, home)
+	second := configureRealBuildContextOfAUser(t, contextPath, home)
+
+	require.Len(t, first.FrontendAttrs[testSourceOpt], 32)
+	require.Equal(t, first.FrontendAttrs[testSourceOpt], second.FrontendAttrs[testSourceOpt])
+	require.FileExists(t, filepath.Join(home, sourceIDFile))
+}
+
+// two containers of the same image build the same path, each one with its own home
+func TestSmartBuildContextSourceOfAUserWithANewHome(t *testing.T) {
+	root := newTestGitRepository(t, "git@github.com:okteto/movies.git")
+	contextPath := filepath.Join(root, "services", "api")
+
+	first := configureRealBuildContextOfAUser(t, contextPath, t.TempDir())
+	second := configureRealBuildContextOfAUser(t, contextPath, t.TempDir())
+
+	require.NotEmpty(t, first.SharedKey)
+	require.Equal(t, first.SharedKey, second.SharedKey)
+	require.NotEqual(t, first.FrontendAttrs[testSourceOpt], second.FrontendAttrs[testSourceOpt])
+}
+
+func TestSmartBuildContextSourceOfAUserWithAHomeThatCanNotBeWritten(t *testing.T) {
+	t.Setenv(SmartBuildContextEnabledEnvVar, "true")
+	t.Setenv("OKTETO_IN_INSTALLER", "")
+	t.Setenv("CI", "")
+	home := t.TempDir()
+	t.Setenv(constants.OktetoFolderEnvVar, home)
+	c := newTestBuildContext(t)
+	fs := afero.NewReadOnlyFs(afero.NewOsFs())
+	strategy, ok := newBuildContextStrategy(fs, io.NewIOController()).(*smartBuildContext)
+	require.True(t, ok)
+
+	first := strategy.source(c.contextPath)
+	second := strategy.source(c.contextPath)
+
+	require.Len(t, first, 32)
+	require.NotEqual(t, first, second)
+	require.NoFileExists(t, filepath.Join(home, sourceIDFile))
+}
+
+func TestHomeSourceIDIsCreatedOnce(t *testing.T) {
+	fs := afero.NewOsFs()
+	home := t.TempDir()
+
+	first, err := homeSourceID(fs, home)
+	require.NoError(t, err)
+	second, err := homeSourceID(fs, home)
+	require.NoError(t, err)
+
+	require.Len(t, first, 32)
+	require.Equal(t, first, second)
+	saved, err := os.ReadFile(filepath.Join(home, sourceIDFile))
+	require.NoError(t, err)
+	require.Equal(t, first, string(saved))
+	// the file that is renamed is not left behind
+	entries, err := os.ReadDir(home)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+}
+
+func TestHomeSourceIDOfAnotherHome(t *testing.T) {
+	fs := afero.NewOsFs()
+
+	first, err := homeSourceID(fs, t.TempDir())
+	require.NoError(t, err)
+	second, err := homeSourceID(fs, t.TempDir())
+	require.NoError(t, err)
+
+	require.NotEqual(t, first, second)
+}
+
+func TestHomeSourceIDKeepsTheValueOfTheFile(t *testing.T) {
+	home := t.TempDir()
+	writeTestFile(t, filepath.Join(home, sourceIDFile), "saved by another build\n")
+
+	// a home that can only be read works with the value that it has
+	id, err := homeSourceID(afero.NewReadOnlyFs(afero.NewOsFs()), home)
+
+	require.NoError(t, err)
+	require.Equal(t, "saved by another build", id)
+}
+
+func TestHomeSourceIDReplacesAFileWithoutValue(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{name: "empty file", content: ""},
+		{name: "blank file", content: " \n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			writeTestFile(t, filepath.Join(home, sourceIDFile), tt.content)
+
+			id, err := homeSourceID(afero.NewOsFs(), home)
+
+			require.NoError(t, err)
+			require.Len(t, id, 32)
+			saved, err := os.ReadFile(filepath.Join(home, sourceIDFile))
+			require.NoError(t, err)
+			require.Equal(t, id, string(saved))
+		})
+	}
+}
+
+func TestHomeSourceIDFailsWhenTheHomeCanNotBeWritten(t *testing.T) {
+	home := t.TempDir()
+
+	id, err := homeSourceID(afero.NewReadOnlyFs(afero.NewOsFs()), home)
+
+	require.Error(t, err)
+	require.Empty(t, id)
+	require.NoFileExists(t, filepath.Join(home, sourceIDFile))
+}
+
+// renameFailsFs is a filesystem that creates files and can not rename them
+type renameFailsFs struct {
+	afero.Fs
+}
+
+func (renameFailsFs) Rename(string, string) error {
+	return errors.New("rename not supported")
+}
+
+func TestHomeSourceIDFailsWhenTheFileCanNotBeRenamed(t *testing.T) {
+	home := t.TempDir()
+
+	id, err := homeSourceID(renameFailsFs{afero.NewOsFs()}, home)
+
+	require.EqualError(t, err, "rename not supported")
+	require.Empty(t, id)
+	entries, err := os.ReadDir(home)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}
+
+func TestHomeSourceIDIsTheSameForBuildsThatStartTogether(t *testing.T) {
+	const builds = 16
+	fs := afero.NewOsFs()
+	home := t.TempDir()
+	ids := make([]string, builds)
+	errs := make([]error, builds)
+	var wg sync.WaitGroup
+	for i := range builds {
+		wg.Go(func() {
+			ids[i], errs[i] = homeSourceID(fs, home)
+		})
+	}
+	wg.Wait()
+
+	for i := range builds {
+		require.NoError(t, errs[i])
+		require.Equal(t, ids[0], ids[i])
+	}
 }
 
 func TestPathInRepository(t *testing.T) {
