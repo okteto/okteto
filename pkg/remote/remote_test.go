@@ -282,6 +282,53 @@ func TestRunDoesNotPassAnInvalidInternalAPIIP(t *testing.T) {
 	require.Empty(t, got.ExtraHosts)
 }
 
+func TestRunPassesTheInternalAPIHostname(t *testing.T) {
+	_, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example"})
+
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_HOSTNAME="okteto-internal-api.okteto.example"`)
+}
+
+func TestRunDoesNotPassAnInvalidInternalAPIHostname(t *testing.T) {
+	_, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example\"\nRUN id"})
+
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_HOSTNAME=""`)
+	require.NotContains(t, dockerfile, "RUN id")
+}
+
+func TestInternalAPIHostname(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+		metadata types.ClusterMetadata
+	}{
+		{
+			name:     "hostname",
+			metadata: types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example"},
+			expected: "okteto-internal-api.okteto.example",
+		},
+		{
+			name:     "without hostname",
+			metadata: types.ClusterMetadata{},
+			expected: "",
+		},
+		{
+			name:     "with a port",
+			metadata: types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example:8443"},
+			expected: "",
+		},
+		{
+			name:     "with a quote",
+			metadata: types.ClusterMetadata{InternalAPIHostname: `okteto-internal-api.okteto.example"`},
+			expected: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, internalAPIHostname(tt.metadata))
+		})
+	}
+}
+
 func TestInternalAPIIP(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -495,6 +542,7 @@ func TestCreateDockerfile(t *testing.T) {
 					SSHAgentPort:           "3000",
 					CommandFlags:           []string{"--name \"test\""},
 					InternalAPIIP:          "10.20.30.40",
+					InternalAPIHostname:    "okteto-internal-api.okteto.example",
 				},
 			},
 			expected: expected{
@@ -543,6 +591,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
 ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
+ENV OKTETO_INTERNAL_API_HOSTNAME="okteto-internal-api.okteto.example"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -652,6 +701,7 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
 ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
+ENV OKTETO_INTERNAL_API_HOSTNAME=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -742,6 +792,7 @@ WORKDIR /okteto/src
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
 ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
+ENV OKTETO_INTERNAL_API_HOSTNAME=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -843,7 +894,10 @@ func TestDockerfileWithCache(t *testing.T) {
 }
 
 // testGitCredentialsEndpoint is the URL Okteto gives the Git credential helper in these tests
-const testGitCredentialsEndpoint = "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials"
+const (
+	testGitCredentialsEndpoint   = "https://okteto-internal-api.okteto.example.com:8443/internal/git/credentials"
+	testGitCredentialsIPEndpoint = "https://10.20.30.40:8443/internal/git/credentials"
+)
 
 func TestRunPassesTheGitCredentialsEndpointOfTheInstaller(t *testing.T) {
 	buildArgs := runRemoteDeploy(t, testGitCredentialsEndpoint, types.ClusterMetadata{GitCredentialsEndpoint: "https://metadata.example.com/internal/git/credentials"})
@@ -948,7 +1002,7 @@ func TestGitCredentialsEndpoint(t *testing.T) {
 func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 	t.Setenv(constants.OktetoDisableGitCredentialHelperEnvVar, "true")
 
-	d := createDeployDockerfile(t, testGitCredentialsEndpoint, "10.20.30.40")
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, okteto.InternalAPI{IP: "10.20.30.40"})
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
@@ -956,7 +1010,7 @@ func TestDockerfileWithoutGitCredentialHelper(t *testing.T) {
 }
 
 func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
-	d := createDeployDockerfile(t, "", "10.20.30.40")
+	d := createDeployDockerfile(t, "", okteto.InternalAPI{IP: "10.20.30.40"})
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
@@ -964,16 +1018,38 @@ func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
 }
 
 func TestDockerfileWithoutInternalAPIIP(t *testing.T) {
-	d := createDeployDockerfile(t, testGitCredentialsEndpoint, "")
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, okteto.InternalAPI{Hostname: "okteto-internal-api.okteto.example.com"})
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
 	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
 }
 
+func TestDockerfileWithGitCredentialHelperForAnEndpointWithTheInternalAPIIP(t *testing.T) {
+	d := createDeployDockerfile(t, testGitCredentialsIPEndpoint, okteto.InternalAPI{Hostname: "okteto-internal-api.okteto.example.com"})
+
+	require.Contains(t, d, "RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true")
+	require.Contains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+}
+
+func TestDockerfileWithoutInternalAPIHostnameForAnEndpointWithTheInternalAPIIP(t *testing.T) {
+	d := createDeployDockerfile(t, testGitCredentialsIPEndpoint, okteto.InternalAPI{IP: "10.20.30.40"})
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+	require.Contains(t, d, "RUN /okteto/bin/okteto registrytoken install --force --log-output=json")
+}
+
+func TestDockerfileWithoutAnHTTPSGitCredentialsEndpoint(t *testing.T) {
+	d := createDeployDockerfile(t, "http://okteto-internal-api.okteto.example.com:8080/internal/git/credentials", okteto.InternalAPI{IP: "10.20.30.40"})
+
+	require.NotContains(t, d, "git-credential")
+	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+}
+
 // createDeployDockerfile returns the Dockerfile that a remote deploy generates with the given Git credentials
-// endpoint and internal IP of the API
-func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint, internalAPIIP string) string {
+// endpoint, internal IP of the API and hostname of the internal API
+func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint string, api okteto.InternalAPI) string {
 	t.Helper()
 	fs := afero.NewMemMapFs()
 	rdc := Runner{
@@ -991,7 +1067,8 @@ func createDeployDockerfile(t *testing.T, gitCredentialsEndpoint, internalAPIIP 
 		Command:                "deploy",
 		Manifest:               &model.Manifest{Name: "test-manifest"},
 		GitCredentialsEndpoint: gitCredentialsEndpoint,
-		InternalAPIIP:          internalAPIIP,
+		InternalAPIIP:          api.IP,
+		InternalAPIHostname:    api.Hostname,
 	})
 
 	require.NoError(t, err)

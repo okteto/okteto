@@ -407,6 +407,7 @@ func TestGetClusterMetadata(t *testing.T) {
 					DivertCRDSEnabled:      true,
 					GitCredentialsEndpoint: "https://okteto-internal-api.test.okteto.com:8443/internal/git/credentials",
 					InternalAPIIP:          "10.20.30.40",
+					InternalAPIHostname:    "okteto-internal-api.test.okteto.com",
 				},
 			},
 		},

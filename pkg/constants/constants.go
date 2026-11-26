@@ -187,6 +187,11 @@ const (
 	// internal routes through. It's empty when the installation doesn't publish a valid one
 	OktetoInternalAPIIPEnvVar = "OKTETO_INTERNAL_API_IP"
 
+	// OktetoInternalAPIHostnameEnvVar Env variable defining the hostname of the internal API of Okteto, which remote
+	// builds verify its certificate against when its endpoints have the internal IP of the Okteto API as their host.
+	// It's empty when the installation doesn't publish a valid one
+	OktetoInternalAPIHostnameEnvVar = "OKTETO_INTERNAL_API_HOSTNAME"
+
 	// OktetoSharedEnvironmentEnvVar Env variable containing the namespace of the shared environment in divert
 	OktetoSharedEnvironmentEnvVar = "OKTETO_SHARED_ENVIRONMENT"
 

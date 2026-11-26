@@ -72,28 +72,35 @@ type endpointClient struct {
 }
 
 // newGetterFromEnv returns the client for the endpoint in OKTETO_GIT_CREDENTIALS_ENDPOINT, the
-// internal IP of the Okteto API in OKTETO_INTERNAL_API_IP and the token in OKTETO_TOKEN. The
-// endpoint only answers inside the cluster, so it doesn't load an Okteto context.
+// internal IP of the Okteto API in OKTETO_INTERNAL_API_IP, the hostname of the internal API in
+// OKTETO_INTERNAL_API_HOSTNAME and the token in OKTETO_TOKEN. The endpoint only answers inside the
+// cluster, so it doesn't load an Okteto context.
 func newGetterFromEnv() (credentialsGetter, error) {
 	return newGetter(
 		os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar),
-		os.Getenv(constants.OktetoInternalAPIIPEnvVar),
+		okteto.InternalAPI{
+			Hostname: os.Getenv(constants.OktetoInternalAPIHostnameEnvVar),
+			IP:       os.Getenv(constants.OktetoInternalAPIIPEnvVar),
+		},
 		os.Getenv(model.OktetoTokenEnvVar),
 	)
 }
 
-// newGetter only sends the token over https to internalAPIIP, never to the address public DNS gives
-// for the endpoint's hostname, which is the ingress, where any user can serve it. certs are trusted
-// on top of the system pool
-func newGetter(endpoint, internalAPIIP, token string, certs ...*x509.Certificate) (credentialsGetter, error) {
+// newGetter only sends the token over https to the internal IP of the Okteto API, never to the
+// address public DNS gives for the hostname of the internal API, which is the ingress, where any user
+// can serve it. The endpoint has the IP or the hostname as its host, and api has the other one. certs
+// are trusted on top of the system pool
+func newGetter(endpoint string, api okteto.InternalAPI, token string, certs ...*x509.Certificate) (credentialsGetter, error) {
 	if endpoint == "" {
 		return nil, errEndpointNotSet
 	}
-	httpClient, err := okteto.NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
-	if errors.Is(err, okteto.ErrInvalidInternalAPIIP) {
+	httpClient, err := okteto.NewInternalAPIHTTPClient(endpoint, api, certs...)
+	switch {
+	case errors.Is(err, okteto.ErrInvalidInternalAPIIP):
 		return nil, fmt.Errorf("%w (%s)", err, constants.OktetoInternalAPIIPEnvVar)
-	}
-	if err != nil {
+	case errors.Is(err, okteto.ErrInvalidInternalAPIHostname):
+		return nil, fmt.Errorf("%w (%s)", err, constants.OktetoInternalAPIHostnameEnvVar)
+	case err != nil:
 		return nil, err
 	}
 	u, err := url.Parse(endpoint)

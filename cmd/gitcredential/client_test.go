@@ -31,8 +31,10 @@ import (
 const (
 	credentialsResponseBody = `{"username":"x-access-token","password":"token","expiresAt":"2099-01-01T00:00:00Z"}`
 
-	internalAPIEndpoint = "https://okteto-internal-api.example.com:8443/internal/git/credentials"
-	internalAPIIP       = "10.20.30.40"
+	internalAPIEndpoint   = "https://okteto-internal-api.example.com:8443/internal/git/credentials"
+	internalAPIIP         = "10.20.30.40"
+	internalAPIIPEndpoint = "https://10.20.30.40:8443/internal/git/credentials"
+	internalAPIHostname   = "okteto-internal-api.example.com"
 
 	// fakeEndpointIP is the IP httptest's TLS servers listen on
 	fakeEndpointIP = "127.0.0.1"
@@ -83,7 +85,15 @@ func setEndpointEnv(t *testing.T, endpoint, ip, token string) {
 	t.Helper()
 	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, endpoint)
 	t.Setenv(constants.OktetoInternalAPIIPEnvVar, ip)
+	t.Setenv(constants.OktetoInternalAPIHostnameEnvVar, "")
 	t.Setenv(model.OktetoTokenEnvVar, token)
+}
+
+// fakeEndpointIPURL is the endpoint of the fake server with fakeEndpointIP as its host. The helper
+// verifies the certificate against the hostname of the internal API it gets apart
+func fakeEndpointIPURL(t *testing.T, server *httptest.Server) string {
+	t.Helper()
+	return "https://" + fakeEndpointIP + ":" + mustParseURL(t, server.URL).Port() + "/internal/git/credentials"
 }
 
 func TestNewGetterFromEnv(t *testing.T) {
@@ -168,10 +178,28 @@ func TestNewGetterFromEnv_HTTPSEndpointAndInternalIP(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestNewGetterFromEnv_EndpointWithTheInternalIPAndTheHostname(t *testing.T) {
+	setEndpointEnv(t, internalAPIIPEndpoint, "", "okteto-token")
+	t.Setenv(constants.OktetoInternalAPIHostnameEnvVar, internalAPIHostname)
+
+	_, err := newGetterFromEnv()
+
+	require.NoError(t, err)
+}
+
+func TestNewGetterFromEnv_EndpointWithTheInternalIPWithoutTheHostname(t *testing.T) {
+	setEndpointEnv(t, internalAPIIPEndpoint, internalAPIIP, "okteto-token")
+
+	_, err := newGetterFromEnv()
+
+	require.ErrorIs(t, err, okteto.ErrInvalidInternalAPIHostname)
+	require.ErrorContains(t, err, constants.OktetoInternalAPIHostnameEnvVar)
+}
+
 func TestGetGitCredentials_SendsTheRepositoryAndTheToken(t *testing.T) {
 	var received receivedRequest
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	getter, err := newGetter(fakeEndpointURL(t, server), fakeEndpointIP, "okteto-token", server.Certificate())
+	getter, err := newGetter(fakeEndpointURL(t, server), okteto.InternalAPI{IP: fakeEndpointIP}, "okteto-token", server.Certificate())
 	require.NoError(t, err)
 
 	_, err = getter.GetGitCredentials(context.Background(), "github.com", "acme/infra")
@@ -294,13 +322,27 @@ func TestGet_FromTheEndpoint(t *testing.T) {
 	var received receivedRequest
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
 	provider := func() (credentialsGetter, error) {
-		return newGetter(fakeEndpointURL(t, server), fakeEndpointIP, "okteto-token", server.Certificate())
+		return newGetter(fakeEndpointURL(t, server), okteto.InternalAPI{IP: fakeEndpointIP}, "okteto-token", server.Certificate())
 	}
 
 	stdout, stderr := runGet(githubRequest, provider)
 
 	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
 	require.Empty(t, stderr)
+}
+
+func TestGet_FromAnEndpointWithTheInternalIP(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
+	provider := func() (credentialsGetter, error) {
+		return newGetter(fakeEndpointIPURL(t, server), okteto.InternalAPI{Hostname: "example.com"}, "okteto-token", server.Certificate())
+	}
+
+	stdout, stderr := runGet(githubRequest, provider)
+
+	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
+	require.Empty(t, stderr)
+	require.Equal(t, "Bearer okteto-token", received.authorization)
 }
 
 func TestGet_WithoutTheEndpointEnvPrintsNothing(t *testing.T) {
@@ -315,11 +357,23 @@ func TestGet_WithoutTheEndpointEnvPrintsNothing(t *testing.T) {
 func TestGet_WithoutTheInternalIPSendsNoToken(t *testing.T) {
 	var received receivedRequest
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	setEndpointEnv(t, server.URL+"/internal/git/credentials", "", "okteto-token")
+	setEndpointEnv(t, fakeEndpointURL(t, server), "", "okteto-token")
 
 	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
 	require.Empty(t, stdout)
 	require.Equal(t, "okteto: no GitHub credentials for acme/infra: the internal IP of the Okteto API is missing or invalid (OKTETO_INTERNAL_API_IP)\n", stderr)
+	require.Equal(t, receivedRequest{}, received)
+}
+
+func TestGet_WithoutTheHostnameOfTheInternalAPISendsNoToken(t *testing.T) {
+	var received receivedRequest
+	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
+	setEndpointEnv(t, fakeEndpointIPURL(t, server), fakeEndpointIP, "okteto-token")
+
+	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
+
+	require.Empty(t, stdout)
+	require.Equal(t, "okteto: no GitHub credentials for acme/infra: the hostname of the internal API is missing or invalid (OKTETO_INTERNAL_API_HOSTNAME)\n", stderr)
 	require.Equal(t, receivedRequest{}, received)
 }
