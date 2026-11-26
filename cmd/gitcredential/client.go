@@ -25,6 +25,7 @@ import (
 	"os"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -71,19 +72,37 @@ type endpointClient struct {
 	token      string
 }
 
+// registryLoader returns the registry of the Okteto context
+type registryLoader func() (string, error)
+
+// contextRegistry loads the Okteto context from the env, as registrytoken does, and returns its registry
+func contextRegistry(ctx context.Context) registryLoader {
+	return func() (string, error) {
+		oktetoContext, err := contextCMD.NewContextCommand().RunStateless(ctx, &contextCMD.Options{})
+		if err != nil {
+			return "", err
+		}
+		return oktetoContext.GetRegistryURL(), nil
+	}
+}
+
 // newGetterFromEnv returns the client for the endpoint in OKTETO_GIT_CREDENTIALS_ENDPOINT, the
-// internal IP of the Okteto API in OKTETO_INTERNAL_API_IP, the hostname of the internal API in
-// OKTETO_INTERNAL_API_HOSTNAME and the token in OKTETO_TOKEN. The endpoint only answers inside the
-// cluster, so it doesn't load an Okteto context.
-func newGetterFromEnv() (credentialsGetter, error) {
-	return newGetter(
-		os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar),
-		okteto.InternalAPI{
-			Hostname: os.Getenv(constants.OktetoInternalAPIHostnameEnvVar),
-			IP:       os.Getenv(constants.OktetoInternalAPIIPEnvVar),
-		},
-		os.Getenv(model.OktetoTokenEnvVar),
-	)
+// internal IP of the Okteto API in OKTETO_INTERNAL_API_IP and the token in OKTETO_TOKEN. The hostname
+// of the internal API comes from the registry that loadRegistry returns, which it only loads when
+// there's an endpoint. It reads the env first: loading the context sets the variables of the .env
+// file in the repository that the env doesn't have, and the token must only go where Okteto says.
+func newGetterFromEnv(loadRegistry registryLoader) (credentialsGetter, error) {
+	endpoint := os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar)
+	if endpoint == "" {
+		return nil, errEndpointNotSet
+	}
+	ip := os.Getenv(constants.OktetoInternalAPIIPEnvVar)
+	token := os.Getenv(model.OktetoTokenEnvVar)
+	registry, err := loadRegistry()
+	if err != nil {
+		return nil, fmt.Errorf("could not load the Okteto context: %w", err)
+	}
+	return newGetter(endpoint, okteto.InternalAPI{Hostname: okteto.InternalAPIHostname(registry), IP: ip}, token)
 }
 
 // newGetter only sends the token over https to the internal IP of the Okteto API, never to the
@@ -98,8 +117,6 @@ func newGetter(endpoint string, api okteto.InternalAPI, token string, certs ...*
 	switch {
 	case errors.Is(err, okteto.ErrInvalidInternalAPIIP):
 		return nil, fmt.Errorf("%w (%s)", err, constants.OktetoInternalAPIIPEnvVar)
-	case errors.Is(err, okteto.ErrInvalidInternalAPIHostname):
-		return nil, fmt.Errorf("%w (%s)", err, constants.OktetoInternalAPIHostnameEnvVar)
 	case err != nil:
 		return nil, err
 	}

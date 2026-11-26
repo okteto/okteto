@@ -95,7 +95,6 @@ ENV {{$key}}={{$val}}
 ENV {{ .SSHAgentHostnameArgName }}="{{ .SSHAgentHostname }}"
 ENV {{ .SSHAgentPortArgName }}="{{ .SSHAgentPort }}"
 ENV {{ .InternalAPIIPArgName }}="{{ .InternalAPIIP }}"
-ENV {{ .InternalAPIHostnameArgName }}="{{ .InternalAPIHostname }}"
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .GitBranchArgName }}
@@ -210,9 +209,8 @@ type Params struct {
 	// InternalAPIIP is the internal IP of the Okteto API remote-run reaches its internal routes through, empty when the
 	// installation doesn't publish a valid one
 	InternalAPIIP string
-	// InternalAPIHostname is the hostname remote-run verifies the certificate of the internal API against when its
-	// endpoints have the internal IP of the Okteto API as their host, empty when the installation doesn't publish a
-	// valid one
+	// InternalAPIHostname is the hostname of the internal API, from the registry of the Okteto context. The Git
+	// credential helper needs it for an endpoint with the internal IP of the Okteto API as its host
 	InternalAPIHostname string
 	// Secrets are the files the remote-run RUN mounts as build secrets
 	Secrets []FileSecret
@@ -253,8 +251,6 @@ type dockerfileTemplateProperties struct {
 	SSHAgentSocketArgName        string
 	InternalAPIIPArgName         string
 	InternalAPIIP                string
-	InternalAPIHostnameArgName   string
-	InternalAPIHostname          string
 	Caches                       []string
 	TestName                     string
 	ManifestName                 string
@@ -317,7 +313,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	params.SSHAgentPort = sc.SSHAgentPort
 	params.GitCredentialsEndpoint = gitCredentialsEndpoint(params.GitCredentialsEndpoint, *sc)
 	params.InternalAPIIP = internalAPIIP(*sc)
-	params.InternalAPIHostname = internalAPIHostname(*sc)
+	params.InternalAPIHostname = okteto.InternalAPIHostname(okteto.GetContext().Registry)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -575,8 +571,6 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		Secrets:                       params.Secrets,
 		InternalAPIIP:                 params.InternalAPIIP,
 		InternalAPIIPArgName:          constants.OktetoInternalAPIIPEnvVar,
-		InternalAPIHostname:           params.InternalAPIHostname,
-		InternalAPIHostnameArgName:    constants.OktetoInternalAPIHostnameEnvVar,
 	}
 
 	dockerfileSyntax.prepareEnvVars()
@@ -736,16 +730,6 @@ func internalAPIIP(sc types.ClusterMetadata) string {
 		return ""
 	}
 	return ip.String()
-}
-
-// internalAPIHostname returns the hostname remote-run verifies the certificate of the internal API against when its
-// endpoints have the internal IP of the Okteto API as their host. It's empty when the installation doesn't publish a
-// valid hostname, and it's only passed when it is one, as it goes into the Dockerfile
-func internalAPIHostname(sc types.ClusterMetadata) string {
-	if !okteto.IsValidInternalAPIHostname(sc.InternalAPIHostname) {
-		return ""
-	}
-	return sc.InternalAPIHostname
 }
 
 func addDefinedHosts(extraHosts []types.HostMap, definedHosts []model.Host) []types.HostMap {

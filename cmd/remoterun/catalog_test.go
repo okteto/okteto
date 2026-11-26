@@ -93,20 +93,19 @@ func warnings(lines []oktetoLog.JSONLogFormat) []oktetoLog.JSONLogFormat {
 }
 
 const (
-	testInternalAPIIP                             = "10.20.30.40"
-	testInternalAPIHostname                       = "okteto-internal-api.okteto.example"
-	testCatalogSecretVariablesEndpoint            = "https://okteto-internal-api.okteto.example:8443/internal/catalog/secret-variables"
-	testCatalogSecretVariablesIPEndpoint          = "https://10.20.30.40:8443/internal/catalog/secret-variables"
-	testCatalogSecretVariablesToken               = "projected-token"
-	internalAPIIPMissingCatalogSecretsError       = "the catalog secret variables can't be fetched: the remote build doesn't get the internal IP of the Okteto API to reach okteto-internal-api.okteto.example"
-	internalAPIIPMissingHint                      = "Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, "
-	internalAPIHostnameMissingCatalogSecretsError = "the catalog secret variables can't be fetched: the remote build doesn't get the hostname of the internal API to reach 10.20.30.40"
-	internalAPIHostnameMissingHint                = "Ask an Okteto admin to make sure the Okteto installation publishes the hostname of the internal API, and that the Okteto CLI starting the remote build passes it on, "
+	testInternalAPIIP                       = "10.20.30.40"
+	testRegistry                            = "registry.okteto.example"
+	testInternalAPIHostname                 = "okteto-internal-api.okteto.example"
+	testCatalogSecretVariablesEndpoint      = "https://okteto-internal-api.okteto.example:8443/internal/catalog/secret-variables"
+	testCatalogSecretVariablesIPEndpoint    = "https://10.20.30.40:8443/internal/catalog/secret-variables"
+	testCatalogSecretVariablesToken         = "projected-token"
+	internalAPIIPMissingCatalogSecretsError = "the catalog secret variables can't be fetched: the remote build doesn't get the internal IP of the Okteto API to reach okteto-internal-api.okteto.example"
+	internalAPIIPMissingHint                = "Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, "
 )
 
 // testInternalAPI is what remote builds get from an installation that
-// publishes both the internal IP of the Okteto API and the hostname of the
-// internal API
+// publishes the internal IP of the Okteto API, with an Okteto context whose
+// registry is testRegistry
 var testInternalAPI = okteto.InternalAPI{Hostname: testInternalAPIHostname, IP: testInternalAPIIP}
 
 // writeTestToken writes content to a token file in a temporary folder, and
@@ -183,9 +182,8 @@ func TestCatalogSecretVariablesWithoutAction(t *testing.T) {
 
 func TestNewCatalogSecretVariablesWithoutAction(t *testing.T) {
 	t.Setenv(constants.OktetoInternalAPIIPEnvVar, testInternalAPIIP)
-	t.Setenv(constants.OktetoInternalAPIHostnameEnvVar, testInternalAPIHostname)
 
-	got, err := newCatalogSecretVariables("", "", catalog.DeployPhase)
+	got, err := newCatalogSecretVariables("", "", testRegistry, catalog.DeployPhase)
 
 	require.NoError(t, err)
 	require.Nil(t, got.newClient)
@@ -194,16 +192,15 @@ func TestNewCatalogSecretVariablesWithoutAction(t *testing.T) {
 }
 
 func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
-	_, err := newCatalogSecretVariables("action-name", "", catalog.DeployPhase)
+	_, err := newCatalogSecretVariables("action-name", "", testRegistry, catalog.DeployPhase)
 
 	require.EqualError(t, err, "--catalog-secret-variables-endpoint is required with --catalog-action")
 }
 
 func TestNewCatalogSecretVariablesForTheAction(t *testing.T) {
 	t.Setenv(constants.OktetoInternalAPIIPEnvVar, testInternalAPIIP)
-	t.Setenv(constants.OktetoInternalAPIHostnameEnvVar, testInternalAPIHostname)
 
-	got, err := newCatalogSecretVariables("action-name", testCatalogSecretVariablesEndpoint, catalog.DestroyPhase)
+	got, err := newCatalogSecretVariables("action-name", testCatalogSecretVariablesEndpoint, testRegistry, catalog.DestroyPhase)
 
 	require.NoError(t, err)
 	require.NotNil(t, got.newClient)
@@ -235,7 +232,7 @@ func TestCatalogSecretVariablesDoNotCallTheEndpointWithoutAValidInternalAPIIP(t 
 
 			got, err := c.get(context.Background())
 
-			require.ErrorAs(t, err, &internalAPIMissingError{})
+			require.ErrorAs(t, err, &internalAPIIPMissingError{})
 			require.EqualError(t, err, internalAPIIPMissingCatalogSecretsError)
 			require.Nil(t, got)
 			require.Empty(t, factory.tokens)
@@ -249,36 +246,19 @@ func TestCatalogSecretVariablesDoNotCallTheEndpointWithoutAValidInternalAPIIP(t 
 
 // Neither the token is read nor the client built: a folder can't be read as a
 // token file, and the factory records every client it creates
-func TestCatalogSecretVariablesDoNotCallAnEndpointWithTheIPWithoutAValidHostname(t *testing.T) {
-	tests := []struct {
-		name     string
-		hostname string
-	}{
-		{name: "without hostname", hostname: ""},
-		{name: "with an invalid hostname", hostname: "okteto-internal-api.okteto.example:8443"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			out := captureJSONLogs(t)
-			factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
-			c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
-			c.newClient = factory.newClient
-			c.tokenFile = t.TempDir()
-			c.endpoint = testCatalogSecretVariablesIPEndpoint
-			c.internalAPI.Hostname = tt.hostname
+func TestCatalogSecretVariablesDoNotCallAnEndpointWithTheIPWithoutTheHostname(t *testing.T) {
+	factory := &recordingCatalogSecretVariablesClientFactory{client: &client.FakeUserClient{}}
+	c := newTestCatalogSecretVariables(t, nil, catalog.DeployPhase)
+	c.newClient = factory.newClient
+	c.tokenFile = t.TempDir()
+	c.endpoint = testCatalogSecretVariablesIPEndpoint
+	c.internalAPI.Hostname = ""
 
-			got, err := c.get(context.Background())
+	got, err := c.get(context.Background())
 
-			require.ErrorAs(t, err, &internalAPIMissingError{})
-			require.EqualError(t, err, internalAPIHostnameMissingCatalogSecretsError)
-			require.Nil(t, got)
-			require.Empty(t, factory.tokens)
-			require.Equal(t, []oktetoLog.JSONLogFormat{
-				catalogLog(oktetoLog.InfoLevel, internalAPIHostnameMissingHint+"then deploy again."),
-				catalogLog(oktetoLog.ErrorLevel, internalAPIHostnameMissingCatalogSecretsError),
-			}, jsonLogs(t, out))
-		})
-	}
+	require.ErrorIs(t, err, okteto.ErrInvalidInternalAPIHostname)
+	require.Nil(t, got)
+	require.Empty(t, factory.tokens)
 }
 
 // Only the first installations with catalog secret variables give an http
@@ -355,19 +335,6 @@ func TestCatalogSecretVariablesBuildsTheClientForTheEndpointAndTheInternalAPIIP(
 	require.Equal(t, []okteto.InternalAPI{testInternalAPI}, factory.internalAPIs)
 }
 
-// Installations whose chart doesn't publish the hostname give an endpoint
-// with it, which only needs the IP
-func TestCatalogSecretVariablesGetsThemFromAnEndpointWithTheHostnameWithoutTheHostname(t *testing.T) {
-	getter := &recordingCatalogSecretVariablesGetter{}
-	c := newTestCatalogSecretVariables(t, getter, catalog.DeployPhase)
-	c.internalAPI.Hostname = ""
-
-	_, err := c.get(context.Background())
-
-	require.NoError(t, err)
-	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: testCatalogSecretVariablesEndpoint, action: "action-name"}, getter)
-}
-
 func TestCatalogSecretVariablesGetsThemFromAnEndpointWithTheIP(t *testing.T) {
 	getter := &recordingCatalogSecretVariablesGetter{}
 	c := newTestCatalogSecretVariables(t, getter, catalog.DeployPhase)
@@ -400,7 +367,7 @@ func TestCatalogSecretVariablesPointsToForceDestroyWithoutTheInternalAPIIPOnDest
 
 	_, err := c.get(context.Background())
 
-	require.ErrorAs(t, err, &internalAPIMissingError{})
+	require.ErrorAs(t, err, &internalAPIIPMissingError{})
 	require.Contains(t, jsonLogs(t, out), catalogLog(oktetoLog.InfoLevel, internalAPIIPMissingHint+"then destroy again, or use force destroy to remove the environment even if the destroy commands can't run."))
 }
 

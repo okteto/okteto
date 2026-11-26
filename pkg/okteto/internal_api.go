@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -47,8 +48,18 @@ type InternalAPI struct {
 	IP string
 }
 
-// IsValidInternalAPIHostname is true when hostname can be the hostname of the internal API
-func IsValidInternalAPIHostname(hostname string) bool {
+// InternalAPIHostname returns the hostname of the internal API of the Okteto installation whose registry is
+// registry: Okteto serves it at okteto-internal-api.<subdomain>, as it serves the registry at registry.<subdomain>.
+// It's empty without a registry
+func InternalAPIHostname(registry string) string {
+	if registry == "" {
+		return ""
+	}
+	return "okteto-internal-api." + strings.TrimPrefix(registry, "registry.")
+}
+
+// isValidInternalAPIHostname is true when hostname can be the hostname of the internal API
+func isValidInternalAPIHostname(hostname string) bool {
 	return len(validation.IsDNS1123Subdomain(hostname)) == 0
 }
 
@@ -115,7 +126,7 @@ func newInternalAPITarget(endpoint string, api InternalAPI) (internalAPITarget, 
 	ip := net.ParseIP(hostname)
 	if ip != nil {
 		hostname = api.Hostname
-		if !IsValidInternalAPIHostname(hostname) {
+		if !isValidInternalAPIHostname(hostname) {
 			return internalAPITarget{}, ErrInvalidInternalAPIHostname
 		}
 	} else {

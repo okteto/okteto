@@ -61,7 +61,9 @@ func getCmd(ctx context.Context) *cobra.Command {
 		Short: "Print the credentials for the repository in Git's request",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
-			get(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), newGetterFromEnv)
+			get(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), func() (credentialsGetter, error) {
+				return newGetterFromEnv(contextRegistry(ctx))
+			})
 		},
 	}
 }

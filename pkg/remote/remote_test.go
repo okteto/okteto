@@ -231,7 +231,7 @@ func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) (*type
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
 		Contexts: map[string]*okteto.Context{
-			"test": {Namespace: "namespace"},
+			"test": {Namespace: "namespace", Registry: "registry.okteto.example.com"},
 		},
 	}
 	fs := afero.NewMemMapFs()
@@ -280,53 +280,6 @@ func TestRunDoesNotPassAnInvalidInternalAPIIP(t *testing.T) {
 
 	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_IP=""`)
 	require.Empty(t, got.ExtraHosts)
-}
-
-func TestRunPassesTheInternalAPIHostname(t *testing.T) {
-	_, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example"})
-
-	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_HOSTNAME="okteto-internal-api.okteto.example"`)
-}
-
-func TestRunDoesNotPassAnInvalidInternalAPIHostname(t *testing.T) {
-	_, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example\"\nRUN id"})
-
-	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_HOSTNAME=""`)
-	require.NotContains(t, dockerfile, "RUN id")
-}
-
-func TestInternalAPIHostname(t *testing.T) {
-	tests := []struct {
-		name     string
-		expected string
-		metadata types.ClusterMetadata
-	}{
-		{
-			name:     "hostname",
-			metadata: types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example"},
-			expected: "okteto-internal-api.okteto.example",
-		},
-		{
-			name:     "without hostname",
-			metadata: types.ClusterMetadata{},
-			expected: "",
-		},
-		{
-			name:     "with a port",
-			metadata: types.ClusterMetadata{InternalAPIHostname: "okteto-internal-api.okteto.example:8443"},
-			expected: "",
-		},
-		{
-			name:     "with a quote",
-			metadata: types.ClusterMetadata{InternalAPIHostname: `okteto-internal-api.okteto.example"`},
-			expected: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, internalAPIHostname(tt.metadata))
-		})
-	}
 }
 
 func TestInternalAPIIP(t *testing.T) {
@@ -542,7 +495,6 @@ func TestCreateDockerfile(t *testing.T) {
 					SSHAgentPort:           "3000",
 					CommandFlags:           []string{"--name \"test\""},
 					InternalAPIIP:          "10.20.30.40",
-					InternalAPIHostname:    "okteto-internal-api.okteto.example",
 				},
 			},
 			expected: expected{
@@ -591,7 +543,6 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
 ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
-ENV OKTETO_INTERNAL_API_HOSTNAME="okteto-internal-api.okteto.example"
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -701,7 +652,6 @@ ENV OKTETO_DEPENDENCY_DATABASE_VARIABLE_USERNAME="dependency_user"
 ENV OKTETO_SSH_AGENT_HOSTNAME="ssh-agent.default.svc.cluster.local"
 ENV OKTETO_SSH_AGENT_PORT="3000"
 ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
-ENV OKTETO_INTERNAL_API_HOSTNAME=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -792,7 +742,6 @@ WORKDIR /okteto/src
 ENV OKTETO_SSH_AGENT_HOSTNAME=""
 ENV OKTETO_SSH_AGENT_PORT=""
 ENV OKTETO_INTERNAL_API_IP="10.20.30.40"
-ENV OKTETO_INTERNAL_API_HOSTNAME=""
 
 ARG OKTETO_GIT_COMMIT
 ARG OKTETO_GIT_BRANCH
@@ -909,6 +858,12 @@ func TestRunPassesTheGitCredentialsEndpointOfTheClusterMetadata(t *testing.T) {
 	buildArgs := runRemoteDeploy(t, "", types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsEndpoint})
 
 	require.Contains(t, buildArgs, "OKTETO_GIT_CREDENTIALS_ENDPOINT="+testGitCredentialsEndpoint)
+}
+
+func TestRunInstallsTheGitCredentialHelperForAnEndpointWithTheInternalAPIIP(t *testing.T) {
+	_, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{GitCredentialsEndpoint: testGitCredentialsIPEndpoint})
+
+	require.Contains(t, dockerfile, "RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true")
 }
 
 func TestRunIgnoresAGitCredentialsEndpointSetAfterTheCommandReadIt(t *testing.T) {

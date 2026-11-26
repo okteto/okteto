@@ -337,3 +337,19 @@ func TestCheckInternalAPIEndpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestInternalAPIHostname(t *testing.T) {
+	tests := []struct {
+		name     string
+		registry string
+		expected string
+	}{
+		{name: "registry", registry: "registry.okteto.example.com", expected: "okteto-internal-api.okteto.example.com"},
+		{name: "no registry", registry: "", expected: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, InternalAPIHostname(tt.registry))
+		})
+	}
+}

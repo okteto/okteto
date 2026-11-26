@@ -74,9 +74,9 @@ type catalogSecretVariables struct {
 	tokenFile string
 	action    string
 	endpoint  string
-	// internalAPI has the internal IP of the Okteto API and the hostname of
-	// the internal API that the CLI starting the remote build passes on. Each
-	// is empty when the installation doesn't publish it
+	// internalAPI has the internal IP of the Okteto API that the CLI starting
+	// the remote build passes on, empty when the installation doesn't publish
+	// it, and the hostname of the internal API from the Okteto context
 	internalAPI okteto.InternalAPI
 	// phase is the operation whose commands get the variables
 	phase catalog.Phase
@@ -113,19 +113,15 @@ func (invalidCatalogSecretVariableNamesError) Error() string {
 // reach
 var errCatalogSecretVariablesEndpointNotHTTPS = errors.New("the catalog secret variables can't be fetched: the Okteto installation gives an endpoint that isn't https")
 
-// internalAPIMissingError is returned when the remote build doesn't get what
-// it needs to reach the endpoint through the internal IP of the Okteto API,
-// so the request isn't sent: the IP for an endpoint with a hostname, or the
-// hostname for one with the IP
-type internalAPIMissingError struct {
-	// missing describes what the remote build doesn't get
-	missing string
-	// host is the host of the endpoint
-	host string
+// internalAPIIPMissingError is returned when the remote build doesn't get a
+// valid internal IP of the Okteto API to reach the endpoint through, so the
+// request isn't sent
+type internalAPIIPMissingError struct {
+	hostname string
 }
 
-func (e internalAPIMissingError) Error() string {
-	return fmt.Sprintf("the catalog secret variables can't be fetched: the remote build doesn't get %s to reach %s", e.missing, e.host)
+func (e internalAPIIPMissingError) Error() string {
+	return fmt.Sprintf("the catalog secret variables can't be fetched: the remote build doesn't get the internal IP of the Okteto API to reach %s", e.hostname)
 }
 
 // addCatalogSecretVariablesFlags adds the flags to get the catalog secret
@@ -137,9 +133,10 @@ func addCatalogSecretVariablesFlags(cmd *cobra.Command, action, endpoint *string
 }
 
 // newCatalogSecretVariables returns the getter of the catalog secret variables
-// of the action, for the commands of the phase. Without an action, nothing is
-// fetched
-func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (catalogSecretVariables, error) {
+// of the action, for the commands of the phase. The hostname of the internal
+// API comes from registry, the registry of the Okteto context. Without an
+// action, nothing is fetched
+func newCatalogSecretVariables(action, endpoint, registry string, phase catalog.Phase) (catalogSecretVariables, error) {
 	c := catalogSecretVariables{action: action, endpoint: endpoint, phase: phase}
 	if action == "" {
 		return c, nil
@@ -149,7 +146,7 @@ func newCatalogSecretVariables(action, endpoint string, phase catalog.Phase) (ca
 	}
 	c.tokenFile = catalog.SecretVariablesTokenPath
 	c.internalAPI = okteto.InternalAPI{
-		Hostname: os.Getenv(constants.OktetoInternalAPIHostnameEnvVar),
+		Hostname: okteto.InternalAPIHostname(registry),
 		IP:       os.Getenv(constants.OktetoInternalAPIIPEnvVar),
 	}
 	c.newClient = newCatalogSecretVariablesClient
@@ -232,9 +229,7 @@ func (c catalogSecretVariables) fetch(ctx context.Context) (types.CatalogSecretV
 	}
 	switch err := okteto.CheckInternalAPIEndpoint(c.endpoint, c.internalAPI); {
 	case errors.Is(err, okteto.ErrInvalidInternalAPIIP):
-		return types.CatalogSecretVariables{}, internalAPIMissingError{missing: "the internal IP of the Okteto API", host: u.Hostname()}
-	case errors.Is(err, okteto.ErrInvalidInternalAPIHostname):
-		return types.CatalogSecretVariables{}, internalAPIMissingError{missing: "the hostname of the internal API", host: u.Hostname()}
+		return types.CatalogSecretVariables{}, internalAPIIPMissingError{hostname: u.Hostname()}
 	case err != nil:
 		return types.CatalogSecretVariables{}, err
 	}
@@ -292,7 +287,7 @@ func (c catalogSecretVariables) logError(err error) {
 	oktetoLog.SetStage(catalogSecretVariablesStage)
 	var unresolved unresolvedCatalogSecretVariablesError
 	var invalidNames invalidCatalogSecretVariableNamesError
-	var apiMissing internalAPIMissingError
+	var ipMissing internalAPIIPMissingError
 	switch {
 	case errors.As(err, &unresolved):
 		for _, v := range unresolved.variables {
@@ -304,8 +299,8 @@ func (c catalogSecretVariables) logError(err error) {
 			oktetoLog.Println(line)
 		}
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to rename the variable in the catalog item, %s", c.retryHint()))
-	case errors.As(err, &apiMissing):
-		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Okteto installation publishes %s, and that the Okteto CLI starting the remote build passes it on, %s", apiMissing.missing, c.retryHint()))
+	case errors.As(err, &ipMissing):
+		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, %s", c.retryHint()))
 	case errors.Is(err, errCatalogSecretVariablesEndpointNotHTTPS):
 		oktetoLog.Println(fmt.Sprintf("Ask an Okteto admin to upgrade the Okteto installation, %s", c.retryHint()))
 	}
