@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -65,11 +66,16 @@ const (
 	ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
 	composeVolumesUrl = "https://www.okteto.com/docs/reference/docker-compose/#volumes-string-optional"
+
+	hybridModeDeprecatedWarning = "Hybrid mode is deprecated and will be removed in a future release.\n    Use sync mode instead: remove 'mode: hybrid' from your development container and define the folders to synchronize in 'sync'.\n    Learn more: https://www.okteto.com/docs/reference/okteto-manifest/#sync-string-required"
 )
 
 var (
 	errConfigNotConfigured     = fmt.Errorf("kubeconfig not found")
 	errAnotherUpCommandStarted = errors.New("development container has been deactivated by another 'okteto up' command")
+
+	// hybridModeDeprecationWarningOnce keeps the hybrid mode deprecation warning to one per command
+	hybridModeDeprecationWarningOnce sync.Once
 )
 
 // Options represents the options available on up command
@@ -439,6 +445,19 @@ func loadManifestOverrides(dev *model.Dev, upOptions *Options) error {
 	return nil
 }
 
+// warnIfHybridMode warns that hybrid mode is deprecated when the development container runs in hybrid mode.
+// It is called once the manifest and the development container are loaded, right before the activation loop,
+// and the warning is logged once even though the development container can be activated several times
+// along the same command (retries and reconnections)
+func warnIfHybridMode(dev *model.Dev) {
+	if !dev.IsHybridModeEnabled() {
+		return
+	}
+	hybridModeDeprecationWarningOnce.Do(func() {
+		oktetoLog.Warning(hybridModeDeprecatedWarning)
+	})
+}
+
 func setSyncDefaultsByDevMode(dev *model.Dev, getSyncTempDir func() (string, error)) error {
 	if dev.IsHybridModeEnabled() {
 		syncTempDir, err := getSyncTempDir()
@@ -520,6 +539,8 @@ func (up *upContext) start() error {
 	up.analyticsMeta.DevProps(up.Dev)
 	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
 	up.analyticsMeta.SetNamespace(up.Namespace)
+
+	warnIfHybridMode(up.Dev)
 
 	go up.activateLoop()
 
