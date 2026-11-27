@@ -48,14 +48,18 @@ type InternalAPI struct {
 	IP string
 }
 
-// InternalAPIHostname returns the hostname of the internal API of the Okteto installation whose registry is
-// registry: Okteto serves it at okteto-internal-api.<subdomain>, as it serves the registry at registry.<subdomain>.
-// It's empty without a registry
-func InternalAPIHostname(registry string) string {
-	if registry == "" {
+// InternalAPIHostname returns the hostname of the Okteto context named contextName, the URL of the Okteto API, in
+// lowercase and without the scheme or the port. The internal API serves the certificate of the Okteto API, so the CLI
+// checks it against the same hostname. It's empty when contextName has no host
+func InternalAPIHostname(contextName string) string {
+	if !strings.Contains(contextName, "://") {
+		contextName = "https://" + contextName
+	}
+	u, err := url.Parse(contextName)
+	if err != nil {
 		return ""
 	}
-	return "okteto-internal-api." + strings.TrimPrefix(registry, "registry.")
+	return strings.ToLower(u.Hostname())
 }
 
 // isValidInternalAPIHostname is true when hostname can be the hostname of the internal API
@@ -75,8 +79,9 @@ func CheckInternalAPIEndpoint(endpoint string, api InternalAPI) error {
 // Host and verifies the certificate against it, with the system pool and certs. It never resolves the hostname, which
 // public DNS resolves to the ingress, and fails instead when api lacks what the endpoint needs.
 //
-// It never goes through a proxy, as the IP is only reachable inside the cluster, and never follows a redirect, which
-// would take the request somewhere else. It doesn't read the Okteto context: the Git credential helper runs without one
+// With the insecure mode of the CLI on, it skips the certificate check, as the client of the Okteto API does. It never
+// goes through a proxy, as the IP is only reachable inside the cluster, and never follows a redirect, which would take
+// the request somewhere else. It doesn't read the Okteto context
 func NewInternalAPIHTTPClient(endpoint string, api InternalAPI, certs ...*x509.Certificate) (*http.Client, error) {
 	target, err := newInternalAPITarget(endpoint, api)
 	if err != nil {
@@ -96,6 +101,7 @@ func NewInternalAPIHTTPClient(endpoint string, api InternalAPI, certs ...*x509.C
 	transport.Proxy = nil
 	transport.TLSClientConfig.RootCAs = pool
 	transport.TLSClientConfig.ServerName = target.hostname
+	transport.TLSClientConfig.InsecureSkipVerify = insecureSkipTLSVerify // skipcq: GSC-G402
 
 	return &http.Client{
 		Transport: &internalAPITransport{target: target, base: transport},

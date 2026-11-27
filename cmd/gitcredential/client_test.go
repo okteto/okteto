@@ -15,10 +15,11 @@ package gitcredential
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -35,9 +36,9 @@ const (
 	internalAPIEndpoint   = "https://okteto-internal-api.example.com:8443/internal/git/credentials"
 	internalAPIIP         = "10.20.30.40"
 	internalAPIIPEndpoint = "https://10.20.30.40:8443/internal/git/credentials"
-	// testRegistry is the registry of the Okteto context, so the hostname of the internal API is
-	// okteto-internal-api.example.com
-	testRegistry = "registry.example.com"
+	// testContextName is the Okteto context in the env, whose hostname the helper checks the
+	// certificate against for an endpoint with the IP
+	testContextName = "https://okteto.example.com"
 
 	// fakeEndpointIP is the IP httptest's TLS servers listen on
 	fakeEndpointIP = "127.0.0.1"
@@ -89,18 +90,15 @@ func setEndpointEnv(t *testing.T, endpoint, ip, token string) {
 	t.Setenv(constants.OktetoGitCredentialsEndpointEnvVar, endpoint)
 	t.Setenv(constants.OktetoInternalAPIIPEnvVar, ip)
 	t.Setenv(model.OktetoTokenEnvVar, token)
+	t.Setenv(model.OktetoURLEnvVar, "")
+	t.Setenv(model.OktetoContextEnvVar, testContextName)
 }
 
-// withRegistry loads an Okteto context whose registry is registry
-func withRegistry(registry string) registryLoader {
-	return func() (string, error) {
-		return registry, nil
-	}
-}
-
-// fromEnv is newGetterFromEnv with an Okteto context whose registry is testRegistry
-func fromEnv() (credentialsGetter, error) {
-	return newGetterFromEnv(withRegistry(testRegistry))
+// unsetEnv unsets key during the test, so that a .env file could set it
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+	t.Setenv(key, "")
+	require.NoError(t, os.Unsetenv(key))
 }
 
 // fakeEndpointIPURL is the endpoint of the fake server with fakeEndpointIP as its host. The helper
@@ -177,7 +175,7 @@ func TestNewGetterFromEnv(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setEndpointEnv(t, tt.endpoint, tt.ip, tt.token)
 
-			_, err := fromEnv()
+			_, err := newGetterFromEnv()
 
 			require.ErrorIs(t, err, tt.expectedErr)
 		})
@@ -187,7 +185,7 @@ func TestNewGetterFromEnv(t *testing.T) {
 func TestNewGetterFromEnv_HTTPSEndpointAndInternalIP(t *testing.T) {
 	setEndpointEnv(t, internalAPIEndpoint, internalAPIIP, "okteto-token")
 
-	_, err := fromEnv()
+	_, err := newGetterFromEnv()
 
 	require.NoError(t, err)
 }
@@ -195,50 +193,56 @@ func TestNewGetterFromEnv_HTTPSEndpointAndInternalIP(t *testing.T) {
 func TestNewGetterFromEnv_EndpointWithTheInternalIP(t *testing.T) {
 	setEndpointEnv(t, internalAPIIPEndpoint, "", "okteto-token")
 
-	_, err := fromEnv()
+	_, err := newGetterFromEnv()
 
 	require.NoError(t, err)
 }
 
-func TestNewGetterFromEnv_EndpointWithTheInternalIPWithoutARegistry(t *testing.T) {
+func TestNewGetterFromEnv_EndpointWithTheInternalIPWithoutAnOktetoContext(t *testing.T) {
 	setEndpointEnv(t, internalAPIIPEndpoint, internalAPIIP, "okteto-token")
+	t.Setenv(model.OktetoContextEnvVar, "")
 
-	_, err := newGetterFromEnv(withRegistry(""))
+	_, err := newGetterFromEnv()
+
+	require.ErrorIs(t, err, okteto.ErrInvalidInternalAPIHostname)
+	require.ErrorContains(t, err, "(OKTETO_URL or OKTETO_CONTEXT)")
+}
+
+// Loading the Okteto context would read the .env file of the repository Git runs the helper in,
+// which could then pick where the token goes
+func TestNewGetterFromEnv_DoesNotReadTheDotEnv(t *testing.T) {
+	setEndpointEnv(t, internalAPIIPEndpoint, "", "okteto-token")
+	unsetEnv(t, model.OktetoURLEnvVar)
+	unsetEnv(t, model.OktetoContextEnvVar)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".env"), []byte("OKTETO_URL=https://okteto.example.com\n"), 0600))
+	t.Chdir(dir)
+
+	_, err := newGetterFromEnv()
 
 	require.ErrorIs(t, err, okteto.ErrInvalidInternalAPIHostname)
 }
 
-func TestNewGetterFromEnv_FailsWithoutTheOktetoContext(t *testing.T) {
-	setEndpointEnv(t, internalAPIEndpoint, internalAPIIP, "okteto-token")
+func TestContextNameFromEnv(t *testing.T) {
+	tests := []struct {
+		name        string
+		oktetoURL   string
+		contextName string
+		expected    string
+	}{
+		{name: "OKTETO_URL", oktetoURL: "https://okteto.example.com", expected: "https://okteto.example.com"},
+		{name: "OKTETO_CONTEXT", contextName: "https://okteto.example.com", expected: "https://okteto.example.com"},
+		{name: "OKTETO_URL first", oktetoURL: "https://okteto.example.com", contextName: "https://other.example.com", expected: "https://okteto.example.com"},
+		{name: "neither"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(model.OktetoURLEnvVar, tt.oktetoURL)
+			t.Setenv(model.OktetoContextEnvVar, tt.contextName)
 
-	_, err := newGetterFromEnv(func() (string, error) { return "", errors.New("okteto context not initialized") })
-
-	require.EqualError(t, err, "could not load the Okteto context: okteto context not initialized")
-}
-
-// Loading the context sets the variables of a .env file that the env doesn't have
-func TestNewGetterFromEnv_ReadsTheEnvBeforeLoadingTheOktetoContext(t *testing.T) {
-	setEndpointEnv(t, internalAPIEndpoint, internalAPIIP, "")
-
-	_, err := newGetterFromEnv(func() (string, error) {
-		t.Setenv(model.OktetoTokenEnvVar, "token-from-a-dot-env")
-		return testRegistry, nil
-	})
-
-	require.ErrorIs(t, err, errTokenNotSet)
-}
-
-func TestNewGetterFromEnv_DoesNotLoadTheOktetoContextWithoutTheEndpoint(t *testing.T) {
-	setEndpointEnv(t, "", internalAPIIP, "okteto-token")
-	loaded := false
-
-	_, err := newGetterFromEnv(func() (string, error) {
-		loaded = true
-		return testRegistry, nil
-	})
-
-	require.ErrorIs(t, err, errEndpointNotSet)
-	require.False(t, loaded)
+			require.Equal(t, tt.expected, contextNameFromEnv())
+		})
+	}
 }
 
 func TestGetGitCredentials_SendsTheRepositoryAndTheToken(t *testing.T) {
@@ -393,7 +397,7 @@ func TestGet_FromAnEndpointWithTheInternalIP(t *testing.T) {
 func TestGet_WithoutTheEndpointEnvPrintsNothing(t *testing.T) {
 	setEndpointEnv(t, "", internalAPIIP, "okteto-token")
 
-	stdout, stderr := runGet(githubRequest, fromEnv)
+	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
 	require.Empty(t, stdout)
 	require.Empty(t, stderr)
@@ -404,7 +408,7 @@ func TestGet_WithoutTheInternalIPSendsNoToken(t *testing.T) {
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
 	setEndpointEnv(t, fakeEndpointURL(t, server), "", "okteto-token")
 
-	stdout, stderr := runGet(githubRequest, fromEnv)
+	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
 	require.Empty(t, stdout)
 	require.Equal(t, "okteto: no GitHub credentials for acme/infra: the internal IP of the Okteto API is missing or invalid (OKTETO_INTERNAL_API_IP)\n", stderr)
@@ -414,14 +418,12 @@ func TestGet_WithoutTheInternalIPSendsNoToken(t *testing.T) {
 func TestGet_WithoutTheOktetoContextSendsNoToken(t *testing.T) {
 	var received receivedRequest
 	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	setEndpointEnv(t, fakeEndpointIPURL(t, server), fakeEndpointIP, "okteto-token")
-	provider := func() (credentialsGetter, error) {
-		return newGetterFromEnv(func() (string, error) { return "", errors.New("okteto context not initialized") })
-	}
+	setEndpointEnv(t, fakeEndpointIPURL(t, server), "", "okteto-token")
+	t.Setenv(model.OktetoContextEnvVar, "")
 
-	stdout, stderr := runGet(githubRequest, provider)
+	stdout, stderr := runGet(githubRequest, newGetterFromEnv)
 
 	require.Empty(t, stdout)
-	require.Equal(t, "okteto: no GitHub credentials for acme/infra: could not load the Okteto context: okteto context not initialized\n", stderr)
+	require.Equal(t, "okteto: no GitHub credentials for acme/infra: the hostname of the internal API is missing or invalid (OKTETO_URL or OKTETO_CONTEXT)\n", stderr)
 	require.Equal(t, receivedRequest{}, received)
 }

@@ -209,8 +209,8 @@ type Params struct {
 	// InternalAPIIP is the internal IP of the Okteto API remote-run reaches its internal routes through, empty when the
 	// installation doesn't publish a valid one
 	InternalAPIIP string
-	// InternalAPIHostname is the hostname of the internal API, from the registry of the Okteto context. The Git
-	// credential helper needs it for an endpoint with the internal IP of the Okteto API as its host
+	// InternalAPIHostname is the hostname the Git credential helper checks the certificate of the internal API against
+	// for an endpoint with the internal IP of the Okteto API as its host: the one of the Okteto context
 	InternalAPIHostname string
 	// Secrets are the files the remote-run RUN mounts as build secrets
 	Secrets []FileSecret
@@ -313,7 +313,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	params.SSHAgentPort = sc.SSHAgentPort
 	params.GitCredentialsEndpoint = gitCredentialsEndpoint(params.GitCredentialsEndpoint, *sc)
 	params.InternalAPIIP = internalAPIIP(*sc)
-	params.InternalAPIHostname = okteto.InternalAPIHostname(okteto.GetContext().Registry)
+	params.InternalAPIHostname = okteto.InternalAPIHostname(okteto.GetContext().Name)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {

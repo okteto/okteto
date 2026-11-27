@@ -231,7 +231,7 @@ func runWithClusterMetadata(t *testing.T, metadata types.ClusterMetadata) (*type
 	okteto.CurrentStore = &okteto.ContextStore{
 		CurrentContext: "test",
 		Contexts: map[string]*okteto.Context{
-			"test": {Namespace: "namespace", Registry: "registry.okteto.example.com"},
+			"test": {Name: "https://okteto.okteto.example.com", Namespace: "namespace"},
 		},
 	}
 	fs := afero.NewMemMapFs()
@@ -973,7 +973,7 @@ func TestDockerfileWithoutGitCredentialsEndpoint(t *testing.T) {
 }
 
 func TestDockerfileWithoutInternalAPIIP(t *testing.T) {
-	d := createDeployDockerfile(t, testGitCredentialsEndpoint, okteto.InternalAPI{Hostname: "okteto-internal-api.okteto.example.com"})
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, okteto.InternalAPI{Hostname: "okteto.okteto.example.com"})
 
 	require.NotContains(t, d, "git-credential")
 	require.NotContains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
@@ -981,7 +981,7 @@ func TestDockerfileWithoutInternalAPIIP(t *testing.T) {
 }
 
 func TestDockerfileWithGitCredentialHelperForAnEndpointWithTheInternalAPIIP(t *testing.T) {
-	d := createDeployDockerfile(t, testGitCredentialsIPEndpoint, okteto.InternalAPI{Hostname: "okteto-internal-api.okteto.example.com"})
+	d := createDeployDockerfile(t, testGitCredentialsIPEndpoint, okteto.InternalAPI{Hostname: "okteto.okteto.example.com"})
 
 	require.Contains(t, d, "RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true")
 	require.Contains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)

@@ -138,7 +138,7 @@ It is important that this command does the minimum and must not do calculations 
 				Variables:    options.Variables,
 			}
 
-			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, oktetoContext.GetRegistryURL(), catalog.DeployPhase)
+			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, oktetoContext.GetCurrentName(), catalog.DeployPhase)
 			if err != nil {
 				return err
 			}

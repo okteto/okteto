@@ -139,7 +139,7 @@ func TestInternalAPIHTTPClientVerifiesTheCertificateAgainstTheHostname(t *testin
 		{
 			name:         "endpoint with the IP",
 			endpointHost: "127.0.0.1",
-			api:          InternalAPI{Hostname: "okteto-internal-api.other.example"},
+			api:          InternalAPI{Hostname: "okteto.other.example"},
 		},
 	}
 	for _, tt := range tests {
@@ -166,6 +166,24 @@ func TestInternalAPIHTTPClientDoesNotTrustTheCertificateWithoutIt(t *testing.T) 
 	_, err = client.Get(endpoint) //nolint:bodyclose // it fails before there's a body
 
 	require.ErrorContains(t, err, "certificate signed by unknown authority")
+}
+
+// The insecure mode of the CLI skips the certificate check, as it does for the
+// Okteto API
+func TestInternalAPIHTTPClientSkipsTheCertificateCheckInInsecureMode(t *testing.T) {
+	original := insecureSkipTLSVerify
+	insecureSkipTLSVerify = true
+	t.Cleanup(func() { insecureSkipTLSVerify = original })
+	server := startInternalAPITestServer(t, "127.0.0.1", answerOK)
+	endpoint := server.endpoint(t, "127.0.0.1")
+	client, err := NewInternalAPIHTTPClient(endpoint, InternalAPI{Hostname: "okteto.other.example"})
+	require.NoError(t, err)
+
+	resp, err := client.Get(endpoint)
+
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, "okteto.other.example", server.sni)
 }
 
 func TestInternalAPIHTTPClientDoesNotFollowRedirects(t *testing.T) {
@@ -221,32 +239,32 @@ func TestNewInternalAPITarget(t *testing.T) {
 		{
 			name:     "hostname ignores the hostname of api",
 			endpoint: "https://example.com:8443/",
-			api:      InternalAPI{Hostname: "okteto-internal-api.okteto.example", IP: "10.20.30.40"},
+			api:      InternalAPI{Hostname: "okteto.example.com", IP: "10.20.30.40"},
 			expected: internalAPITarget{address: "10.20.30.40:8443", hostname: "example.com", host: "example.com:8443"},
 		},
 		{
 			name:     "IPv4",
 			endpoint: "https://10.20.30.40:8443/",
-			api:      InternalAPI{Hostname: "okteto-internal-api.okteto.example"},
-			expected: internalAPITarget{address: "10.20.30.40:8443", hostname: "okteto-internal-api.okteto.example", host: "okteto-internal-api.okteto.example:8443"},
+			api:      InternalAPI{Hostname: "okteto.example.com"},
+			expected: internalAPITarget{address: "10.20.30.40:8443", hostname: "okteto.example.com", host: "okteto.example.com:8443"},
 		},
 		{
 			name:     "IPv6",
 			endpoint: "https://[fd00:0::1]:8443/",
-			api:      InternalAPI{Hostname: "okteto-internal-api.okteto.example"},
-			expected: internalAPITarget{address: "[fd00::1]:8443", hostname: "okteto-internal-api.okteto.example", host: "okteto-internal-api.okteto.example:8443"},
+			api:      InternalAPI{Hostname: "okteto.example.com"},
+			expected: internalAPITarget{address: "[fd00::1]:8443", hostname: "okteto.example.com", host: "okteto.example.com:8443"},
 		},
 		{
 			name:     "IP without port",
 			endpoint: "https://10.20.30.40/",
-			api:      InternalAPI{Hostname: "okteto-internal-api.okteto.example"},
-			expected: internalAPITarget{address: "10.20.30.40:443", hostname: "okteto-internal-api.okteto.example", host: "okteto-internal-api.okteto.example"},
+			api:      InternalAPI{Hostname: "okteto.example.com"},
+			expected: internalAPITarget{address: "10.20.30.40:443", hostname: "okteto.example.com", host: "okteto.example.com"},
 		},
 		{
 			name:     "IP ignores the IP of api",
 			endpoint: "https://10.20.30.40:8443/",
-			api:      InternalAPI{Hostname: "okteto-internal-api.okteto.example", IP: "10.0.0.1"},
-			expected: internalAPITarget{address: "10.20.30.40:8443", hostname: "okteto-internal-api.okteto.example", host: "okteto-internal-api.okteto.example:8443"},
+			api:      InternalAPI{Hostname: "okteto.example.com", IP: "10.0.0.1"},
+			expected: internalAPITarget{address: "10.20.30.40:8443", hostname: "okteto.example.com", host: "okteto.example.com:8443"},
 		},
 	}
 	for _, tt := range tests {
@@ -287,9 +305,9 @@ func TestInternalAPIHTTPClientFailsForAnEndpointWithTheIPWithoutAValidHostname(t
 	}{
 		{name: "without hostname", api: InternalAPI{}},
 		{name: "with the IP", api: InternalAPI{IP: "10.20.30.40"}},
-		{name: "with a port", api: InternalAPI{Hostname: "okteto-internal-api.okteto.example:8443"}},
-		{name: "URL", api: InternalAPI{Hostname: "https://okteto-internal-api.okteto.example"}},
-		{name: "with a new line", api: InternalAPI{Hostname: "okteto-internal-api.okteto.example\nRUN id"}},
+		{name: "with a port", api: InternalAPI{Hostname: "okteto.example.com:8443"}},
+		{name: "URL", api: InternalAPI{Hostname: "https://okteto.example.com"}},
+		{name: "with a new line", api: InternalAPI{Hostname: "okteto.example.com\nRUN id"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -340,16 +358,20 @@ func TestCheckInternalAPIEndpoint(t *testing.T) {
 
 func TestInternalAPIHostname(t *testing.T) {
 	tests := []struct {
-		name     string
-		registry string
-		expected string
+		name        string
+		contextName string
+		expected    string
 	}{
-		{name: "registry", registry: "registry.okteto.example.com", expected: "okteto-internal-api.okteto.example.com"},
-		{name: "no registry", registry: "", expected: ""},
+		{name: "URL", contextName: "https://okteto.example.com", expected: "okteto.example.com"},
+		{name: "URL with a port", contextName: "https://okteto.example.com:8443", expected: "okteto.example.com"},
+		{name: "URL with a path", contextName: "https://okteto.example.com/", expected: "okteto.example.com"},
+		{name: "without scheme", contextName: "okteto.example.com", expected: "okteto.example.com"},
+		{name: "uppercase", contextName: "https://Okteto.Example.com", expected: "okteto.example.com"},
+		{name: "empty", contextName: "", expected: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, InternalAPIHostname(tt.registry))
+			require.Equal(t, tt.expected, InternalAPIHostname(tt.contextName))
 		})
 	}
 }

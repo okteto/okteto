@@ -94,8 +94,7 @@ func warnings(lines []oktetoLog.JSONLogFormat) []oktetoLog.JSONLogFormat {
 
 const (
 	testInternalAPIIP                       = "10.20.30.40"
-	testRegistry                            = "registry.okteto.example"
-	testInternalAPIHostname                 = "okteto-internal-api.okteto.example"
+	testContextName                         = "https://okteto.okteto.example"
 	testCatalogSecretVariablesEndpoint      = "https://okteto-internal-api.okteto.example:8443/internal/catalog/secret-variables"
 	testCatalogSecretVariablesIPEndpoint    = "https://10.20.30.40:8443/internal/catalog/secret-variables"
 	testCatalogSecretVariablesToken         = "projected-token"
@@ -105,8 +104,8 @@ const (
 
 // testInternalAPI is what remote builds get from an installation that
 // publishes the internal IP of the Okteto API, with an Okteto context whose
-// registry is testRegistry
-var testInternalAPI = okteto.InternalAPI{Hostname: testInternalAPIHostname, IP: testInternalAPIIP}
+// name is testContextName
+var testInternalAPI = okteto.InternalAPI{Hostname: "okteto.okteto.example", IP: testInternalAPIIP}
 
 // writeTestToken writes content to a token file in a temporary folder, and
 // returns its path
@@ -183,7 +182,7 @@ func TestCatalogSecretVariablesWithoutAction(t *testing.T) {
 func TestNewCatalogSecretVariablesWithoutAction(t *testing.T) {
 	t.Setenv(constants.OktetoInternalAPIIPEnvVar, testInternalAPIIP)
 
-	got, err := newCatalogSecretVariables("", "", testRegistry, catalog.DeployPhase)
+	got, err := newCatalogSecretVariables("", "", testContextName, catalog.DeployPhase)
 
 	require.NoError(t, err)
 	require.Nil(t, got.newClient)
@@ -192,7 +191,7 @@ func TestNewCatalogSecretVariablesWithoutAction(t *testing.T) {
 }
 
 func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
-	_, err := newCatalogSecretVariables("action-name", "", testRegistry, catalog.DeployPhase)
+	_, err := newCatalogSecretVariables("action-name", "", testContextName, catalog.DeployPhase)
 
 	require.EqualError(t, err, "--catalog-secret-variables-endpoint is required with --catalog-action")
 }
@@ -200,7 +199,7 @@ func TestNewCatalogSecretVariablesRequiresTheEndpoint(t *testing.T) {
 func TestNewCatalogSecretVariablesForTheAction(t *testing.T) {
 	t.Setenv(constants.OktetoInternalAPIIPEnvVar, testInternalAPIIP)
 
-	got, err := newCatalogSecretVariables("action-name", testCatalogSecretVariablesEndpoint, testRegistry, catalog.DestroyPhase)
+	got, err := newCatalogSecretVariables("action-name", testCatalogSecretVariablesEndpoint, testContextName, catalog.DestroyPhase)
 
 	require.NoError(t, err)
 	require.NotNil(t, got.newClient)

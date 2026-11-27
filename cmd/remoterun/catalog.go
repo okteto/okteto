@@ -76,7 +76,7 @@ type catalogSecretVariables struct {
 	endpoint  string
 	// internalAPI has the internal IP of the Okteto API that the CLI starting
 	// the remote build passes on, empty when the installation doesn't publish
-	// it, and the hostname of the internal API from the Okteto context
+	// it, and the hostname of the Okteto context
 	internalAPI okteto.InternalAPI
 	// phase is the operation whose commands get the variables
 	phase catalog.Phase
@@ -133,10 +133,10 @@ func addCatalogSecretVariablesFlags(cmd *cobra.Command, action, endpoint *string
 }
 
 // newCatalogSecretVariables returns the getter of the catalog secret variables
-// of the action, for the commands of the phase. The hostname of the internal
-// API comes from registry, the registry of the Okteto context. Without an
-// action, nothing is fetched
-func newCatalogSecretVariables(action, endpoint, registry string, phase catalog.Phase) (catalogSecretVariables, error) {
+// of the action, for the commands of the phase. For an endpoint with the IP,
+// it checks the certificate of the internal API against the hostname of the
+// Okteto context named contextName. Without an action, nothing is fetched
+func newCatalogSecretVariables(action, endpoint, contextName string, phase catalog.Phase) (catalogSecretVariables, error) {
 	c := catalogSecretVariables{action: action, endpoint: endpoint, phase: phase}
 	if action == "" {
 		return c, nil
@@ -146,7 +146,7 @@ func newCatalogSecretVariables(action, endpoint, registry string, phase catalog.
 	}
 	c.tokenFile = catalog.SecretVariablesTokenPath
 	c.internalAPI = okteto.InternalAPI{
-		Hostname: okteto.InternalAPIHostname(registry),
+		Hostname: okteto.InternalAPIHostname(contextName),
 		IP:       os.Getenv(constants.OktetoInternalAPIIPEnvVar),
 	}
 	c.newClient = newCatalogSecretVariablesClient
