@@ -1301,6 +1301,27 @@ func Test_translateSvcProbe(t *testing.T) {
 			},
 		},
 		{
+			name: "healthcheck shell command keeps its shell",
+			svc: &model.Service{
+				Healtcheck: &model.HealthCheck{
+					Test: model.HealtcheckTest{
+						"sh", "-c", "pg_isready -U postgres || exit 1",
+					},
+					Readiness: true,
+				},
+			},
+			expected: healthcheckProbes{
+				readiness: &apiv1.Probe{
+					ProbeHandler: apiv1.ProbeHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"sh", "-c", "pg_isready -U postgres || exit 1"},
+						},
+					},
+				},
+				liveness: nil,
+			},
+		},
+		{
 			name: "healthcheck exec with other fields only liveness",
 			svc: &model.Service{
 				Healtcheck: &model.HealthCheck{

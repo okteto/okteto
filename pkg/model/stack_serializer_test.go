@@ -86,6 +86,12 @@ func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
 			expectedTest: HealtcheckTest{},
 			expectedHTTP: HTTPHealtcheck{Path: "/a/path/exists", Port: int32(4572)},
 		},
+		{
+			name:         "CurlBehindAShell",
+			test:         []string{"sh", "-c", "curl -f http://0.0.0.0:8080/health || exit 1"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/health", Port: int32(8080)},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			check := HealthCheck{
@@ -110,6 +116,44 @@ func Test_translateHealtcheckCurlToHTTPKeepsHTTPSCheck(t *testing.T) {
 
 	require.Nil(t, check.HTTP)
 	require.Equal(t, test, check.Test)
+}
+
+// A CMD-SHELL healthcheck that relies on shell syntax must keep its shell, otherwise the
+// operators are passed to the command as arguments and the probe can never pass (#5164).
+func Test_ShellHealthcheckInStack(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		expected HealtcheckTest
+	}{
+		{
+			name:     "or-else keeps its shell",
+			manifest: []byte("services:\n  db:\n    image: postgres:16-alpine\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres || exit 1\"]"),
+			expected: HealtcheckTest{"sh", "-c", "pg_isready -U postgres || exit 1"},
+		},
+		{
+			name:     "pipe keeps its shell",
+			manifest: []byte("services:\n  cache:\n    image: redis\n    healthcheck:\n      test: [\"CMD-SHELL\", \"redis-cli ping | grep PONG\"]"),
+			expected: HealtcheckTest{"sh", "-c", "redis-cli ping | grep PONG"},
+		},
+		{
+			name:     "command without shell syntax stays an exec form",
+			manifest: []byte("services:\n  web:\n    image: nginx\n    healthcheck:\n      test: [\"CMD-SHELL\", \"nginx -t\"]"),
+			expected: HealtcheckTest{"nginx", "-t"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, true)
+			require.NoError(t, err)
+
+			for name, svc := range s.Services {
+				require.NotNil(t, svc.Healtcheck, name)
+				require.Equal(t, tt.expected, svc.Healtcheck.Test, name)
+			}
+		})
+	}
 }
 
 func Test_DeployReplicasUnmarshalling(t *testing.T) {
@@ -713,6 +757,24 @@ func Test_HealthcheckTestUnmarshalling(t *testing.T) {
 			name:            "CMDSHELL",
 			healthcheckTest: `["CMD-SHELL", "curl -f localhost:5000"]`,
 			expected:        []string{"curl", "-f", "localhost:5000"},
+			expectedError:   false,
+		},
+		{
+			name:            "CMDSHELL with shell syntax keeps its shell",
+			healthcheckTest: `["CMD-SHELL", "pg_isready -U postgres || exit 1"]`,
+			expected:        []string{"sh", "-c", "pg_isready -U postgres || exit 1"},
+			expectedError:   false,
+		},
+		{
+			name:            "CMDSHELL with a pipe keeps its shell",
+			healthcheckTest: `["CMD-SHELL", "redis-cli ping | grep PONG"]`,
+			expected:        []string{"sh", "-c", "redis-cli ping | grep PONG"},
+			expectedError:   false,
+		},
+		{
+			name:            "string form with shell syntax keeps its shell",
+			healthcheckTest: `pg_isready -U postgres || exit 1`,
+			expected:        []string{"sh", "-c", "pg_isready -U postgres || exit 1"},
 			expectedError:   false,
 		},
 		{
