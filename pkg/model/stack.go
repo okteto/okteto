@@ -257,7 +257,14 @@ type StackWarnings struct {
 type DependsOn map[string]DependsOnConditionSpec
 
 type DependsOnConditionSpec struct {
+	Required  *bool              `json:"required,omitempty" yaml:"required,omitempty"`
 	Condition DependsOnCondition `json:"condition,omitempty" yaml:"condition,omitempty"`
+	Restart   bool               `json:"restart,omitempty" yaml:"restart,omitempty"`
+}
+
+// IsOptional reports whether the dependency is declared with `required: false`.
+func (d DependsOnConditionSpec) IsOptional() bool {
+	return d.Required != nil && !*d.Required
 }
 
 type DependsOnCondition string
@@ -419,6 +426,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
+	s.Services.dropUndefinedOptionalDependencies()
 	for svcName, svc := range s.Services {
 		if svc.Build != nil {
 
@@ -583,6 +591,16 @@ func (e *errDependsOnUndefined) Error() string {
 
 func (e *errDependsOnUndefined) Unwrap() error {
 	return errDependsOn
+}
+
+func (cs ComposeServices) dropUndefinedOptionalDependencies() {
+	for _, svc := range cs {
+		for dependentSvc, condition := range svc.DependsOn {
+			if _, ok := cs[dependentSvc]; !ok && condition.IsOptional() {
+				delete(svc.DependsOn, dependentSvc)
+			}
+		}
+	}
 }
 
 func (cs ComposeServices) ValidateDependsOn(svcs []string) error {
