@@ -275,6 +275,13 @@ func TestRunPassesTheInternalAPIIPWithoutMappingAHostname(t *testing.T) {
 	require.Empty(t, got.ExtraHosts)
 }
 
+func TestRunPassesAnIPv6InternalAPIIP(t *testing.T) {
+	got, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIIP: "fd00::1"})
+
+	require.Contains(t, dockerfile, `ENV OKTETO_INTERNAL_API_IP="fd00::1"`)
+	require.Empty(t, got.ExtraHosts)
+}
+
 func TestRunDoesNotPassAnInvalidInternalAPIIP(t *testing.T) {
 	got, dockerfile := runWithClusterMetadata(t, types.ClusterMetadata{InternalAPIIP: "10.20.30.40\nRUN id"})
 
@@ -982,6 +989,20 @@ func TestDockerfileWithoutInternalAPIIP(t *testing.T) {
 
 func TestDockerfileWithGitCredentialHelperForAnEndpointWithTheInternalAPIIP(t *testing.T) {
 	d := createDeployDockerfile(t, testGitCredentialsIPEndpoint, okteto.InternalAPI{Hostname: "okteto.okteto.example.com"})
+
+	require.Contains(t, d, "RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true")
+	require.Contains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+}
+
+func TestDockerfileWithGitCredentialHelperForAnIPv6InternalAPIIP(t *testing.T) {
+	d := createDeployDockerfile(t, testGitCredentialsEndpoint, okteto.InternalAPI{IP: "fd00::1"})
+
+	require.Contains(t, d, "RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true")
+	require.Contains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)
+}
+
+func TestDockerfileWithGitCredentialHelperForAnEndpointWithAnIPv6InternalAPIIP(t *testing.T) {
+	d := createDeployDockerfile(t, "https://[fd00::1]:8443/internal/git/credentials", okteto.InternalAPI{Hostname: "okteto.okteto.example.com"})
 
 	require.Contains(t, d, "RUN /okteto/bin/okteto git-credential install --system --log-output=plain || true")
 	require.Contains(t, d, constants.OktetoGitCredentialsEndpointEnvVar)

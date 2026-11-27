@@ -97,6 +97,7 @@ const (
 	testContextName                         = "https://okteto.okteto.example"
 	testCatalogSecretVariablesEndpoint      = "https://okteto-internal-api.okteto.example:8443/internal/catalog/secret-variables"
 	testCatalogSecretVariablesIPEndpoint    = "https://10.20.30.40:8443/internal/catalog/secret-variables"
+	testCatalogSecretVariablesIPv6Endpoint  = "https://[fd00::1]:8443/internal/catalog/secret-variables"
 	testCatalogSecretVariablesToken         = "projected-token"
 	internalAPIIPMissingCatalogSecretsError = "the catalog secret variables can't be fetched: the remote build doesn't get the internal IP of the Okteto API to reach okteto-internal-api.okteto.example"
 	internalAPIIPMissingHint                = "Ask an Okteto admin to make sure the Okteto installation publishes the internal IP of the Okteto API, and that the Okteto CLI starting the remote build passes it on, "
@@ -344,6 +345,18 @@ func TestCatalogSecretVariablesGetsThemFromAnEndpointWithTheIP(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: testCatalogSecretVariablesIPEndpoint, action: "action-name"}, getter)
+}
+
+func TestCatalogSecretVariablesGetsThemFromAnEndpointWithAnIPv6(t *testing.T) {
+	getter := &recordingCatalogSecretVariablesGetter{}
+	c := newTestCatalogSecretVariables(t, getter, catalog.DeployPhase)
+	c.endpoint = testCatalogSecretVariablesIPv6Endpoint
+	c.internalAPI.IP = ""
+
+	_, err := c.get(context.Background())
+
+	require.NoError(t, err)
+	require.Equal(t, &recordingCatalogSecretVariablesGetter{endpoint: testCatalogSecretVariablesIPv6Endpoint, action: "action-name"}, getter)
 }
 
 func TestCatalogSecretVariablesLogsTheClientError(t *testing.T) {

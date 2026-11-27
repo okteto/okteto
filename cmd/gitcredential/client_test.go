@@ -15,6 +15,8 @@ package gitcredential
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -56,7 +58,17 @@ type receivedRequest struct {
 // fakeEndpoint answers every request with status and body, and records the last request in received
 func fakeEndpoint(t *testing.T, status int, body string, received *receivedRequest) *httptest.Server {
 	t.Helper()
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return fakeEndpointOn(t, fakeEndpointIP, status, body, received)
+}
+
+// fakeEndpointOn is fakeEndpoint listening on ip. It skips the test when it can't listen on ip
+func fakeEndpointOn(t *testing.T, ip string, status int, body string, received *receivedRequest) *httptest.Server {
+	t.Helper()
+	listener, err := net.Listen("tcp", net.JoinHostPort(ip, "0"))
+	if err != nil {
+		t.Skipf("can't listen on %s: %s", ip, err)
+	}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*received = receivedRequest{
 			method:        r.Method,
 			path:          r.URL.Path,
@@ -67,15 +79,18 @@ func fakeEndpoint(t *testing.T, status int, body string, received *receivedReque
 		w.WriteHeader(status)
 		_, _ = w.Write([]byte(body))
 	}))
+	require.NoError(t, server.Listener.Close())
+	server.Listener = listener
+	server.StartTLS()
 	t.Cleanup(server.Close)
 	return server
 }
 
 // fakeEndpointURL is the endpoint of the fake server on example.com, a hostname its certificate is
-// valid for. The helper connects to fakeEndpointIP instead of resolving it
+// valid for. The helper connects to the IP of the server instead of resolving it
 func fakeEndpointURL(t *testing.T, server *httptest.Server) string {
 	t.Helper()
-	return "https://example.com:" + mustParseURL(t, server.URL).Port() + "/internal/git/credentials"
+	return fmt.Sprintf("https://%s/internal/git/credentials", net.JoinHostPort("example.com", mustParseURL(t, server.URL).Port()))
 }
 
 func mustParseURL(t *testing.T, raw string) *url.URL {
@@ -101,11 +116,11 @@ func unsetEnv(t *testing.T, key string) {
 	require.NoError(t, os.Unsetenv(key))
 }
 
-// fakeEndpointIPURL is the endpoint of the fake server with fakeEndpointIP as its host. The helper
-// verifies the certificate against the hostname of the internal API it gets apart
+// fakeEndpointIPURL is the endpoint of the fake server with the IP it listens on as its host. The
+// helper verifies the certificate against the hostname of the internal API it gets apart
 func fakeEndpointIPURL(t *testing.T, server *httptest.Server) string {
 	t.Helper()
-	return "https://" + fakeEndpointIP + ":" + mustParseURL(t, server.URL).Port() + "/internal/git/credentials"
+	return fmt.Sprintf("https://%s/internal/git/credentials", server.Listener.Addr())
 }
 
 func TestNewGetterFromEnv(t *testing.T) {
@@ -183,19 +198,41 @@ func TestNewGetterFromEnv(t *testing.T) {
 }
 
 func TestNewGetterFromEnv_HTTPSEndpointAndInternalIP(t *testing.T) {
-	setEndpointEnv(t, internalAPIEndpoint, internalAPIIP, "okteto-token")
+	tests := []struct {
+		name string
+		ip   string
+	}{
+		{name: "IPv4", ip: internalAPIIP},
+		{name: "IPv6", ip: "fd00::1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setEndpointEnv(t, internalAPIEndpoint, tt.ip, "okteto-token")
 
-	_, err := newGetterFromEnv()
+			_, err := newGetterFromEnv()
 
-	require.NoError(t, err)
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestNewGetterFromEnv_EndpointWithTheInternalIP(t *testing.T) {
-	setEndpointEnv(t, internalAPIIPEndpoint, "", "okteto-token")
+	tests := []struct {
+		name     string
+		endpoint string
+	}{
+		{name: "IPv4", endpoint: internalAPIIPEndpoint},
+		{name: "IPv6", endpoint: "https://[fd00::1]:8443/internal/git/credentials"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setEndpointEnv(t, tt.endpoint, "", "okteto-token")
 
-	_, err := newGetterFromEnv()
+			_, err := newGetterFromEnv()
 
-	require.NoError(t, err)
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestNewGetterFromEnv_EndpointWithTheInternalIPWithoutAnOktetoContext(t *testing.T) {
@@ -367,31 +404,48 @@ func TestGetGitCredentials_UnreachableEndpoint(t *testing.T) {
 	require.ErrorContains(t, err, "could not reach the Okteto API")
 }
 
+// fakeEndpointIPs are the IPs the fake endpoint listens on, for the tests that run over IPv4 and IPv6
+var fakeEndpointIPs = []struct {
+	name string
+	ip   string
+}{
+	{name: "IPv4", ip: fakeEndpointIP},
+	{name: "IPv6", ip: "::1"},
+}
+
 func TestGet_FromTheEndpoint(t *testing.T) {
-	var received receivedRequest
-	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	provider := func() (credentialsGetter, error) {
-		return newGetter(fakeEndpointURL(t, server), okteto.InternalAPI{IP: fakeEndpointIP}, "okteto-token", server.Certificate())
+	for _, tt := range fakeEndpointIPs {
+		t.Run(tt.name, func(t *testing.T) {
+			var received receivedRequest
+			server := fakeEndpointOn(t, tt.ip, http.StatusOK, credentialsResponseBody, &received)
+			provider := func() (credentialsGetter, error) {
+				return newGetter(fakeEndpointURL(t, server), okteto.InternalAPI{IP: tt.ip}, "okteto-token", server.Certificate())
+			}
+
+			stdout, stderr := runGet(githubRequest, provider)
+
+			require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
+			require.Empty(t, stderr)
+		})
 	}
-
-	stdout, stderr := runGet(githubRequest, provider)
-
-	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
-	require.Empty(t, stderr)
 }
 
 func TestGet_FromAnEndpointWithTheInternalIP(t *testing.T) {
-	var received receivedRequest
-	server := fakeEndpoint(t, http.StatusOK, credentialsResponseBody, &received)
-	provider := func() (credentialsGetter, error) {
-		return newGetter(fakeEndpointIPURL(t, server), okteto.InternalAPI{Hostname: "example.com"}, "okteto-token", server.Certificate())
+	for _, tt := range fakeEndpointIPs {
+		t.Run(tt.name, func(t *testing.T) {
+			var received receivedRequest
+			server := fakeEndpointOn(t, tt.ip, http.StatusOK, credentialsResponseBody, &received)
+			provider := func() (credentialsGetter, error) {
+				return newGetter(fakeEndpointIPURL(t, server), okteto.InternalAPI{Hostname: "example.com"}, "okteto-token", server.Certificate())
+			}
+
+			stdout, stderr := runGet(githubRequest, provider)
+
+			require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
+			require.Empty(t, stderr)
+			require.Equal(t, "Bearer okteto-token", received.authorization)
+		})
 	}
-
-	stdout, stderr := runGet(githubRequest, provider)
-
-	require.Equal(t, "username=x-access-token\npassword=token\npassword_expiry_utc=4070908800\n", stdout)
-	require.Empty(t, stderr)
-	require.Equal(t, "Bearer okteto-token", received.authorization)
 }
 
 func TestGet_WithoutTheEndpointEnvPrintsNothing(t *testing.T) {
