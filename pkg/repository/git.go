@@ -139,6 +139,10 @@ func (r gitRepoController) getRepoURL() (string, error) {
 		return "", fmt.Errorf("git repo doesn't have any remote")
 	}
 
+	// go-git returns the remotes in no particular order: without "origin" it is always the first one by name
+	sort.Slice(remotes, func(i, j int) bool {
+		return remotes[i].Config().Name < remotes[j].Config().Name
+	})
 	return r.sanitiseURL(remotes[0].Config().URLs[0]), nil
 }
 
