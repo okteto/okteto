@@ -72,28 +72,45 @@ type endpointClient struct {
 }
 
 // newGetterFromEnv returns the client for the endpoint in OKTETO_GIT_CREDENTIALS_ENDPOINT, the
-// internal IP of the Okteto API in OKTETO_INTERNAL_API_IP and the token in OKTETO_TOKEN. The
-// endpoint only answers inside the cluster, so it doesn't load an Okteto context.
+// internal IP of the Okteto API in OKTETO_INTERNAL_API_IP and the token in OKTETO_TOKEN. For an
+// endpoint with the IP, it checks the certificate against the hostname of the Okteto context in the
+// env. It doesn't load the context: that reads the .env file of the repository Git runs it in, which
+// could then pick where the token goes, and calls the Okteto API on every Git request.
 func newGetterFromEnv() (credentialsGetter, error) {
 	return newGetter(
 		os.Getenv(constants.OktetoGitCredentialsEndpointEnvVar),
-		os.Getenv(constants.OktetoInternalAPIIPEnvVar),
+		okteto.InternalAPI{
+			Hostname: okteto.InternalAPIHostname(contextNameFromEnv()),
+			IP:       os.Getenv(constants.OktetoInternalAPIIPEnvVar),
+		},
 		os.Getenv(model.OktetoTokenEnvVar),
 	)
 }
 
-// newGetter only sends the token over https to internalAPIIP, never to the address public DNS gives
-// for the endpoint's hostname, which is the ingress, where any user can serve it. certs are trusted
-// on top of the system pool
-func newGetter(endpoint, internalAPIIP, token string, certs ...*x509.Certificate) (credentialsGetter, error) {
+// contextNameFromEnv returns the name of the Okteto context in OKTETO_URL or OKTETO_CONTEXT, in the
+// order okteto context reads them
+func contextNameFromEnv() string {
+	if name := os.Getenv(model.OktetoURLEnvVar); name != "" {
+		return name
+	}
+	return os.Getenv(model.OktetoContextEnvVar)
+}
+
+// newGetter only sends the token over https to the internal IP of the Okteto API, never to the
+// address public DNS gives for the hostname of the internal API, which is the ingress, where any user
+// can serve it. The endpoint has the IP or the hostname as its host, and api has the other one. certs
+// are trusted on top of the system pool
+func newGetter(endpoint string, api okteto.InternalAPI, token string, certs ...*x509.Certificate) (credentialsGetter, error) {
 	if endpoint == "" {
 		return nil, errEndpointNotSet
 	}
-	httpClient, err := okteto.NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
-	if errors.Is(err, okteto.ErrInvalidInternalAPIIP) {
+	httpClient, err := okteto.NewInternalAPIHTTPClient(endpoint, api, certs...)
+	switch {
+	case errors.Is(err, okteto.ErrInvalidInternalAPIIP):
 		return nil, fmt.Errorf("%w (%s)", err, constants.OktetoInternalAPIIPEnvVar)
-	}
-	if err != nil {
+	case errors.Is(err, okteto.ErrInvalidInternalAPIHostname):
+		return nil, fmt.Errorf("%w (%s or %s)", err, model.OktetoURLEnvVar, model.OktetoContextEnvVar)
+	case err != nil:
 		return nil, err
 	}
 	u, err := url.Parse(endpoint)

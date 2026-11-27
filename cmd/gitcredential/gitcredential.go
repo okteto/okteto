@@ -39,8 +39,10 @@ func GitCredential(ctx context.Context) *cobra.Command {
 Usage: printf 'protocol=https\nhost=github.com\npath=owner/repo.git\n\n' | okteto git-credential get
 
 It sends OKTETO_TOKEN to the endpoint in OKTETO_GIT_CREDENTIALS_ENDPOINT, which Okteto sets in its
-installer and remote runs, only over https and only to the internal IP of the Okteto API in
-OKTETO_INTERNAL_API_IP. Without them, the helper gives no credentials.
+installer and remote runs, only over https and only to the internal IP of the Okteto API: the host
+of the endpoint, or OKTETO_INTERNAL_API_IP when the host is a hostname. For an endpoint with the IP,
+it checks the certificate against the hostname of the Okteto context in OKTETO_URL or
+OKTETO_CONTEXT. Without them, the helper gives no credentials.
 "store" and "erase" do nothing. OKTETO_DISABLE_GIT_CREDENTIAL_HELPER=true turns it off.
 
 More info about Git credential helpers here: https://git-scm.com/docs/gitcredentials

@@ -123,7 +123,7 @@ It is important that this command does the minimum and must not do calculations 
 				ForceDestroy: options.ForceDestroy,
 			}
 
-			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, catalog.DestroyPhase)
+			secretVariables, err := newCatalogSecretVariables(options.CatalogAction, options.CatalogSecretVariablesEndpoint, oktetoContext.GetCurrentName(), catalog.DestroyPhase)
 			if err != nil {
 				return err
 			}

@@ -52,11 +52,12 @@ type CatalogSecretVariablesClient struct {
 }
 
 // NewCatalogSecretVariablesClient returns the client that gets the catalog
-// secret variables from endpoint, an https URL it reaches through
-// internalAPIIP, as NewInternalAPIHTTPClient does. It fails without both. It
-// sends the token of the current context, or the one of the options, and
-// trusts the certificate of the current context
-func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Option) (*CatalogSecretVariablesClient, error) {
+// secret variables from endpoint, an https URL it reaches through the internal
+// IP of the Okteto API, as NewInternalAPIHTTPClient does with api. It fails
+// when api lacks what the endpoint needs. It sends the token of the current
+// context, or the one of the options, and trusts the certificate of the
+// current context
+func NewCatalogSecretVariablesClient(endpoint string, api InternalAPI, opts ...Option) (*CatalogSecretVariablesClient, error) {
 	cfg := defaultOktetoClientCfg()
 	for _, opt := range opts {
 		opt(cfg)
@@ -75,7 +76,7 @@ func NewCatalogSecretVariablesClient(endpoint, internalAPIIP string, opts ...Opt
 		}
 	}
 
-	httpClient, err := NewInternalAPIHTTPClient(endpoint, internalAPIIP, certs...)
+	httpClient, err := NewInternalAPIHTTPClient(endpoint, api, certs...)
 	if err != nil {
 		return nil, err
 	}

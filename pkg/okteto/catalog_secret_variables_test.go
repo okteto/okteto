@@ -91,7 +91,7 @@ func TestGetCatalogSecretVariablesThroughTheInternalAPIIP(t *testing.T) {
 		authorization = r.Header.Get("Authorization")
 		_, _ = w.Write([]byte(`{"variables":[{"name":"PIN","value":"1"}]}`))
 	})
-	c, err := NewCatalogSecretVariablesClient(endpoint, "127.0.0.1")
+	c, err := NewCatalogSecretVariablesClient(endpoint, InternalAPI{IP: "127.0.0.1"})
 	require.NoError(t, err)
 
 	got, err := c.GetCatalogSecretVariables(context.Background(), endpoint, "action")
@@ -102,13 +102,32 @@ func TestGetCatalogSecretVariablesThroughTheInternalAPIIP(t *testing.T) {
 	require.Equal(t, "example.com", server.sni)
 }
 
+func TestGetCatalogSecretVariablesFromAnEndpointWithTheInternalAPIIP(t *testing.T) {
+	var authorization string
+	server, _ := startTestInternalAPI(t, "okteto-token", func(w http.ResponseWriter, r *http.Request) {
+		authorization = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte(`{"variables":[{"name":"PIN","value":"1"}]}`))
+	})
+	endpoint := server.endpoint(t, "127.0.0.1")
+	c, err := NewCatalogSecretVariablesClient(endpoint, InternalAPI{Hostname: "example.com"})
+	require.NoError(t, err)
+
+	got, err := c.GetCatalogSecretVariables(context.Background(), endpoint, "action")
+
+	require.NoError(t, err)
+	require.Equal(t, []types.CatalogSecretVariable{{Name: "PIN", Value: "1"}}, got.Variables)
+	require.Equal(t, "Bearer okteto-token", authorization)
+	require.Equal(t, "example.com", server.sni)
+	require.Equal(t, "example.com:"+server.port(t), server.host)
+}
+
 func TestGetCatalogSecretVariablesSendsTheTokenOfTheOptions(t *testing.T) {
 	var authorization string
 	_, endpoint := startTestInternalAPI(t, "okteto-token", func(w http.ResponseWriter, r *http.Request) {
 		authorization = r.Header.Get("Authorization")
 		_, _ = w.Write([]byte(`{"variables":[]}`))
 	})
-	c, err := NewCatalogSecretVariablesClient(endpoint, "127.0.0.1", WithToken("projected-token"))
+	c, err := NewCatalogSecretVariablesClient(endpoint, InternalAPI{IP: "127.0.0.1"}, WithToken("projected-token"))
 	require.NoError(t, err)
 
 	_, err = c.GetCatalogSecretVariables(context.Background(), endpoint, "action")
@@ -124,7 +143,7 @@ func TestNewCatalogSecretVariablesClientWithATokenAndWithoutAContext(t *testing.
 	CurrentStore = nil
 	t.Setenv(constants.OktetoFolderEnvVar, t.TempDir())
 
-	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "10.20.30.40", WithToken("projected-token"))
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, InternalAPI{IP: "10.20.30.40"}, WithToken("projected-token"))
 
 	require.NoError(t, err)
 }
@@ -132,7 +151,7 @@ func TestNewCatalogSecretVariablesClientWithATokenAndWithoutAContext(t *testing.
 func TestNewCatalogSecretVariablesClientFailsForAnHTTPEndpoint(t *testing.T) {
 	setTestContextToken(t, "okteto-token")
 
-	_, err := NewCatalogSecretVariablesClient("http://okteto-api.okteto:8080/internal/catalog/secret-variables", "10.20.30.40")
+	_, err := NewCatalogSecretVariablesClient("http://okteto-api.okteto:8080/internal/catalog/secret-variables", InternalAPI{IP: "10.20.30.40"})
 
 	require.ErrorIs(t, err, ErrInvalidInternalAPIEndpoint)
 }
@@ -140,15 +159,23 @@ func TestNewCatalogSecretVariablesClientFailsForAnHTTPEndpoint(t *testing.T) {
 func TestNewCatalogSecretVariablesClientFailsWithoutTheInternalAPIIP(t *testing.T) {
 	setTestContextToken(t, "okteto-token")
 
-	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "")
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, InternalAPI{})
 
 	require.ErrorIs(t, err, ErrInvalidInternalAPIIP)
+}
+
+func TestNewCatalogSecretVariablesClientFailsWithoutTheHostnameForAnEndpointWithTheIP(t *testing.T) {
+	setTestContextToken(t, "okteto-token")
+
+	_, err := NewCatalogSecretVariablesClient("https://10.20.30.40:8443/internal/catalog/secret-variables", InternalAPI{IP: "10.20.30.40"})
+
+	require.ErrorIs(t, err, ErrInvalidInternalAPIHostname)
 }
 
 func TestNewCatalogSecretVariablesClientRequiresAToken(t *testing.T) {
 	setTestContextToken(t, "")
 
-	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, "10.20.30.40")
+	_, err := NewCatalogSecretVariablesClient(testCatalogSecretVariablesEndpoint, InternalAPI{IP: "10.20.30.40"})
 
 	require.Error(t, err)
 }

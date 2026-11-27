@@ -209,6 +209,9 @@ type Params struct {
 	// InternalAPIIP is the internal IP of the Okteto API remote-run reaches its internal routes through, empty when the
 	// installation doesn't publish a valid one
 	InternalAPIIP string
+	// InternalAPIHostname is the hostname the Git credential helper checks the certificate of the internal API against
+	// for an endpoint with the internal IP of the Okteto API as its host: the one of the Okteto context
+	InternalAPIHostname string
 	// Secrets are the files the remote-run RUN mounts as build secrets
 	Secrets []FileSecret
 
@@ -257,9 +260,10 @@ type dockerfileTemplateProperties struct {
 	// GitCredentialsEndpointArgName is the URL the Git credential helper gets the credentials from.
 	// Git starts the helper from the commands that remote-run runs, so it reaches it as an env var
 	GitCredentialsEndpointArgName string
-	// InstallGitCredentialHelper is true when Okteto gives the helper its endpoint and the internal IP of
-	// the API, unless OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns it off. Without them the helper gives
-	// nothing, but installing it would still change how Git looks up github.com credentials
+	// InstallGitCredentialHelper is true when Okteto gives the helper its endpoint and what it needs to
+	// reach it through the internal IP of the API, unless OKTETO_DISABLE_GIT_CREDENTIAL_HELPER turns it
+	// off. Without them the helper gives nothing, but installing it would still change how Git looks up
+	// github.com credentials
 	InstallGitCredentialHelper bool
 }
 
@@ -309,6 +313,7 @@ func (r *Runner) Run(ctx context.Context, params *Params) error {
 	params.SSHAgentPort = sc.SSHAgentPort
 	params.GitCredentialsEndpoint = gitCredentialsEndpoint(params.GitCredentialsEndpoint, *sc)
 	params.InternalAPIIP = internalAPIIP(*sc)
+	params.InternalAPIHostname = okteto.InternalAPIHostname(okteto.GetContext().Name)
 
 	dockerfile, err := r.createDockerfile(tmpDir, params)
 	if err != nil {
@@ -551,7 +556,7 @@ func (r *Runner) createDockerfile(tmpDir string, params *Params) (string, error)
 		OktetoPrefixEnvVars:           getOktetoPrefixEnvVars(r.getEnviron()),
 		OktetoCommandSpecificEnvVars:  params.OktetoCommandSpecificEnvVars,
 		GitCredentialsEndpointArgName: constants.OktetoGitCredentialsEndpointEnvVar,
-		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(params.GitCredentialsEndpoint, params.InternalAPIIP),
+		InstallGitCredentialHelper:    shouldInstallGitCredentialHelper(params.GitCredentialsEndpoint, okteto.InternalAPI{Hostname: params.InternalAPIHostname, IP: params.InternalAPIIP}),
 		Command:                       params.Command,
 		Caches:                        params.Caches,
 		TestName:                      params.TestName,
@@ -608,11 +613,13 @@ func gitCredentialsEndpoint(installerEndpoint string, sc types.ClusterMetadata) 
 	return sc.GitCredentialsEndpoint
 }
 
-// shouldInstallGitCredentialHelper returns true when the run has an endpoint and the internal IP of the API
-// to give the Git credential helper, and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off. The helper
-// only sends the token to that IP, so without it, it would only print an error on every GitHub request
-func shouldInstallGitCredentialHelper(endpoint, internalAPIIP string) bool {
-	return endpoint != "" && internalAPIIP != "" && !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
+// shouldInstallGitCredentialHelper returns true when the run has an https endpoint for the Git credential
+// helper and api has what it needs to reach it through the internal IP of the API (the IP for an endpoint with
+// the hostname, the hostname for one with the IP), and OKTETO_DISABLE_GIT_CREDENTIAL_HELPER doesn't turn it off.
+// The helper only sends the token to that IP, so without them, it would only print an error on every GitHub
+// request
+func shouldInstallGitCredentialHelper(endpoint string, api okteto.InternalAPI) bool {
+	return okteto.CheckInternalAPIEndpoint(endpoint, api) == nil && !env.LoadBoolean(constants.OktetoDisableGitCredentialHelperEnvVar)
 }
 
 func (r *Runner) getContextPath(cwd, manifestPath string) string {
