@@ -160,7 +160,7 @@ type ServiceRaw struct {
 	Volumes                  []build.VolumeMounts   `yaml:"volumes,omitempty"`
 	CapAddSneakCase          []apiv1.Capability     `yaml:"cap_add,omitempty"`
 	EnvFiles                 env.Files              `yaml:"envFile,omitempty"`
-	EnvFilesSneakCase        env.Files              `yaml:"env_file,omitempty"`
+	EnvFilesSneakCase        composeEnvFiles        `yaml:"env_file,omitempty"`
 	Args                     ArgsStack              `yaml:"args,omitempty"`
 	Entrypoint               CommandStack           `yaml:"entrypoint,omitempty"`
 	Environment              stackEnvironment       `yaml:"environment,omitempty"`
@@ -542,8 +542,9 @@ func (serviceRaw *ServiceRaw) toService(svcName string, stack *Stack, topLevelSe
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles
-	if len(serviceRaw.EnvFilesSneakCase) > 0 {
-		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
+	if len(serviceRaw.EnvFilesSneakCase.files) > 0 {
+		svc.EnvFiles = serviceRaw.EnvFilesSneakCase.files
+		svc.optionalEnvFiles = serviceRaw.EnvFilesSneakCase.optional
 	}
 
 	svc.Environment = env.Environment{}
@@ -1851,6 +1852,57 @@ func validateExtensions(stack StackRaw) error {
 		return fmt.Errorf(`invalid compose manifest: The following fields are not supported.
     - %s
     More information is available here: https://okteto.com/docs/reference/docker-compose/`, strings.Join(nonValidFields, "\n    - "))
+	}
+	return nil
+}
+
+// composeEnvFile is an env_file entry: a path, or the long syntax with "required"
+type composeEnvFile struct {
+	Required *bool  `yaml:"required,omitempty"`
+	Path     string `yaml:"path"`
+}
+
+func (f *composeEnvFile) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var path string
+	if err := unmarshal(&path); err == nil {
+		f.Path = path
+		return nil
+	}
+	type composeEnvFileRaw composeEnvFile
+	var raw composeEnvFileRaw
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	if raw.Path == "" {
+		return fmt.Errorf("env_file entry requires a path")
+	}
+	*f = composeEnvFile(raw)
+	return nil
+}
+
+type composeEnvFiles struct {
+	optional map[string]bool
+	files    env.Files
+}
+
+func (c *composeEnvFiles) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var single string
+	if err := unmarshal(&single); err == nil {
+		c.files = env.Files{single}
+		return nil
+	}
+	var entries []composeEnvFile
+	if err := unmarshal(&entries); err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		c.files = append(c.files, entry.Path)
+		if entry.Required != nil && !*entry.Required {
+			if c.optional == nil {
+				c.optional = map[string]bool{}
+			}
+			c.optional[entry.Path] = true
+		}
 	}
 	return nil
 }

@@ -3443,3 +3443,50 @@ func Test_UnmarshalRestartOnFailureInvalidMaxRetries(t *testing.T) {
 		assert.ErrorContains(t, err, "invalid restart policy", restart)
 	}
 }
+
+func TestComposeEnvFileLongSyntax(t *testing.T) {
+	manifest := []byte(`services:
+  app:
+    image: nginx
+    env_file:
+      - .env.base
+      - path: .env.required
+      - path: .env.local
+        required: false
+`)
+	s, err := ReadStack(manifest, true)
+	require.NoError(t, err)
+
+	svc := s.Services["app"]
+	assert.Equal(t, env.Files{".env.base", ".env.required", ".env.local"}, svc.EnvFiles)
+	assert.Equal(t, map[string]bool{".env.local": true}, svc.optionalEnvFiles)
+}
+
+func TestComposeEnvFileLongSyntaxRequiresPath(t *testing.T) {
+	manifest := []byte(`services:
+  app:
+    image: nginx
+    env_file:
+      - required: false
+`)
+	_, err := ReadStack(manifest, true)
+	assert.ErrorContains(t, err, "env_file entry requires a path")
+}
+
+func TestLoadEnvFilesSkipsMissingOptionalFile(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "base.env")
+	require.NoError(t, os.WriteFile(base, []byte("A=1\n"), 0600))
+	missing := filepath.Join(dir, "missing.env")
+	svc := &Service{EnvFiles: env.Files{base, missing}, optionalEnvFiles: map[string]bool{missing: true}}
+
+	require.NoError(t, loadEnvFiles(svc, "app"))
+	assert.Equal(t, env.Environment{{Name: "A", Value: "1"}}, svc.Environment)
+}
+
+func TestLoadEnvFilesFailsOnMissingRequiredFile(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing.env")
+	svc := &Service{EnvFiles: env.Files{missing}}
+
+	assert.ErrorIs(t, loadEnvFiles(svc, "app"), os.ErrNotExist)
+}
